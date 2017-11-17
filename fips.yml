@@ -1,0 +1,8 @@
+#
+# chips-test
+#
+---
+imports:
+    chips:
+        git: https://github.com/floooh/chips
+
