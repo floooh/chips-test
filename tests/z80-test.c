@@ -6,6 +6,7 @@
 #endif
 #define CHIPS_IMPL
 #include "chips/z80.h"
+#include <stdio.h>
 
 z80 cpu;
 uint8_t mem[1<<16] = { 0 };
@@ -53,7 +54,8 @@ bool flags(uint8_t expected) {
     return (cpu.F & ~(Z80_YF|Z80_XF)) == expected;
 }
 
-#define T(x) assert(x)
+uint32_t num_tests = 0;
+#define T(x) { assert(x); num_tests++; }
 
 /* LD A,R; LD A,I */
 void LD_A_RI() {
@@ -817,5 +819,6 @@ int main() {
     AND_A_iHLIXIYi();
     INC_DEC_r();
     INC_DEC_iHLIXIYi();
+    printf("%d tests run ok.\n", num_tests);
     return 0;
 }
