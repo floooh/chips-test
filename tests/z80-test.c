@@ -727,6 +727,61 @@ void AND_A_iHLIXIYi() {
     /* FIXME */
 }
 
+/* INC r; DEC r */
+void INC_DEC_r() {
+    uint8_t prog[] = {
+        0x3e, 0x00,         // LD A,0x00
+        0x06, 0xFF,         // LD B,0xFF
+        0x0e, 0x0F,         // LD C,0x0F
+        0x16, 0x0E,         // LD D,0x0E
+        0x1E, 0x7F,         // LD E,0x7F
+        0x26, 0x3E,         // LD H,0x3E
+        0x2E, 0x23,         // LD L,0x23
+        0x3C,               // INC A
+        0x3D,               // DEC A
+        0x04,               // INC B
+        0x05,               // DEC B
+        0x0C,               // INC C
+        0x0D,               // DEC C
+        0x14,               // INC D
+        0x15,               // DEC D
+        0xFE, 0x01,         // CP 0x01  // set carry flag (should be preserved)
+        0x1C,               // INC E
+        0x1D,               // DEC E
+        0x24,               // INC H
+        0x25,               // DEC H
+        0x2C,               // INC L
+        0x2D,               // DEC L
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+
+    // skip loads
+    for (int i = 0; i < 7; i++) {
+        step();
+    }
+    T(4==step()); T(0x01 == cpu.A); T(flags(0));
+    T(4==step()); T(0x00 == cpu.A); T(flags(Z80_ZF|Z80_NF));
+    T(4==step()); T(0x00 == cpu.B); T(flags(Z80_ZF|Z80_HF));
+    T(4==step()); T(0xFF == cpu.B); T(flags(Z80_SF|Z80_HF|Z80_NF));
+    T(4==step()); T(0x10 == cpu.C); T(flags(Z80_HF));
+    T(4==step()); T(0x0F == cpu.C); T(flags(Z80_HF|Z80_NF));
+    T(4==step()); T(0x0F == cpu.D); T(flags(0));
+    T(4==step()); T(0x0E == cpu.D); T(flags(Z80_NF));
+    T(7==step()); T(0x00 == cpu.A); T(flags(Z80_SF|Z80_HF|Z80_NF|Z80_CF));
+    T(4==step()); T(0x80 == cpu.E); T(flags(Z80_SF|Z80_HF|Z80_VF|Z80_CF));
+    T(4==step()); T(0x7F == cpu.E); T(flags(Z80_HF|Z80_VF|Z80_NF|Z80_CF));
+    T(4==step()); T(0x3F == cpu.H); T(flags(Z80_CF));
+    T(4==step()); T(0x3E == cpu.H); T(flags(Z80_NF|Z80_CF));
+    T(4==step()); T(0x24 == cpu.L); T(flags(Z80_CF));
+    T(4==step()); T(0x23 == cpu.L); T(flags(Z80_NF|Z80_CF));
+}
+
+/* INC (HL); INC (IX+d); INC (IY+d); DEC (HL); DEC (IX+d); DEC (IY+d) */
+void INC_DEC_iHLIXIYi() {
+
+}
+
 int main() {
     LD_A_RI();
     LD_IR_A();
@@ -760,5 +815,7 @@ int main() {
     OR_XOR_A_iHLIXIYi();
     AND_A_rn();
     AND_A_iHLIXIYi();
+    INC_DEC_r();
+    INC_DEC_iHLIXIYi();
     return 0;
 }
