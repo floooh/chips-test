@@ -1104,6 +1104,19 @@ void RLD_RRD() {
     T(7 ==step()); T(0x00 == cpu.A);
 }
 
+/* HALT */
+void HALT() {
+    puts(">>> HALT");
+    uint8_t prog[] = {
+        0x76,       // HALT
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(4==step()); T(0x0000 == cpu.PC); T(z80_any(&cpu, Z80_HALT));
+    T(4==step()); T(0x0000 == cpu.PC); T(z80_any(&cpu, Z80_HALT));
+    T(4==step()); T(0x0000 == cpu.PC); T(z80_any(&cpu, Z80_HALT));
+}
+
 int main() {
     LD_A_RI();
     LD_IR_A();
@@ -1150,6 +1163,7 @@ int main() {
     SRL_r();
     SRL_iHLIXIYi();
     RLD_RRD();
+    HALT();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
