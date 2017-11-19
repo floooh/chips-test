@@ -1665,6 +1665,62 @@ void JR_cc_e() {
     T(12==step()); T(0x0218 == cpu.PC);
 }
 
+/* DJNZ */
+void DJNZ() {
+    puts(">>> DJNZ");
+    uint8_t prog[] = {
+        0x06, 0x03,         //      LD B,0x03
+        0x97,               //      SUB A
+        0x3C,               // l0:  INC A
+        0x10, 0xFD,         //      DJNZ l0
+        0x00,               //      NOP
+    };
+    copy(0x0204, prog, sizeof(prog));
+    init();
+    cpu.PC = 0x0204;
+
+    T(7 ==step()); T(0x03 == cpu.B);
+    T(4 ==step()); T(0x00 == cpu.A);
+    T(4 ==step()); T(0x01 == cpu.A);
+    T(13==step()); T(0x02 == cpu.B); T(0x0207 == cpu.PC);
+    T(4 ==step()); T(0x02 == cpu.A);
+    T(13==step()); T(0x01 == cpu.B); T(0x0207 == cpu.PC);
+    T(4 ==step()); T(0x03 == cpu.A);
+    T(8 ==step()); T(0x00 == cpu.B); T(0x020A == cpu.PC);
+}
+
+/* CALL; RET */
+void CALL_RET() {
+    puts(">>> CALL; RET");
+    uint8_t prog[] = {
+        0xCD, 0x0A, 0x02,       //      CALL l0
+        0xCD, 0x0A, 0x02,       //      CALL l0
+        0xC9,                   // l0:  RET
+    };
+    copy(0x0204, prog, sizeof(prog));
+    init();
+    cpu.SP = 0x0100;
+    cpu.PC = 0x0204;
+
+    T(17 == step());
+    T(0x020A == cpu.PC);
+    T(0x00FE == cpu.SP);
+    T(0x07 == mem[0x00FE]); T(0x02 == mem[0x00FF]);
+
+    T(10 == step());
+    T(0x0207 == cpu.PC);
+    T(0x0100 == cpu.SP);
+
+    T(17 == step());
+    T(0x020A == cpu.PC);
+    T(0x00FE == cpu.SP);
+    T(0x0A == mem[0x00FE]); T(0x02 == mem[0x00FF]);
+
+    T(10 == step());
+    T(0x020A == cpu.PC);
+    T(0x0100 == cpu.SP);
+}
+
 int main() {
     LD_A_RI();
     LD_IR_A();
@@ -1728,6 +1784,8 @@ int main() {
     JP_cc_nn();
     JP_JR();
     JR_cc_e();
+    DJNZ();
+    CALL_RET();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
