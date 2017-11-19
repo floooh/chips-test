@@ -59,16 +59,42 @@ uint32_t num_tests = 0;
 
 /* LD A,R; LD A,I */
 void LD_A_RI() {
-    /* FIXME */
+    puts(">>> LD A,R; LD A,I");
+    uint8_t prog[] = {
+        0xED, 0x57,         // LD A,I
+        0x97,               // SUB A
+        0xED, 0x5F,         // LD A,R
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    cpu.iff1 = true;
+    cpu.iff2 = true;
+    cpu.R = 0x34;
+    cpu.I = 0x01;
+    cpu.F = Z80_CF;
+    T(9 == step()); T(0x01 == cpu.A); T(flags(Z80_PF|Z80_CF));
+    T(4 == step()); T(0x00 == cpu.A); T(flags(Z80_ZF|Z80_NF));
+    T(9 == step()); T(0x39 == cpu.A); T(flags(Z80_PF));
 }
 
 /* LD I,A; LD R,A */
 void LD_IR_A() {
-    /* FIXME */
+    puts(">>> LD I,A; LD R,A");
+    uint8_t prog[] = {
+        0x3E, 0x45,     // LD A,0x45
+        0xED, 0x47,     // LD I,A
+        0xED, 0x4F,     // LD R,A
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(7==step()); T(0x45 == cpu.A);
+    T(9==step()); T(0x45 == cpu.I);
+    T(9==step()); T(0x45 == cpu.R);
 }
 
 /* LD r,s; LD r,n */
 void LD_r_sn() {
+    puts(">>> LD r,s; LD r,n");
     uint8_t prog[] = {
         0x3E, 0x12,     // LD A,0x12
         0x47,           // LD B,A
@@ -196,6 +222,7 @@ void LD_r_sn() {
 
 /* LD r,(HL) */
 void LD_r_iHLi() {
+    puts(">>> LD r,(HL)");
     uint8_t prog[] = {
         0x21, 0x00, 0x10,   // LD HL,0x1000
         0x3E, 0x33,         // LD A,0x33
@@ -231,11 +258,12 @@ void LD_r_iHLi() {
 
 /* LD r,(IX|IY+d) */
 void LD_r_iIXIYi() {
-    /* FIXME */
+    puts("FIXME FIXME FIXME >>> LD r,(IX+d); LD r,(IY+d)");
 }
 
 /* LD (HL),r */
 void LD_iHLi_r() {
+    puts(">>> LD (HL),r");
     uint8_t prog[] = {
         0x21, 0x00, 0x10,   // LD HL,0x1000
         0x3E, 0x12,         // LD A,0x12
@@ -271,11 +299,12 @@ void LD_iHLi_r() {
 
 /* LD (IX|IY+d),r */
 void LD_iIXIYi_r() {
-    /* FIXME */
+    puts("FIXME FIXME FIXME >>> LD (IX+d),r; LD (IY+d)");
 }
 
 /* LD (HL),n */
 void LD_iHLi_n() {
+    puts(">>> LD (HL),n");
     uint8_t prog[] = {
         0x21, 0x00, 0x20,   // LD HL,0x2000
         0x36, 0x33,         // LD (HL),0x33
@@ -293,11 +322,13 @@ void LD_iHLi_n() {
 
 /* LD (IX|IY+d),n */
 void LD_iIXIYi_n() {
+    puts("FIXME FIXME FIXME >>> LD (IX+d),n; LD (IY+d),n");
     /* FIXME */
 }
 
 /* LD A,(BC); LD A,(DE); LD A,(nn) */
 void LD_A_iBCDEnni() {
+    puts(">>> LD A,(BC); LD A,(DE); LD A,(nn)");
     uint8_t data[] = {
         0x11, 0x22, 0x33
     };
@@ -321,6 +352,7 @@ void LD_A_iBCDEnni() {
 
 /* LD (BC),A; LD (DE),A; LD (nn),A */
 void LD_iBCDEnni_A() {
+    puts(">>> LD (BC),A; LD (DE),A; LD (nn),A");
     uint8_t prog[] = {
         0x01, 0x00, 0x10,   // LD BC,0x1000
         0x11, 0x01, 0x10,   // LD DE,0x1001
@@ -342,36 +374,37 @@ void LD_iBCDEnni_A() {
 
 /* LD dd,nn; LD IX,nn; LD IY,nn */
 void LD_ddIXIY_nn() {
-    /* FIXME */
+    puts("FIXME FIXME FIXME >>> LD dd,nn; LD IX,nn; LD IY,nn");
 }
 
 /* LD HL,(nn); LD dd,(nn); LD IX,(nn); LD IY,(nn) */
 void LD_HLddIXIY_inni() {
-    /* FIXME */
+    puts("FIXME FIXME FIXME >>> LD dd,(nn); LD IX,(nn); LD IY,(nn)");
 }
 
 /* LD (nn),HL; LD (nn),dd; LD (nn),IX; LD (nn),IY */
 void LD_inni_HLddIXIY() {
-    /* FIXME */
+    puts("FIXME FIXME FIXME >>> LD (nn),dd; LD (nn),IX; LD (nn),IY");
 }
 
 /* LD SP,HL; LD SP,IX; LD SP,IY */
 void LD_SP_HLIXIY() {
-    /* FIXME */
+    puts("FIXME FIXME FIXME >>> LD SP,HL; LD SP,IX; LD SP,IY");
 }
 
 /* PUSH qq; PUSH IX; PUSH IY; POP qq; POP IX; POP IY */
 void PUSH_POP_qqIXIY() {
-    /* FIXME */
+    puts("FIXME FIXME FIXME >>> PUSH qq; PUSH IX; PUSH IY; POP qq; POP IX; POP IY");
 }
 
 /* EX DE,HL; EX AF,AF'; EX (SP),HL; EX (SP),IX; EX (SP),IY */
 void EX() {
-    /* FIXME */
+    puts("FIXME FIXME FIXME >>> EX DE,HL; EX AF,AF'; EX (SP),HL; EX (SP),IX; EX (SP),IY");
 }
 
 /* ADD A,r; ADD A,n */
 void ADD_A_rn() {
+    puts(">>> ADD A,r; ADD A,n");
     uint8_t prog[] = {
         0x3E, 0x0F,     // LD A,0x0F
         0x87,           // ADD A,A
@@ -413,11 +446,12 @@ void ADD_A_rn() {
 
 /* ADD A,(HL); ADD A,(IX+d); ADD A,(IY+d) */
 void ADD_A_iHLIXIYi() {
-    /* FIXME */
+    puts("FIXME FIXME FIXME >>> ADD A,(HL); ADD A,(IX+d); ADD A,(IY+d)");
 }
 
 /* ADC A,r; ADC A,n */
 void ADC_A_rn() {
+    puts(">>> ADC A,r; ADD A,n");
     uint8_t prog[] = {
         0x3E, 0x00,         // LD A,0x00
         0x06, 0x41,         // LD B,0x41
@@ -457,11 +491,12 @@ void ADC_A_rn() {
 
 /* ADC A,(HL); ADC A,(IX+d); ADC A,(IY+d) */
 void ADC_A_iHLIXIYi() {
-    /* FIXME */
+    puts("FIXME FIXME FIXME >>> ADC A,(HL); ADC A,(IX+d); ADC A,(IY+d)");
 }
 
 /* SUB A,r; SUB A,n */
 void SUB_A_rn() {
+    puts(">>> SUB A,r; SUB A,n");
     uint8_t prog[] = {
         0x3E, 0x04,     // LD A,0x04
         0x06, 0x01,     // LD B,0x01
@@ -503,11 +538,12 @@ void SUB_A_rn() {
 
 /* SUB A,(HL); SUB A,(IX+d); SUB A,(IY+d) */
 void SUB_A_iHLIXIYi() {
-    /* FIXME */
+    puts("FIXME FIXME FIXME >>> SUB A,(HL); SUB A,(IX+d); SUB A,(IY+d)");
 }
 
 /* CP A,r; CP A,n */
 void CP_A_rn() {
+    puts(">>> CP A,r; CP A,n");
     uint8_t prog[] = {
         0x3E, 0x04,     // LD A,0x04
         0x06, 0x05,     // LD B,0x05
@@ -547,11 +583,12 @@ void CP_A_rn() {
 
 /* CP A,(HL); CP A,(IX+d); CP A,(IY+d) */
 void CP_A_iHLIXIYi() {
-    /* FIXME */
+    puts("FIXME FIXME FIXME >>> CP A,(HL); CP A,(IX+d); CP A,(IY+d)");
 }
 
 /* SBC A,r; SBC A,n */
 void SBC_A_rn() {
+    puts(">>> SBC A,r; SBC A,n");
     uint8_t prog[] = {
         0x3E, 0x04,     // LD A,0x04
         0x06, 0x01,     // LD B,0x01
@@ -589,11 +626,12 @@ void SBC_A_rn() {
 
 /* SBC A,(HL); SBC A,(IX+d); SBC A,(IY+d) */
 void SBC_A_iHLIXIYi() {
-    /* FIXME */
+    puts("FIXME FIXME FIXME >>> SBC A,(HL); SBC A,(IX+d); SBC A,(IY+d)");
 }
 
 /* OR A,r; OR A,n */
 void OR_A_rn() {
+    puts(">>> OR A,r; OR A,n");
     uint8_t prog[] = {
         0x97,           // SUB A
         0x06, 0x01,     // LD B,0x01
@@ -632,6 +670,7 @@ void OR_A_rn() {
 
 /* XOR A,r; XOR A,n */
 void XOR_A_rn() {
+    puts(">>> XOR A,r; XOR A,n");
     uint8_t prog[] = {
         0x97,           // SUB A
         0x06, 0x01,     // LD B,0x01
@@ -671,11 +710,12 @@ void XOR_A_rn() {
 /* OR A,(HL); OR A,(IX+d); OR A,(IY+d) */
 /* XOR A,(HL); XOR A,(IX+d); XOR A,(IY+d) */
 void OR_XOR_A_iHLIXIYi() {
-    /* FIXME */
+    puts("FIXME FIXME FIXME >>> OR/XOR A,(HL); OR/XOR A,(IX+d); OR/XOR A,(IY+d)");
 }
 
 /* AND A,r; AND A,n */
 void AND_A_rn() {
+    puts(">>> AND A,r; AND A,n");
     uint8_t prog[] = {
         0x3E, 0xFF,             // LD A,0xFF
         0x06, 0x01,             // LD B,0x01
@@ -726,11 +766,12 @@ void AND_A_rn() {
 
 /* AND A,(HL); AND A,(IX+d); AND A,(IY+d) */
 void AND_A_iHLIXIYi() {
-    /* FIXME */
+    puts("FIXME FIXME FIXME >>> AND A,(HL); AND A,(IX+d); AND A,(IY+d)");
 }
 
 /* INC r; DEC r */
 void INC_DEC_r() {
+    puts(">>> INC r; DEC r");
     uint8_t prog[] = {
         0x3e, 0x00,         // LD A,0x00
         0x06, 0xFF,         // LD B,0xFF
@@ -781,7 +822,286 @@ void INC_DEC_r() {
 
 /* INC (HL); INC (IX+d); INC (IY+d); DEC (HL); DEC (IX+d); DEC (IY+d) */
 void INC_DEC_iHLIXIYi() {
+    puts("FIXME FIXME FIXME >>> INC/DEC (HL)/(IX+d)/(IY+d)");
+}
 
+/* INC ss; INC IX; INC IY; DEC ss; DEC IX; DEC IY */
+void INC_DEC_ssIXIY() {
+    puts("FIXME FIXME FIXME >>> INC/DEC ss/IX/IY");
+}
+
+/* RLCA; RLA; RRCA; RRA */
+void RLCA_RLA_RRCA_RRA() {
+    puts(">>> RLCA; RLA; RRCA; RRA");
+    uint8_t prog[] = {
+        0x3E, 0xA0,     // LD A,0xA0
+        0x07,           // RLCA
+        0x07,           // RLCA
+        0x0F,           // RRCA
+        0x0F,           // RRCA
+        0x17,           // RLA
+        0x17,           // RLA
+        0x1F,           // RRA
+        0x1F,           // RRA
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+
+    cpu.F = 0xff;
+    T(7==step()); T(0xA0 == cpu.A);
+    T(4==step()); T(0x41 == cpu.A); T(flags(Z80_SF|Z80_ZF|Z80_VF|Z80_CF));
+    T(4==step()); T(0x82 == cpu.A); T(flags(Z80_SF|Z80_ZF|Z80_VF));
+    T(4==step()); T(0x41 == cpu.A); T(flags(Z80_SF|Z80_ZF|Z80_VF));
+    T(4==step()); T(0xA0 == cpu.A); T(flags(Z80_SF|Z80_ZF|Z80_VF|Z80_CF));
+    T(4==step()); T(0x41 == cpu.A); T(flags(Z80_SF|Z80_ZF|Z80_VF|Z80_CF));
+    T(4==step()); T(0x83 == cpu.A); T(flags(Z80_SF|Z80_ZF|Z80_VF));
+    T(4==step()); T(0x41 == cpu.A); T(flags(Z80_SF|Z80_ZF|Z80_VF|Z80_CF));
+    T(4==step()); T(0xA0 == cpu.A); T(flags(Z80_SF|Z80_ZF|Z80_VF|Z80_CF));
+}
+
+/* RLC r; RL r; RRC r; RR r */
+void RLC_RL_RRC_RR_r() {
+    puts(">>> RLC r; RL r; RRC r; RR r");
+    uint8_t prog[] = {
+        0x3E, 0x01,     // LD A,0x01
+        0x06, 0xFF,     // LD B,0xFF
+        0x0E, 0x03,     // LD C,0x03
+        0x16, 0xFE,     // LD D,0xFE
+        0x1E, 0x11,     // LD E,0x11
+        0x26, 0x3F,     // LD H,0x3F
+        0x2E, 0x70,     // LD L,0x70
+
+        0xCB, 0x0F,     // RRC A
+        0xCB, 0x07,     // RLC A
+        0xCB, 0x08,     // RRC B
+        0xCB, 0x00,     // RLC B
+        0xCB, 0x01,     // RLC C
+        0xCB, 0x09,     // RRC C
+        0xCB, 0x02,     // RLC D
+        0xCB, 0x0A,     // RRC D
+        0xCB, 0x0B,     // RRC E
+        0xCB, 0x03,     // RLC E
+        0xCB, 0x04,     // RLC H
+        0xCB, 0x0C,     // RCC H
+        0xCB, 0x05,     // RLC L
+        0xCB, 0x0D,     // RRC L
+
+        0xCB, 0x1F,     // RR A
+        0xCB, 0x17,     // RL A
+        0xCB, 0x18,     // RR B
+        0xCB, 0x10,     // RL B
+        0xCB, 0x11,     // RL C
+        0xCB, 0x19,     // RR C
+        0xCB, 0x12,     // RL D
+        0xCB, 0x1A,     // RR D
+        0xCB, 0x1B,     // RR E
+        0xCB, 0x13,     // RL E
+        0xCB, 0x14,     // RL H
+        0xCB, 0x1C,     // RR H
+        0xCB, 0x15,     // RL L
+        0xCB, 0x1D,     // RR L
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+
+    // skip loads
+    for (int i = 0; i < 7; i++) {
+        step();
+    }
+    T(8==step()); T(0x80 == cpu.A); T(flags(Z80_SF|Z80_CF));
+    T(8==step()); T(0x01 == cpu.A); T(flags(Z80_CF));
+    T(8==step()); T(0xFF == cpu.B); T(flags(Z80_SF|Z80_PF|Z80_CF));
+    T(8==step()); T(0xFF == cpu.B); T(flags(Z80_SF|Z80_PF|Z80_CF));
+    T(8==step()); T(0x06 == cpu.C); T(flags(Z80_PF));
+    T(8==step()); T(0x03 == cpu.C); T(flags(Z80_PF));
+    T(8==step()); T(0xFD == cpu.D); T(flags(Z80_SF|Z80_CF));
+    T(8==step()); T(0xFE == cpu.D); T(flags(Z80_SF|Z80_CF));
+    T(8==step()); T(0x88 == cpu.E); T(flags(Z80_SF|Z80_PF|Z80_CF));
+    T(8==step()); T(0x11 == cpu.E); T(flags(Z80_PF|Z80_CF));
+    T(8==step()); T(0x7E == cpu.H); T(flags(Z80_PF));
+    T(8==step()); T(0x3F == cpu.H); T(flags(Z80_PF));
+    T(8==step()); T(0xE0 == cpu.L); T(flags(Z80_SF));
+    T(8==step()); T(0x70 == cpu.L); T(flags(0));
+    T(8==step()); T(0x00 == cpu.A); T(flags(Z80_ZF|Z80_PF|Z80_CF));
+    T(8==step()); T(0x01 == cpu.A); T(flags(0));
+    T(8==step()); T(0x7F == cpu.B); T(flags(Z80_CF));
+    T(8==step()); T(0xFF == cpu.B); T(flags(Z80_SF|Z80_PF));
+    T(8==step()); T(0x06 == cpu.C); T(flags(Z80_PF));
+    T(8==step()); T(0x03 == cpu.C); T(flags(Z80_PF));
+    T(8==step()); T(0xFC == cpu.D); T(flags(Z80_SF|Z80_PF|Z80_CF));
+    T(8==step()); T(0xFE == cpu.D); T(flags(Z80_SF));
+    T(8==step()); T(0x08 == cpu.E); T(flags(Z80_CF));
+    T(8==step()); T(0x11 == cpu.E); T(flags(Z80_PF));
+    T(8==step()); T(0x7E == cpu.H); T(flags(Z80_PF));
+    T(8==step()); T(0x3F == cpu.H); T(flags(Z80_PF));
+    T(8==step()); T(0xE0 == cpu.L); T(flags(Z80_SF));
+    T(8==step()); T(0x70 == cpu.L); T(flags(0));
+}
+
+/* RRC/RLC/RR/RL (HL)/(IX+d)/(IY+d) */
+void RRC_RLC_RR_RL_iHLIXIYi() {
+    puts("FIXME FIXME FIXME >>> RLC/RL/RRC/RR (HL)/(IX+d)/(IY+d)");
+}
+
+/* SLA r */
+void SLA_r() {
+    puts(">>> SLA r");
+    uint8_t prog[] = {
+        0x3E, 0x01,         // LD A,0x01
+        0x06, 0x80,         // LD B,0x80
+        0x0E, 0xAA,         // LD C,0xAA
+        0x16, 0xFE,         // LD D,0xFE
+        0x1E, 0x7F,         // LD E,0x7F
+        0x26, 0x11,         // LD H,0x11
+        0x2E, 0x00,         // LD L,0x00
+        0xCB, 0x27,         // SLA A
+        0xCB, 0x20,         // SLA B
+        0xCB, 0x21,         // SLA C
+        0xCB, 0x22,         // SLA D
+        0xCB, 0x23,         // SLA E
+        0xCB, 0x24,         // SLA H
+        0xCB, 0x25,         // SLA L
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+
+    // skip loads
+    for (int i = 0; i < 7; i++) {
+        step();
+    }
+    T(8==step()); T(0x02 == cpu.A); T(flags(0));
+    T(8==step()); T(0x00 == cpu.B); T(flags(Z80_ZF|Z80_PF|Z80_CF));
+    T(8==step()); T(0x54 == cpu.C); T(flags(Z80_CF));
+    T(8==step()); T(0xFC == cpu.D); T(flags(Z80_SF|Z80_PF|Z80_CF));
+    T(8==step()); T(0xFE == cpu.E); T(flags(Z80_SF));
+    T(8==step()); T(0x22 == cpu.H); T(flags(Z80_PF));
+    T(8==step()); T(0x00 == cpu.L); T(flags(Z80_ZF|Z80_PF));
+}
+
+/* SLA (HL)/(IX+d)/(IY+d) */
+void SLA_iHLIXIYi() {
+    puts("FIXME FIXME FIXME >>> SLA (HL)/(IX+d)/(IY+d)");
+}
+
+/* SRA r */
+void SRA_r() {
+    puts(">>> SRA r");
+    uint8_t prog[] = {
+        0x3E, 0x01,         // LD A,0x01
+        0x06, 0x80,         // LD B,0x80
+        0x0E, 0xAA,         // LD C,0xAA
+        0x16, 0xFE,         // LD D,0xFE
+        0x1E, 0x7F,         // LD E,0x7F
+        0x26, 0x11,         // LD H,0x11
+        0x2E, 0x00,         // LD L,0x00
+        0xCB, 0x2F,         // SRA A
+        0xCB, 0x28,         // SRA B
+        0xCB, 0x29,         // SRA C
+        0xCB, 0x2A,         // SRA D
+        0xCB, 0x2B,         // SRA E
+        0xCB, 0x2C,         // SRA H
+        0xCB, 0x2D,         // SRA L
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    // skip loads
+    for (int i = 0; i < 7; i++) {
+        step();
+    }
+    T(8==step()); T(0x00 == cpu.A); T(flags(Z80_ZF|Z80_PF|Z80_CF));
+    T(8==step()); T(0xC0 == cpu.B); T(flags(Z80_SF|Z80_PF));
+    T(8==step()); T(0xD5 == cpu.C); T(flags(Z80_SF));
+    T(8==step()); T(0xFF == cpu.D); T(flags(Z80_SF|Z80_PF));
+    T(8==step()); T(0x3F == cpu.E); T(flags(Z80_PF|Z80_CF));
+    T(8==step()); T(0x08 == cpu.H); T(flags(Z80_CF));
+    T(8==step()); T(0x00 == cpu.L); T(flags(Z80_ZF|Z80_PF));
+}
+
+/* SRA (HL)/(IX+d)/(IY+d) */
+void SRA_iHLIXIYi() {
+    puts("FIXME FIXME FIXME >>> SRA (HL)/(IX+d)/(IY+d)");
+}
+
+/* SRL r */
+void SRL_r() {
+    puts(">>> SRL r");
+    uint8_t prog[] = {
+        0x3E, 0x01,         // LD A,0x01
+        0x06, 0x80,         // LD B,0x80
+        0x0E, 0xAA,         // LD C,0xAA
+        0x16, 0xFE,         // LD D,0xFE
+        0x1E, 0x7F,         // LD E,0x7F
+        0x26, 0x11,         // LD H,0x11
+        0x2E, 0x00,         // LD L,0x00
+        0xCB, 0x3F,         // SRL A
+        0xCB, 0x38,         // SRL B
+        0xCB, 0x39,         // SRL C
+        0xCB, 0x3A,         // SRL D
+        0xCB, 0x3B,         // SRL E
+        0xCB, 0x3C,         // SRL H
+        0xCB, 0x3D,         // SRL L
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+
+    // skip loads
+    for (int i = 0; i < 7; i++) {
+        step();
+    }
+    T(8==step()); T(0x00 == cpu.A); T(flags(Z80_ZF|Z80_PF|Z80_CF));
+    T(8==step()); T(0x40 == cpu.B); T(flags(0));
+    T(8==step()); T(0x55 == cpu.C); T(flags(Z80_PF));
+    T(8==step()); T(0x7F == cpu.D); T(flags(0));
+    T(8==step()); T(0x3F == cpu.E); T(flags(Z80_PF|Z80_CF));
+    T(8==step()); T(0x08 == cpu.H); T(flags(Z80_CF));
+    T(8==step()); T(0x00 == cpu.L); T(flags(Z80_ZF|Z80_PF))
+}
+
+/* SRL (HL)/(IX+d)/(IY+d) */
+void SRL_iHLIXIYi() {
+    puts("FIXME FIXME FIXME >>> SRL (HL)/(IX+d)/(IY+d)");
+}
+
+/* RLD; RRD */
+void RLD_RRD() {
+    puts(">>> RLD; RRD");
+    uint8_t prog[] = {
+        0x3E, 0x12,         // LD A,0x12
+        0x21, 0x00, 0x10,   // LD HL,0x1000
+        0x36, 0x34,         // LD (HL),0x34
+        0xED, 0x67,         // RRD
+        0xED, 0x6F,         // RLD
+        0x7E,               // LD A,(HL)
+        0x3E, 0xFE,         // LD A,0xFE
+        0x36, 0x00,         // LD (HL),0x00
+        0xED, 0x6F,         // RLD
+        0xED, 0x67,         // RRD
+        0x7E,               // LD A,(HL)
+        0x3E, 0x01,         // LD A,0x01
+        0x36, 0x00,         // LD (HL),0x00
+        0xED, 0x6F,         // RLD
+        0xED, 0x67,         // RRD
+        0x7E
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(7 ==step()); T(0x12 == cpu.A);
+    T(10==step()); T(0x1000 == cpu.HL);
+    T(10==step()); T(0x34 == mem[0x1000]);
+    T(18==step()); T(0x14 == cpu.A); T(0x23 == mem[0x1000]);
+    T(18==step()); T(0x12 == cpu.A); T(0x34 == mem[0x1000]);
+    T(7 ==step()); T(0x34 == cpu.A);
+    T(7 ==step()); T(0xFE == cpu.A);
+    T(10==step()); T(0x00 == mem[0x1000]);
+    T(18==step()); T(0xF0 == cpu.A); T(0x0E == mem[0x1000]); T(flags(Z80_SF|Z80_PF));
+    T(18==step()); T(0xFE == cpu.A); T(0x00 == mem[0x1000]); T(flags(Z80_SF));
+    T(7 ==step()); T(0x00 == cpu.A);
+    T(7 ==step()); T(0x01 == cpu.A);
+    T(10 ==step()); T(0x00 == mem[0x1000]);
+    cpu.F |= Z80_CF;
+    T(18==step()); T(0x00 == cpu.A); T(0x01 == mem[0x1000]); T(flags(Z80_ZF|Z80_PF|Z80_CF));
+    T(18==step()); T(0x01 == cpu.A); T(0x00 == mem[0x1000]); T(flags(Z80_CF));
+    T(7 ==step()); T(0x00 == cpu.A);
 }
 
 int main() {
@@ -819,6 +1139,17 @@ int main() {
     AND_A_iHLIXIYi();
     INC_DEC_r();
     INC_DEC_iHLIXIYi();
+    INC_DEC_ssIXIY();
+    RLCA_RLA_RRCA_RRA();
+    RLC_RL_RRC_RR_r();
+    RRC_RLC_RR_RL_iHLIXIYi();
+    SLA_r();
+    SLA_iHLIXIYi();
+    SRA_r();
+    SRA_iHLIXIYi();
+    SRL_r();
+    SRL_iHLIXIYi();
+    RLD_RRD();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
