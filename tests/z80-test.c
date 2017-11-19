@@ -258,7 +258,72 @@ void LD_r_iHLi() {
 
 /* LD r,(IX|IY+d) */
 void LD_r_iIXIYi() {
-    puts("FIXME FIXME FIXME >>> LD r,(IX+d); LD r,(IY+d)");
+    puts(">>> LD r,(IX+d); LD r,(IY+d)");
+    uint8_t prog[] = {
+        0xDD, 0x21, 0x03, 0x10,     // LD IX,0x1003
+        0x3E, 0x12,                 // LD A,0x12
+        0xDD, 0x77, 0x00,           // LD (IX+0),A
+        0x06, 0x13,                 // LD B,0x13
+        0xDD, 0x70, 0x01,           // LD (IX+1),B
+        0x0E, 0x14,                 // LD C,0x14
+        0xDD, 0x71, 0x02,           // LD (IX+2),C
+        0x16, 0x15,                 // LD D,0x15
+        0xDD, 0x72, 0xFF,           // LD (IX-1),D
+        0x1E, 0x16,                 // LD E,0x16
+        0xDD, 0x73, 0xFE,           // LD (IX-2),E
+        0x26, 0x17,                 // LD H,0x17
+        0xDD, 0x74, 0x03,           // LD (IX+3),H
+        0x2E, 0x18,                 // LD L,0x18
+        0xDD, 0x75, 0xFD,           // LD (IX-3),L
+        0xFD, 0x21, 0x03, 0x10,     // LD IY,0x1003
+        0x3E, 0x12,                 // LD A,0x12
+        0xFD, 0x77, 0x00,           // LD (IY+0),A
+        0x06, 0x13,                 // LD B,0x13
+        0xFD, 0x70, 0x01,           // LD (IY+1),B
+        0x0E, 0x14,                 // LD C,0x14
+        0xFD, 0x71, 0x02,           // LD (IY+2),C
+        0x16, 0x15,                 // LD D,0x15
+        0xFD, 0x72, 0xFF,           // LD (IY-1),D
+        0x1E, 0x16,                 // LD E,0x16
+        0xFD, 0x73, 0xFE,           // LD (IY-2),E
+        0x26, 0x17,                 // LD H,0x17
+        0xFD, 0x74, 0x03,           // LD (IY+3),H
+        0x2E, 0x18,                 // LD L,0x18
+        0xFD, 0x75, 0xFD,           // LD (IY-3),L
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+
+    T(14==step()); T(0x1003 == cpu.IX);
+    T(7 ==step()); T(0x12 == cpu.A);
+    T(19==step()); T(0x12 == mem[0x1003]);
+    T(7 ==step()); T(0x13 == cpu.B);
+    T(19==step()); T(0x13 == mem[0x1004]);
+    T(7 ==step()); T(0x14 == cpu.C);
+    T(19==step()); T(0x14 == mem[0x1005]);
+    T(7 ==step()); T(0x15 == cpu.D);
+    T(19==step()); T(0x15 == mem[0x1002]);
+    T(7 ==step()); T(0x16 == cpu.E);
+    T(19==step()); T(0x16 == mem[0x1001]);
+    T(7 ==step()); T(0x17 == cpu.H);
+    T(19==step()); T(0x17 == mem[0x1006]);
+    T(7 ==step()); T(0x18 == cpu.L);
+    T(19==step()); T(0x18 == mem[0x1000]);
+    T(14==step()); T(0x1003 == cpu.IY);
+    T(7 ==step()); T(0x12 == cpu.A);
+    T(19==step()); T(0x12 == mem[0x1003]);
+    T(7 ==step()); T(0x13 == cpu.B);
+    T(19==step()); T(0x13 == mem[0x1004]);
+    T(7 ==step()); T(0x14 == cpu.C);
+    T(19==step()); T(0x14 == mem[0x1005]);
+    T(7 ==step()); T(0x15 == cpu.D);
+    T(19==step()); T(0x15 == mem[0x1002]);
+    T(7 ==step()); T(0x16 == cpu.E);
+    T(19==step()); T(0x16 == mem[0x1001]);
+    T(7 ==step()); T(0x17 == cpu.H);
+    T(19==step()); T(0x17 == mem[0x1006]);
+    T(7 ==step()); T(0x18 == cpu.L);
+    T(19==step()); T(0x18 == mem[0x1000]);
 }
 
 /* LD (HL),r */
@@ -299,7 +364,72 @@ void LD_iHLi_r() {
 
 /* LD (IX|IY+d),r */
 void LD_iIXIYi_r() {
-    puts("FIXME FIXME FIXME >>> LD (IX+d),r; LD (IY+d)");
+    puts(">>> LD (IX+d),r; LD (IY+d)");
+    uint8_t prog[] = {
+        0xDD, 0x21, 0x03, 0x10,     // LD IX,0x1003
+        0x3E, 0x12,                 // LD A,0x12
+        0xDD, 0x77, 0x00,           // LD (IX+0),A
+        0x06, 0x13,                 // LD B,0x13
+        0xDD, 0x70, 0x01,           // LD (IX+1),B
+        0x0E, 0x14,                 // LD C,0x14
+        0xDD, 0x71, 0x02,           // LD (IX+2),C
+        0x16, 0x15,                 // LD D,0x15
+        0xDD, 0x72, 0xFF,           // LD (IX-1),D
+        0x1E, 0x16,                 // LD E,0x16
+        0xDD, 0x73, 0xFE,           // LD (IX-2),E
+        0x26, 0x17,                 // LD H,0x17
+        0xDD, 0x74, 0x03,           // LD (IX+3),H
+        0x2E, 0x18,                 // LD L,0x18
+        0xDD, 0x75, 0xFD,           // LD (IX-3),L
+        0xFD, 0x21, 0x03, 0x10,     // LD IY,0x1003
+        0x3E, 0x12,                 // LD A,0x12
+        0xFD, 0x77, 0x00,           // LD (IY+0),A
+        0x06, 0x13,                 // LD B,0x13
+        0xFD, 0x70, 0x01,           // LD (IY+1),B
+        0x0E, 0x14,                 // LD C,0x14
+        0xFD, 0x71, 0x02,           // LD (IY+2),C
+        0x16, 0x15,                 // LD D,0x15
+        0xFD, 0x72, 0xFF,           // LD (IY-1),D
+        0x1E, 0x16,                 // LD E,0x16
+        0xFD, 0x73, 0xFE,           // LD (IY-2),E
+        0x26, 0x17,                 // LD H,0x17
+        0xFD, 0x74, 0x03,           // LD (IY+3),H
+        0x2E, 0x18,                 // LD L,0x18
+        0xFD, 0x75, 0xFD,           // LD (IY-3),L
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+
+    T(14==step()); T(0x1003 == cpu.IX);
+    T(7 ==step()); T(0x12 == cpu.A);
+    T(19==step()); T(0x12 == mem[0x1003]);
+    T(7 ==step()); T(0x13 == cpu.B);
+    T(19==step()); T(0x13 == mem[0x1004]);
+    T(7 ==step()); T(0x14 == cpu.C);
+    T(19==step()); T(0x14 == mem[0x1005]);
+    T(7 ==step()); T(0x15 == cpu.D);
+    T(19==step()); T(0x15 == mem[0x1002]);
+    T(7 ==step()); T(0x16 == cpu.E);
+    T(19==step()); T(0x16 == mem[0x1001]);
+    T(7 ==step()); T(0x17 == cpu.H);
+    T(19==step()); T(0x17 == mem[0x1006]);
+    T(7 ==step()); T(0x18 == cpu.L);
+    T(19==step()); T(0x18 == mem[0x1000]);
+    T(14==step()); T(0x1003 == cpu.IY);
+    T(7 ==step()); T(0x12 == cpu.A);
+    T(19==step()); T(0x12 == mem[0x1003]);
+    T(7 ==step()); T(0x13 == cpu.B);
+    T(19==step()); T(0x13 == mem[0x1004]);
+    T(7 ==step()); T(0x14 == cpu.C);
+    T(19==step()); T(0x14 == mem[0x1005]);
+    T(7 ==step()); T(0x15 == cpu.D);
+    T(19==step()); T(0x15 == mem[0x1002]);
+    T(7 ==step()); T(0x16 == cpu.E);
+    T(19==step()); T(0x16 == mem[0x1001]);
+    T(7 ==step()); T(0x17 == cpu.H);
+    T(19==step()); T(0x17 == mem[0x1006]);
+    T(7 ==step()); T(0x18 == cpu.L);
+    T(19==step()); T(0x18 == mem[0x1000]);
 }
 
 /* LD (HL),n */
@@ -322,9 +452,24 @@ void LD_iHLi_n() {
 
 /* LD (IX|IY+d),n */
 void LD_iIXIYi_n() {
-    puts("FIXME FIXME FIXME >>> LD (IX+d),n; LD (IY+d),n");
-    /* FIXME */
-}
+    puts(">>> LD (IX+d),n; LD (IY+d),n");
+    uint8_t prog[] = {
+        0xDD, 0x21, 0x00, 0x20,     // LD IX,0x2000
+        0xDD, 0x36, 0x02, 0x33,     // LD (IX+2),0x33
+        0xDD, 0x36, 0xFE, 0x11,     // LD (IX-2),0x11
+        0xFD, 0x21, 0x00, 0x10,     // LD IY,0x1000
+        0xFD, 0x36, 0x01, 0x22,     // LD (IY+1),0x22
+        0xFD, 0x36, 0xFF, 0x44,     // LD (IY-1),0x44
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+
+    T(14==step()); T(0x2000 == cpu.IX);
+    T(19==step()); T(0x33 == mem[0x2002]);
+    T(19==step()); T(0x11 == mem[0x1FFE]);
+    T(14==step()); T(0x1000 == cpu.IY);
+    T(19==step()); T(0x22 == mem[0x1001]);
+    T(19==step()); T(0x44 == mem[0x0FFF]);}
 
 /* LD A,(BC); LD A,(DE); LD A,(nn) */
 void LD_A_iBCDEnni() {
@@ -363,7 +508,6 @@ void LD_iBCDEnni_A() {
     };
     copy(0x0000, prog, sizeof(prog));
     init();
-
     T(10==step()); T(0x1000 == cpu.BC);
     T(10==step()); T(0x1001 == cpu.DE);
     T(7 ==step()); T(0x77 == cpu.A);
@@ -374,22 +518,108 @@ void LD_iBCDEnni_A() {
 
 /* LD dd,nn; LD IX,nn; LD IY,nn */
 void LD_ddIXIY_nn() {
-    puts("FIXME FIXME FIXME >>> LD dd,nn; LD IX,nn; LD IY,nn");
+    puts(">>> LD dd,nn; LD IX,nn; LD IY,nn");
+    uint8_t prog[] = {
+        0x01, 0x34, 0x12,       // LD BC,0x1234
+        0x11, 0x78, 0x56,       // LD DE,0x5678
+        0x21, 0xBC, 0x9A,       // LD HL,0x9ABC
+        0x31, 0x68, 0x13,       // LD SP,0x1368
+        0xDD, 0x21, 0x21, 0x43, // LD IX,0x4321
+        0xFD, 0x21, 0x65, 0x87, // LD IY,0x8765
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(10==step()); T(0x1234 == cpu.BC);
+    T(10==step()); T(0x5678 == cpu.DE);
+    T(10==step()); T(0x9ABC == cpu.HL);
+    T(10==step()); T(0x1368 == cpu.SP);
+    T(14==step()); T(0x4321 == cpu.IX);
+    T(14==step()); T(0x8765 == cpu.IY);
 }
 
 /* LD HL,(nn); LD dd,(nn); LD IX,(nn); LD IY,(nn) */
 void LD_HLddIXIY_inni() {
-    puts("FIXME FIXME FIXME >>> LD dd,(nn); LD IX,(nn); LD IY,(nn)");
+    puts(">>> LD dd,(nn); LD IX,(nn); LD IY,(nn)");
+    uint8_t data[] = {
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08
+    };
+    uint8_t prog[] = {
+        0x2A, 0x00, 0x10,           // LD HL,(0x1000)
+        0xED, 0x4B, 0x01, 0x10,     // LD BC,(0x1001)
+        0xED, 0x5B, 0x02, 0x10,     // LD DE,(0x1002)
+        0xED, 0x6B, 0x03, 0x10,     // LD HL,(0x1003) undocumented 'long' version
+        0xED, 0x7B, 0x04, 0x10,     // LD SP,(0x1004)
+        0xDD, 0x2A, 0x05, 0x10,     // LD IX,(0x1004)
+        0xFD, 0x2A, 0x06, 0x10,     // LD IY,(0x1005)
+    };
+    copy(0x1000, data, sizeof(data));
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(16==step()); T(0x0201 == cpu.HL);
+    T(20==step()); T(0x0302 == cpu.BC);
+    T(20==step()); T(0x0403 == cpu.DE);
+    T(20==step()); T(0x0504 == cpu.HL);
+    T(20==step()); T(0x0605 == cpu.SP);
+    T(20==step()); T(0x0706 == cpu.IX);
+    T(20==step()); T(0x0807 == cpu.IY);
 }
 
 /* LD (nn),HL; LD (nn),dd; LD (nn),IX; LD (nn),IY */
 void LD_inni_HLddIXIY() {
-    puts("FIXME FIXME FIXME >>> LD (nn),dd; LD (nn),IX; LD (nn),IY");
+    puts(">>> LD (nn),dd; LD (nn),IX; LD (nn),IY");
+    uint8_t prog[] = {
+        0x21, 0x01, 0x02,           // LD HL,0x0201
+        0x22, 0x00, 0x10,           // LD (0x1000),HL
+        0x01, 0x34, 0x12,           // LD BC,0x1234
+        0xED, 0x43, 0x02, 0x10,     // LD (0x1002),BC
+        0x11, 0x78, 0x56,           // LD DE,0x5678
+        0xED, 0x53, 0x04, 0x10,     // LD (0x1004),DE
+        0x21, 0xBC, 0x9A,           // LD HL,0x9ABC
+        0xED, 0x63, 0x06, 0x10,     // LD (0x1006),HL undocumented 'long' version
+        0x31, 0x68, 0x13,           // LD SP,0x1368
+        0xED, 0x73, 0x08, 0x10,     // LD (0x1008),SP
+        0xDD, 0x21, 0x21, 0x43,     // LD IX,0x4321
+        0xDD, 0x22, 0x0A, 0x10,     // LD (0x100A),IX
+        0xFD, 0x21, 0x65, 0x87,     // LD IY,0x8765
+        0xFD, 0x22, 0x0C, 0x10,     // LD (0x100C),IY
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(10==step()); T(0x0201 == cpu.HL);
+    T(16==step()); T(0x01 == mem[0x1000]); T(0x02 == mem[0x1001]);
+    T(10==step()); T(0x1234 == cpu.BC);
+    T(20==step()); T(0x34 == mem[0x1002]); T(0x12 == mem[0x1003]);
+    T(10==step()); T(0x5678 == cpu.DE);
+    T(20==step()); T(0x78 == mem[0x1004]); T(0x56 == mem[0x1005]);
+    T(10==step()); T(0x9ABC == cpu.HL);
+    T(20==step()); T(0xBC == mem[0x1006]); T(0x9A == mem[0x1007]);
+    T(10==step()); T(0x1368 == cpu.SP);
+    T(20==step()); T(0x68 == mem[0x1008]); T(0x13 == mem[0x1009]);
+    T(14==step()); T(0x4321 == cpu.IX);
+    T(20==step()); T(0x21 == mem[0x100A]); T(0x43 == mem[0x100B]);
+    T(14==step()); T(0x8765 == cpu.IY);
+    T(20==step()); T(0x65 == mem[0x100C]); T(0x87 == mem[0x100D]);
 }
 
 /* LD SP,HL; LD SP,IX; LD SP,IY */
 void LD_SP_HLIXIY() {
-    puts("FIXME FIXME FIXME >>> LD SP,HL; LD SP,IX; LD SP,IY");
+    puts(">>> LD SP,HL; LD SP,IX; LD SP,IY");
+    uint8_t prog[] = {
+        0x21, 0x34, 0x12,           // LD HL,0x1234
+        0xDD, 0x21, 0x78, 0x56,     // LD IX,0x5678
+        0xFD, 0x21, 0xBC, 0x9A,     // LD IY,0x9ABC
+        0xF9,                       // LD SP,HL
+        0xDD, 0xF9,                 // LD SP,IX
+        0xFD, 0xF9,                 // LD SP,IY
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(10==step()); T(0x1234 == cpu.HL);
+    T(14==step()); T(0x5678 == cpu.IX);
+    T(14==step()); T(0x9ABC == cpu.IY);
+    T(6 ==step()); T(0x1234 == cpu.SP);
+    T(10==step()); T(0x5678 == cpu.SP);
+    T(10==step()); T(0x9ABC == cpu.SP);
 }
 
 /* PUSH qq; PUSH IX; PUSH IY; POP qq; POP IX; POP IY */
@@ -1782,6 +2012,31 @@ void CALL_RET_cc() {
     T(11==step()); T(0x0228 == cpu.PC);
 }
 
+/* IN */
+void IN() {
+    puts("FIXME FIXME FIXME >>> IN");
+}
+
+/* INIR; INDR */
+void INIR_INDR() {
+    puts("FIXME FIXME FIXME >>> INIR; INDR");
+}
+
+/* OUT */
+void OUT() {
+    puts("FIXME FIXME FIXME >>> OUT");
+}
+
+/* OTIR; OTDR */
+void OTIR_OTDR() {
+    puts("FIXME FIXME FIXME >>> OTIR; OTDR");
+}
+
+/* ADD HL,rr; ADC HL,rr; SBC HL,rr; ADD IX,rr; ADD IY,rr */
+void ADD_ADC_SBC_16() {
+    puts("FIXME FIXME FIXME >>> ADD HL,rr; ADC HL,rr; SBC HL,rr; ADD IX,rr; ADD IY,rr");
+}
+
 int main() {
     LD_A_RI();
     LD_IR_A();
@@ -1848,6 +2103,11 @@ int main() {
     DJNZ();
     CALL_RET();
     CALL_RET_cc();
+    IN();
+    INIR_INDR();
+    OUT();
+    OTIR_OTDR();
+    ADD_ADC_SBC_16();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
