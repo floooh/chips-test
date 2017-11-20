@@ -2372,6 +2372,21 @@ void ADD_ADC_SBC_16() {
     puts("FIXME FIXME FIXME >>> ADD HL,rr; ADC HL,rr; SBC HL,rr; ADD IX,rr; ADD IY,rr");
 }
 
+/* BIT b,r; BIT b,(HL); BIT b,(IX+d); BIT b,(IY+d) */
+void BIT() {
+    puts(" FIXME FIXME FIXME >>> BIT b,r; BIT b,(HL); BIT b,(IX+d); BIT b,(IY+d)");
+}
+
+/* SET b,r; SET b,(HL); SET b,(IX+d); SET b,(IY+d) */
+void SET() {
+    puts(" FIXME FIXME FIXME >>> SET b,r; SET b,(HL); SET b,(IX+d); SET b,(IY+d)");
+}
+
+/* RES b,r; RES b,(HL); RES b,(IX+d); RES b,(IY+d) */
+void RES() {
+    puts(" FIXME FIXME FIXME >>> RES b,r; RES b,(HL); RES b,(IX+d); RES b,(IY+d)");
+}
+
 int main() {
     LD_A_RI();
     LD_IR_A();
@@ -2443,6 +2458,9 @@ int main() {
     OUT();
     OTIR_OTDR();
     ADD_ADC_SBC_16();
+    BIT();
+    SET();
+    RES();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
