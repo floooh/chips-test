@@ -67,8 +67,8 @@ void LD_A_RI() {
     };
     copy(0x0000, prog, sizeof(prog));
     init();
-    cpu.iff1 = true;
-    cpu.iff2 = true;
+    cpu.IFF1 = true;
+    cpu.IFF2 = true;
     cpu.R = 0x34;
     cpu.I = 0x01;
     cpu.F = Z80_CF;
@@ -2136,16 +2136,16 @@ void DI_EI_IM() {
     copy(0x0000, prog, sizeof(prog));
     init();
 
-    T(4==step()); T(!cpu.iff1); T(!cpu.iff2);
-    T(4==step()); T(!cpu.iff1); T(!cpu.iff2);
-    T(4==step()); T(cpu.iff1);  T(cpu.iff2);
-    T(4==step()); T(!cpu.iff1); T(!cpu.iff2);
-    T(4==step()); T(!cpu.iff1); T(!cpu.iff2);
-    T(4==step()); T(cpu.iff1);  T(cpu.iff2);
-    T(8==step()); T(0 == cpu.im);
-    T(8==step()); T(1 == cpu.im);
-    T(8==step()); T(2 == cpu.im);
-    T(8==step()); T(0 == cpu.im);
+    T(4==step()); T(!cpu.IFF1); T(!cpu.IFF2);
+    T(4==step()); T(!cpu.IFF1); T(!cpu.IFF2);
+    T(4==step()); T(cpu.IFF1);  T(cpu.IFF2);
+    T(4==step()); T(!cpu.IFF1); T(!cpu.IFF2);
+    T(4==step()); T(!cpu.IFF1); T(!cpu.IFF2);
+    T(4==step()); T(cpu.IFF1);  T(cpu.IFF2);
+    T(8==step()); T(0 == cpu.IM);
+    T(8==step()); T(1 == cpu.IM);
+    T(8==step()); T(2 == cpu.IM);
+    T(8==step()); T(0 == cpu.IM);
 }
 
 /* JP cc,nn */
