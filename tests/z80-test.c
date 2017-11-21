@@ -2694,16 +2694,61 @@ void ADD_ADC_SBC_16() {
 /* BIT b,r; BIT b,(HL); BIT b,(IX+d); BIT b,(IY+d) */
 void BIT() {
     puts(" FIXME FIXME FIXME >>> BIT b,r; BIT b,(HL); BIT b,(IX+d); BIT b,(IY+d)");
+    /* only test cycle count for now */
+    uint8_t prog[] = {
+        0xCB, 0x47,             // BIT 0,A
+        0xCB, 0x46,             // BIT 0,(HL)
+        0xDD, 0xCB, 0x01, 0x46, // BIT 0,(IX+1)
+        0xFD, 0xCB, 0xFF, 0x46, // BIT 0,(IY-1)
+        0xDD, 0xCB, 0x02, 0x47, // undocumented: BIT 0,(IX+2),A
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(8 ==step());
+    T(12==step());
+    T(20==step());
+    T(20==step());
+    T(20==step());
 }
 
 /* SET b,r; SET b,(HL); SET b,(IX+d); SET b,(IY+d) */
 void SET() {
     puts(" FIXME FIXME FIXME >>> SET b,r; SET b,(HL); SET b,(IX+d); SET b,(IY+d)");
+    /* only test cycle count for now */
+    uint8_t prog[] = {
+        0xCB, 0xC7,             // SET 0,A
+        0xCB, 0xC6,             // SET 0,(HL)
+        0xDD, 0xCB, 0x01, 0xC6, // SET 0,(IX+1)
+        0xFD, 0xCB, 0xFF, 0xC6, // SET 0,(IY-1)
+        0xDD, 0xCB, 0x02, 0xC7, // undocumented: SET 0,(IX+2),A
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(8 ==step());
+    T(15==step());
+    T(23==step());
+    T(23==step());
+    T(23==step());
 }
 
 /* RES b,r; RES b,(HL); RES b,(IX+d); RES b,(IY+d) */
 void RES() {
     puts(" FIXME FIXME FIXME >>> RES b,r; RES b,(HL); RES b,(IX+d); RES b,(IY+d)");
+    /* only test cycle count for now */
+    uint8_t prog[] = {
+        0xCB, 0x87,             // RES 0,A
+        0xCB, 0x86,             // RES 0,(HL)
+        0xDD, 0xCB, 0x01, 0x86, // RES 0,(IX+1)
+        0xFD, 0xCB, 0xFF, 0x86, // RES 0,(IY-1)
+        0xDD, 0xCB, 0x02, 0x87, // undocumented: RES 0,(IX+2),A
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(8 ==step());
+    T(15==step());
+    T(23==step());
+    T(23==step());
+    T(23==step());
 }
 
 int main() {
