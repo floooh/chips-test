@@ -2511,17 +2511,135 @@ void IN() {
 
 /* INIR; INDR */
 void INIR_INDR() {
-    puts("FIXME FIXME FIXME >>> INIR; INDR");
+    puts(">>> INIR; INDR");
+    uint8_t prog[] = {
+        0x21, 0x00, 0x10,       // LD HL,0x1000
+        0x01, 0x02, 0x03,       // LD BC,0x0302
+        0xED, 0xB2,             // INIR
+        0x01, 0x03, 0x03,       // LD BC,0x0303
+        0xED, 0xBA              // INDR
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(10 == step()); T(0x1000 == cpu.HL);
+    T(10 == step()); T(0x0302 == cpu.BC);
+    T(21 == step());
+    T(0x1001 == cpu.HL);
+    T(0x0202 == cpu.BC);
+    T(0x04 == mem[0x1000]);
+    T(!(cpu.F & Z80_ZF));
+    T(21 == step());
+    T(0x1002 == cpu.HL);
+    T(0x0102 == cpu.BC);
+    T(0x04 == mem[0x1001]);
+    T(!(cpu.F & Z80_ZF));
+    T(16 == step());
+    T(0x1003 == cpu.HL);
+    T(0x0002 == cpu.BC);
+    T(0x04 == mem[0x1002]);
+    T(cpu.F & Z80_ZF);
+    T(10 == step()); T(0x0303 == cpu.BC);
+    T(21 == step());
+    T(0x1002 == cpu.HL);
+    T(0x0203 == cpu.BC);
+    T(0x06 == mem[0x1003]);
+    T(!(cpu.F & Z80_ZF));
+    T(21 == step());
+    T(0x1001 == cpu.HL);
+    T(0x0103 == cpu.BC);
+    T(0x06 == mem[0x1002]);
+    T(!(cpu.F & Z80_ZF));
+    T(16 == step());
+    T(0x1000 == cpu.HL);
+    T(0x0003 == cpu.BC);
+    T(0x06 == mem[0x1001]);
+    T(cpu.F & Z80_ZF);
 }
 
 /* OUT */
 void OUT() {
-    puts("FIXME FIXME FIXME >>> OUT");
+    puts(">>> OUT");
+    uint8_t prog[] = {
+        0x3E, 0x01,         // LD A,0x01
+        0xD3, 0x01,         // OUT (0x01),A
+        0xD3, 0xFF,         // OUT (0xFF),A
+        0x01, 0x34, 0x12,   // LD BC,0x1234
+        0x11, 0x78, 0x56,   // LD DE,0x5678
+        0x21, 0xCD, 0xAB,   // LD HL,0xABCD
+        0xED, 0x79,         // OUT (C),A
+        0xED, 0x41,         // OUT (C),B
+        0xED, 0x49,         // OUT (C),C
+        0xED, 0x51,         // OUT (C),D
+        0xED, 0x59,         // OUT (C),E
+        0xED, 0x61,         // OUT (C),H
+        0xED, 0x69,         // OUT (C),L
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(7 ==step()); T(0x01 == cpu.A);
+    T(11==step()); T(0x0101 == out_port); T(0x01 == out_byte); T(0x0102 == cpu.WZ);
+    T(11==step()); T(0x01FF == out_port); T(0x01 == out_byte); T(0x0100 == cpu.WZ);
+    T(10==step()); T(0x1234 == cpu.BC);
+    T(10==step()); T(0x5678 == cpu.DE);
+    T(10==step()); T(0xABCD == cpu.HL);
+    T(12==step()); T(0x1234 == out_port); T(0x01 == out_byte); T(0x1235 == cpu.WZ);
+    T(12==step()); T(0x1234 == out_port); T(0x12 == out_byte); T(0x1235 == cpu.WZ);
+    T(12==step()); T(0x1234 == out_port); T(0x34 == out_byte); T(0x1235 == cpu.WZ);
+    T(12==step()); T(0x1234 == out_port); T(0x56 == out_byte); T(0x1235 == cpu.WZ);
+    T(12==step()); T(0x1234 == out_port); T(0x78 == out_byte); T(0x1235 == cpu.WZ);
+    T(12==step()); T(0x1234 == out_port); T(0xAB == out_byte); T(0x1235 == cpu.WZ);
+    T(12==step()); T(0x1234 == out_port); T(0xCD == out_byte); T(0x1235 == cpu.WZ);
 }
 
 /* OTIR; OTDR */
 void OTIR_OTDR() {
-    puts("FIXME FIXME FIXME >>> OTIR; OTDR");
+    puts(">>> OTIR; OTDR");
+    uint8_t data[] = {
+        0x01, 0x02, 0x03, 0x04
+    };
+    uint8_t prog[] = {
+        0x21, 0x00, 0x10,       // LD HL,0x1000
+        0x01, 0x02, 0x03,       // LD BC,0x0302
+        0xED, 0xB3,             // OTIR
+        0x01, 0x03, 0x03,       // LD BC,0x0303
+        0xED, 0xBB,             // OTDR
+    };
+    copy(0x1000, data, sizeof(data));
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(10 == step()); T(0x1000 == cpu.HL);
+    T(10 == step()); T(0x0302 == cpu.BC);
+    T(21 == step());
+    T(0x1001 == cpu.HL);
+    T(0x0202 == cpu.BC);
+    T(0x0202 == out_port); T(0x01 == out_byte);
+    T(!(cpu.F & Z80_ZF));
+    T(21 == step());
+    T(0x1002 == cpu.HL);
+    T(0x0102 == cpu.BC);
+    T(0x0102 == out_port); T(0x02 == out_byte);
+    T(!(cpu.F & Z80_ZF));
+    T(16 == step());
+    T(0x1003 == cpu.HL);
+    T(0x0002 == cpu.BC);
+    T(0x0002 == out_port); T(0x03 == out_byte);
+    T(cpu.F & Z80_ZF);
+    T(10 == step()); T(0x0303 == cpu.BC);
+    T(21 == step());
+    T(0x1002 == cpu.HL);
+    T(0x0203 == cpu.BC);
+    T(0x0203 == out_port); T(0x04 == out_byte);
+    T(!(cpu.F & Z80_ZF));
+    T(21 == step());
+    T(0x1001 == cpu.HL);
+    T(0x0103 == cpu.BC);
+    T(0x0103 == out_port); T(0x03 == out_byte);
+    T(!(cpu.F & Z80_ZF));
+    T(16 == step());
+    T(0x1000 == cpu.HL);
+    T(0x0003 == cpu.BC);
+    T(0x0003 == out_port); T(0x02 == out_byte);
+    T(cpu.F & Z80_ZF);
 }
 
 /* ADD HL,rr; ADC HL,rr; SBC HL,rr; ADD IX,rr; ADD IY,rr */
