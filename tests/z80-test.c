@@ -1677,9 +1677,9 @@ void HALT() {
     };
     copy(0x0000, prog, sizeof(prog));
     init();
-    T(4==step()); T(0x0000 == cpu.PC); T(z80_any(&cpu, Z80_HALT));
-    T(4==step()); T(0x0000 == cpu.PC); T(z80_any(&cpu, Z80_HALT));
-    T(4==step()); T(0x0000 == cpu.PC); T(z80_any(&cpu, Z80_HALT));
+    T(4==step()); T(0x0000 == cpu.PC); T(cpu.CTRL & Z80_HALT);
+    T(4==step()); T(0x0000 == cpu.PC); T(cpu.CTRL & Z80_HALT);
+    T(4==step()); T(0x0000 == cpu.PC); T(cpu.CTRL & Z80_HALT);
 }
 
 /* LDI */
