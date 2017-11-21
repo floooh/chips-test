@@ -2165,7 +2165,6 @@ void CPL() {
     };
     copy(0x0000, prog, sizeof(prog));
     init();
-
     T(4==step()); T(0x00 == cpu.A); T(flags(Z80_ZF|Z80_NF));
     T(4==step()); T(0xFF == cpu.A); T(flags(Z80_ZF|Z80_HF|Z80_NF));
     T(4==step()); T(0x00 == cpu.A); T(flags(Z80_ZF|Z80_HF|Z80_NF));
@@ -2189,7 +2188,6 @@ void NEG() {
     };
     copy(0x0000, prog, sizeof(prog));
     init();
-
     T(7==step()); T(0x01 == cpu.A);
     T(8==step()); T(0xFF == cpu.A); T(flags(Z80_SF|Z80_HF|Z80_NF|Z80_CF));
     T(7==step()); T(0x00 == cpu.A); T(flags(Z80_ZF|Z80_HF|Z80_CF));
@@ -2213,7 +2211,6 @@ void CCF_SCF() {
     };
     copy(0x0000, prog, sizeof(prog));
     init();
-
     T(4==step()); T(0x00 == cpu.A); T(flags(Z80_ZF|Z80_NF));
     T(4==step()); T(0x00 == cpu.A); T(flags(Z80_ZF|Z80_CF));
     T(4==step()); T(0x00 == cpu.A); T(flags(Z80_ZF|Z80_HF));
@@ -2239,7 +2236,6 @@ void DI_EI_IM() {
     };
     copy(0x0000, prog, sizeof(prog));
     init();
-
     T(4==step()); T(!cpu.IFF1); T(!cpu.IFF2);
     T(4==step()); T(!cpu.IFF1); T(!cpu.IFF2);
     T(4==step()); T(cpu.IFF1);  T(cpu.IFF2);
@@ -2298,7 +2294,36 @@ void JP_cc_nn() {
 
 /* JP; JR */
 void JP_JR() {
-    puts("FIXME FIXME FIXME >>> JP; JR");
+    puts(">>> JP; JR");
+    uint8_t prog[] = {
+        0x21, 0x16, 0x02,           //      LD HL,l3
+        0xDD, 0x21, 0x19, 0x02,     //      LD IX,l4
+        0xFD, 0x21, 0x21, 0x02,     //      LD IY,l5
+        0xC3, 0x14, 0x02,           //      JP l0
+        0x18, 0x04,                 // l1:  JR l2
+        0x18, 0xFC,                 // l0:  JR l1
+        0xDD, 0xE9,                 // l3:  JP (IX)
+        0xE9,                       // l2:  JP (HL)
+        0xFD, 0xE9,                 // l4:  JP (IY)
+        0x18, 0x06,                 // l6:  JR l7
+        0x00, 0x00, 0x00, 0x00,     //      4x NOP
+        0x18, 0xF8,                 // l5:  JR l6
+        0x00                        // l7:  NOP
+    };
+    copy(0x0204, prog, sizeof(prog));
+    init();
+    cpu.PC = 0x0204;
+    T(10==step()); T(0x0216 == cpu.HL);
+    T(14==step()); T(0x0219 == cpu.IX);
+    T(14==step()); T(0x0221 == cpu.IY);
+    T(10==step()); T(0x0214 == cpu.PC); T(0x0214 == cpu.WZ);
+    T(12==step()); T(0x0212 == cpu.PC); T(0x0212 == cpu.WZ);
+    T(12==step()); T(0x0218 == cpu.PC); T(0x0218 == cpu.WZ);
+    T(4 ==step()); T(0x0216 == cpu.PC); T(0x0218 == cpu.WZ);
+    T(8 ==step()); T(0x0219 == cpu.PC); T(0x0218 == cpu.WZ);
+    T(8 ==step()); T(0x0221 == cpu.PC); T(0x0218 == cpu.WZ);
+    T(12==step()); T(0x021B == cpu.PC); T(0x021B == cpu.WZ);
+    T(12==step()); T(0x0223 == cpu.PC); T(0x0223 == cpu.WZ);
 }
 
 /* JR_cc_e) */
@@ -2322,7 +2347,6 @@ void JR_cc_e() {
     copy(0x0204, prog, sizeof(prog));
     init();
     cpu.PC = 0x0204;
-
     T(4 ==step()); T(0x00 == cpu.A); T(flags(Z80_ZF|Z80_NF));
     T(7 ==step()); T(0x0207 == cpu.PC);
     T(12==step()); T(0x020A == cpu.PC); T(0x020A == cpu.WZ);
@@ -2347,7 +2371,6 @@ void DJNZ() {
     copy(0x0204, prog, sizeof(prog));
     init();
     cpu.PC = 0x0204;
-
     T(7 ==step()); T(0x03 == cpu.B);
     T(4 ==step()); T(0x00 == cpu.A);
     T(4 ==step()); T(0x01 == cpu.A);
@@ -2370,18 +2393,14 @@ void CALL_RET() {
     init();
     cpu.SP = 0x0100;
     cpu.PC = 0x0204;
-
     T(17 == step());
     T(0x020A == cpu.PC); T(0x020A == cpu.WZ); T(0x00FE == cpu.SP);
     T(0x07 == mem[0x00FE]); T(0x02 == mem[0x00FF]);
-
     T(10 == step());
     T(0x0207 == cpu.PC); T(0x0207 == cpu.WZ); T(0x0100 == cpu.SP);
-
     T(17 == step());
     T(0x020A == cpu.PC); T(0x020A == cpu.WZ); T(0x00FE == cpu.SP);
     T(0x0A == mem[0x00FE]); T(0x02 == mem[0x00FF]);
-
     T(10 == step());
     T(0x020A == cpu.PC); T(0x020A == cpu.WZ); T(0x0100 == cpu.SP);
 }
@@ -2420,7 +2439,6 @@ void CALL_RET_cc() {
     init();
     cpu.PC = 0x0204;
     cpu.SP = 0x0100;
-
     T(4 ==step()); T(0x00 == cpu.A);
     T(10==step()); T(0x0208 == cpu.PC); T(0x0229 == cpu.WZ);
     T(17==step()); T(0x0229 == cpu.PC); T(0x0229 == cpu.WZ);
