@@ -10,7 +10,8 @@
 
 z80 cpu;
 uint8_t mem[1<<16] = { 0 };
-
+uint16_t out_port = 0;
+uint8_t out_byte = 0;
 void tick(z80* cpu) {
     if (cpu->CTRL & Z80_MREQ) {
         if (cpu->CTRL & Z80_RD) {
@@ -25,9 +26,12 @@ void tick(z80* cpu) {
     else if (cpu->CTRL & Z80_IORQ) {
         if (cpu->CTRL & Z80_RD) {
             /* IN */
+            cpu->DATA = (cpu->ADDR & 0xFF) * 2;
         }
         else if (cpu->CTRL & Z80_WR) {
             /* OUT */
+            out_port = cpu->ADDR;
+            out_byte = cpu->DATA;
         }
     }
 }
@@ -2467,7 +2471,42 @@ void CALL_RET_cc() {
 
 /* IN */
 void IN() {
-    puts("FIXME FIXME FIXME >>> IN");
+    puts(">>> IN");
+    uint8_t prog[] = {
+        0x3E, 0x01,         // LD A,0x01
+        0xDB, 0x03,         // IN A,(0x03)
+        0xDB, 0x04,         // IN A,(0x04)
+        0x01, 0x02, 0x02,   // LD BC,0x0202
+        0xED, 0x78,         // IN A,(C)
+        0x01, 0xFF, 0x05,   // LD BC,0x05FF
+        0xED, 0x50,         // IN D,(C)
+        0x01, 0x05, 0x05,   // LD BC,0x0505
+        0xED, 0x58,         // IN E,(C)
+        0x01, 0x06, 0x01,   // LD BC,0x0106
+        0xED, 0x60,         // IN H,(C)
+        0x01, 0x00, 0x10,   // LD BC,0x0000
+        0xED, 0x68,         // IN L,(C)
+        0xED, 0x40,         // IN B,(C)
+        0xED, 0x48,         // IN C,(c)
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    cpu.F = Z80_HF|Z80_CF;
+    T(7 ==step()); T(0x01 == cpu.A); T(flags(Z80_HF|Z80_CF));
+    T(11==step()); T(0x06 == cpu.A); T(flags(Z80_HF|Z80_CF)); T(0x0104 == cpu.WZ);
+    T(11==step()); T(0x08 == cpu.A); T(flags(Z80_HF|Z80_CF)); T(0x0605 == cpu.WZ);
+    T(10==step()); T(0x0202 == cpu.BC);
+    T(12==step()); T(0x04 == cpu.A); T(flags(Z80_CF)); T(0x0203 == cpu.WZ);
+    T(10==step()); T(0x05FF == cpu.BC);
+    T(12==step()); T(0xFE == cpu.D); T(flags(Z80_SF|Z80_CF)); T(0x0600 == cpu.WZ);
+    T(10==step()); T(0x0505 == cpu.BC);
+    T(12==step()); T(0x0A == cpu.E); T(flags(Z80_PF|Z80_CF)); T(0x0506 == cpu.WZ);
+    T(10==step()); T(0x0106 == cpu.BC);
+    T(12==step()); T(0x0C == cpu.H); T(flags(Z80_PF|Z80_CF)); T(0x0107 == cpu.WZ);
+    T(10==step()); T(0x1000 == cpu.BC);
+    T(12==step()); T(0x00 == cpu.L); T(flags(Z80_ZF|Z80_PF|Z80_CF)); T(0x1001 == cpu.WZ);
+    T(12==step()); T(0x00 == cpu.B); T(flags(Z80_ZF|Z80_PF|Z80_CF)); T(0x1001 == cpu.WZ);
+    T(12==step()); T(0x00 == cpu.C); T(flags(Z80_ZF|Z80_PF|Z80_CF)); T(0x0001 == cpu.WZ);
 }
 
 /* INIR; INDR */
