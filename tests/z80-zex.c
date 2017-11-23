@@ -26,6 +26,26 @@ static void put_char(char c) {
     putchar(c);
 }
 
+/* Z80 tick callback */
+static void tick(z80* cpu) {
+    if (cpu->CTRL & Z80_MREQ) {
+        if (cpu->CTRL & Z80_RD) {
+            cpu->DATA = mem[cpu->ADDR];
+        }
+        else if (cpu->CTRL & Z80_WR) {
+            mem[cpu->ADDR] = cpu->DATA;
+        }
+    }
+    else if (cpu->CTRL & Z80_IORQ) {
+        if (cpu->CTRL & Z80_RD) {
+            cpu->DATA = 0xFF;
+        }
+        else if (cpu->CTRL & Z80_WR) {
+            /* IO write, do nothing */
+        }
+    }
+}
+
 /* emulate character and string output CP/M system calls */
 static bool cpm_bdos(z80* cpu) {
     bool retval = true;
@@ -46,28 +66,8 @@ static bool cpm_bdos(z80* cpu) {
         retval = false;
     }
     // emulate a RET
-    _z80_ret(cpu);
+    _z80_ret(cpu, cpu->tick);
     return retval;
-}
-
-/* Z80 tick callback */
-static void tick(z80* cpu) {
-    if (cpu->CTRL & Z80_MREQ) {
-        if (cpu->CTRL & Z80_RD) {
-            cpu->DATA = mem[cpu->ADDR];
-        }
-        else if (cpu->CTRL & Z80_WR) {
-            mem[cpu->ADDR] = cpu->DATA;
-        }
-    }
-    else if (cpu->CTRL & Z80_IORQ) {
-        if (cpu->CTRL & Z80_RD) {
-            cpu->DATA = 0xFF;
-        }
-        else if (cpu->CTRL & Z80_WR) {
-            /* IO write, do nothing */
-        }
-    }
 }
 
 /* run CPU through the configured test (ZEXDOC or ZEXALL) */
