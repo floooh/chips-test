@@ -66,7 +66,7 @@ static bool cpm_bdos(z80* cpu) {
         retval = false;
     }
     // emulate a RET
-    _z80_ret(cpu, cpu->tick);
+    _z80_ret(cpu, cpu->tick, 0);
     return retval;
 }
 
