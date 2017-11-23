@@ -42,6 +42,8 @@ void init() {
         .tick_context = 0
     };
     z80_init(&cpu, &desc);
+    cpu.F = 0;
+    cpu.AF_ = 0xFF00;
 }
 
 void copy(uint16_t addr, uint8_t* bytes, size_t num) {
@@ -709,15 +711,15 @@ void EX() {
     T(10==step()); T(0x1234 == cpu.HL);
     T(10==step()); T(0x5678 == cpu.DE);
     T(4 ==step()); T(0x1234 == cpu.DE); T(0x5678 == cpu.HL);
-    T(7 ==step()); T(0x1100 == cpu.AF); T(0x0000 == cpu.AF_);
-    T(4 ==step()); T(0x0000 == cpu.AF); T(0x1100 == cpu.AF_);
+    T(7 ==step()); T(0x1100 == cpu.AF); T(0xFF00 == cpu.AF_);
+    T(4 ==step()); T(0xFF00 == cpu.AF); T(0x1100 == cpu.AF_);
     T(7 ==step()); T(0x2200 == cpu.AF); T(0x1100 == cpu.AF_);
     T(4 ==step()); T(0x1100 == cpu.AF); T(0x2200 == cpu.AF_);
     T(10==step()); T(0x9ABC == cpu.BC);
     T(4 ==step());
-    T(0x0000 == cpu.HL); T(0x5678 == cpu.HL_);
-    T(0x0000 == cpu.DE); T(0x1234 == cpu.DE_);
-    T(0x0000 == cpu.BC); T(0x9ABC == cpu.BC_);
+    T(0xFFFF == cpu.HL); T(0x5678 == cpu.HL_);
+    T(0xFFFF == cpu.DE); T(0x1234 == cpu.DE_);
+    T(0xFFFF == cpu.BC); T(0x9ABC == cpu.BC_);
     T(10==step()); T(0x1111 == cpu.HL);
     T(10==step()); T(0x2222 == cpu.DE);
     T(10==step()); T(0x3333 == cpu.BC);
@@ -1146,6 +1148,7 @@ void OR_XOR_A_iHLIXIYi() {
     puts(">>> OR/XOR A,(HL); OR/XOR A,(IX+d); OR/XOR A,(IY+d)");
     uint8_t data[] = { 0x41, 0x62, 0x84 };
     uint8_t prog[] = {
+        0x3E, 0x00,                 // LD A,0x00
         0x21, 0x00, 0x10,           // LD HL,0x1000
         0xDD, 0x21, 0x00, 0x10,     // LD IX,0x1000
         0xFD, 0x21, 0x03, 0x10,     // LD IY,0x1003
@@ -1159,7 +1162,7 @@ void OR_XOR_A_iHLIXIYi() {
     copy(0x1000, data, sizeof(data));
     copy(0x0000, prog, sizeof(prog));
     init();
-    step(); step(); step();
+    step(); step(); step(); step();
     T(7 ==step()); T(0x41 == cpu.A); T(flags(Z80_PF));
     T(19==step()); T(0x63 == cpu.A); T(flags(Z80_PF));
     T(19==step()); T(0xE7 == cpu.A); T(flags(Z80_SF|Z80_PF));
