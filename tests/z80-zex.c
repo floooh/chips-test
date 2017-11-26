@@ -27,18 +27,18 @@ static void put_char(char c) {
 }
 
 /* Z80 tick callback */
-static uint64_t tick(uint64_t pins, void* ctx) {
+static uint64_t tick(uint64_t pins) {
     if (pins & Z80_MREQ) {
         if (pins & Z80_RD) {
-            _SDATA(mem[_GADDR()]);
+            Z80_SET_DATA(pins, mem[Z80_ADDR(pins)]);
         }
         else if (pins & Z80_WR) {
-            mem[_GADDR()] = _GDATA();
+            mem[Z80_ADDR(pins)] = Z80_DATA(pins);
         }
     }
     else if (pins & Z80_IORQ) {
         if (pins & Z80_RD) {
-            _SDATA(0xFF);
+            Z80_SET_DATA(pins, 0xFF);
         }
         else if (pins & Z80_WR) {
             /* IO write, do nothing */

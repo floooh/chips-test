@@ -12,26 +12,26 @@ z80 cpu;
 uint8_t mem[1<<16] = { 0 };
 uint16_t out_port = 0;
 uint8_t out_byte = 0;
-uint64_t tick(uint64_t pins, void* ctx) {
+uint64_t tick(uint64_t pins) {
     if (pins & Z80_MREQ) {
         if (pins & Z80_RD) {
             /* memory read */
-            _SDATA(mem[_GADDR()]);
+            Z80_SET_DATA(pins, mem[Z80_ADDR(pins)]);
         }
         else if (pins & Z80_WR) {
             /* memory write */
-            mem[_GADDR()] = _GDATA();
+            mem[Z80_ADDR(pins)] = Z80_DATA(pins);
         }
     }
     else if (pins & Z80_IORQ) {
         if (pins & Z80_RD) {
             /* IN */
-            _SDATA((_GADDR() & 0xFF) * 2);
+            Z80_SET_DATA(pins, (Z80_ADDR(pins) & 0xFF) * 2);
         }
         else if (pins & Z80_WR) {
             /* OUT */
-            out_port = _GADDR();
-            out_byte = _GDATA();
+            out_port = Z80_ADDR(pins);
+            out_byte = Z80_DATA(pins);
         }
     }
     return pins;
@@ -40,7 +40,6 @@ uint64_t tick(uint64_t pins, void* ctx) {
 void init() {
     z80_desc desc = {
         .tick_func = tick,
-        .tick_context = 0
     };
     z80_init(&cpu, &desc);
     cpu.F = 0;
