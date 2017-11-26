@@ -67,9 +67,9 @@ static bool cpm_bdos(z80* cpu) {
         retval = false;
     }
     // emulate a RET
-    cpu->Z = mem[cpu->SP++];
-    cpu->W = mem[cpu->SP++];
-    cpu->PC = cpu->WZ;
+    uint8_t z = mem[cpu->SP++];
+    uint8_t w = mem[cpu->SP++];
+    cpu->PC = cpu->WZ = (w<<8)|z;
     return retval;
 }
 
