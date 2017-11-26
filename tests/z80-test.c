@@ -12,28 +12,29 @@ z80 cpu;
 uint8_t mem[1<<16] = { 0 };
 uint16_t out_port = 0;
 uint8_t out_byte = 0;
-void tick(z80* cpu) {
-    if (cpu->CTRL & Z80_MREQ) {
-        if (cpu->CTRL & Z80_RD) {
+uint64_t tick(uint64_t pins, void* ctx) {
+    if (pins & Z80_MREQ) {
+        if (pins & Z80_RD) {
             /* memory read */
-            cpu->DATA = mem[cpu->ADDR];
+            _SDATA(mem[_GADDR()]);
         }
-        else if (cpu->CTRL & Z80_WR) {
+        else if (pins & Z80_WR) {
             /* memory write */
-            mem[cpu->ADDR] = cpu->DATA;
+            mem[_GADDR()] = _GDATA();
         }
     }
-    else if (cpu->CTRL & Z80_IORQ) {
-        if (cpu->CTRL & Z80_RD) {
+    else if (pins & Z80_IORQ) {
+        if (pins & Z80_RD) {
             /* IN */
-            cpu->DATA = (cpu->ADDR & 0xFF) * 2;
+            _SDATA((_GADDR() & 0xFF) * 2);
         }
-        else if (cpu->CTRL & Z80_WR) {
+        else if (pins & Z80_WR) {
             /* OUT */
-            out_port = cpu->ADDR;
-            out_byte = cpu->DATA;
+            out_port = _GADDR();
+            out_byte = _GDATA();
         }
     }
+    return pins;
 }
 
 void init() {
@@ -1782,9 +1783,9 @@ void HALT() {
     };
     copy(0x0000, prog, sizeof(prog));
     init();
-    T(4==step()); T(0x0000 == cpu.PC); T(cpu.CTRL & Z80_HALT);
-    T(4==step()); T(0x0000 == cpu.PC); T(cpu.CTRL & Z80_HALT);
-    T(4==step()); T(0x0000 == cpu.PC); T(cpu.CTRL & Z80_HALT);
+    T(4==step()); T(0x0000 == cpu.PC); T(cpu.PINS & Z80_HALT);
+    T(4==step()); T(0x0000 == cpu.PC); T(cpu.PINS & Z80_HALT);
+    T(4==step()); T(0x0000 == cpu.PC); T(cpu.PINS & Z80_HALT);
 }
 
 /* LDI */

@@ -27,23 +27,24 @@ static void put_char(char c) {
 }
 
 /* Z80 tick callback */
-static void tick(z80* cpu) {
-    if (cpu->CTRL & Z80_MREQ) {
-        if (cpu->CTRL & Z80_RD) {
-            cpu->DATA = mem[cpu->ADDR];
+static uint64_t tick(uint64_t pins, void* ctx) {
+    if (pins & Z80_MREQ) {
+        if (pins & Z80_RD) {
+            _SDATA(mem[_GADDR()]);
         }
-        else if (cpu->CTRL & Z80_WR) {
-            mem[cpu->ADDR] = cpu->DATA;
+        else if (pins & Z80_WR) {
+            mem[_GADDR()] = _GDATA();
         }
     }
-    else if (cpu->CTRL & Z80_IORQ) {
-        if (cpu->CTRL & Z80_RD) {
-            cpu->DATA = 0xFF;
+    else if (pins & Z80_IORQ) {
+        if (pins & Z80_RD) {
+            _SDATA(0xFF);
         }
-        else if (cpu->CTRL & Z80_WR) {
+        else if (pins & Z80_WR) {
             /* IO write, do nothing */
         }
     }
+    return pins;
 }
 
 /* emulate character and string output CP/M system calls */
