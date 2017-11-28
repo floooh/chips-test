@@ -1,11 +1,13 @@
 //------------------------------------------------------------------------------
-//  z80-zes.c
+//  z80-zex.c
 //
 //  Runs Frank Cringle's zexdoc and zexall test through the Z80 emu. Provide
 //  a minimal CP/M environment to make these work.
 //------------------------------------------------------------------------------
 #define CHIPS_IMPL
 #include "chips/z80.h"
+#define SOKOL_IMPL
+#include "sokol_time.h"
 #include "zex-dump.h"
 #include <stdio.h>
 
@@ -78,6 +80,7 @@ static bool run_test(z80* cpu, const char* name) {
     bool running = true;
     uint64_t ticks = 0;
     uint64_t ops = 0;
+    uint64_t start_time = stm_now();
     while (running) {
         ticks += z80_step(cpu);
         ops++;
@@ -91,6 +94,8 @@ static bool run_test(z80* cpu, const char* name) {
             running = false;
         }
     }
+    double dur = stm_sec(stm_since(start_time));
+    printf("\n%s: %llu cycles, %llu ops in %.3fsecs (%.2f MHz / %.2f MIPS)\n", name, ticks, ops, dur, (ticks/dur)/1000000.0,(ops/dur)/1000000.0);
 
     /* check if an error occurred */
     if (output_size > 0) {
@@ -130,6 +135,7 @@ static bool zexall() {
 }
 
 int main() {
+    stm_setup();
     if (!zexdoc()) {
         return 10;
     }
