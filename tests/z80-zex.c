@@ -116,7 +116,7 @@ static bool zexdoc() {
     memset(mem, 0, sizeof(mem));
     memcpy(&mem[0x0100], dump_zexdoc, sizeof(dump_zexdoc));
     z80 cpu;
-    z80_init(&cpu, &(z80_desc){ .tick_func = tick });
+    z80_init(&cpu, &(z80_desc){ .tick_cb = tick });
     cpu.SP = 0xF000;
     cpu.PC = 0x0100;
     return run_test(&cpu, "ZEXDOC");
@@ -128,7 +128,7 @@ static bool zexall() {
     memset(mem, 0, sizeof(mem));
     memcpy(&mem[0x0100], dump_zexall, sizeof(dump_zexall));
     z80 cpu;
-    z80_init(&cpu, &(z80_desc){ .tick_func = tick });
+    z80_init(&cpu, &(z80_desc){ .tick_cb = tick });
     cpu.SP = 0xF000;
     cpu.PC = 0x0100;
     return run_test(&cpu, "ZEXALL");

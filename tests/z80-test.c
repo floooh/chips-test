@@ -39,7 +39,7 @@ uint64_t tick(uint64_t pins) {
 
 void init() {
     z80_desc desc = {
-        .tick_func = tick,
+        .tick_cb = tick,
     };
     z80_init(&cpu, &desc);
     cpu.F = 0;
@@ -2754,6 +2754,11 @@ void RES() {
     T(23==step());
 }
 
+/* RST */
+void RST() {
+    puts(" FIXME FIXME FIXME >>> RST");
+}
+
 int main() {
     LD_A_RI();
     LD_IR_A();
@@ -2828,6 +2833,7 @@ int main() {
     BIT();
     SET();
     RES();
+    RST();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }

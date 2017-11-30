@@ -8,7 +8,10 @@ get_filename_component(FIPS_ROOT_DIR "../fips" ABSOLUTE)
 include("${FIPS_ROOT_DIR}/cmake/fips.cmake")
 
 fips_setup(PROJECT chips-test)
+fips_ide_group(tests)
 fips_add_subdirectory(tests)
+fips_ide_group(examples)
+fips_add_subdirectory(examples)
 fips_finish()
 
 
