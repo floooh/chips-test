@@ -19,7 +19,6 @@
 #define SOKOL_IMPL
 #define SOKOL_GLCORE33
 #include "sokol_gfx.h"
-#include "sokol_time.h"
 #define CHIPS_IMPL
 #include "chips/z80.h"
 #include "chips/z80pio.h"
@@ -64,7 +63,7 @@ int main() {
     /* emulate and draw frames */
     uint32_t overrun_ticks = 0;
     while (!glfwWindowShouldClose(w)) {
-        /* number of 2MHz ticks per 60Hz frame */
+        /* number of 2MHz ticks in a 60Hz frame */
         uint32_t ticks_to_run = (2000000 / 60) + overrun_ticks;
         uint32_t ticks_executed = z80_run(&cpu, ticks_to_run);
         assert(ticks_executed >= ticks_to_run);
@@ -122,14 +121,13 @@ GLFWwindow* init_gfx() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    GLFWwindow* w = glfwCreateWindow(640, 640, "Sokol Clear GLFW", 0, 0);
+    GLFWwindow* w = glfwCreateWindow(640, 640, "Z1013 Example", 0, 0);
     glfwMakeContextCurrent(w);
     glfwSwapInterval(1);
     flextInit(w);
 
     /* setup sokol_gfx and sokol_time */
     sg_setup(&(sg_desc){});
-    stm_setup();
 
     /* rendering resources for textured fullscreen rectangle */
     float quad_vertices[] = { 0.0f, 0.0f,  1.0f, 0.0f,  0.0f, 1.0f,  1.0f, 1.0f };
@@ -198,14 +196,12 @@ void decode_video() {
     }
 }
 
+/* decode emulator framebuffer into texture, and draw fullscreen rect */
 void draw_frame(GLFWwindow* w) {
-    /* decode emulator framebuffer and update texture */
     decode_video();
     sg_update_image(draw_state.fs_images[0], &(sg_image_content){
         .subimage[0][0] = { .ptr = rgba8_buffer, .size = sizeof(rgba8_buffer) }
     });
-
-    /* draw a textured fullscreen rectangle, don't need to clear */
     int width, height;
     glfwGetFramebufferSize(w, &width, &height);
     sg_pass_action pass_action = {
