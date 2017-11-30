@@ -64,7 +64,7 @@ int main() {
     uint32_t overrun_ticks = 0;
     while (!glfwWindowShouldClose(w)) {
         /* number of 2MHz ticks in a 60Hz frame */
-        uint32_t ticks_to_run = (2000000 / 60) + overrun_ticks;
+        uint32_t ticks_to_run = (2000000 / 60) - overrun_ticks;
         uint32_t ticks_executed = z80_run(&cpu, ticks_to_run);
         assert(ticks_executed >= ticks_to_run);
         overrun_ticks = ticks_executed - ticks_to_run;
