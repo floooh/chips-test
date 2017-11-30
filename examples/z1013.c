@@ -126,7 +126,7 @@ GLFWwindow* init_gfx() {
     glfwSwapInterval(1);
     flextInit(w);
 
-    /* setup sokol_gfx and sokol_time */
+    /* setup sokol_gfx */
     sg_setup(&(sg_desc){});
 
     /* rendering resources for textured fullscreen rectangle */
