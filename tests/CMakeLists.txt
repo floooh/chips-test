@@ -14,3 +14,7 @@ fips_begin_app(z80pio-test cmdline)
     fips_files(z80pio-test.c)
 fips_end_app()
 
+fips_begin_app(kbd-test cmdline)
+    fips_vs_warning_level(3)
+    fips_files(kbd-test.c)
+fips_end_app()
