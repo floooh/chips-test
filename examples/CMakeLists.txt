@@ -3,7 +3,7 @@ fips_begin_lib(flextgl)
     fips_src(flextgl)
 fips_end_lib()
 
-fips_begin_app(z1013 windowed)
+fips_begin_app(z1013 cmdline)
     fips_vs_warning_level(3)
     fips_files(z1013.c)
     fips_generate(FROM z1013-roms.yml TYPE dump SOURCE z1013-roms.c HEADER z1013-roms.h)
