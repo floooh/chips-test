@@ -127,7 +127,7 @@ GLFWwindow* init_gfx() {
     flextInit(w);
 
     /* setup sokol_gfx */
-    sg_setup(&(sg_desc){});
+    sg_setup(&(sg_desc){0});
 
     /* rendering resources for textured fullscreen rectangle */
     float quad_vertices[] = { 0.0f, 0.0f,  1.0f, 0.0f,  0.0f, 1.0f,  1.0f, 1.0f };
