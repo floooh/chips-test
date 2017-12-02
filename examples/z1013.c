@@ -258,7 +258,6 @@ void on_key(GLFWwindow* w, int glfw_key, int scancode, int action, int mods) {
         case GLFW_KEY_DOWN:     key = 0x0A; break;
         case GLFW_KEY_UP:       key = 0x0B; break;
         case GLFW_KEY_ESCAPE:   key = 0x03; break;
-        case GLFW_KEY_SPACE:    key = ' '; break;
     }
     if (key) {
         if ((GLFW_PRESS == action) || (GLFW_REPEAT == action)) {
