@@ -6,6 +6,7 @@ fips_end_app()
 fips_begin_app(z80-zex cmdline)
     fips_vs_warning_level(3)
     fips_files(z80-zex.c)
+    fips_dir(roms)
     fips_generate(FROM zex-dump.yml TYPE dump SOURCE zex-dump.c HEADER zex-dump.h)
 fips_end_app()
 

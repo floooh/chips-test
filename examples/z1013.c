@@ -11,6 +11,12 @@
     and a 2 KByte operating system ROM starting at F000.
 
     No cassette-tape / beeper sound emulated!
+
+    I have added a pre-loaded KC-BASIC interpreter:
+
+    Start the BASIC interpreter with 'J 300', return to OS with 'BYE'.
+
+    Enter BASIC editing mode with 'AUTO', leave by pressing Esc.
 */
 #define GLFW_INCLUDE_NONE
 #include "GLFW/glfw3.h"
@@ -18,11 +24,12 @@
 #define SOKOL_IMPL
 #define SOKOL_GLCORE33
 #include "sokol_gfx.h"
+#include "sokol_time.h"
 #define CHIPS_IMPL
 #include "chips/z80.h"
 #include "chips/z80pio.h"
 #include "chips/keyboard_matrix.h"
-#include "z1013-roms.h"
+#include "roms/z1013-roms.h"
 #include <ctype.h> /* isupper, islower, toupper, tolower */
 
 /* the Z1013 hardware */
@@ -69,22 +76,23 @@ int main() {
         .sticky_count = 2,
     });
     /* shift key is column 7, line 6 */
-    kbd_register_shift(&kbd, 1, 7, 6);
+    const int shift = 0, shift_mask = (1<<shift);
+    const int ctrl = 1, ctrl_mask = (1<<ctrl);
+    kbd_register_modifier(&kbd, shift, 7, 6);
     /* ctrl key is column 6, line 5 */
-    kbd_register_shift(&kbd, 2, 6, 5);
+    kbd_register_modifier(&kbd, ctrl, 6, 5);
     /* alpha-numeric keys */
     const char* keymap =
         /* unshifted keys */
         "13579-  QETUO@  ADGJL*  YCBM.^  24680[  WRZIP]  SFHK+\\  XVN,/_  "
         /* shift layer */
         "!#%')=  qetuo`  adgjl:  ycbm>~  \"$&( {  wrzip}  sfhk;|  xvn<?   ";
-    for (int shift = 0; shift < 2; shift++) {
-        const uint8_t shift_mask = shift ? (1<<0):0;
+    for (int layer = 0; layer < 2; layer++) {
         for (int line = 0; line < 8; line++) {
             for (int col = 0; col < 8; col++) {
-                int c = keymap[shift*64 + line*8 + col];
+                int c = keymap[layer*64 + line*8 + col];
                 if (c != 0x20) {
-                    kbd_register_key(&kbd, c, col, line, shift_mask);
+                    kbd_register_key(&kbd, c, col, line, layer?shift_mask:0);
                 }
             }
         }
@@ -96,7 +104,7 @@ int main() {
     kbd_register_key(&kbd, 0x0A, 6, 7, 0);  /* cursor down */
     kbd_register_key(&kbd, 0x0B, 6, 6, 0);  /* cursor up */
     kbd_register_key(&kbd, 0x0D, 6, 1, 0);  /* enter */
-    kbd_register_key(&kbd, 0x03, 1, 3, (1<<1)); /* map Esc to Ctrl+C (STOP/BREAK) */
+    kbd_register_key(&kbd, 0x03, 1, 3, ctrl_mask); /* map Esc to Ctrl+C (STOP/BREAK) */
 
     /* GLFW keyboard callbacks */
     glfwSetKeyCallback(w, on_key);
@@ -106,14 +114,20 @@ int main() {
     assert(sizeof(dump_z1013_mon_a2) == 2048);
     memcpy(&mem[0xF000], dump_z1013_mon_a2, sizeof(dump_z1013_mon_a2));
 
+    /* copy BASIC interpreter to 0x0100, skip first 0x20 bytes .z80 file format header */
+    assert(0x0100 + sizeof(dump_kc_basic) < 0xF000);
+    memcpy(&mem[0x0100], dump_kc_basic+0x20, sizeof(dump_kc_basic)-0x20);
+
     /* execution starts at 0xF000 */
     cpu.PC = 0xF000;
 
     /* emulate and draw frames */
     uint32_t overrun_ticks = 0;
+    uint64_t last_time_stamp = stm_now();
     while (!glfwWindowShouldClose(w)) {
-        /* number of 2MHz ticks in a 60Hz frame */
-        uint32_t ticks_to_run = (2000000 / 60) - overrun_ticks;
+        /* number of 2MHz ticks in host frame */
+        double frame_time = stm_sec(stm_laptime(&last_time_stamp));
+        uint32_t ticks_to_run = (uint32_t) ((2000000 * frame_time) - overrun_ticks);
         uint32_t ticks_executed = z80_run(&cpu, ticks_to_run);
         assert(ticks_executed >= ticks_to_run);
         overrun_ticks = ticks_executed - ticks_to_run;
@@ -171,7 +185,7 @@ uint64_t tick(uint64_t pins) {
     return pins;
 }
 
-/* PIO input callback, scans the upper or lower 4 lines of the keyboard matrix */
+/* PIO input callback, scan the upper or lower 4 lines of the keyboard matrix */
 uint8_t pio_in(int port_id) {
     uint8_t data = 0;
     if (Z80PIO_PORT_A == port_id) {
@@ -255,22 +269,21 @@ void on_key(GLFWwindow* w, int glfw_key, int scancode, int action, int mods) {
     }
 }
 
+/* setup GLFW, flextGL, sokol_gfx, sokol_time and create gfx resources */
 GLFWwindow* init_gfx() {
-    /* create window and GL context via GLFW */
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    GLFWwindow* w = glfwCreateWindow(640, 640, "Z1013 Example", 0, 0);
+    GLFWwindow* w = glfwCreateWindow(640, 640, "Z1013 Example ('j 300' to start BASIC)", 0, 0);
     glfwMakeContextCurrent(w);
     glfwSwapInterval(1);
     flextInit(w);
 
-    /* setup sokol_gfx */
     sg_setup(&(sg_desc){0});
+    stm_setup();
 
-    /* rendering resources for textured fullscreen rectangle */
     float quad_vertices[] = { 0.0f, 0.0f,  1.0f, 0.0f,  0.0f, 1.0f,  1.0f, 1.0f };
     draw_state.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
         .size = sizeof(quad_vertices),
@@ -311,10 +324,6 @@ GLFWwindow* init_gfx() {
         .height = 256,
         .pixel_format = SG_PIXELFORMAT_RGBA8,
         .usage = SG_USAGE_STREAM,
-        .min_filter = SG_FILTER_NEAREST,
-        .mag_filter = SG_FILTER_NEAREST,
-        .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
-        .wrap_v = SG_WRAP_CLAMP_TO_EDGE
     });
     return w;
 }

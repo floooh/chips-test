@@ -8,7 +8,7 @@
 #include "chips/z80.h"
 #define SOKOL_IMPL
 #include "sokol_time.h"
-#include "zex-dump.h"
+#include "roms/zex-dump.h"
 #include <stdio.h>
 
 enum {

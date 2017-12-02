@@ -3,3 +3,4 @@
 // machine generated, do not edit!
 extern unsigned char dump_z1013_font[2048];
 extern unsigned char dump_z1013_mon_a2[2048];
+extern unsigned char dump_kc_basic[10783];
