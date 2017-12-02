@@ -44,6 +44,8 @@ uint8_t mem[1<<16];
 uint64_t tick(uint64_t pins);
 uint8_t pio_in(int port_id);
 void pio_out(int port_id, uint8_t data);
+
+/* GLFW keyboard input callbacks */
 void on_key(GLFWwindow* w, int key, int scancode, int action, int mods);
 void on_char(GLFWwindow* w, unsigned int codepoint);
 
@@ -59,7 +61,7 @@ int main() {
     /* setup rendering via GLFW and sokol_gfx */
     GLFWwindow* w = init_gfx();
 
-    /* initialize the Z80 CPU PIO */
+    /* initialize the Z80 CPU and PIO */
     z80_init(&cpu, &(z80_desc){
         .tick_cb = tick
     });
@@ -77,9 +79,9 @@ int main() {
     });
     /* shift key is column 7, line 6 */
     const int shift = 0, shift_mask = (1<<shift);
-    const int ctrl = 1, ctrl_mask = (1<<ctrl);
     kbd_register_modifier(&kbd, shift, 7, 6);
     /* ctrl key is column 6, line 5 */
+    const int ctrl = 1, ctrl_mask = (1<<ctrl);
     kbd_register_modifier(&kbd, ctrl, 6, 5);
     /* alpha-numeric keys */
     const char* keymap =
@@ -177,7 +179,7 @@ uint64_t tick(uint64_t pins) {
                 case 0x01: z80pio_write_ctrl(&pio, Z80PIO_PORT_A, data); break;
                 case 0x02: z80pio_write_data(&pio, Z80PIO_PORT_B, data); break;
                 case 0x03: z80pio_write_ctrl(&pio, Z80PIO_PORT_B, data); break;
-                /* port 0x08 is a simple hardware latch to store the requested keyboard column */
+                /* port 0x08 resolves to a simple hw latch to store the requested keyboard column */
                 case 0x08: kbd_request_column = data; break;
             }
         }
@@ -212,7 +214,6 @@ void pio_out(int port_id, uint8_t data) {
         /* bit 7 is cassette output, not emulated */
     }
 }
-
 
 /* decode the Z1013 32x32 ASCII framebuffer to a linear 256x256 RGBA8 buffer */
 void decode_video() {
@@ -280,7 +281,6 @@ GLFWwindow* init_gfx() {
     glfwMakeContextCurrent(w);
     glfwSwapInterval(1);
     flextInit(w);
-
     sg_setup(&(sg_desc){0});
     stm_setup();
 
