@@ -2,14 +2,13 @@
     z1013.c
 
     The Z1013 was a very simple East German home computer, basically
-    just a Z80 CPU, PIO, some memory and a keyboard matrix. It's easy
-    to emulate because the system didn't use any interrupts, and only
-    simple PIO IN/OUT is required to control the keyboard.
+    just a Z80 CPU connected to some memory, and a PIO connected to
+    a keyboard matrix. It's easy to emulate because the system didn't
+    use any interrupts, and only simple PIO IN/OUT is required to
+    scan the keyboard matrix.
 
-    It had a 32x32 mono-chrome ASCII framebuffer starting at EC00,
+    It had a 32x32 monochrome ASCII framebuffer starting at EC00,
     and a 2 KByte operating system ROM starting at F000.
-
-    FIXME: keyboard input
 
     No cassette-tape / beeper sound emulated!
 */
@@ -22,7 +21,24 @@
 #define CHIPS_IMPL
 #include "chips/z80.h"
 #include "chips/z80pio.h"
+#include "chips/keyboard_matrix.h"
 #include "z1013-roms.h"
+#include <ctype.h> /* isupper, islower, toupper, tolower */
+
+/* the Z1013 hardware */
+z80 cpu;
+z80pio pio;
+keyboard_matrix kbd;
+uint8_t kbd_request_column = 0;
+bool kbd_request_line_hilo = false;
+uint8_t mem[1<<16];
+
+/* emulator callbacks */
+uint64_t tick(uint64_t pins);
+uint8_t pio_in(int port_id);
+void pio_out(int port_id, uint8_t data);
+void on_key(GLFWwindow* w, int key, int scancode, int action, int mods);
+void on_char(GLFWwindow* w, unsigned int codepoint);
 
 /* rendering functions and resources */
 GLFWwindow* init_gfx();
@@ -31,21 +47,12 @@ void shutdown_gfx();
 sg_draw_state draw_state;
 uint32_t rgba8_buffer[256*256];
 
-/* emulator callbacks */
-uint64_t tick(uint64_t pins);
-uint8_t pio_in(int port_id);
-void pio_out(int port_id, uint8_t data);
-
-/* emulator chips and 64 KBytes of memory */
-z80 cpu;
-z80pio pio;
-uint8_t mem[1<<16];
-
 int main() {
-    /* setup rendering */
+
+    /* setup rendering via GLFW and sokol_gfx */
     GLFWwindow* w = init_gfx();
 
-    /* initialize the Z80 CPU and PIO */
+    /* initialize the Z80 CPU PIO */
     z80_init(&cpu, &(z80_desc){
         .tick_cb = tick
     });
@@ -53,6 +60,48 @@ int main() {
         .in_cb = pio_in,
         .out_cb = pio_out
     });
+
+    /* setup the 8x8 keyboard matrix (see http://www.z1013.de/images/21.gif) */
+    kbd_init(&kbd, &(keyboard_matrix_desc){
+        /* keep keys pressed for at least 2 frames to give the
+           Z1013 enough time to scan the keyboard
+        */
+        .sticky_count = 2,
+    });
+    /* shift key is column 7, line 6 */
+    kbd_register_shift(&kbd, 1, 7, 6);
+    /* ctrl key is column 6, line 5 */
+    kbd_register_shift(&kbd, 2, 6, 5);
+    /* alpha-numeric keys */
+    const char* keymap =
+        /* unshifted keys */
+        "13579-  QETUO@  ADGJL*  YCBM.^  24680[  WRZIP]  SFHK+\\  XVN,/_  "
+        /* shift layer */
+        "!#%')=  qetuo`  adgjl:  ycbm>~  \"$&( {  wrzip}  sfhk;|  xvn<?   ";
+    for (int shift = 0; shift < 2; shift++) {
+        const uint8_t shift_mask = shift ? (1<<0):0;
+        for (int line = 0; line < 8; line++) {
+            for (int col = 0; col < 8; col++) {
+                int c = keymap[shift*64 + line*8 + col];
+                if (c != 0x20) {
+                    kbd_register_key(&kbd, c, col, line, shift_mask);
+                }
+            }
+        }
+    }
+    /* special keys */
+    kbd_register_key(&kbd, ' ',  6, 4, 0);  /* space */
+    kbd_register_key(&kbd, 0x08, 6, 2, 0);  /* cursor left */
+    kbd_register_key(&kbd, 0x09, 6, 3, 0);  /* cursor right */
+    kbd_register_key(&kbd, 0x0A, 6, 7, 0);  /* cursor down */
+    kbd_register_key(&kbd, 0x0B, 6, 6, 0);  /* cursor up */
+    kbd_register_key(&kbd, 0x0D, 6, 1, 0);  /* enter */
+    kbd_register_key(&kbd, 0x03, 1, 3, (1<<1)); /* map Esc to Ctrl+C (STOP/BREAK) */
+
+    /* GLFW keyboard callbacks */
+    glfwSetKeyCallback(w, on_key);
+    glfwSetCharCallback(w, on_char);
+
     /* 2 KByte system rom starting at 0xF000 */
     assert(sizeof(dump_z1013_mon_a2) == 2048);
     memcpy(&mem[0xF000], dump_z1013_mon_a2, sizeof(dump_z1013_mon_a2));
@@ -68,20 +117,12 @@ int main() {
         uint32_t ticks_executed = z80_run(&cpu, ticks_to_run);
         assert(ticks_executed >= ticks_to_run);
         overrun_ticks = ticks_executed - ticks_to_run;
+        kbd_update(&kbd);
         draw_frame(w);
     }
     /* shutdown */
     shutdown_gfx();
     return 0;
-}
-
-uint8_t pio_in(int port_id) {
-    // FIXME
-    return 0x00;
-}
-
-void pio_out(int port_id, uint8_t data) {
-    // FIXME
 }
 
 /* the CPU tick function needs to perform memory and I/O reads/writes */
@@ -94,24 +135,124 @@ uint64_t tick(uint64_t pins) {
             Z80_SET_DATA(pins, mem[addr]);
         }
         else if (pins & Z80_WR) {
+            /* write memory byte, don't overwrite ROM */
             if (addr < 0xF000) {
-                /* write memory byte, don't overwrite ROM */
-                uint8_t data = Z80_DATA(pins);
-                mem[addr] = data;
+                mem[addr] = Z80_DATA(pins);
             }
         }
     }
     else if (pins & Z80_IORQ) {
         /* an I/O request */
+        const uint16_t port = Z80_ADDR(pins);
         if (pins & Z80_RD) {
-            // FIXME!
-            Z80_SET_DATA(pins, 0xFF);
+            /* an I/O read */
+            uint8_t data = 0xFF;
+            switch (port & 0xFF) {
+                case 0x00: data = z80pio_read_data(&pio, Z80PIO_PORT_A); break;
+                case 0x01: data = z80pio_read_ctrl(&pio); break;
+                case 0x02: data = z80pio_read_data(&pio, Z80PIO_PORT_B); break;
+                case 0x03: data = z80pio_read_ctrl(&pio); break;
+            }
+            Z80_SET_DATA(pins, data);
         }
         else if (pins & Z80_WR) {
-            // FIXME!
+            /* an I/O write */
+            const uint8_t data = Z80_DATA(pins);
+            switch (port & 0xFF) {
+                case 0x00: z80pio_write_data(&pio, Z80PIO_PORT_A, data); break;
+                case 0x01: z80pio_write_ctrl(&pio, Z80PIO_PORT_A, data); break;
+                case 0x02: z80pio_write_data(&pio, Z80PIO_PORT_B, data); break;
+                case 0x03: z80pio_write_ctrl(&pio, Z80PIO_PORT_B, data); break;
+                /* port 0x08 is a simple hardware latch to store the requested keyboard column */
+                case 0x08: kbd_request_column = data; break;
+            }
         }
     }
     return pins;
+}
+
+/* PIO input callback, scans the upper or lower 4 lines of the keyboard matrix */
+uint8_t pio_in(int port_id) {
+    uint8_t data = 0;
+    if (Z80PIO_PORT_A == port_id) {
+        /* PIO port A is reserved for user devices */
+        data = 0xFF;
+    }
+    else {
+        /* port B is for cassette input (bit 7), and lower 4 bits for kbd matrix lines */
+        uint16_t column_mask = (1<<kbd_request_column);
+        uint16_t line_mask = kbd_test_lines(&kbd, column_mask);
+        if (kbd_request_line_hilo) {
+            line_mask >>= 4;
+        }
+        data = 0xF & ~(line_mask & 0xF);
+    }
+    return data;
+}
+
+/* the PIO output callback selects the upper or lower 4 lines for the next keyboard scan */
+void pio_out(int port_id, uint8_t data) {
+    if (Z80PIO_PORT_B == port_id) {
+        /* bit 4 for 8x8 keyboard selects upper or lower 4 kbd matrix line bits */
+        kbd_request_line_hilo = 0 != (data & (1<<4));
+        /* bit 7 is cassette output, not emulated */
+    }
+}
+
+
+/* decode the Z1013 32x32 ASCII framebuffer to a linear 256x256 RGBA8 buffer */
+void decode_video() {
+    uint32_t* dst = rgba8_buffer;
+    const uint8_t* src = &mem[0xEC00];   /* the 32x32 framebuffer starts at EC00 */
+    const uint8_t* font = dump_z1013_font;
+    for (int y = 0; y < 32; y++) {
+        for (int py = 0; py < 8; py++) {
+            for (int x = 0; x < 32; x++) {
+                uint8_t chr = src[(y<<5) + x];
+                uint8_t bits = font[(chr<<3)|py];
+                for (int px = 7; px >=0; px--) {
+                    *dst++ = bits & (1<<px) ? 0xFFFFFFFF : 0xFF000000;
+                }
+            }
+        }
+    }
+}
+
+/* GLFW character callback */
+void on_char(GLFWwindow* w, unsigned int codepoint) {
+    if (codepoint < KBD_MAX_KEYS) {
+        /* need to invert case (unshifted is upper caps, shifted is lower caps */
+        if (isupper(codepoint)) {
+            codepoint = tolower(codepoint);
+        }
+        else if (islower(codepoint)) {
+            codepoint = toupper(codepoint);
+        }
+        kbd_key_down(&kbd, (int)codepoint);
+        kbd_key_up(&kbd, (int)codepoint);
+    }
+}
+
+/* GLFW 'raw key' callback */
+void on_key(GLFWwindow* w, int glfw_key, int scancode, int action, int mods) {
+    int key = 0;
+    switch (glfw_key) {
+        case GLFW_KEY_ENTER:    key = 0x0D; break;
+        case GLFW_KEY_RIGHT:    key = 0x09; break;
+        case GLFW_KEY_LEFT:     key = 0x08; break;
+        case GLFW_KEY_DOWN:     key = 0x0A; break;
+        case GLFW_KEY_UP:       key = 0x0B; break;
+        case GLFW_KEY_ESCAPE:   key = 0x03; break;
+        case GLFW_KEY_SPACE:    key = ' '; break;
+    }
+    if (key) {
+        if ((GLFW_PRESS == action) || (GLFW_REPEAT == action)) {
+            kbd_key_down(&kbd, key);
+        }
+        else if (GLFW_RELEASE == action) {
+            kbd_key_up(&kbd, key);
+        }
+    }
 }
 
 GLFWwindow* init_gfx() {
@@ -178,24 +319,6 @@ GLFWwindow* init_gfx() {
     return w;
 }
 
-/* decode the Z1013 32x32 ASCII framebuffer to a linear 256x256 RGBA8 buffer */
-void decode_video() {
-    uint32_t* dst = rgba8_buffer;
-    const uint8_t* src = &mem[0xEC00];   /* the 32x32 framebuffer starts at EC00 */
-    const uint8_t* font = dump_z1013_font;
-    for (int y = 0; y < 32; y++) {
-        for (int py = 0; py < 8; py++) {
-            for (int x = 0; x < 32; x++) {
-                uint8_t chr = src[(y<<5) + x];
-                uint8_t bits = font[(chr<<3)|py];
-                for (int px = 7; px >=0; px--) {
-                    *dst++ = bits & (1<<px) ? 0xFFFFFFFF : 0xFF000000;
-                }
-            }
-        }
-    }
-}
-
 /* decode emulator framebuffer into texture, and draw fullscreen rect */
 void draw_frame(GLFWwindow* w) {
     decode_video();
@@ -216,6 +339,7 @@ void draw_frame(GLFWwindow* w) {
     glfwPollEvents();
 }
 
+/* shutdown sokol and GLFW */
 void shutdown_gfx() {
     sg_shutdown();
     glfwTerminate();
