@@ -172,7 +172,7 @@ uint64_t tick(uint64_t pins) {
 
             The PIO Control/Data select pin (Z80PIO_CDSEL) is connected to
             address bus pin A0. This means even addresses select a PIO data
-            operation, and off addresses a PIO control operation.
+            operation, and odd addresses select a PIO control operation.
 
             The PIO port A/B select pin (Z80PIO_BASEL) is connected to address
             bus pin A1. This means the lower 2 port numbers address the PIO
