@@ -159,7 +159,12 @@ uint64_t tick(uint64_t pins) {
     }
     else if (pins & Z80_IORQ) {
         /* an I/O request */
-        /* PIO is CE,CDSEL,BASEL is connected to address bus bits 0,1 */
+        /* PIO pins CE,CDSEL,BASEL are connected to address bus bits 0,1,
+           which means the PIO resides at port addresses 0..4 (and in
+           the current implementation all addresses after that, need
+           to check exact address resolution through Z1013 docs if
+           this is really the case)
+        */
         if (pins & 0x03) {
             uint64_t pio_pins = (pins & Z80_PIN_MASK) | Z80PIO_CE;
             /* address bit 0 selects data/ctrl */
