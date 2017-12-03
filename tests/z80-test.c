@@ -1,8 +1,9 @@
 //------------------------------------------------------------------------------
 //  z80-test.c
 //------------------------------------------------------------------------------
-#ifndef _DEBUG
-#define _DEBUG
+// force assert() enabled
+#ifdef NDEBUG
+#undef NDEBUG
 #endif
 #define CHIPS_IMPL
 #include "chips/z80.h"

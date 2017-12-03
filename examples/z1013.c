@@ -159,29 +159,20 @@ uint64_t tick(uint64_t pins) {
     }
     else if (pins & Z80_IORQ) {
         /* an I/O request */
-        const uint16_t port = Z80_ADDR(pins);
-        if (pins & Z80_RD) {
-            /* an I/O read */
-            uint8_t data = 0xFF;
-            switch (port & 0xFF) {
-                case 0x00: data = z80pio_read_data(&pio, Z80PIO_PORT_A); break;
-                case 0x01: data = z80pio_read_ctrl(&pio); break;
-                case 0x02: data = z80pio_read_data(&pio, Z80PIO_PORT_B); break;
-                case 0x03: data = z80pio_read_ctrl(&pio); break;
-            }
-            Z80_SET_DATA(pins, data);
+        /* PIO is CE,CDSEL,BASEL is connected to address bus bits 0,1 */
+        if (pins & 0x03) {
+            uint64_t pio_pins = (pins & Z80_PIN_MASK) | Z80PIO_CE;
+            /* address bit 0 selects data/ctrl */
+            if (pio_pins & (1<<0)) pio_pins |= Z80PIO_CDSEL;
+            /* address bit 1 selects port A/B */
+            if (pio_pins & (1<<1)) pio_pins |= Z80PIO_BASEL;
+            pins = z80pio_tick(&pio, pio_pins) & Z80_PIN_MASK;
         }
-        else if (pins & Z80_WR) {
-            /* an I/O write */
-            const uint8_t data = Z80_DATA(pins);
-            switch (port & 0xFF) {
-                case 0x00: z80pio_write_data(&pio, Z80PIO_PORT_A, data); break;
-                case 0x01: z80pio_write_ctrl(&pio, Z80PIO_PORT_A, data); break;
-                case 0x02: z80pio_write_data(&pio, Z80PIO_PORT_B, data); break;
-                case 0x03: z80pio_write_ctrl(&pio, Z80PIO_PORT_B, data); break;
-                /* port 0x08 resolves to a simple hw latch to store the requested keyboard column */
-                case 0x08: kbd_request_column = data; break;
-            }
+        else if ((pins & ((1<<3)|Z80_WR)) == ((1<<3)|Z80_WR)) {
+            /* port 8 is connected to a hardware latch to store the
+               requested keyboard column for the next keyboard scan
+            */
+            kbd_request_column = Z80_DATA(pins);
         }
     }
     return pins;

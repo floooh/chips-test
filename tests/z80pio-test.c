@@ -1,6 +1,10 @@
 //------------------------------------------------------------------------------
 //  z80pio_test.c
 //------------------------------------------------------------------------------
+// force assert() enabled
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 #define CHIPS_IMPL
 #include "chips/z80pio.h"
 #include <stdio.h>
@@ -30,46 +34,46 @@ void test_read_write_control() {
 
     /* write interrupt vector 0xEE for port A */
     T(pio.reset_active);
-    z80pio_write_ctrl(&pio, Z80PIO_PORT_A, 0xEE);
+    _z80pio_write_ctrl(&pio, Z80PIO_PORT_A, 0xEE);
     T(!pio.reset_active);
     T(pio.PORT[Z80PIO_PORT_A].int_vector == 0xEE);
     T(pio.PORT[Z80PIO_PORT_A].int_control &= Z80PIO_INTCTRL_EI);
 
     /* write interrupt vector 0xCC for port B */
-    z80pio_write_ctrl(&pio, Z80PIO_PORT_B, 0xCC);
+    _z80pio_write_ctrl(&pio, Z80PIO_PORT_B, 0xCC);
     T(pio.PORT[Z80PIO_PORT_B].int_vector == 0xCC);
     T(pio.PORT[Z80PIO_PORT_B].int_control &= Z80PIO_INTCTRL_EI);
 
     /* set port A to output */
-    z80pio_write_ctrl(&pio, Z80PIO_PORT_A, (Z80PIO_MODE_OUTPUT<<6)|0x0F);
+    _z80pio_write_ctrl(&pio, Z80PIO_PORT_A, (Z80PIO_MODE_OUTPUT<<6)|0x0F);
     T(pio.PORT[Z80PIO_PORT_A].mode == Z80PIO_MODE_OUTPUT);
 
     /* set port B to input */
-    z80pio_write_ctrl(&pio, Z80PIO_PORT_B, (Z80PIO_MODE_INPUT<<6)|0x0F);
+    _z80pio_write_ctrl(&pio, Z80PIO_PORT_B, (Z80PIO_MODE_INPUT<<6)|0x0F);
     T(pio.PORT[Z80PIO_PORT_B].mode == Z80PIO_MODE_INPUT);
 
     /* set port A to bidirectional */
-    z80pio_write_ctrl(&pio, Z80PIO_PORT_A, (Z80PIO_MODE_BIDIRECTIONAL<<6)|0x0F);
+    _z80pio_write_ctrl(&pio, Z80PIO_PORT_A, (Z80PIO_MODE_BIDIRECTIONAL<<6)|0x0F);
     T(pio.PORT[Z80PIO_PORT_A].mode == Z80PIO_MODE_BIDIRECTIONAL);
 
     /* set port A to mode control (plus followup io_select mask) */
-    z80pio_write_ctrl(&pio, Z80PIO_PORT_A, (Z80PIO_MODE_BITCONTROL<<6)|0x0F);
+    _z80pio_write_ctrl(&pio, Z80PIO_PORT_A, (Z80PIO_MODE_BITCONTROL<<6)|0x0F);
     T(!pio.PORT[Z80PIO_PORT_A].int_enabled);
     T(pio.PORT[Z80PIO_PORT_A].mode == Z80PIO_MODE_BITCONTROL);
-    z80pio_write_ctrl(&pio, Z80PIO_PORT_A, 0xAA);
+    _z80pio_write_ctrl(&pio, Z80PIO_PORT_A, 0xAA);
     T(pio.PORT[Z80PIO_PORT_A].int_enabled);
     T(pio.PORT[Z80PIO_PORT_A].io_select == 0xAA);
 
     /* set port B interrupt control word (with interrupt control mask following) */
-    z80pio_write_ctrl(&pio, Z80PIO_PORT_B, (Z80PIO_INTCTRL_ANDOR|Z80PIO_INTCTRL_HILO|Z80PIO_INTCTRL_MASK_FOLLOWS)|0x07);
+    _z80pio_write_ctrl(&pio, Z80PIO_PORT_B, (Z80PIO_INTCTRL_ANDOR|Z80PIO_INTCTRL_HILO|Z80PIO_INTCTRL_MASK_FOLLOWS)|0x07);
     T(!pio.PORT[Z80PIO_PORT_B].int_enabled);
     T(pio.PORT[Z80PIO_PORT_B].int_control == (Z80PIO_INTCTRL_ANDOR|Z80PIO_INTCTRL_HILO|Z80PIO_INTCTRL_MASK_FOLLOWS));
-    z80pio_write_ctrl(&pio, Z80PIO_PORT_B, 0x23);
+    _z80pio_write_ctrl(&pio, Z80PIO_PORT_B, 0x23);
     T(!pio.PORT[Z80PIO_PORT_B].int_enabled);
     T(pio.PORT[Z80PIO_PORT_B].int_mask == 0x23);
 
     /* enable interrupts on port B */
-    z80pio_write_ctrl(&pio, Z80PIO_PORT_B, Z80PIO_INTCTRL_EI|0x03);
+    _z80pio_write_ctrl(&pio, Z80PIO_PORT_B, Z80PIO_INTCTRL_EI|0x03);
     T(pio.PORT[Z80PIO_PORT_B].int_enabled);
     T(pio.PORT[Z80PIO_PORT_B].int_control == (Z80PIO_INTCTRL_EI|Z80PIO_INTCTRL_ANDOR|Z80PIO_INTCTRL_HILO|Z80PIO_INTCTRL_MASK_FOLLOWS));
 
@@ -78,9 +82,9 @@ void test_read_write_control() {
        seem to be documented anywhere, so we're doing
        the same thing that MAME does.
     */
-    z80pio_write_ctrl(&pio, Z80PIO_PORT_A, Z80PIO_INTCTRL_ANDOR|Z80PIO_INTCTRL_HILO|0x07);
-    z80pio_write_ctrl(&pio, Z80PIO_PORT_B, Z80PIO_INTCTRL_EI|Z80PIO_INTCTRL_ANDOR|0x07);
-    uint8_t data = z80pio_read_ctrl(&pio);
+    _z80pio_write_ctrl(&pio, Z80PIO_PORT_A, Z80PIO_INTCTRL_ANDOR|Z80PIO_INTCTRL_HILO|0x07);
+    _z80pio_write_ctrl(&pio, Z80PIO_PORT_B, Z80PIO_INTCTRL_EI|Z80PIO_INTCTRL_ANDOR|0x07);
+    uint8_t data = _z80pio_read_ctrl(&pio);
     T(data == 0x4C);
 }
 
