@@ -18,13 +18,13 @@
 
     Enter BASIC editing mode with 'AUTO', leave by pressing Esc.
 */
+#define SOKOL_IMPL
+#include "sokol_time.h"
 #define GLFW_INCLUDE_NONE
 #include "GLFW/glfw3.h"
 #include "flextgl/flextGL.h"
-#define SOKOL_IMPL
 #define SOKOL_GLCORE33
 #include "sokol_gfx.h"
-#include "sokol_time.h"
 #define CHIPS_IMPL
 #include "chips/z80.h"
 #include "chips/z80pio.h"
