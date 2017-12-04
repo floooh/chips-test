@@ -50,16 +50,16 @@ void on_key(GLFWwindow* w, int key, int scancode, int action, int mods);
 void on_char(GLFWwindow* w, unsigned int codepoint);
 
 /* rendering functions and resources */
-GLFWwindow* init_gfx();
-void draw_frame(GLFWwindow* w);
-void shutdown_gfx();
+GLFWwindow* gfx_init();
+void gfx_draw(GLFWwindow* w);
+void gfx_shutdown();
 sg_draw_state draw_state;
 uint32_t rgba8_buffer[256*256];
 
 int main() {
 
     /* setup rendering via GLFW and sokol_gfx */
-    GLFWwindow* w = init_gfx();
+    GLFWwindow* w = gfx_init();
 
     /* initialize the Z80 CPU and PIO */
     z80_init(&cpu, &(z80_desc){
@@ -134,10 +134,10 @@ int main() {
         assert(ticks_executed >= ticks_to_run);
         overrun_ticks = ticks_executed - ticks_to_run;
         kbd_update(&kbd);
-        draw_frame(w);
+        gfx_draw(w);
     }
     /* shutdown */
-    shutdown_gfx();
+    gfx_shutdown();
     return 0;
 }
 
@@ -235,7 +235,7 @@ void pio_out(int port_id, uint8_t data) {
 }
 
 /* decode the Z1013 32x32 ASCII framebuffer to a linear 256x256 RGBA8 buffer */
-void decode_video() {
+void decode_vidmem() {
     uint32_t* dst = rgba8_buffer;
     const uint8_t* src = &mem[0xEC00];   /* the 32x32 framebuffer starts at EC00 */
     const uint8_t* font = dump_z1013_font;
@@ -289,13 +289,13 @@ void on_key(GLFWwindow* w, int glfw_key, int scancode, int action, int mods) {
 }
 
 /* setup GLFW, flextGL, sokol_gfx, sokol_time and create gfx resources */
-GLFWwindow* init_gfx() {
+GLFWwindow* gfx_init() {
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    GLFWwindow* w = glfwCreateWindow(640, 640, "Z1013 Example ('j 300' to start BASIC)", 0, 0);
+    GLFWwindow* w = glfwCreateWindow(512, 512, "Z1013 Example ('j 300' to start BASIC)", 0, 0);
     glfwMakeContextCurrent(w);
     glfwSwapInterval(1);
     flextInit(w);
@@ -347,8 +347,8 @@ GLFWwindow* init_gfx() {
 }
 
 /* decode emulator framebuffer into texture, and draw fullscreen rect */
-void draw_frame(GLFWwindow* w) {
-    decode_video();
+void gfx_draw(GLFWwindow* w) {
+    decode_vidmem();
     sg_update_image(draw_state.fs_images[0], &(sg_image_content){
         .subimage[0][0] = { .ptr = rgba8_buffer, .size = sizeof(rgba8_buffer) }
     });
@@ -367,7 +367,7 @@ void draw_frame(GLFWwindow* w) {
 }
 
 /* shutdown sokol and GLFW */
-void shutdown_gfx() {
+void gfx_shutdown() {
     sg_shutdown();
     glfwTerminate();
 }
