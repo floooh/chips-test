@@ -3,6 +3,11 @@ fips_begin_app(z80-test cmdline)
     fips_files(z80-test.c)
 fips_end_app()
 
+fips_begin_app(z80-int cmdline)
+    fips_vs_warning_level(3)
+    fips_files(z80-int.c)
+fips_end_app()
+
 fips_begin_app(z80-zex cmdline)
     fips_vs_warning_level(3)
     fips_files(z80-zex.c)
