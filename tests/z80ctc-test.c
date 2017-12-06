@@ -6,6 +6,7 @@
 #undef NDEBUG
 #endif
 #define CHIPS_IMPL
+#include "chips/z80.h"
 #include "chips/z80ctc.h"
 #include <stdio.h>
 
@@ -121,10 +122,108 @@ void test_counter() {
     }
 }
 
+/* a complete, integrated interrupt handling test */
+z80 cpu;
+z80ctc ctc;
+uint8_t mem[1<<16];
+
+uint64_t tick(uint64_t pins) {
+    if (pins & Z80_MREQ) {
+        if (pins & Z80_RD) {
+            Z80_SET_DATA(pins, mem[Z80_ADDR(pins)]);
+        }
+        else if (pins & Z80_WR) {
+            mem[Z80_ADDR(pins)] = Z80_DATA(pins);
+        }
+    }
+    else if (pins & Z80_IORQ) {
+        /* just assume that any IO request is for the CTC */
+        pins = (pins & Z80_PIN_MASK) | Z80CTC_CE;
+        if (pins & 1) pins |= Z80CTC_CS0;
+        if (pins & 2) pins |= Z80CTC_CS1;
+    }
+    pins = z80ctc_tick(&ctc, pins) & Z80_PIN_MASK;
+    return pins;
+}
+
+void w16(uint16_t addr, uint16_t data) {
+    mem[addr]   = (uint8_t) data;
+    mem[addr+1] = (uint8_t) (data>>8);
+}
+
+void copy(uint16_t addr, uint8_t* bytes, size_t num) {
+    assert((addr + num) <= sizeof(mem));
+    memcpy(&mem[addr], bytes, num);
+}
+
+void test_interrupt() {
+    z80_init(&cpu, &(z80_desc){
+        .tick_cb = tick
+    });
+    z80ctc_init(&ctc);
+    memset(mem, 0, sizeof(mem));
+
+    /*
+        - setup CTC channel 0 to request an interrupt every 1024 ticks
+        - go into a halt, which is left at interrupt, increment a
+          memory location, and loop back to the halt
+        - an interrupt routine increments another memory location
+        - run CPU for N ticks, check if both counters have expected values
+    */
+
+    /* location of interrupt routine */
+    w16(0x00E0, 0x0200);
+
+    uint8_t ctc_ctrl =
+        Z80CTC_CTRL_EI |
+        Z80CTC_CTRL_MODE_TIMER |
+        Z80CTC_CTRL_PRESCALER_256 |
+        Z80CTC_CTRL_TRIGGER_AUTO |
+        Z80CTC_CTRL_CONST_FOLLOWS |
+        Z80CTC_CTRL_CONTROL;
+
+    /* main program at 0x0100 */
+    uint8_t main_prog[] = {
+        0x31, 0x00, 0x03,   /* LD SP,0x0300 */
+        0xFB,               /* EI */
+        0xED, 0x5E,         /* IM 2 */
+        0xAF,               /* XOR A */
+        0xED, 0x47,         /* LD I,A */
+        0x3E, 0xE0,         /* LD A,0xE0: load interrupt vector into CTC channel 0 */
+        0xD3, 0x00,         /* OUT (0),A */
+        0x3E, ctc_ctrl,     /* LD A,n: configure CTC channel 0 as timer */
+        0xD3, 0x00,         /* OUT (0),A */
+        0x3E, 0x04,         /* LD A,0x04: timer constant (with prescaler 256): 4 * 256 = 1024 */
+        0xD3, 0x00,         /* OUT (0),A */
+        0x76,               /* HALT */
+        0x21, 0x00, 0x00,   /* LD HL,0x0000 */
+        0x34,               /* INC (HL) */
+        0x18, 0xF9,         /* JR -> HALT, endless loop back to the HALT instruction */
+    };
+    copy(0x0100, main_prog, sizeof(main_prog));
+    cpu.PC = 0x0100;
+
+    /* interrupt service routine, increment content of 0x0001 */
+    uint8_t int_prog[] = {
+        0xF3,               /* DI */
+        0x21, 0x01, 0x00,   /* LD HL,0x0001 */
+        0x34,               /* INC (HL) */
+        0xFB,               /* EI */
+        0xED, 0x4D,         /* RETI */
+    };
+    copy(0x0200, int_prog, sizeof(int_prog));
+
+    /* run for 4500 ticks, this should invoke the interrupt routine 4x */
+    z80_run(&cpu, 4500);
+    T(mem[0x0000] == 4);
+    T(mem[0x0001] == 4);
+}
+
 int main() {
     test_intvector();
     test_timer();
     test_timer_wait_trigger();
     test_counter();
+    test_interrupt();
     return 0;
 }
