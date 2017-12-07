@@ -62,13 +62,8 @@ int main() {
     GLFWwindow* w = gfx_init();
 
     /* initialize the Z80 CPU and PIO */
-    z80_init(&cpu, &(z80_desc){
-        .tick_cb = tick
-    });
-    z80pio_init(&pio, &(z80pio_desc){
-        .in_cb = pio_in,
-        .out_cb = pio_out
-    });
+    z80_init(&cpu, &(z80_desc){ .tick_cb = tick });
+    z80pio_init(&pio, &(z80pio_desc){ .in_cb = pio_in, .out_cb = pio_out });
 
     /* setup the 8x8 keyboard matrix (see http://www.z1013.de/images/21.gif) */
     kbd_init(&kbd, &(keyboard_matrix_desc){
@@ -187,7 +182,7 @@ uint64_t tick(uint64_t pins) {
             in that order. Next the CPU reads back the keyboard matrix lines
             in 2 steps of 4 bits each from PIO port B.
         */
-        if ((pins & ((1<<2)|(1<<3)|(1<<4))) == 0) {
+        if ((pins & (Z80_A4|Z80_A3|Z80_A2)) == 0) {
             /* address bits A2..A4 are zero, this activates the PIO chip-select pin */
             uint64_t pio_pins = (pins & Z80_PIN_MASK) | Z80PIO_CE;
             /* address bit 0 selects data/ctrl */
@@ -196,7 +191,7 @@ uint64_t tick(uint64_t pins) {
             if (pio_pins & (1<<1)) pio_pins |= Z80PIO_BASEL;
             pins = z80pio_tick(&pio, pio_pins) & Z80_PIN_MASK;
         }
-        else if ((pins & ((1<<3)|Z80_WR)) == ((1<<3)|Z80_WR)) {
+        else if ((pins & (Z80_A3|Z80_WR)) == (Z80_A3|Z80_WR)) {
             /* port 8 is connected to a hardware latch to store the
                requested keyboard column for the next keyboard scan
             */
