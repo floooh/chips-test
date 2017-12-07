@@ -77,14 +77,14 @@ int main() {
 
     /* initialize CPU, PIOs and CTC */
     z80_init(&cpu, &(z80_desc){ .tick_cb = tick, });
-    z80pio_init(&pio1, &(z80pio_desc){ .in_cb=pio1_in, .out_cb=pio2_out });
+    z80pio_init(&pio1, &(z80pio_desc){ .in_cb=pio1_in, .out_cb=pio1_out });
     z80pio_init(&pio2, &(z80pio_desc){ .in_cb=pio2_in, .out_cb=pio2_out });
     z80ctc_init(&ctc);
 
     /* setup keyboard matrix, keep keys pressed for N frames to give
        the scan-out routine enough time
     */
-    kbd_init(&kbd, &(keyboard_matrix_desc){ .sticky_count=4 });
+    kbd_init(&kbd, &(keyboard_matrix_desc){ .sticky_count=7 });
     /* shift key is column 0, line 7 */
     kbd_register_modifier(&kbd, 0, 0, 7);
     /* register alpha-numeric keys */
@@ -158,10 +158,10 @@ int main() {
 
     /* emulate and draw frames */
     uint32_t overrun_ticks = 0;
-    //uint64_t last_time_stamp = stm_now();
+    uint64_t last_time_stamp = stm_now();
     while (!glfwWindowShouldClose(w)) {
         /* number of 2.4576MHz ticks in host frame */
-        double frame_time = 1.0/60.0; //stm_sec(stm_laptime(&last_time_stamp));
+        double frame_time = stm_sec(stm_laptime(&last_time_stamp));
         uint32_t ticks_to_run = (uint32_t) ((KC87_FREQ * frame_time) - overrun_ticks);
         uint32_t ticks_executed = z80_run(&cpu, ticks_to_run);
         assert(ticks_executed >= ticks_to_run);
