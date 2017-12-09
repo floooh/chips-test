@@ -44,7 +44,7 @@ const  uint32_t palette[8] = {
 };
 
 /* emulator callbacks */
-uint64_t tick(uint64_t pins);
+uint64_t tick(int num, uint64_t pins);
 uint8_t pio1_in(int port_id);
 void pio1_out(int port_id, uint8_t data);
 uint8_t pio2_in(int port_id);
@@ -175,10 +175,37 @@ int main() {
 }
 
 /* the CPU tick callback performs memory and I/O reads/writes */
-uint64_t tick(uint64_t pins) {
+uint64_t tick(int num_ticks, uint64_t pins) {
 
-    /* read/write memory */
+    /* tick the CTC channels, the CTC channel 2 output signal ZCTO2 is connected
+       to CTC channel 3 input signal CLKTRG3 to form a timer cascade
+       which drives the system clock, store the state of ZCTO2 for the
+       next tick
+    */
+    pins |= ctc_clktrg3_state;
+    for (int i = 0; i < num_ticks; i++) {
+        if (pins & Z80CTC_ZCTO2) { pins |= Z80CTC_CLKTRG3; }
+        else                     { pins &= ~Z80CTC_CLKTRG3; }
+        pins = z80ctc_tick(&ctc, pins);
+
+    }
+    ctc_clktrg3_state = (pins & Z80CTC_ZCTO2) ? Z80CTC_CLKTRG3:0;
+
+    /* the blink flip flop is controlled by a 'bisync' video signal
+       (I guess that means it triggers at half PAL frequency: 25Hz),
+       going into a binary counter, bit 4 of the counter is connected
+       to the blink flip flop.
+    */
+    for (int i = 0; i < num_ticks; i++) {
+        if (0 >= blink_counter--) {
+            blink_counter = (KC87_FREQ * 8) / 25;
+            blink_flip_flop = !blink_flip_flop;
+        }
+    }
+
+    /* memory and IO requests */
     if (pins & Z80_MREQ) {
+        /* a memory request machine cycle */
         const uint16_t addr = Z80_ADDR(pins);
         if (pins & Z80_RD) {
             /* read memory byte */
@@ -191,59 +218,54 @@ uint64_t tick(uint64_t pins) {
             }
         }
     }
+    else if (pins & Z80_IORQ) {
+        /* an IO request machine cycle */
 
-    /* the interrupt priority is PIO1->PIO2->CTC, the chips must be ticked in this order */
+        /* check if any of the PIO/CTC chips is enabled */
+        /* address line 7 must be on, 6 must be off, IORQ on, M1 off */
+        const bool chip_enable = (pins & (Z80_IORQ|Z80_M1|Z80_A7|Z80_A6)) == (Z80_IORQ|Z80_A7);
+        const int chip_select = (pins & (Z80_A5|Z80_A4|Z80_A3))>>3;
 
-    /* check if any of the PIO/CTC chips is enabled */
-    /* address line 7 must be on, 6 must be off, IORQ on, M1 off */
-    const bool chip_enable = (pins & (Z80_IORQ|Z80_M1|Z80_A7|Z80_A6)) == (Z80_IORQ|Z80_A7);
-    const int chip_select = (pins & (Z80_A5|Z80_A4|Z80_A3))>>3;
-
-    /* tick PIO1 */
-    pins = pins & Z80_PIN_MASK;
-    if (chip_enable && (chip_select == 1)) {
-        /* PIO1 is mapped to ports 0x88 to 0x8F (each port is mapped twice) */
-        pins |= Z80PIO_CE;
-        if (pins & Z80_A0) { pins |= Z80PIO_BASEL; }
-        if (pins & Z80_A1) { pins |= Z80PIO_CDSEL; }
+        pins = pins & Z80_PIN_MASK;
+        if (chip_enable) {
+            switch (chip_select) {
+                /* IO request on CTC? */
+                case 0:
+                    /* CTC is mapped to ports 0x80 to 0x87 (each port is mapped twice) */
+                    pins |= Z80CTC_CE;
+                    if (pins & Z80_A0) { pins |= Z80CTC_CS0; };
+                    if (pins & Z80_A1) { pins |= Z80CTC_CS1; };
+                    pins = z80ctc_iorq(&ctc, pins) & Z80_PIN_MASK;
+                /* IO request on PIO1? */
+                case 1:
+                    /* PIO1 is mapped to ports 0x88 to 0x8F (each port is mapped twice) */
+                    pins |= Z80PIO_CE;
+                    if (pins & Z80_A0) { pins |= Z80PIO_BASEL; }
+                    if (pins & Z80_A1) { pins |= Z80PIO_CDSEL; }
+                    pins = z80pio_iorq(&pio1, pins) & Z80_PIN_MASK;
+                    break;
+                /* IO request on PIO2? */
+                case 2:
+                    /* PIO2 is mapped to ports 0x90 to 0x97 (each port is mapped twice) */
+                    pins |= Z80PIO_CE;
+                    if (pins & Z80_A0) { pins |= Z80PIO_BASEL; }
+                    if (pins & Z80_A1) { pins |= Z80PIO_CDSEL; }
+                    pins = z80pio_iorq(&pio2, pins) & Z80_PIN_MASK;
+            }
+        }
     }
-    pins = z80pio_tick(&pio1, pins) & Z80_PIN_MASK;
 
-    /* tick PIO2 */
-    if (chip_enable && (chip_select == 2)) {
-        /* PIO2 is mapped to ports 0x90 to 0x97 (each port is mapped twice) */
-        pins |= Z80PIO_CE;
-        if (pins & Z80_A0) { pins |= Z80PIO_BASEL; }
-        if (pins & Z80_A1) { pins |= Z80PIO_CDSEL; }
-    }
-    pins = z80pio_tick(&pio2, pins) & Z80_PIN_MASK;
-
-    /* tick CTC */
-    if (chip_enable && (chip_select == 0)) {
-        /* CTC is mapped to ports 0x80 to 0x87 (each port is mapped twice) */
-        pins |= Z80CTC_CE;
-        if (pins & Z80_A0) { pins |= Z80CTC_CS0; };
-        if (pins & Z80_A1) { pins |= Z80CTC_CS1; };
-    }
-    pins |= ctc_clktrg3_state;
-    pins = z80ctc_tick(&ctc, pins);
-
-    /* the CTC channel 2 output signal ZCTO2 is connected to
-       CTC channel 3 input signal CLKTRG3 to form a timer cascade
-       which drives the system clock, store the state of ZCTO2 for the
-       next tick
+    /* handle interrupt requests by PIOs and CTCs, the interrupt priority
+       is PIO1>PIO2>CTC, the interrupt handling functions must be called
+       in this order
     */
-    ctc_clktrg3_state = (pins & Z80CTC_ZCTO2)? Z80CTC_CLKTRG3:0;
-
-    /* the blink flip flop is controlled by a 'bisync' video signal
-       (I guess that means it triggers at half PAL frequency: 25Hz),
-       going into a binary counter, bit 4 of the counter is connected
-       to the blink flip flop.
-    */
-    if (0 >= blink_counter--) {
-        blink_counter = (KC87_FREQ * 8) / 25;
-        blink_flip_flop = !blink_flip_flop;
+    for (int i = 0; i < num_ticks; i++) {
+        pins |= Z80_IEIO;   /* enable the interrupt enable in for highest priority device */
+        pins = z80pio_int(&pio1, pins);
+        pins = z80pio_int(&pio2, pins);
+        pins = z80ctc_int(&ctc, pins);
     }
+
     return (pins & Z80_PIN_MASK);
 }
 

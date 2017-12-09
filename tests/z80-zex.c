@@ -29,7 +29,7 @@ static void put_char(char c) {
 }
 
 /* Z80 tick callback */
-static uint64_t tick(uint64_t pins) {
+static uint64_t tick(int num, uint64_t pins) {
     if (pins & Z80_MREQ) {
         if (pins & Z80_RD) {
             Z80_SET_DATA(pins, mem[Z80_ADDR(pins)]);

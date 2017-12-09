@@ -41,7 +41,7 @@ bool kbd_request_line_hilo = false;
 uint8_t mem[1<<16];
 
 /* emulator callbacks */
-uint64_t tick(uint64_t pins);
+uint64_t tick(int num, uint64_t pins);
 uint8_t pio_in(int port_id);
 void pio_out(int port_id, uint8_t data);
 
@@ -137,7 +137,7 @@ int main() {
 }
 
 /* the CPU tick function needs to perform memory and I/O reads/writes */
-uint64_t tick(uint64_t pins) {
+uint64_t tick(int num_ticks, uint64_t pins) {
     if (pins & Z80_MREQ) {
         /* a memory request */
         const uint16_t addr = Z80_ADDR(pins);
@@ -189,7 +189,7 @@ uint64_t tick(uint64_t pins) {
             if (pio_pins & (1<<0)) pio_pins |= Z80PIO_CDSEL;
             /* address bit 1 selects port A/B */
             if (pio_pins & (1<<1)) pio_pins |= Z80PIO_BASEL;
-            pins = z80pio_tick(&pio, pio_pins) & Z80_PIN_MASK;
+            pins = z80pio_iorq(&pio, pio_pins) & Z80_PIN_MASK;
         }
         else if ((pins & (Z80_A3|Z80_WR)) == (Z80_A3|Z80_WR)) {
             /* port 8 is connected to a hardware latch to store the
@@ -198,6 +198,9 @@ uint64_t tick(uint64_t pins) {
             kbd_request_column = Z80_DATA(pins);
         }
     }
+    /* there are no interrupts happening in a vanilla Z1013,
+       so don't trigger the interrupt daisy chain
+    */
     return pins;
 }
 

@@ -13,7 +13,7 @@ z80 cpu;
 uint8_t mem[1<<16] = { 0 };
 uint16_t out_port = 0;
 uint8_t out_byte = 0;
-uint64_t tick(uint64_t pins) {
+uint64_t tick(int num, uint64_t pins) {
     if (pins & Z80_MREQ) {
         if (pins & Z80_RD) {
             /* memory read */

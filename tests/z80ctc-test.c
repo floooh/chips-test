@@ -127,7 +127,10 @@ z80 cpu;
 z80ctc ctc;
 uint8_t mem[1<<16];
 
-uint64_t tick(uint64_t pins) {
+uint64_t tick(int num_ticks, uint64_t pins) {
+    for (int i = 0; i < num_ticks; i++) {
+        pins = z80ctc_tick(&ctc, pins);
+    }
     if (pins & Z80_MREQ) {
         if (pins & Z80_RD) {
             Z80_SET_DATA(pins, mem[Z80_ADDR(pins)]);
@@ -141,9 +144,14 @@ uint64_t tick(uint64_t pins) {
         pins = (pins & Z80_PIN_MASK) | Z80CTC_CE;
         if (pins & 1) pins |= Z80CTC_CS0;
         if (pins & 2) pins |= Z80CTC_CS1;
+        pins = z80ctc_iorq(&ctc, pins);
     }
-    pins = z80ctc_tick(&ctc, pins) & Z80_PIN_MASK;
-    return pins;
+    /* interrupt handling */
+    for (int i = 0; i < num_ticks; i++) {
+        pins |= Z80_IEIO;
+        pins = z80ctc_int(&ctc, pins);
+    }
+    return pins & Z80_PIN_MASK;
 }
 
 void w16(uint16_t addr, uint16_t data) {

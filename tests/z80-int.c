@@ -13,7 +13,7 @@ z80 cpu;
 uint8_t mem[1<<16] = { 0 };
 bool reti_executed = false;
 
-uint64_t tick(uint64_t pins) {
+uint64_t tick(int num, uint64_t pins) {
     if (pins & Z80_MREQ) {
         const uint16_t addr = Z80_ADDR(pins);
         if (pins & Z80_RD) {
@@ -36,7 +36,7 @@ uint64_t tick(uint64_t pins) {
             Z80_SET_DATA(pins, 0xE0);
         }
     }
-    else if (pins & Z80_RETI) {
+    if (pins & Z80_RETI) {
         /* reti was executed */
         reti_executed = true;
         pins &= ~Z80_RETI;
