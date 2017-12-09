@@ -38,14 +38,6 @@ static uint64_t tick(int num, uint64_t pins) {
             mem[Z80_ADDR(pins)] = Z80_DATA(pins);
         }
     }
-    else if (pins & Z80_IORQ) {
-        if (pins & Z80_RD) {
-            Z80_SET_DATA(pins, 0xFF);
-        }
-        else if (pins & Z80_WR) {
-            /* IO write, do nothing */
-        }
-    }
     return pins;
 }
 
