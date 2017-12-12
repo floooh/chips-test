@@ -53,7 +53,7 @@ void copy(uint16_t addr, uint8_t* bytes, size_t num) {
 }
 
 uint32_t step() {
-    return z80_step(&cpu);
+    return z80_exec(&cpu, 0);
 }
 
 bool flags(uint8_t expected) {

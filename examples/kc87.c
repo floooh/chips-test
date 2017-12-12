@@ -163,7 +163,7 @@ int main() {
         /* number of 2.4576MHz ticks in host frame */
         double frame_time = stm_sec(stm_laptime(&last_time_stamp));
         uint32_t ticks_to_run = (uint32_t) ((KC87_FREQ * frame_time) - overrun_ticks);
-        uint32_t ticks_executed = z80_run(&cpu, ticks_to_run);
+        uint32_t ticks_executed = z80_exec(&cpu, ticks_to_run);
         assert(ticks_executed >= ticks_to_run);
         overrun_ticks = ticks_executed - ticks_to_run;
         kbd_update(&kbd);

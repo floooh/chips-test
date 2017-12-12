@@ -222,7 +222,7 @@ void test_interrupt() {
     copy(0x0200, int_prog, sizeof(int_prog));
 
     /* run for 4500 ticks, this should invoke the interrupt routine 4x */
-    z80_run(&cpu, 4500);
+    z80_exec(&cpu, 4500);
     T(mem[0x0000] == 4);
     T(mem[0x0001] == 4);
 }

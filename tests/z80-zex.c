@@ -71,11 +71,10 @@ static bool cpm_bdos(z80* cpu) {
 static bool run_test(z80* cpu, const char* name) {
     bool running = true;
     uint64_t ticks = 0;
-    uint64_t ops = 0;
     uint64_t start_time = stm_now();
     while (running) {
-        ticks += z80_step(cpu);
-        ops++;
+        /* run for a lot of ticks or until HALT is encountered */
+        ticks += z80_exec(cpu, (1<<30));
         /* check for BDOS call */
         if (5 == cpu->PC) {
             if (!cpm_bdos(cpu)) {
@@ -85,9 +84,10 @@ static bool run_test(z80* cpu, const char* name) {
         else if (0 == cpu->PC) {
             running = false;
         }
+        cpu->PINS &= ~Z80_HALT;
     }
     double dur = stm_sec(stm_since(start_time));
-    printf("\n%s: %llu cycles, %llu ops in %.3fsecs (%.2f MHz / %.2f MIPS)\n", name, ticks, ops, dur, (ticks/dur)/1000000.0,(ops/dur)/1000000.0);
+    printf("\n%s: %llu cycles in %.3fsecs (%.2f MHz)\n", name, ticks, dur, (ticks/dur)/1000000.0);
 
     /* check if an error occurred */
     if (output_size > 0) {
@@ -109,8 +109,13 @@ static bool zexdoc() {
     memcpy(&mem[0x0100], dump_zexdoc, sizeof(dump_zexdoc));
     z80 cpu;
     z80_init(&cpu, &(z80_desc){ .tick_cb = tick });
+    /* break out of z80_exec when HALT instruction is encountered */
+    cpu.break_mask |= Z80_HALT;
     cpu.SP = 0xF000;
     cpu.PC = 0x0100;
+    /* patch a HALT instruction at address 0x0000 and 0x0005 */
+    mem[0] = 0x76;
+    mem[5] = 0x76;
     return run_test(&cpu, "ZEXDOC");
 }
 
@@ -121,8 +126,13 @@ static bool zexall() {
     memcpy(&mem[0x0100], dump_zexall, sizeof(dump_zexall));
     z80 cpu;
     z80_init(&cpu, &(z80_desc){ .tick_cb = tick });
+    /* break out of z80_exec when HALT instruction is encountered */
+    cpu.break_mask |= Z80_HALT;
     cpu.SP = 0xF000;
     cpu.PC = 0x0100;
+    /* patch a HALT instruction at address 0x0000 and 0x0005 */
+    mem[0] = 0x76;
+    mem[5] = 0x76;
     return run_test(&cpu, "ZEXALL");
 }
 
