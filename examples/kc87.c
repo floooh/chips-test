@@ -298,12 +298,12 @@ void pio1_out(int port_id, uint8_t data) {
 uint8_t pio2_in(int port_id) {
     if (Z80PIO_PORT_A == port_id) {
         /* return keyboard matrix column bits for requested line bits */
-        uint8_t columns = kbd_scan_columns(&kbd);
+        uint8_t columns = (uint8_t) kbd_scan_columns(&kbd);
         return ~columns;
     }
     else {
         /* return keyboard matrix line bits for requested column bits */
-        uint8_t lines = kbd_scan_lines(&kbd);
+        uint8_t lines = (uint8_t) kbd_scan_lines(&kbd);
         return ~lines;
     }
 }
