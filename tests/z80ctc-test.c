@@ -14,7 +14,7 @@ uint32_t num_tests = 0;
 #define T(x) { assert(x); num_tests++; }
 
 void test_intvector() {
-    z80ctc ctc;
+    z80ctc_t ctc;
     z80ctc_init(&ctc);
     /* write interrupt vector */
     _z80ctc_write(&ctc, 0, 0, 0xE0);
@@ -25,7 +25,7 @@ void test_intvector() {
 }
 
 void test_timer() {
-    z80ctc ctc;
+    z80ctc_t ctc;
     z80ctc_init(&ctc);
     uint64_t pins = 0;
 
@@ -53,7 +53,7 @@ void test_timer() {
 }
 
 void test_timer_wait_trigger() {
-    z80ctc ctc;
+    z80ctc_t ctc;
     z80ctc_init(&ctc);
     uint64_t pins = 0;
 
@@ -90,7 +90,7 @@ void test_timer_wait_trigger() {
 }
 
 void test_counter() {
-    z80ctc ctc;
+    z80ctc_t ctc;
     z80ctc_init(&ctc);
     uint64_t pins = 0;
 
@@ -123,8 +123,8 @@ void test_counter() {
 }
 
 /* a complete, integrated interrupt handling test */
-z80 cpu;
-z80ctc ctc;
+z80_t cpu;
+z80ctc_t ctc;
 uint8_t mem[1<<16];
 
 uint64_t tick(int num_ticks, uint64_t pins) {
@@ -165,7 +165,7 @@ void copy(uint16_t addr, uint8_t* bytes, size_t num) {
 }
 
 void test_interrupt() {
-    z80_init(&cpu, &(z80_desc){
+    z80_init(&cpu, &(z80_desc_t){
         .tick_cb = tick
     });
     z80ctc_init(&ctc);

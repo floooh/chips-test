@@ -17,17 +17,17 @@
 #include "chips/z80.h"
 #include "chips/z80pio.h"
 #include "chips/z80ctc.h"
-#include "chips/keyboard_matrix.h"
+#include "chips/kbd.h"
 #include "roms/kc87-roms.h"
 #include <ctype.h> /* isupper, islower, toupper, tolower */
 
 /* the KC87 hardware */
 #define KC87_FREQ (2457600)
-z80 cpu;
-z80pio pio1;
-z80pio pio2;
-z80ctc ctc;
-keyboard_matrix kbd;
+z80_t cpu;
+z80pio_t pio1;
+z80pio_t pio2;
+z80ctc_t ctc;
+kbd_t kbd;
 uint32_t blink_counter = 0;
 bool blink_flip_flop = false;
 uint64_t ctc_clktrg3_state = 0;
@@ -76,15 +76,15 @@ int main() {
     GLFWwindow* w = gfx_init();
 
     /* initialize CPU, PIOs and CTC */
-    z80_init(&cpu, &(z80_desc){ .tick_cb = tick, });
-    z80pio_init(&pio1, &(z80pio_desc){ .in_cb=pio1_in, .out_cb=pio1_out });
-    z80pio_init(&pio2, &(z80pio_desc){ .in_cb=pio2_in, .out_cb=pio2_out });
+    z80_init(&cpu, &(z80_desc_t){ .tick_cb = tick, });
+    z80pio_init(&pio1, &(z80pio_desc_t){ .in_cb=pio1_in, .out_cb=pio1_out });
+    z80pio_init(&pio2, &(z80pio_desc_t){ .in_cb=pio2_in, .out_cb=pio2_out });
     z80ctc_init(&ctc);
 
     /* setup keyboard matrix, keep keys pressed for N frames to give
        the scan-out routine enough time
     */
-    kbd_init(&kbd, &(keyboard_matrix_desc){ .sticky_count=7 });
+    kbd_init(&kbd, &(kbd_desc_t){ .sticky_count=7 });
     /* shift key is column 0, line 7 */
     kbd_register_modifier(&kbd, 0, 0, 7);
     /* register alpha-numeric keys */

@@ -9,7 +9,7 @@
 #include "chips/z80.h"
 #include <stdio.h>
 
-z80 cpu;
+z80_t cpu;
 uint8_t mem[1<<16] = { 0 };
 uint16_t out_port = 0;
 uint8_t out_byte = 0;
@@ -39,7 +39,7 @@ uint64_t tick(int num, uint64_t pins) {
 }
 
 void init() {
-    z80_desc desc = {
+    z80_desc_t desc = {
         .tick_cb = tick,
     };
     z80_init(&cpu, &desc);

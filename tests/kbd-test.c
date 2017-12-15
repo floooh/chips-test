@@ -3,15 +3,15 @@
 //  Test keyboard matrix helper functions.
 //------------------------------------------------------------------------------
 #define CHIPS_IMPL
-#include "chips/keyboard_matrix.h"
+#include "chips/kbd.h"
 #include <stdio.h>
 
 uint32_t num_tests = 0;
 #define T(x) { assert(x); num_tests++; }
 
 int main() {
-    keyboard_matrix kbd;
-    kbd_init(&kbd, &(keyboard_matrix_desc){0});
+    kbd_t kbd;
+    kbd_init(&kbd, &(kbd_desc_t){0});
     kbd_register_modifier(&kbd, 0, 0, 0);
     kbd_register_key(&kbd, 'a', 2, 3, 0);
     kbd_register_key(&kbd, 'A', 2, 3, 1);

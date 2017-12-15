@@ -28,14 +28,14 @@
 #define CHIPS_IMPL
 #include "chips/z80.h"
 #include "chips/z80pio.h"
-#include "chips/keyboard_matrix.h"
+#include "chips/kbd.h"
 #include "roms/z1013-roms.h"
 #include <ctype.h> /* isupper, islower, toupper, tolower */
 
 /* the Z1013 hardware */
-z80 cpu;
-z80pio pio;
-keyboard_matrix kbd;
+z80_t cpu;
+z80pio_t pio;
+kbd_t kbd;
 uint8_t kbd_request_column = 0;
 bool kbd_request_line_hilo = false;
 uint8_t mem[1<<16];
@@ -62,11 +62,11 @@ int main() {
     GLFWwindow* w = gfx_init();
 
     /* initialize the Z80 CPU and PIO */
-    z80_init(&cpu, &(z80_desc){ .tick_cb = tick });
-    z80pio_init(&pio, &(z80pio_desc){ .in_cb = pio_in, .out_cb = pio_out });
+    z80_init(&cpu, &(z80_desc_t){ .tick_cb = tick });
+    z80pio_init(&pio, &(z80pio_desc_t){ .in_cb = pio_in, .out_cb = pio_out });
 
     /* setup the 8x8 keyboard matrix (see http://www.z1013.de/images/21.gif) */
-    kbd_init(&kbd, &(keyboard_matrix_desc){
+    kbd_init(&kbd, &(kbd_desc_t){
         /* keep keys pressed for at least 2 frames to give the
            Z1013 enough time to scan the keyboard
         */

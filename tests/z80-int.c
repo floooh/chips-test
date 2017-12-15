@@ -9,7 +9,7 @@
 #include "chips/z80.h"
 #include <stdio.h>
 
-z80 cpu;
+z80_t cpu;
 uint8_t mem[1<<16] = { 0 };
 bool reti_executed = false;
 
@@ -62,7 +62,7 @@ uint32_t num_tests = 0;
 #define T(x) { assert(x); num_tests++; }
 
 int main() {
-    z80_init(&cpu, &(z80_desc){
+    z80_init(&cpu, &(z80_desc_t){
         .tick_cb = tick
     });
 

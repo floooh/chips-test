@@ -20,7 +20,7 @@ uint8_t io_cb(bool write, uint16_t addr, uint8_t inval) {
 }
 
 int main() {
-    memory mem;
+    mem_t mem;
     mem_init(&mem);
 
     /* initial state should be "everything is unmapped */

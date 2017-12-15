@@ -42,7 +42,7 @@ static uint64_t tick(int num, uint64_t pins) {
 }
 
 /* emulate character and string output CP/M system calls */
-static bool cpm_bdos(z80* cpu) {
+static bool cpm_bdos(z80_t* cpu) {
     bool retval = true;
     if (2 == cpu->C) {
         // output character in register E
@@ -68,7 +68,7 @@ static bool cpm_bdos(z80* cpu) {
 }
 
 /* run CPU through the configured test (ZEXDOC or ZEXALL) */
-static bool run_test(z80* cpu, const char* name) {
+static bool run_test(z80_t* cpu, const char* name) {
     bool running = true;
     uint64_t ticks = 0;
     uint64_t start_time = stm_now();
@@ -107,8 +107,8 @@ static bool zexdoc() {
     memset(output, 0, sizeof(output));
     memset(mem, 0, sizeof(mem));
     memcpy(&mem[0x0100], dump_zexdoc, sizeof(dump_zexdoc));
-    z80 cpu;
-    z80_init(&cpu, &(z80_desc){ .tick_cb = tick });
+    z80_t cpu;
+    z80_init(&cpu, &(z80_desc_t){ .tick_cb = tick });
     /* break out of z80_exec when HALT instruction is encountered */
     cpu.break_mask |= Z80_HALT;
     cpu.SP = 0xF000;
@@ -124,8 +124,8 @@ static bool zexall() {
     memset(output, 0, sizeof(output));
     memset(mem, 0, sizeof(mem));
     memcpy(&mem[0x0100], dump_zexall, sizeof(dump_zexall));
-    z80 cpu;
-    z80_init(&cpu, &(z80_desc){ .tick_cb = tick });
+    z80_t cpu;
+    z80_init(&cpu, &(z80_desc_t){ .tick_cb = tick });
     /* break out of z80_exec when HALT instruction is encountered */
     cpu.break_mask |= Z80_HALT;
     cpu.SP = 0xF000;
