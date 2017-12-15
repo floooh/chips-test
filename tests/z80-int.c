@@ -62,9 +62,7 @@ uint32_t num_tests = 0;
 #define T(x) { assert(x); num_tests++; }
 
 int main() {
-    z80_init(&cpu, &(z80_desc_t){
-        .tick_cb = tick
-    });
+    z80_init(&cpu, tick);
 
     /* place the address 0x0200 of an interrupt service routine at 0x00E0 */
     w16(0x00E0, 0x0200);

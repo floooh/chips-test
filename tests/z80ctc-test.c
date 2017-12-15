@@ -165,9 +165,7 @@ void copy(uint16_t addr, uint8_t* bytes, size_t num) {
 }
 
 void test_interrupt() {
-    z80_init(&cpu, &(z80_desc_t){
-        .tick_cb = tick
-    });
+    z80_init(&cpu, tick);
     z80ctc_init(&ctc);
     memset(mem, 0, sizeof(mem));
 

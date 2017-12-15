@@ -11,7 +11,7 @@ uint32_t num_tests = 0;
 
 int main() {
     kbd_t kbd;
-    kbd_init(&kbd, &(kbd_desc_t){0});
+    kbd_init(&kbd, 0);
     kbd_register_modifier(&kbd, 0, 0, 0);
     kbd_register_key(&kbd, 'a', 2, 3, 0);
     kbd_register_key(&kbd, 'A', 2, 3, 1);

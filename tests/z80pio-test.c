@@ -26,11 +26,7 @@ void out_cb(int port_id, uint8_t data) {
 
 void test_read_write_control() {
     z80pio_t pio;
-    z80pio_desc_t desc = {
-        .in_cb = in_cb,
-        .out_cb = out_cb
-    };
-    z80pio_init(&pio, &desc);
+    z80pio_init(&pio, in_cb, out_cb);
 
     /* write interrupt vector 0xEE for port A */
     T(pio.reset_active);

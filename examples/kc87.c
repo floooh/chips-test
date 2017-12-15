@@ -76,15 +76,15 @@ int main() {
     GLFWwindow* w = gfx_init();
 
     /* initialize CPU, PIOs and CTC */
-    z80_init(&cpu, &(z80_desc_t){ .tick_cb = tick, });
-    z80pio_init(&pio1, &(z80pio_desc_t){ .in_cb=pio1_in, .out_cb=pio1_out });
-    z80pio_init(&pio2, &(z80pio_desc_t){ .in_cb=pio2_in, .out_cb=pio2_out });
+    z80_init(&cpu, tick);
+    z80pio_init(&pio1, pio1_in, pio1_out);
+    z80pio_init(&pio2, pio2_in, pio2_out);
     z80ctc_init(&ctc);
 
     /* setup keyboard matrix, keep keys pressed for N frames to give
        the scan-out routine enough time
     */
-    kbd_init(&kbd, &(kbd_desc_t){ .sticky_count=7 });
+    kbd_init(&kbd, 3);
     /* shift key is column 0, line 7 */
     kbd_register_modifier(&kbd, 0, 0, 7);
     /* register alpha-numeric keys */

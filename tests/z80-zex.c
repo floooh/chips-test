@@ -108,7 +108,7 @@ static bool zexdoc() {
     memset(mem, 0, sizeof(mem));
     memcpy(&mem[0x0100], dump_zexdoc, sizeof(dump_zexdoc));
     z80_t cpu;
-    z80_init(&cpu, &(z80_desc_t){ .tick_cb = tick });
+    z80_init(&cpu, tick);
     /* break out of z80_exec when HALT instruction is encountered */
     cpu.break_mask |= Z80_HALT;
     cpu.SP = 0xF000;
@@ -125,7 +125,7 @@ static bool zexall() {
     memset(mem, 0, sizeof(mem));
     memcpy(&mem[0x0100], dump_zexall, sizeof(dump_zexall));
     z80_t cpu;
-    z80_init(&cpu, &(z80_desc_t){ .tick_cb = tick });
+    z80_init(&cpu, tick);
     /* break out of z80_exec when HALT instruction is encountered */
     cpu.break_mask |= Z80_HALT;
     cpu.SP = 0xF000;

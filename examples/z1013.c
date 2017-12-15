@@ -62,16 +62,14 @@ int main() {
     GLFWwindow* w = gfx_init();
 
     /* initialize the Z80 CPU and PIO */
-    z80_init(&cpu, &(z80_desc_t){ .tick_cb = tick });
-    z80pio_init(&pio, &(z80pio_desc_t){ .in_cb = pio_in, .out_cb = pio_out });
+    z80_init(&cpu, tick);
+    z80pio_init(&pio, pio_in, pio_out);
 
-    /* setup the 8x8 keyboard matrix (see http://www.z1013.de/images/21.gif) */
-    kbd_init(&kbd, &(kbd_desc_t){
-        /* keep keys pressed for at least 2 frames to give the
-           Z1013 enough time to scan the keyboard
-        */
-        .sticky_count = 2,
-    });
+    /* setup the 8x8 keyboard matrix (see http://www.z1013.de/images/21.gif)
+       keep keys pressed for at least 2 frames to give the
+       Z1013 enough time to scan the keyboard
+    */
+    kbd_init(&kbd, 2);
     /* shift key is column 7, line 6 */
     const int shift = 0, shift_mask = (1<<shift);
     kbd_register_modifier(&kbd, shift, 7, 6);

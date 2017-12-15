@@ -39,10 +39,7 @@ uint64_t tick(int num, uint64_t pins) {
 }
 
 void init() {
-    z80_desc_t desc = {
-        .tick_cb = tick,
-    };
-    z80_init(&cpu, &desc);
+    z80_init(&cpu, tick);
     cpu.F = 0;
     cpu.AF_ = 0xFF00;
 }
