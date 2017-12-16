@@ -42,7 +42,7 @@ void test_timer() {
     T(10 == ctc.chn[1].down_counter);
     for (int r = 0; r < 3; r++) {
         for (int i = 0; i < 160; i++) {
-            pins = _z80ctc_tick_channel(&ctc.chn[1], pins, 1);
+            pins = z80ctc_tick(&ctc, pins);
             if (i != 159) {
                 T(0 == (pins & Z80CTC_ZCTO1));
             }
@@ -70,14 +70,14 @@ void test_timer_wait_trigger() {
 
     /* tick the CTC without starting the timer */
     for (int i = 0; i < 300; i++) {
-        pins = _z80ctc_tick_channel(&ctc.chn[1], pins, 1);
+        pins = z80ctc_tick(&ctc, pins);
         T(0 == (pins & Z80CTC_ZCTO1));
     }
     /* now start the timer on next tick */
     pins |= Z80CTC_CLKTRG1;
     for (int r = 0; r < 3; r++) {
         for (int i = 0; i < 160; i++) {
-            pins = _z80ctc_tick_channel(&ctc.chn[1], pins, 1);
+            pins = z80ctc_tick(&ctc, pins);
             if (i != 159) {
                 T(0 == (pins & Z80CTC_ZCTO1));
             }
@@ -108,7 +108,7 @@ void test_counter() {
     for (int r = 0; r < 3; r++) {
         for (int i = 0; i < 10; i++) {
             pins |= Z80CTC_CLKTRG1;
-            pins = _z80ctc_tick_channel(&ctc.chn[1], pins, 1);
+            pins = z80ctc_tick(&ctc, pins);
             if (i != 9) {
                 T(0 == (pins & Z80CTC_ZCTO1));
             }
@@ -117,7 +117,7 @@ void test_counter() {
                 T(10 == ctc.chn[1].down_counter);
             }
             pins &= ~Z80CTC_CLKTRG1;
-            pins = _z80ctc_tick_channel(&ctc.chn[1], pins, 1);
+            pins = z80ctc_tick(&ctc, pins);
         }
     }
 }
