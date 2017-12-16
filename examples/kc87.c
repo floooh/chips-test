@@ -259,13 +259,13 @@ uint64_t tick(int num_ticks, uint64_t pins) {
        is PIO1>PIO2>CTC, the interrupt handling functions must be called
        in this order
     */
-    for (int i = 0; i < num_ticks; i++) {
-        pins |= Z80_IEIO;   /* enable the interrupt enable in for highest priority device */
+    Z80_DAISYCHAIN_BEGIN(pins)
+    {
         pins = z80pio_int(&pio1, pins);
         pins = z80pio_int(&pio2, pins);
         pins = z80ctc_int(&ctc, pins);
     }
-
+    Z80_DAISYCHAIN_END(pins);
     return (pins & Z80_PIN_MASK);
 }
 
