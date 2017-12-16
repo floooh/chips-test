@@ -30,7 +30,7 @@ z80ctc_t ctc;
 kbd_t kbd;
 uint32_t blink_counter = 0;
 bool blink_flip_flop = false;
-uint64_t ctc_clktrg3_state = 0;
+uint64_t ctc_zcto2 = 0;
 uint8_t mem[1<<16];
 const  uint32_t palette[8] = {
     0xFF000000,     // black
@@ -182,14 +182,14 @@ uint64_t tick(int num_ticks, uint64_t pins) {
        which drives the system clock, store the state of ZCTO2 for the
        next tick
     */
-    pins |= ctc_clktrg3_state;
+    pins |= ctc_zcto2;
     for (int i = 0; i < num_ticks; i++) {
         if (pins & Z80CTC_ZCTO2) { pins |= Z80CTC_CLKTRG3; }
         else                     { pins &= ~Z80CTC_CLKTRG3; }
         pins = z80ctc_tick(&ctc, pins);
 
     }
-    ctc_clktrg3_state = (pins & Z80CTC_ZCTO2) ? Z80CTC_CLKTRG3:0;
+    ctc_zcto2 = (pins & Z80CTC_ZCTO2);
 
     /* the blink flip flop is controlled by a 'bisync' video signal
        (I guess that means it triggers at half PAL frequency: 25Hz),

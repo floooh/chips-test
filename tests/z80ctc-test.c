@@ -75,6 +75,7 @@ void test_timer_wait_trigger() {
     }
     /* now start the timer on next tick */
     pins |= Z80CTC_CLKTRG1;
+    pins = z80ctc_tick(&ctc, pins);
     for (int r = 0; r < 3; r++) {
         for (int i = 0; i < 160; i++) {
             pins = z80ctc_tick(&ctc, pins);
