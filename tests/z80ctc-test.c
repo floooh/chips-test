@@ -148,10 +148,9 @@ uint64_t tick(int num_ticks, uint64_t pins) {
         pins = z80ctc_iorq(&ctc, pins);
     }
     /* interrupt handling */
-    for (int i = 0; i < num_ticks; i++) {
-        pins |= Z80_IEIO;
-        pins = z80ctc_int(&ctc, pins);
-    }
+    Z80_DAISYCHAIN_BEGIN(pins);
+    pins = z80ctc_int(&ctc, pins);
+    Z80_DAISYCHAIN_END(pins);
     return pins & Z80_PIN_MASK;
 }
 
