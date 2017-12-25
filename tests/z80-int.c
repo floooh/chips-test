@@ -15,12 +15,12 @@ bool reti_executed = false;
 
 uint64_t tick(int num, uint64_t pins) {
     if (pins & Z80_MREQ) {
-        const uint16_t addr = Z80_ADDR(pins);
+        const uint16_t addr = Z80_GET_ADDR(pins);
         if (pins & Z80_RD) {
             Z80_SET_DATA(pins, mem[addr]);
         }
         else if (pins & Z80_WR) {
-            mem[addr] = Z80_DATA(pins);
+            mem[addr] = Z80_GET_DATA(pins);
         }
     }
     else if (pins & Z80_IORQ) {

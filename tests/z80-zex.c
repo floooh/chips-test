@@ -32,10 +32,10 @@ static void put_char(char c) {
 static uint64_t tick(int num, uint64_t pins) {
     if (pins & Z80_MREQ) {
         if (pins & Z80_RD) {
-            Z80_SET_DATA(pins, mem[Z80_ADDR(pins)]);
+            Z80_SET_DATA(pins, mem[Z80_GET_ADDR(pins)]);
         }
         else if (pins & Z80_WR) {
-            mem[Z80_ADDR(pins)] = Z80_DATA(pins);
+            mem[Z80_GET_ADDR(pins)] = Z80_GET_DATA(pins);
         }
     }
     return pins;

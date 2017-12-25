@@ -206,7 +206,7 @@ uint64_t tick(int num_ticks, uint64_t pins) {
     /* memory and IO requests */
     if (pins & Z80_MREQ) {
         /* a memory request machine cycle */
-        const uint16_t addr = Z80_ADDR(pins);
+        const uint16_t addr = Z80_GET_ADDR(pins);
         if (pins & Z80_RD) {
             /* read memory byte */
             Z80_SET_DATA(pins, mem[addr]);
@@ -214,7 +214,7 @@ uint64_t tick(int num_ticks, uint64_t pins) {
         else if (pins & Z80_WR) {
             /* write memory byte, don't overwrite ROM */
             if ((addr < 0xC000) || ((addr >= 0xE800) && (addr < 0xF000))) {
-                mem[addr] = Z80_DATA(pins);
+                mem[addr] = Z80_GET_DATA(pins);
             }
         }
     }

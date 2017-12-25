@@ -17,22 +17,22 @@ uint64_t tick(int num, uint64_t pins) {
     if (pins & Z80_MREQ) {
         if (pins & Z80_RD) {
             /* memory read */
-            Z80_SET_DATA(pins, mem[Z80_ADDR(pins)]);
+            Z80_SET_DATA(pins, mem[Z80_GET_ADDR(pins)]);
         }
         else if (pins & Z80_WR) {
             /* memory write */
-            mem[Z80_ADDR(pins)] = Z80_DATA(pins);
+            mem[Z80_GET_ADDR(pins)] = Z80_GET_DATA(pins);
         }
     }
     else if (pins & Z80_IORQ) {
         if (pins & Z80_RD) {
             /* IN */
-            Z80_SET_DATA(pins, (Z80_ADDR(pins) & 0xFF) * 2);
+            Z80_SET_DATA(pins, (Z80_GET_ADDR(pins) & 0xFF) * 2);
         }
         else if (pins & Z80_WR) {
             /* OUT */
-            out_port = Z80_ADDR(pins);
-            out_byte = Z80_DATA(pins);
+            out_port = Z80_GET_ADDR(pins);
+            out_byte = Z80_GET_DATA(pins);
         }
     }
     return pins;
