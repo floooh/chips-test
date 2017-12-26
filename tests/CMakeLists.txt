@@ -39,3 +39,8 @@ fips_begin_app(ay38912-test cmdline)
     fips_vs_warning_level(3)
     fips_files(ay38912-test.c)
 fips_end_app()
+
+fips_begin_app(m6502-test cmdline)
+    fips_vs_warning_level(3)
+    fips_files(m6502-test.c)
+fips_end_app()
