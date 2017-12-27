@@ -245,6 +245,7 @@ void LDX() {
 }
 
 void LDY() {
+    puts(">>> LDY");
     init();
     uint8_t prog[] = {
         // immediate
@@ -312,6 +313,7 @@ void LDY() {
 }
 
 void STA() {
+    puts(">>> STA");
     init();
     uint8_t prog[] = {
         0xA9, 0x23,             // LDA #$23
@@ -341,6 +343,7 @@ void STA() {
 }
 
 void STX() {
+    puts(">>> STX");
     init();
     uint8_t prog[] = {
         0xA2, 0x23,             // LDX #$23
@@ -360,6 +363,7 @@ void STX() {
 }
 
 void STY() {
+    puts(">>> STY");
     init();
     uint8_t prog[] = {
         0xA0, 0x23,             // LDY #$23
@@ -379,6 +383,7 @@ void STY() {
 }
 
 void TAX_TXA() {
+    puts(">>> TAX,TXA");
     init();
     uint8_t prog[] = {
         0xA9, 0x00,     // LDA #$00
@@ -407,6 +412,7 @@ void TAX_TXA() {
 }
 
 void TAY_TYA() {
+    puts(">>> TAY,TYA");
     init();
     uint8_t prog[] = {
         0xA9, 0x00,     // LDA #$00
@@ -434,6 +440,35 @@ void TAY_TYA() {
     T(2 == step()); T(cpu.A == 0xF0); T(tf(M6502_NF));
 }
 
+void DEX_INX_DEY_INY() {
+    puts(">>> DEX,INX,DEY,INY");
+    init();
+    uint8_t prog[] = {
+        0xA2, 0x01,     // LDX #$01
+        0xCA,           // DEX
+        0xCA,           // DEX
+        0xE8,           // INX
+        0xE8,           // INX
+        0xA0, 0x01,     // LDY #$01
+        0x88,           // DEY
+        0x88,           // DEY
+        0xC8,           // INY
+        0xC8,           // INY
+    };
+    copy(0x0200, prog, sizeof(prog));
+
+    T(2 == step()); T(cpu.X == 0x01); T(tf(0));
+    T(2 == step()); T(cpu.X == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(cpu.X == 0xFF); T(tf(M6502_NF));
+    T(2 == step()); T(cpu.X == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(cpu.X == 0x01); T(tf(0));
+    T(2 == step()); T(cpu.Y == 0x01); T(tf(0));
+    T(2 == step()); T(cpu.Y == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(cpu.Y == 0xFF); T(tf(M6502_NF));
+    T(2 == step()); T(cpu.Y == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(cpu.Y == 0x01); T(tf(0));
+}
+
 int main() {
     INIT();
     RESET();
@@ -445,6 +480,7 @@ int main() {
     STY();
     TAX_TXA();
     TAY_TYA();
+    DEX_INX_DEY_INY();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
