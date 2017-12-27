@@ -640,6 +640,29 @@ void PHA_PLA_PHP_PLP() {
     T(4 == step()); T(cpu.S == 0xFD); T(tf(0));
 }
 
+void CLC_SEC_CLI_SEI_CLV_CLD_SED() {
+    init();
+    uint8_t prog[] = {
+        0xB8,       // CLV
+        0x78,       // SEI
+        0x58,       // CLI
+        0x38,       // SEC
+        0x18,       // CLC
+        0xF8,       // SED
+        0xD8,       // CLD
+    };
+    copy(0x0200, prog, sizeof(prog));
+    cpu.P |= M6502_VF;
+
+    T(2 == step()); T(tf(0));
+    T(2 == step()); T(tf(M6502_IF));
+    T(2 == step()); T(tf(0));
+    T(2 == step()); T(tf(M6502_CF));
+    T(2 == step()); T(tf(0));
+    T(2 == step()); T(tf(M6502_DF));
+    T(2 == step()); T(tf(0));
+}
+
 int main() {
     INIT();
     RESET();
@@ -658,6 +681,7 @@ int main() {
     EOR();
     NOP();
     PHA_PLA_PHP_PLP();
+    CLC_SEC_CLI_SEI_CLV_CLD_SED();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
