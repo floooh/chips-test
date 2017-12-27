@@ -378,6 +378,62 @@ void STY() {
     T(4 == step()); T(mem[0x0020] == 0x23);
 }
 
+void TAX_TXA() {
+    init();
+    uint8_t prog[] = {
+        0xA9, 0x00,     // LDA #$00
+        0xA2, 0x10,     // LDX #$10
+        0xAA,           // TAX
+        0xA9, 0xF0,     // LDA #$F0
+        0x8A,           // TXA
+        0xA9, 0xF0,     // LDA #$F0
+        0xA2, 0x00,     // LDX #$00
+        0xAA,           // TAX
+        0xA9, 0x01,     // LDA #$01
+        0x8A,           // TXA
+    };
+    copy(0x0200, prog, sizeof(prog));
+
+    T(2 == step()); T(cpu.A == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(cpu.X == 0x10); T(tf(0));
+    T(2 == step()); T(cpu.X == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(cpu.A == 0xF0); T(tf(M6502_NF));
+    T(2 == step()); T(cpu.A == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(cpu.A == 0xF0); T(tf(M6502_NF));
+    T(2 == step()); T(cpu.X == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(cpu.X == 0xF0); T(tf(M6502_NF));
+    T(2 == step()); T(cpu.A == 0x01); T(tf(0));
+    T(2 == step()); T(cpu.A == 0xF0); T(tf(M6502_NF));
+}
+
+void TAY_TYA() {
+    init();
+    uint8_t prog[] = {
+        0xA9, 0x00,     // LDA #$00
+        0xA0, 0x10,     // LDY #$10
+        0xA8,           // TAY
+        0xA9, 0xF0,     // LDA #$F0
+        0x98,           // TYA
+        0xA9, 0xF0,     // LDA #$F0
+        0xA0, 0x00,     // LDY #$00
+        0xA8,           // TAY
+        0xA9, 0x01,     // LDA #$01
+        0x98,           // TYA
+    };
+    copy(0x0200, prog, sizeof(prog));
+
+    T(2 == step()); T(cpu.A == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(cpu.Y == 0x10); T(tf(0));
+    T(2 == step()); T(cpu.Y == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(cpu.A == 0xF0); T(tf(M6502_NF));
+    T(2 == step()); T(cpu.A == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(cpu.A == 0xF0); T(tf(M6502_NF));
+    T(2 == step()); T(cpu.Y == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(cpu.Y == 0xF0); T(tf(M6502_NF));
+    T(2 == step()); T(cpu.A == 0x01); T(tf(0));
+    T(2 == step()); T(cpu.A == 0xF0); T(tf(M6502_NF));
+}
+
 int main() {
     INIT();
     RESET();
@@ -387,6 +443,8 @@ int main() {
     STA();
     STX();
     STY();
+    TAX_TXA();
+    TAY_TYA();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
