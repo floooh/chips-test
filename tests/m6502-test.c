@@ -822,6 +822,38 @@ void LSR() {
     T(2 == step()); T(0x20 == cpu.A); T(tf(0));
 }
 
+void ROR_ROL() {
+    puts(">>> ROR,ROL");
+    init();
+    // FIXME: more adressing modes
+    uint8_t prog[] = {
+        0xA9, 0x81,     // LDA #$81
+        0xA2, 0x01,     // LDX #$01
+        0x85, 0x10,     // STA #$10
+        0x26, 0x10,     // ROL $10
+        0x36, 0x0F,     // ROL $0F,X
+        0x76, 0x0F,     // ROR $0F,X
+        0x66, 0x10,     // ROR $10
+        0x6A,           // ROR
+        0x6A,           // ROR
+        0x2A,           // ROL
+        0x2A,           // ROL
+    };
+    copy(0x0200, prog, sizeof(prog));
+
+    T(2 == step()); T(0x81 == cpu.A);
+    T(2 == step()); T(0x01 == cpu.X);
+    T(3 == step()); T(0x81 == mem[0x0010]);
+    T(5 == step()); T(0x02 == mem[0x0010]); T(tf(M6502_CF));
+    T(6 == step()); T(0x05 == mem[0x0010]); T(tf(0));
+    T(6 == step()); T(0x02 == mem[0x0010]); T(tf(M6502_CF));
+    T(5 == step()); T(0x81 == mem[0x0010]); T(tf(M6502_NF));
+    T(2 == step()); T(0x40 == cpu.A); T(tf(M6502_CF));
+    T(2 == step()); T(0xA0 == cpu.A); T(tf(M6502_NF));
+    T(2 == step()); T(0x40 == cpu.A); T(tf(M6502_CF));
+    T(2 == step()); T(0x81 == cpu.A); T(tf(M6502_NF));
+}
+
 int main() {
     INIT();
     RESET();
@@ -846,6 +878,7 @@ int main() {
     CMP_CPX_CPY();
     ASL();
     LSR();
+    ROR_ROL();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
