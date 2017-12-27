@@ -774,6 +774,54 @@ void CMP_CPX_CPY() {
     T(2 == step()); T(tf(M6502_NF));
 }
 
+void ASL() {
+    puts(">>> ASL");
+    init();
+    // FIXME: more addressing modes
+    uint8_t prog[] = {
+        0xA9, 0x81,     // LDA #$81
+        0xA2, 0x01,     // LDX #$01
+        0x85, 0x10,     // STA #$10
+        0x06, 0x10,     // ASL $10
+        0x16, 0x0F,     // ASL $0F,X
+        0x0A,           // ASL
+        0x0A,           // ASL
+    };
+    copy(0x0200, prog, sizeof(prog));
+
+    T(2 == step()); T(0x81 == cpu.A);
+    T(2 == step()); T(0x01 == cpu.X);
+    T(3 == step()); T(0x81 == mem[0x0010]);
+    T(5 == step()); T(0x02 == mem[0x0010]); T(tf(M6502_CF));
+    T(6 == step()); T(0x04 == mem[0x0010]); T(tf(0));
+    T(2 == step()); T(0x02 == cpu.A); T(tf(M6502_CF));
+    T(2 == step()); T(0x04 == cpu.A); T(tf(0));
+}
+
+void LSR() {
+    puts(">>> LSR");
+    init();
+    // FIXME: more addressing modes
+    uint8_t prog[] = {
+        0xA9, 0x81,     // LDA #$81
+        0xA2, 0x01,     // LDX #$01
+        0x85, 0x10,     // STA #$10
+        0x46, 0x10,     // LSR $10
+        0x56, 0x0F,     // LSR $0F,X
+        0x4A,           // LSR
+        0x4A,           // LSR
+    };
+    copy(0x0200, prog, sizeof(prog));
+
+    T(2 == step()); T(0x81 == cpu.A);
+    T(2 == step()); T(0x01 == cpu.X);
+    T(3 == step()); T(0x81 == mem[0x0010]);
+    T(5 == step()); T(0x40 == mem[0x0010]); T(tf(M6502_CF));
+    T(6 == step()); T(0x20 == mem[0x0010]); T(tf(0));
+    T(2 == step()); T(0x40 == cpu.A); T(tf(M6502_CF));
+    T(2 == step()); T(0x20 == cpu.A); T(tf(0));
+}
+
 int main() {
     INIT();
     RESET();
@@ -796,6 +844,8 @@ int main() {
     INC_DEC();
     ADC_SBC();
     CMP_CPX_CPY();
+    ASL();
+    LSR();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
