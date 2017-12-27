@@ -743,6 +743,37 @@ void ADC_SBC() {
     T(2 == step()); T(0xFB == cpu.A); T(tf(M6502_NF|M6502_CF));
 }
 
+void CMP_CPX_CPY() {
+    puts(">>> CMP,CPX,CPY");
+    init();
+    // FIXME: non-immediate addressing modes
+    uint8_t prog[] = {
+        0xA9, 0x01,     // LDA #$01
+        0xA2, 0x02,     // LDX #$02
+        0xA0, 0x03,     // LDY #$03
+        0xC9, 0x00,     // CMP #$00
+        0xC9, 0x01,     // CMP #$01
+        0xC9, 0x02,     // CMP #$02
+        0xE0, 0x01,     // CPX #$01
+        0xE0, 0x02,     // CPX #$02
+        0xE0, 0x03,     // CPX #$03
+        0xC0, 0x02,     // CPY #$02
+        0xC0, 0x02,     // CPY #$03
+        0xC0, 0x03,     // CPY #$04
+    };
+    copy(0x0200, prog, sizeof(prog));
+
+    T(2 == step()); T(0x01 == cpu.A);
+    T(2 == step()); T(0x02 == cpu.X);
+    T(2 == step()); T(0x03 == cpu.Y);
+    T(2 == step()); T(tf(M6502_CF));
+    T(2 == step()); T(tf(M6502_ZF|M6502_CF));
+    T(2 == step()); T(tf(M6502_NF));
+    T(2 == step()); T(tf(M6502_CF));
+    T(2 == step()); T(tf(M6502_ZF|M6502_CF));
+    T(2 == step()); T(tf(M6502_NF));
+}
+
 int main() {
     INIT();
     RESET();
@@ -764,6 +795,7 @@ int main() {
     CLC_SEC_CLI_SEI_CLV_CLD_SED();
     INC_DEC();
     ADC_SBC();
+    CMP_CPX_CPY();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
