@@ -693,6 +693,56 @@ void INC_DEC() {
     T(7 == step()); T(0x00 == mem[0x1010]); T(tf(M6502_ZF));
 }
 
+void ADC_SBC() {
+    puts(">>> ADC,SBC");
+    init();
+    uint8_t prog[] = {
+        0xA9, 0x01,         // LDA #$01
+        0x85, 0x10,         // STA $10
+        0x8D, 0x00, 0x10,   // STA $1000
+        0xA9, 0xFC,         // LDA #$FC
+        0xA2, 0x08,         // LDX #$08
+        0xA0, 0x04,         // LDY #$04
+        0x18,               // CLC
+        0x69, 0x01,         // ADC #$01
+        0x65, 0x10,         // ADC $10
+        0x75, 0x08,         // ADC $8,X
+        0x6D, 0x00, 0x10,   // ADC $1000
+        0x7D, 0xF8, 0x0F,   // ADC $0FF8,X
+        0x79, 0xFC, 0x0F,   // ADC $0FFC,Y
+        // FIXME: ADC (zp,X) and ADC (zp),X
+        0xF9, 0xFC, 0x0F,   // SBC $0FFC,Y
+        0xFD, 0xF8, 0x0F,   // SBC $0FF8,X
+        0xED, 0x00, 0x10,   // SBC $1000
+        0xF5, 0x08,         // SBC $8,X
+        0xE5, 0x10,         // SBC $10
+        0xE9, 0x01,         // SBC #$10
+    };
+    copy(0x0200, prog, sizeof(prog));
+
+    T(2 == step()); T(0x01 == cpu.A);
+    T(3 == step()); T(0x01 == mem[0x0010]);
+    T(4 == step()); T(0x01 == mem[0x1000]);
+    T(2 == step()); T(0xFC == cpu.A);
+    T(2 == step()); T(0x08 == cpu.X);
+    T(2 == step()); T(0x04 == cpu.Y);
+    T(2 == step());  // CLC
+    // ADC
+    T(2 == step()); T(0xFD == cpu.A); T(tf(M6502_NF));
+    T(3 == step()); T(0xFE == cpu.A); T(tf(M6502_NF));
+    T(4 == step()); T(0xFF == cpu.A); T(tf(M6502_NF));
+    T(4 == step()); T(0x00 == cpu.A); T(tf(M6502_ZF|M6502_CF));
+    T(5 == step()); T(0x02 == cpu.A); T(tf(0));
+    T(5 == step()); T(0x03 == cpu.A); T(tf(0));
+    // SBC
+    T(5 == step()); T(0x01 == cpu.A); T(tf(M6502_CF));
+    T(5 == step()); T(0x00 == cpu.A); T(tf(M6502_ZF|M6502_CF));
+    T(4 == step()); T(0xFF == cpu.A); T(tf(M6502_NF));
+    T(4 == step()); T(0xFD == cpu.A); T(tf(M6502_NF|M6502_CF));
+    T(3 == step()); T(0xFC == cpu.A); T(tf(M6502_NF|M6502_CF));
+    T(2 == step()); T(0xFB == cpu.A); T(tf(M6502_NF|M6502_CF));
+}
+
 int main() {
     INIT();
     RESET();
@@ -713,6 +763,7 @@ int main() {
     PHA_PLA_PHP_PLP();
     CLC_SEC_CLI_SEI_CLV_CLD_SED();
     INC_DEC();
+    ADC_SBC();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
