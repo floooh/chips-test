@@ -311,12 +311,82 @@ void LDY() {
     T(5 == step()); T(cpu.Y == 0x56); T(tf(0));
 }
 
+void STA() {
+    init();
+    uint8_t prog[] = {
+        0xA9, 0x23,             // LDA #$23
+        0xA2, 0x10,             // LDX #$10
+        0xA0, 0xC0,             // LDY #$C0
+        0x85, 0x10,             // STA $10
+        0x8D, 0x34, 0x12,       // STA $1234
+        0x95, 0x10,             // STA $10,X
+        0x9D, 0x00, 0x20,       // STA $2000,X
+        0x99, 0x00, 0x20,       // STA $2000,Y
+        0x81, 0x10,             // STA ($10,X)
+        0x91, 0x20,             // STA ($20),Y
+    };
+    copy(0x0200, prog, sizeof(prog));
+
+    T(2 == step()); T(cpu.A == 0x23);
+    T(2 == step()); T(cpu.X == 0x10);
+    T(2 == step()); T(cpu.Y == 0xC0);
+    T(3 == step()); T(mem[0x0010] == 0x23);
+    T(4 == step()); T(mem[0x1234] == 0x23);
+    T(4 == step()); T(mem[0x0020] == 0x23);
+    T(5 == step()); T(mem[0x2010] == 0x23);
+    T(5 == step()); T(mem[0x20C0] == 0x23);
+    w16(0x0020, 0x4321);
+    T(6 == step()); T(mem[0x4321] == 0x23);
+    T(6 == step()); T(mem[0x43E1] == 0x23);
+}
+
+void STX() {
+    init();
+    uint8_t prog[] = {
+        0xA2, 0x23,             // LDX #$23
+        0xA0, 0x10,             // LDY #$10
+
+        0x86, 0x10,             // STX $10
+        0x8E, 0x34, 0x12,       // STX $1234
+        0x96, 0x10,             // STX $10,Y
+    };
+    copy(0x0200, prog, sizeof(prog));
+
+    T(2 == step()); T(cpu.X == 0x23);
+    T(2 == step()); T(cpu.Y == 0x10);
+    T(3 == step()); T(mem[0x0010] == 0x23);
+    T(4 == step()); T(mem[0x1234] == 0x23);
+    T(4 == step()); T(mem[0x0020] == 0x23);
+}
+
+void STY() {
+    init();
+    uint8_t prog[] = {
+        0xA0, 0x23,             // LDY #$23
+        0xA2, 0x10,             // LDX #$10
+
+        0x84, 0x10,             // STX $10
+        0x8C, 0x34, 0x12,       // STX $1234
+        0x94, 0x10,             // STX $10,Y
+    };
+    copy(0x0200, prog, sizeof(prog));
+
+    T(2 == step()); T(cpu.Y == 0x23);
+    T(2 == step()); T(cpu.X == 0x10);
+    T(3 == step()); T(mem[0x0010] == 0x23);
+    T(4 == step()); T(mem[0x1234] == 0x23);
+    T(4 == step()); T(mem[0x0020] == 0x23);
+}
+
 int main() {
     INIT();
     RESET();
     LDA();
     LDX();
     LDY();
+    STA();
+    STX();
+    STY();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
