@@ -176,10 +176,147 @@ void LDA() {
     T(6 == step()); T(cpu.A == 0xA8); T(tf(M6502_NF));
 }
 
+void LDX() {
+    puts(">>> LDX");
+    init();
+    uint8_t prog[] = {
+        // immediate
+        0xA2, 0x00,         // LDX #$00
+        0xA2, 0x01,         // LDX #$01
+        0xA2, 0x00,         // LDX #$00
+        0xA2, 0x80,         // LDX #$80
+
+        // zero page
+        0xA6, 0x02,         // LDX $02
+        0xA6, 0x03,         // LDX $03
+        0xA6, 0x80,         // LDX $80
+        0xA6, 0xFF,         // LDX $FF
+
+        // absolute
+        0xAE, 0x00, 0x10,   // LDX $1000
+        0xAE, 0xFF, 0xFF,   // LDX $FFFF
+        0xAE, 0x21, 0x00,   // LDX $0021
+
+        // zero page,Y
+        0xA0, 0x0F,         // LDY #$0F
+        0xB6, 0x10,         // LDX $10,Y    => 0x1F
+        0xB6, 0xF8,         // LDX $FE,Y    => 0x07
+        0xB6, 0x78,         // LDX $78,Y    => 0x87
+
+        // absolute,Y
+        0xA0, 0xF0,         // LDY #$F0
+        0xBE, 0x10, 0x0F,   // LDX $0F10,Y    => 0x1000
+        0xBE, 0x0F, 0xFF,   // LDX $FF0F,Y    => 0xFFFF
+        0xBE, 0x31, 0xFF,   // LDX $FF31,Y    => 0x0021
+    };
+    w8(0x0002, 0x01); w8(0x0003, 0x00); w8(0x0080, 0x80); w8(0x00FF, 0x03);
+    w8(0x1000, 0x12); w8(0xFFFF, 0x34); w8(0x0021, 0x56);
+    w8(0x001F, 0xAA); w8(0x0007, 0x33); w8(0x0087, 0x22);
+    copy(0x0200, prog, sizeof(prog));
+
+    // immediate
+    T(2 == step()); T(cpu.X == 0x00); (tf(M6502_ZF));
+    T(2 == step()); T(cpu.X == 0x01); (tf(0));
+    T(2 == step()); T(cpu.X == 0x00); (tf(M6502_ZF));
+    T(2 == step()); T(cpu.X == 0x80); (tf(M6502_NF));
+
+    // zero page
+    T(3 == step()); T(cpu.X == 0x01); T(tf(0));
+    T(3 == step()); T(cpu.X == 0x00); T(tf(M6502_ZF));
+    T(3 == step()); T(cpu.X == 0x80); T(tf(M6502_NF));
+    T(3 == step()); T(cpu.X == 0x03); T(tf(0));
+
+    // absolute
+    T(4 == step()); T(cpu.X == 0x12); T(tf(0));
+    T(4 == step()); T(cpu.X == 0x34); T(tf(0));
+    T(4 == step()); T(cpu.X == 0x56); T(tf(0));
+
+    // zero page,Y
+    T(2 == step()); T(cpu.Y == 0x0F); T(tf(0));
+    T(4 == step()); T(cpu.X == 0xAA); T(tf(M6502_NF));
+    T(4 == step()); T(cpu.X == 0x33); T(tf(0));
+    T(4 == step()); T(cpu.X == 0x22); T(tf(0));
+
+    // absolute,X
+    T(2 == step()); T(cpu.Y == 0xF0); T(tf(0));
+    T(5 == step()); T(cpu.X == 0x12); T(tf(0));
+    T(4 == step()); T(cpu.X == 0x34); T(tf(0));
+    T(5 == step()); T(cpu.X == 0x56); T(tf(0));
+}
+
+void LDY() {
+    init();
+    uint8_t prog[] = {
+        // immediate
+        0xA0, 0x00,         // LDY #$00
+        0xA0, 0x01,         // LDY #$01
+        0xA0, 0x00,         // LDY #$00
+        0xA0, 0x80,         // LDY #$80
+
+        // zero page
+        0xA4, 0x02,         // LDY $02
+        0xA4, 0x03,         // LDY $03
+        0xA4, 0x80,         // LDY $80
+        0xA4, 0xFF,         // LDY $FF
+
+        // absolute
+        0xAC, 0x00, 0x10,   // LDY $1000
+        0xAC, 0xFF, 0xFF,   // LDY $FFFF
+        0xAC, 0x21, 0x00,   // LDY $0021
+
+        // zero page,X
+        0xA2, 0x0F,         // LDX #$0F
+        0xB4, 0x10,         // LDY $10,X    => 0x1F
+        0xB4, 0xF8,         // LDY $FE,X    => 0x07
+        0xB4, 0x78,         // LDY $78,X    => 0x87
+
+        // absolute,X
+        0xA2, 0xF0,         // LDX #$F0
+        0xBC, 0x10, 0x0F,   // LDY $0F10,X    => 0x1000
+        0xBC, 0x0F, 0xFF,   // LDY $FF0F,X    => 0xFFFF
+        0xBC, 0x31, 0xFF,   // LDY $FF31,X    => 0x0021
+    };
+    w8(0x0002, 0x01); w8(0x0003, 0x00); w8(0x0080, 0x80); w8(0x00FF, 0x03);
+    w8(0x1000, 0x12); w8(0xFFFF, 0x34); w8(0x0021, 0x56);
+    w8(0x001F, 0xAA); w8(0x0007, 0x33); w8(0x0087, 0x22);
+    copy(0x0200, prog, sizeof(prog));
+
+    // immediate
+    T(2 == step()); T(cpu.Y == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(cpu.Y == 0x01); T(tf(0));
+    T(2 == step()); T(cpu.Y == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(cpu.Y == 0x80); T(tf(M6502_NF));
+
+    // zero page
+    T(3 == step()); T(cpu.Y == 0x01); T(tf(0));
+    T(3 == step()); T(cpu.Y == 0x00); T(tf(M6502_ZF));
+    T(3 == step()); T(cpu.Y == 0x80); T(tf(M6502_NF));
+    T(3 == step()); T(cpu.Y == 0x03); T(tf(0));
+
+    // absolute
+    T(4 == step()); T(cpu.Y == 0x12); T(tf(0));
+    T(4 == step()); T(cpu.Y == 0x34); T(tf(0));
+    T(4 == step()); T(cpu.Y == 0x56); T(tf(0));
+
+    // zero page,Y
+    T(2 == step()); T(cpu.X == 0x0F); T(tf(0));
+    T(4 == step()); T(cpu.Y == 0xAA); T(tf(M6502_NF));
+    T(4 == step()); T(cpu.Y == 0x33); T(tf(0));
+    T(4 == step()); T(cpu.Y == 0x22); T(tf(0));
+
+    // absolute,X
+    T(2 == step()); T(cpu.X == 0xF0); T(tf(0));
+    T(5 == step()); T(cpu.Y == 0x12); T(tf(0));
+    T(4 == step()); T(cpu.Y == 0x34); T(tf(0));
+    T(5 == step()); T(cpu.Y == 0x56); T(tf(0));
+}
+
 int main() {
     INIT();
     RESET();
     LDA();
+    LDX();
+    LDY();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
