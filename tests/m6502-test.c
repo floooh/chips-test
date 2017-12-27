@@ -618,6 +618,28 @@ void NOP() {
     T(2 == step());
 }
 
+void PHA_PLA_PHP_PLP() {
+    init();
+    uint8_t prog[] = {
+        0xA9, 0x23,     // LDA #$23
+        0x48,           // PHA
+        0xA9, 0x32,     // LDA #$32
+        0x68,           // PLA
+        0x08,           // PHP
+        0xA9, 0x00,     // LDA #$00
+        0x28,           // PLP
+    };
+    copy(0x0200, prog, sizeof(prog));
+
+    T(2 == step()); T(cpu.A == 0x23); T(cpu.S == 0xFD);
+    T(3 == step()); T(cpu.S == 0xFC); T(mem[0x01FD] == 0x23);
+    T(2 == step()); T(cpu.A == 0x32);
+    T(4 == step()); T(cpu.A == 0x23); T(cpu.S == 0xFD); T(tf(0));
+    T(3 == step()); T(cpu.S == 0xFC); T(mem[0x01FD] == (M6502_XF|M6502_IF|M6502_BF));
+    T(2 == step()); T(tf(M6502_ZF));
+    T(4 == step()); T(cpu.S == 0xFD); T(tf(0));
+}
+
 int main() {
     INIT();
     RESET();
@@ -635,6 +657,7 @@ int main() {
     AND();
     EOR();
     NOP();
+    PHA_PLA_PHP_PLP();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
