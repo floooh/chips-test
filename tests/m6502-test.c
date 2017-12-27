@@ -470,6 +470,7 @@ void DEX_INX_DEY_INY() {
 }
 
 void TXS_TSX() {
+    puts(">>> TXS,TSX");
     init();
     uint8_t prog[] = {
         0xA2, 0xAA,     // LDX #$AA
@@ -487,6 +488,136 @@ void TXS_TSX() {
     T(2 == step()); T(cpu.X == 0xAA); T(tf(M6502_NF));
 }
 
+void ORA() {
+    puts(">>> ORA");
+    init();
+    uint8_t prog[] = {
+        0xA9, 0x00,         // LDA #$00
+        0xA2, 0x01,         // LDX #$01
+        0xA0, 0x02,         // LDY #$02
+        0x09, 0x00,         // ORA #$00
+        0x05, 0x10,         // ORA $10
+        0x15, 0x10,         // ORA $10,X
+        0x0d, 0x00, 0x10,   // ORA $1000
+        0x1d, 0x00, 0x10,   // ORA $1000,X
+        0x19, 0x00, 0x10,   // ORA $1000,Y
+        0x01, 0x22,         // ORA ($22,X)
+        0x11, 0x20,         // ORA ($20),Y
+    };
+    copy(0x0200, prog, sizeof(prog));
+    w16(0x0020, 0x1002);
+    w16(0x0023, 0x1003);
+    w8(0x0010, (1<<0));
+    w8(0x0011, (1<<1));
+    w8(0x1000, (1<<2));
+    w8(0x1001, (1<<3));
+    w8(0x1002, (1<<4));
+    w8(0x1003, (1<<5));
+    w8(0x1004, (1<<6));
+
+    T(2 == step()); T(cpu.A == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(cpu.X == 0x01); T(tf(0));
+    T(2 == step()); T(cpu.Y == 0x02); T(tf(0));
+    T(2 == step()); T(cpu.A == 0x00); T(tf(M6502_ZF));
+    T(3 == step()); T(cpu.A == 0x01); T(tf(0));
+    T(4 == step()); T(cpu.A == 0x03); T(tf(0));
+    T(4 == step()); T(cpu.A == 0x07); T(tf(0));
+    T(4 == step()); T(cpu.A == 0x0F); T(tf(0));
+    T(4 == step()); T(cpu.A == 0x1F); T(tf(0));
+    T(6 == step()); T(cpu.A == 0x3F); T(tf(0));
+    T(5 == step()); T(cpu.A == 0x7F); T(tf(0));
+}
+
+void AND() {
+    puts(">>> AND");
+    init();
+    uint8_t prog[] = {
+        0xA9, 0xFF,         // LDA #$FF
+        0xA2, 0x01,         // LDX #$01
+        0xA0, 0x02,         // LDY #$02
+        0x29, 0xFF,         // AND #$FF
+        0x25, 0x10,         // AND $10
+        0x35, 0x10,         // AND $10,X
+        0x2d, 0x00, 0x10,   // AND $1000
+        0x3d, 0x00, 0x10,   // AND $1000,X
+        0x39, 0x00, 0x10,   // AND $1000,Y
+        0x21, 0x22,         // AND ($22,X)
+        0x31, 0x20,         // AND ($20),Y
+    };
+    copy(0x0200, prog, sizeof(prog));
+    w16(0x0020, 0x1002);
+    w16(0x0023, 0x1003);
+    w8(0x0010, 0x7F);
+    w8(0x0011, 0x3F);
+    w8(0x1000, 0x1F);
+    w8(0x1001, 0x0F);
+    w8(0x1002, 0x07);
+    w8(0x1003, 0x03);
+    w8(0x1004, 0x01);
+
+    T(2 == step()); T(cpu.A == 0xFF); T(tf(M6502_NF));
+    T(2 == step()); T(cpu.X == 0x01); T(tf(0));
+    T(2 == step()); T(cpu.Y == 0x02); T(tf(0));
+    T(2 == step()); T(cpu.A == 0xFF); T(tf(M6502_NF));
+    T(3 == step()); T(cpu.A == 0x7F); T(tf(0));
+    T(4 == step()); T(cpu.A == 0x3F); T(tf(0));
+    T(4 == step()); T(cpu.A == 0x1F); T(tf(0));
+    T(4 == step()); T(cpu.A == 0x0F); T(tf(0));
+    T(4 == step()); T(cpu.A == 0x07); T(tf(0));
+    T(6 == step()); T(cpu.A == 0x03); T(tf(0));
+    T(5 == step()); T(cpu.A == 0x01); T(tf(0));
+}
+
+void EOR() {
+    puts(">>> EOR");
+    init();
+    uint8_t prog[] = {
+        0xA9, 0xFF,         // LDA #$FF
+        0xA2, 0x01,         // LDX #$01
+        0xA0, 0x02,         // LDY #$02
+        0x49, 0xFF,         // EOR #$FF
+        0x45, 0x10,         // EOR $10
+        0x55, 0x10,         // EOR $10,X
+        0x4d, 0x00, 0x10,   // EOR $1000
+        0x5d, 0x00, 0x10,   // EOR $1000,X
+        0x59, 0x00, 0x10,   // EOR $1000,Y
+        0x41, 0x22,         // EOR ($22,X)
+        0x51, 0x20,         // EOR ($20),Y
+    };
+    copy(0x0200, prog, sizeof(prog));
+    w16(0x0020, 0x1002);
+    w16(0x0023, 0x1003);
+    w8(0x0010, 0x7F);
+    w8(0x0011, 0x3F);
+    w8(0x1000, 0x1F);
+    w8(0x1001, 0x0F);
+    w8(0x1002, 0x07);
+    w8(0x1003, 0x03);
+    w8(0x1004, 0x01);
+
+    T(2 == step()); T(cpu.A == 0xFF); T(tf(M6502_NF));
+    T(2 == step()); T(cpu.X == 0x01); T(tf(0));
+    T(2 == step()); T(cpu.Y == 0x02); T(tf(0));
+    T(2 == step()); T(cpu.A == 0x00); T(tf(M6502_ZF));
+    T(3 == step()); T(cpu.A == 0x7F); T(tf(0));
+    T(4 == step()); T(cpu.A == 0x40); T(tf(0));
+    T(4 == step()); T(cpu.A == 0x5F); T(tf(0));
+    T(4 == step()); T(cpu.A == 0x50); T(tf(0));
+    T(4 == step()); T(cpu.A == 0x57); T(tf(0));
+    T(6 == step()); T(cpu.A == 0x54); T(tf(0));
+    T(5 == step()); T(cpu.A == 0x55); T(tf(0));
+}
+
+void NOP() {
+    puts(">>> NOP");
+    init();
+    uint8_t prog[] = {
+        0xEA,       // NOP
+    };
+    copy(0x0200, prog, sizeof(prog));
+    T(2 == step());
+}
+
 int main() {
     INIT();
     RESET();
@@ -500,6 +631,10 @@ int main() {
     TAY_TYA();
     DEX_INX_DEY_INY();
     TXS_TSX();
+    ORA();
+    AND();
+    EOR();
+    NOP();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
