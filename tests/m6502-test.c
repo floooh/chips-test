@@ -469,6 +469,24 @@ void DEX_INX_DEY_INY() {
     T(2 == step()); T(cpu.Y == 0x01); T(tf(0));
 }
 
+void TXS_TSX() {
+    init();
+    uint8_t prog[] = {
+        0xA2, 0xAA,     // LDX #$AA
+        0xA9, 0x00,     // LDA #$00
+        0x9A,           // TXS
+        0xAA,           // TAX
+        0xBA,           // TSX
+    };
+    copy(0x0200, prog, sizeof(prog));
+
+    T(2 == step()); T(cpu.X == 0xAA); T(tf(M6502_NF));
+    T(2 == step()); T(cpu.A == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(cpu.S == 0xAA); T(tf(M6502_ZF));
+    T(2 == step()); T(cpu.X == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(cpu.X == 0xAA); T(tf(M6502_NF));
+}
+
 int main() {
     INIT();
     RESET();
@@ -481,6 +499,7 @@ int main() {
     TAX_TXA();
     TAY_TYA();
     DEX_INX_DEY_INY();
+    TXS_TSX();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
