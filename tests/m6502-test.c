@@ -35,6 +35,7 @@ void w16(uint16_t addr, uint16_t data) {
 }
 
 void init() {
+    memset(mem, 0, sizeof(mem));
     m6502_init(&cpu, tick);
     w16(0xFFFC, 0x0200);
     m6502_reset(&cpu);
@@ -619,6 +620,7 @@ void NOP() {
 }
 
 void PHA_PLA_PHP_PLP() {
+    puts(">>> PHA,PLA,PHP,PLP");
     init();
     uint8_t prog[] = {
         0xA9, 0x23,     // LDA #$23
@@ -641,6 +643,7 @@ void PHA_PLA_PHP_PLP() {
 }
 
 void CLC_SEC_CLI_SEI_CLV_CLD_SED() {
+    puts(">>> CLC,SEC,CLI,SEI,CLV,CLD,SED");
     init();
     uint8_t prog[] = {
         0xB8,       // CLV
@@ -663,6 +666,33 @@ void CLC_SEC_CLI_SEI_CLV_CLD_SED() {
     T(2 == step()); T(tf(0));
 }
 
+void INC_DEC() {
+    puts(">>> INC,DEC");
+    init();
+    uint8_t prog[] = {
+        0xA2, 0x10,         // LDX #$10
+        0xE6, 0x33,         // INC $33
+        0xF6, 0x33,         // INC $33,X
+        0xEE, 0x00, 0x10,   // INC $1000
+        0xFE, 0x00, 0x10,   // INC $1000,X
+        0xC6, 0x33,         // DEC $33
+        0xD6, 0x33,         // DEC $33,X
+        0xCE, 0x00, 0x10,   // DEC $1000
+        0xDE, 0x00, 0x10,   // DEC $1000,X
+    };
+    copy(0x0200, prog, sizeof(prog));
+
+    T(2 == step()); T(0x10 == cpu.X);
+    T(5 == step()); T(0x01 == mem[0x0033]); T(tf(0));
+    T(6 == step()); T(0x01 == mem[0x0043]); T(tf(0));
+    T(6 == step()); T(0x01 == mem[0x1000]); T(tf(0));
+    T(7 == step()); T(0x01 == mem[0x1010]); T(tf(0));
+    T(5 == step()); T(0x00 == mem[0x0033]); T(tf(M6502_ZF));
+    T(6 == step()); T(0x00 == mem[0x0043]); T(tf(M6502_ZF));
+    T(6 == step()); T(0x00 == mem[0x1000]); T(tf(M6502_ZF));
+    T(7 == step()); T(0x00 == mem[0x1010]); T(tf(M6502_ZF));
+}
+
 int main() {
     INIT();
     RESET();
@@ -682,6 +712,7 @@ int main() {
     NOP();
     PHA_PLA_PHP_PLP();
     CLC_SEC_CLI_SEI_CLV_CLD_SED();
+    INC_DEC();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
