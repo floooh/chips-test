@@ -881,6 +881,39 @@ void BIT() {
     T(4 == step()); T(tf(M6502_NF|M6502_VF));
 }
 
+void BNE_BEQ() {
+    puts(">>> BNE,BEQ");
+    init();
+    uint8_t prog[] = {
+        0xA9, 0x10,         // LDA #$10
+        0xC9, 0x10,         // CMP #$10
+        0xF0, 0x02,         // BEQ eq
+        0xA9, 0x0F,         // ne: LDA #$0F
+        0xC9, 0x0F,         // eq: CMP #$0F
+        0xD0, 0xFA,         // BNE ne -> executed 2x, second time not taken
+        0xEA,
+    };
+    copy(0x0200, prog, sizeof(prog));
+
+    T(2 == step()); T(0x10 == cpu.A);
+    T(2 == step()); T(tf(M6502_ZF|M6502_CF));
+    T(3 == step()); T(cpu.PC == 0x0208);
+    T(2 == step()); T(tf(M6502_CF));
+    T(3 == step()); T(cpu.PC == 0x0206);
+    T(2 == step()); T(0x0F == cpu.A);
+    T(2 == step()); T(tf(M6502_ZF|M6502_CF));
+    T(2 == step()); T(cpu.PC == 0x020C);
+
+    // patch jump target, and test jumping across 256 bytes page
+    cpu.PC = 0x0200;
+    w8(0x0205, 0xC0);
+    T(2 == step()); T(0x10 == cpu.A);
+    T(2 == step()); T(tf(M6502_ZF|M6502_CF));
+    T(4 == step()); T(cpu.PC == 0x01C6);
+
+    // FIXME: test the other branches
+}
+
 int main() {
     INIT();
     RESET();
@@ -907,6 +940,7 @@ int main() {
     LSR();
     ROR_ROL();
     BIT();
+    BNE_BEQ();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
