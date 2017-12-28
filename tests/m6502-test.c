@@ -854,6 +854,33 @@ void ROR_ROL() {
     T(2 == step()); T(0x81 == cpu.A); T(tf(M6502_NF));
 }
 
+void BIT() {
+    puts(">>> BIT");
+    init();
+    uint8_t prog[] = {
+        0xA9, 0x00,         // LDA #$00
+        0x85, 0x1F,         // STA $1F
+        0xA9, 0x80,         // LDA #$80
+        0x85, 0x20,         // STA $20
+        0xA9, 0xC0,         // LDA #$C0
+        0x8D, 0x00, 0x10,   // STA $1000
+        0x24, 0x1F,         // BIT $1F
+        0x24, 0x20,         // BIT $20
+        0x2C, 0x00, 0x10    // BIT $1000
+    };
+    copy(0x0200, prog, sizeof(prog));
+
+    T(2 == step()); T(0x00 == cpu.A);
+    T(3 == step()); T(0x00 == mem[0x001F]);
+    T(2 == step()); T(0x80 == cpu.A);
+    T(3 == step()); T(0x80 == mem[0x0020]);
+    T(2 == step()); T(0xC0 == cpu.A);
+    T(4 == step()); T(0xC0 == mem[0x1000]);
+    T(3 == step()); T(tf(M6502_ZF));
+    T(3 == step()); T(tf(M6502_NF));
+    T(4 == step()); T(tf(M6502_NF|M6502_VF));
+}
+
 int main() {
     INIT();
     RESET();
@@ -879,6 +906,7 @@ int main() {
     ASL();
     LSR();
     ROR_ROL();
+    BIT();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
