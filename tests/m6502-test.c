@@ -985,6 +985,31 @@ void JSR_RTS() {
     T(6 == step()); T(cpu.PC == 0x0303); T(cpu.S == 0xFD);
 }
 
+void RTI() {
+    puts(">>> RTI");
+    init();
+    uint8_t prog[] = {
+        0xA9, 0x11,     // LDA #$11
+        0x48,           // PHA
+        0xA9, 0x22,     // LDA #$22
+        0x48,           // PHA
+        0xA9, 0x33,     // LDA #$33
+        0x48,           // PHA
+        0x40,           // RTI
+    };
+    copy(0x0200, prog, sizeof(prog));
+    cpu.PC = 0x0200;
+
+    T(cpu.S == 0xFD);
+    T(2 == step()); T(cpu.A == 0x11);
+    T(3 == step()); T(cpu.S == 0xFC);
+    T(2 == step()); T(cpu.A == 0x22);
+    T(3 == step()); T(cpu.S == 0xFB);
+    T(2 == step()); T(cpu.A == 0x33);
+    T(3 == step()); T(cpu.S == 0xFA);
+    T(6 == step()); T(cpu.S == 0xFD); T(cpu.PC == 0x1122); T(tf(M6502_ZF|M6502_CF));
+}
+
 int main() {
     INIT();
     RESET();
@@ -1016,6 +1041,7 @@ int main() {
     JMP_indirect_samepage();
     JMP_indirect_wrap();
     JSR_RTS();
+    RTI();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
