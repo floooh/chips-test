@@ -34,6 +34,12 @@ void w16(uint16_t addr, uint16_t data) {
     mem[(addr+1)&0xFFFF] = data>>8;
 }
 
+uint16_t r16(uint16_t addr) {
+    uint8_t l = mem[addr];
+    uint8_t h = mem[(addr+1)&0xFFFF];
+    return (h<<8)|l;
+}
+
 void init() {
     memset(mem, 0, sizeof(mem));
     m6502_init(&cpu, tick);
@@ -961,6 +967,24 @@ void JMP_indirect_wrap() {
     T(5 == step()); T(cpu.PC == 0x2233);
 }
 
+void JSR_RTS() {
+    puts(">>> JSR,RTS");
+    init();
+    uint8_t prog[] = {
+        0x20, 0x05, 0x03,   // JSR fun
+        0xEA, 0xEA,         // NOP, NOP
+        0xEA,               // fun: NOP
+        0x60,               // RTS
+    };
+    copy(0x0300, prog, sizeof(prog));
+    cpu.PC = 0x0300;
+
+    T(cpu.S == 0xFD);
+    T(6 == step()); T(cpu.PC == 0x0305); T(cpu.S == 0xFB); T(r16(0x01FC)==0x0302);
+    T(2 == step());
+    T(6 == step()); T(cpu.PC == 0x0303); T(cpu.S == 0xFD);
+}
+
 int main() {
     INIT();
     RESET();
@@ -991,6 +1015,7 @@ int main() {
     JMP();
     JMP_indirect_samepage();
     JMP_indirect_wrap();
+    JSR_RTS();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
