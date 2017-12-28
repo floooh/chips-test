@@ -914,6 +914,53 @@ void BNE_BEQ() {
     // FIXME: test the other branches
 }
 
+void JMP() {
+    puts(">>> JMP");
+    init();
+    uint8_t prog[] = {
+        0x4C, 0x00, 0x10,   // JMP $1000
+    };
+    copy(0x0200, prog, sizeof(prog));
+    T(3 == step()); T(cpu.PC == 0x1000);
+}
+
+void JMP_indirect_samepage() {
+    puts(">>> JMP indirect, same page");
+    init();
+    uint8_t prog[] = {
+        0xA9, 0x33,         // LDA #$33
+        0x8D, 0x10, 0x21,   // STA $2110
+        0xA9, 0x22,         // LDA #$22
+        0x8D, 0x11, 0x21,   // STA $2111
+        0x6C, 0x10, 0x21,   // JMP ($2110)
+    };
+    copy(0x0200, prog, sizeof(prog));
+    T(2 == step()); T(cpu.A == 0x33);
+    T(4 == step()); T(mem[0x2110] == 0x33);
+    T(2 == step()); T(cpu.A == 0x22);
+    T(4 == step()); T(mem[0x2111] == 0x22);
+    T(5 == step()); T(cpu.PC == 0x2233);
+}
+
+void JMP_indirect_wrap() {
+    puts(">>> JMP indirect, cross page");
+    init();
+    uint8_t prog[] = {
+        0xA9, 0x33,         // LDA #$33
+        0x8D, 0xFF, 0x21,   // STA $21FF
+        0xA9, 0x22,         // LDA #$22
+        0x8D, 0x00, 0x21,   // STA $2100    // note: wraps around!
+        0x6C, 0xFF, 0x21,   // JMP ($21FF)
+    };
+    copy(0x0200, prog, sizeof(prog));
+
+    T(2 == step()); T(cpu.A == 0x33);
+    T(4 == step()); T(mem[0x21FF] == 0x33);
+    T(2 == step()); T(cpu.A == 0x22);
+    T(4 == step()); T(mem[0x2100] == 0x22);
+    T(5 == step()); T(cpu.PC == 0x2233);
+}
+
 int main() {
     INIT();
     RESET();
@@ -941,6 +988,9 @@ int main() {
     ROR_ROL();
     BIT();
     BNE_BEQ();
+    JMP();
+    JMP_indirect_samepage();
+    JMP_indirect_wrap();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
