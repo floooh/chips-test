@@ -20,7 +20,11 @@ uint8_t sram[0x2000];
 uint64_t tick(uint64_t pins) {
     const uint16_t addr = M6502_GET_ADDR(pins);
     /* memory-mapped IO range from 2000..401F is ignored */
-    if (pins & M6502_RW) {
+    /* ignore memory-mapped-io requests */
+    if ((addr >= 0x2000) && (addr < 0x4020)) {
+        return pins;
+    }
+    else if (pins & M6502_RW) {
         /* memory read */
         M6502_SET_DATA(pins, mem_rd(&mem, addr));
     }
