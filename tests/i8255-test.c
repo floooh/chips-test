@@ -94,7 +94,69 @@ void test_bit_set_clear() {
 }
 
 void test_in_out() {
+    i8255_t ppi;
+    i8255_init(&ppi, in_cb, out_cb);
+    values[0] = 0x12; values[1] = 0x34; values[2] = 0x45;
 
+    /* configure mode:
+        Port A: input
+        Port B: output
+        Port C: upper half: output, lower half: input
+        all on 'basic input/output' (the only one supported)
+    */
+    uint8_t ctrl =
+        I8255_CTRL_CONTROL_MODE |
+        I8255_CTRL_A_INPUT |
+        I8255_CTRL_B_OUTPUT |
+        I8255_CTRL_CHI_OUTPUT |
+        I8255_CTRL_CLO_INPUT |
+        I8255_CTRL_BCLO_MODE_0 |
+        I8255_CTRL_ACHI_MODE_0;
+    uint64_t pins = I8255_CS|I8255_WR|I8255_A0|I8255_A1;
+    I8255_SET_DATA(pins, ctrl);
+    i8255_iorq(&ppi, pins);
+
+    /* writing to an input port shouldn't do anything */
+    values[0] = 0x12; values[1] = 0x34; values[2] = 0x45;
+    pins = I8255_CS|I8255_WR;   /* write to port A */
+    I8255_SET_DATA(pins, 0x33);
+    i8255_iorq(&ppi, pins);
+    T(values[0] == 0x12);
+
+    /* writing to an output port (B) should invoke the out callback and set the output latch */
+    pins = I8255_CS|I8255_WR|I8255_A0;
+    I8255_SET_DATA(pins, 0xAA);
+    i8255_iorq(&ppi, pins);
+    T(values[1] == 0xAA);
+    T(ppi.output[1] == 0xAA);
+
+    /* writing to port C should only affect the 'output half', and set all input half bits */
+    pins = I8255_CS|I8255_WR|I8255_A1;
+    I8255_SET_DATA(pins, 0x77);
+    i8255_iorq(&ppi, pins);
+    T(values[2] == 0x7F);
+    T(ppi.output[2] == 0x77);
+
+    /* reading from an input port (A) should ask the input callback */
+    values[0] = 0xAB;
+    pins = I8255_CS|I8255_RD;
+    pins = i8255_iorq(&ppi, pins);
+    uint8_t data = I8255_GET_DATA(pins);
+    T(data == 0xAB);
+
+    /* reading an output port (B) should return the last output value */
+    values[1] = 0x23;
+    pins = I8255_CS|I8255_RD|I8255_A0;
+    pins = i8255_iorq(&ppi, pins);
+    data = I8255_GET_DATA(pins);
+    T(data == 0xAA);
+
+    /* reading from mixed input/output return a mixed latched/callback result */
+    values[2] = 0x34;
+    pins = I8255_CS|I8255_RD|I8255_A1;
+    pins = i8255_iorq(&ppi, pins);
+    data = I8255_GET_DATA(pins);
+    T(data == 0x74);
 }
 
 int main() {
