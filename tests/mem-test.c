@@ -9,16 +9,6 @@
 uint32_t num_tests = 0;
 #define T(x) { assert(x); num_tests++; }
 
-bool io_cb_write = false;
-uint16_t io_cb_addr = 0x0000;
-uint8_t io_cb_inval = 0x00;
-uint8_t io_cb(bool write, uint16_t addr, uint8_t inval) {
-    io_cb_write = write;
-    io_cb_addr = addr;
-    io_cb_inval = inval;
-    return 0xBB;
-}
-
 int main() {
     mem_t mem;
     mem_init(&mem);
@@ -76,19 +66,6 @@ int main() {
     T(mem_rd(&mem, 0xF800)==0x78);
     T(bank4[0x1800] == 0xAA);
 
-    /* memory-mapped-io area */
-    mem_map_io(&mem, 0, 0xF000, 0x1000, io_cb);
-    T(mem_rdio(&mem, 0xF123) == 0xBB);
-    T(io_cb_write == false);
-    T(io_cb_addr == 0xF123)
-    T(io_cb_inval == 0);
-    mem_wrio(&mem, 0xF124, 0xCC);
-    T(io_cb_write == true);
-    T(io_cb_addr == 0xF124)
-    T(io_cb_inval == 0xCC);
-    T(mem_rdio(&mem, 0x1000) == 0x33);
-    mem_wrio(&mem, 0x1000, 0x44);
-    T(mem_rdio(&mem, 0x1000) == 0x44);
     return 0;
 }
 
