@@ -16,12 +16,16 @@
 m6502_t cpu;
 mem_t mem;
 uint8_t ram[1<<16];
+bool text_enabled = true;
 
 /* load a test dump into memory, return false if last test is reached ('trap17') */
 bool load_test(const char* name) {
-    if (0 == strcmp(name, "trap17")) {
+    if (0 == strcmp(name, "trap1")) {
         /* last test reached */
         return false;
+    }
+    else if (0 == strcmp(name, "sbcb(eb)")) {
+        name = "sbcb_eb";
     }
     const uint8_t* ptr = 0;
     int size = 0;
@@ -112,7 +116,9 @@ bool trap() {
     if (cpu.PC == 0xFFD2) {
         /* print character */
         mem_wr(&mem, 0x030C, 0x00);
-        putchar(petscii2ascii(cpu.A));
+        if (text_enabled) {
+            putchar(petscii2ascii(cpu.A));
+        }
         cpu.PC = pop();
         cpu.PC++;
     }
@@ -133,10 +139,17 @@ bool trap() {
         }
         pop();
         cpu.PC = 0x0816;
+        text_enabled = true;
     }
     else if (cpu.PC == 0xFFE4) {
-        /* scan keyboard */
-        cpu.A = 0x03;
+        /* scan keyboard, this is called when an error was encountered,
+           we'll continue, but disable text output until the next test is loaded
+        */
+        if (text_enabled) {
+            puts("\nSKIP TEXT OUTPUT UNTIL NEXT TEST\n");
+        }
+        text_enabled = false;
+        cpu.A = 0x02;
         cpu.PC = pop();
         cpu.PC++;
     }
@@ -167,7 +180,8 @@ int main() {
     memset(ram, 0, sizeof(ram));
     mem_map_ram(&mem, 0, 0x0000, sizeof(ram), ram);
 
-    m6502_init(&cpu, tick, true);
+    m6502_init(&cpu, tick);
+    cpu.bcd_supported = true;
     m6502_reset(&cpu);
     load_test("_start");
     bool done = false;

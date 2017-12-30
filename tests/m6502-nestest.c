@@ -57,8 +57,8 @@ int main() {
     mem_map_rom(&mem, 0, 0x8000, 0x4000, &(dump_nestest[16]));
     mem_map_rom(&mem, 0, 0xC000, 0x4000, &(dump_nestest[16]));
 
-    /* initialize the CPU (without BCD arithmetic support) */
-    m6502_init(&cpu, tick, false);
+    /* initialize the CPU */
+    m6502_init(&cpu, tick);
     m6502_reset(&cpu);
     cpu.PC = 0xC000;
 
