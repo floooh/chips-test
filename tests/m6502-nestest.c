@@ -59,6 +59,7 @@ int main() {
 
     /* initialize the CPU */
     m6502_init(&cpu, tick);
+    cpu.bcd_supported = false;
     m6502_reset(&cpu);
     cpu.PC = 0xC000;
 

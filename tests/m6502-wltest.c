@@ -181,7 +181,6 @@ int main() {
     mem_map_ram(&mem, 0, 0x0000, sizeof(ram), ram);
 
     m6502_init(&cpu, tick);
-    cpu.bcd_supported = true;
     m6502_reset(&cpu);
     load_test("_start");
     bool done = false;
