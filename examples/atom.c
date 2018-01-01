@@ -31,7 +31,8 @@ i8255_t ppi;
 kbd_t kbd;
 mem_t mem;
 int counter_2_4khz = 0;
-int period_2_4hz = 0;
+int period_2_4khz = 0;
+bool state_2_4khz = false;
 uint8_t ram[1<<16];
 
 /* emulator callbacks */
@@ -79,7 +80,7 @@ int main() {
     /* 0xB000 to 0xBFFF is memory-mapped IO area */
     /* 0xC000 to 0xFFFF are operating system roms */
     mem_map_rom(&mem, 0, 0xC000, 0x1000, dump_abasic);
-    mem_map_rom(&mem, 0, 0xF000, 0x1000, dump_afloat);
+    mem_map_rom(&mem, 0, 0xD000, 0x1000, dump_afloat);
     mem_map_rom(&mem, 0, 0xE000, 0x1000, dump_dosrom);
     mem_map_rom(&mem, 0, 0xF000, 0x1000, dump_abasic+0x1000);
 
@@ -119,6 +120,7 @@ int main() {
 
     /* initialize chips */
     m6502_init(&cpu, cpu_tick);
+    m6502_reset(&cpu);
     mc6847_desc_t vdg_desc = {
         .tick_hz = ATOM_FREQ,
         .rgba8_buffer = rgba8_buffer,
@@ -127,6 +129,11 @@ int main() {
     };
     mc6847_init(&vdg, &vdg_desc);
     i8255_init(&ppi, ppi_in, ppi_out);
+
+    /* initialize 2.4 khz counter */
+    period_2_4khz = ATOM_FREQ / 2400;
+    counter_2_4khz = 0;
+    state_2_4khz = false;
 
     /* GLFW keyboard callbacks */
     glfwSetKeyCallback(w, on_key);
@@ -152,25 +159,169 @@ int main() {
 
 /* CPU tick callback */
 uint64_t cpu_tick(uint64_t pins) {
-    // FIXME!
+
+    /* tick the VDG */
+    mc6847_tick(&vdg);
+
+    /* tick the 2.4khz counter */
+    counter_2_4khz++;
+    if (counter_2_4khz >= period_2_4khz) {
+        state_2_4khz = !state_2_4khz;
+        counter_2_4khz -= period_2_4khz;
+    }
+
+    const uint16_t addr = M6502_GET_ADDR(pins);
+    if ((addr >= 0xB000) && (addr < 0xC000)) {
+        /* memory-mapped IO area */
+        if ((addr >= 0xB000) && (addr < 0xB400)) {
+            /* i8255: http://www.acornatom.nl/sites/fpga/www.howell1964.freeserve.co.uk/acorn/atom/amb/amb_8255.htm */
+            uint64_t ppi_pins = (pins & M6502_PIN_MASK) | I8255_CS;
+            if (pins & M6502_RW) {
+                ppi_pins |= I8255_RD;
+            }
+            else {
+                ppi_pins |= I8255_WR;
+            }
+            if (pins & M6502_A0) { ppi_pins |= I8255_A0; }
+            if (pins & M6502_A1) { ppi_pins |= I8255_A1; }
+            pins = i8255_iorq(&ppi, ppi_pins) & M6502_PIN_MASK;
+        }
+        else if (addr >= 0xB800) {
+            M6502_SET_DATA(pins, 0x00);
+        }
+        else {
+            M6502_SET_DATA(pins, 0x00);
+        }
+    }
+    else {
+        /* memory access */
+        if (pins & M6502_RW) {
+            /* read access */
+            M6502_SET_DATA(pins, mem_rd(&mem, addr));
+        }
+        else {
+            /* write access */
+            mem_wr(&mem, addr, M6502_GET_DATA(pins));
+        }
+    }
     return pins;
 }
 
 /* video memory fetch callback */
 uint64_t vdg_fetch(uint64_t pins) {
-    // FIXME!
+    const uint16_t addr = MC6847_GET_ADDR(pins);
+    uint8_t data = mem_rd(&mem, addr+0x8000);
+
+    /*  the upper 2 databus bits are directly wired to MC6847 pins:
+        bit 7 -> INV pin (in text mode, invert pixel pattern)
+        bit 6 -> A/S and INT/EXT pin, A/S actives semigraphics mode
+                 and INT/EXT selects the 2x3 semigraphics pattern
+                 (so 4x4 semigraphics isn't possible)
+    */
+    MC6847_SET_DATA(pins, data);
+    if (data & (1<<7)) { pins |= MC6847_INV; }
+    else               { pins &= ~MC6847_INV; }
+    if (data & (1<<6)) { pins |= (MC6847_AS|MC6847_INTEXT); }
+    else               { pins &= ~(MC6847_AS|MC6847_INTEXT); }
     return pins;
 }
 
 /* i8255 PPI input callback */
 uint8_t ppi_in(int port_id) {
-    // FIXME!
-    return 0xFF;
+    uint8_t data = 0;
+    if (I8255_PORT_B == port_id) {
+        /* keyboard row state */
+        // FIXME
+        data = 0x00;
+    }
+    else if (I8255_PORT_C == port_id) {
+        /*  PPI port C input:
+            4:  input: 2400 Hz
+            5:  input: cassette
+            6:  input: keyboard repeat
+            7:  input: MC6847 FSYNC
+        */
+        if (state_2_4khz) {
+            data |= (1<<4);
+        }
+        // FIXME: always send REPEAT key as 'not pressed'
+        data |= (1<<6);
+        if (vdg.pins & MC6847_FS) {
+            data |= (1<<7);
+        }
+    }
+    return data;
 }
 
 /* i8255 PPI output callback */
 uint64_t ppi_out(int port_id, uint64_t pins, uint8_t data) {
-    // FIXME!
+    /*
+        FROM Atom Theory and Praxis (and MAME)
+        The  8255  Programmable  Peripheral  Interface  Adapter  contains  three
+        8-bit ports, and all but one of these lines is used by the ATOM.
+        Port A - #B000
+               Output bits:      Function:
+                    O -- 3     Keyboard column
+                    4 -- 7     Graphics mode (4: A/G, 5..7: GM0..2)
+        Port B - #B001
+               Input bits:       Function:
+                    O -- 5     Keyboard row
+                      6        CTRL key (low when pressed)
+                      7        SHIFT keys {low when pressed)
+        Port C - #B002
+               Output bits:      Function:
+                    O          Tape output
+                    1          Enable 2.4 kHz to cassette output
+                    2          Loudspeaker
+                    3          Not used (??? see below)
+               Input bits:       Function:
+                    4          2.4 kHz input
+                    5          Cassette input
+                    6          REPT key (low when pressed)
+                    7          60 Hz sync signal (low during flyback)
+        The port C output lines, bits O to 3, may be used for user
+        applications when the cassette interface is not being used.
+    */
+    if (I8255_PORT_A == port_id) {
+        /* PPI port A
+            0..3:   keyboard matrix column
+            4:      MC6847 A/G
+            5:      MC6847 GM0
+            6:      MC6847 GM1
+            7:      MC6847 GM2
+        */
+        kbd_set_active_columns(&kbd, data & 0x0F);
+        uint64_t vdg_pins = 0;
+        uint64_t vdg_mask = MC6847_AG|MC6847_GM0|MC6847_GM1|MC6847_GM2;
+        if (data & (1<<4)) { vdg_pins |= MC6847_AG; }
+        if (data & (1<<5)) { vdg_pins |= MC6847_GM0; }
+        if (data & (1<<6)) { vdg_pins |= MC6847_GM1; }
+        if (data & (1<<7)) { vdg_pins |= MC6847_GM2; }
+        mc6847_ctrl(&vdg, vdg_pins, vdg_mask);
+    }
+    else if (I8255_PORT_C == port_id) {
+        /* PPI port C output:
+            0:  output: cass 0
+            1:  output: cass 1
+            2:  output: speaker
+            3:  output: MC6847 CSS
+
+            the resulting cassette out signal is
+            created like this (see the Atom circuit diagram
+            right of the keyboard matrix:
+
+            (((not 2.4khz) and cass1) & and cass0)
+
+            but the cassette out bits seem to get stuck on 0
+            after saving a BASIC program, so don't make it audible
+        */
+        uint64_t vdg_pins = 0;
+        uint64_t vdg_mask = MC6847_CSS;
+        if (data & (1<<3)) {
+            vdg_pins |= MC6847_CSS;
+        }
+        mc6847_ctrl(&vdg, vdg_pins, vdg_mask);
+    }
     return pins;
 }
 
