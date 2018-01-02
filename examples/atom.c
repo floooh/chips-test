@@ -316,7 +316,7 @@ uint8_t ppi_in(int port_id) {
         }
         // FIXME: always send REPEAT key as 'not pressed'
         data |= (1<<6);
-        if (vdg.pins & MC6847_FS) {
+        if (0 == (vdg.pins & MC6847_FS)) {
             data |= (1<<7);
         }
     }
