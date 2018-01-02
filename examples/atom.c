@@ -2,10 +2,15 @@
     atom.c
 
     The Acorn Atom was a very simple 6502-based home computer
-    consisting of just a MOS 6502 CPU, Motorola MC6847 video
-    display generator, and Intel i8255 I/O chip.
+    (just a MOS 6502 CPU, Motorola MC6847 video
+    display generator, and Intel i8255 I/O chip).
 
-    The audio beeper is not emulated.
+    Note: Ctrl+L (clear screen) is mapped to F1.
+
+    NOT EMULATED:
+        - the audio beeper
+        - the optional VIA 6522
+        - REPT key (and some other special keys)
 */
 #define SOKOL_IMPL
 #include "sokol_time.h"
@@ -33,7 +38,7 @@ mem_t mem;
 int counter_2_4khz = 0;
 int period_2_4khz = 0;
 bool state_2_4khz = false;
-uint8_t ram[1<<16];
+uint8_t ram[1<<16];     /* only 40 KByte used */
 
 /* emulator callbacks */
 uint64_t cpu_tick(uint64_t pins);
@@ -45,7 +50,7 @@ uint64_t ppi_out(int port_id, uint64_t pins, uint8_t data);
 void on_key(GLFWwindow* w, int key, int scancode, int action, int mods);
 void on_char(GLFWwindow* w, unsigned int codepoint);
 
-/* rendering functions and resources */
+/* host rendering functions and resources */
 GLFWwindow* gfx_init();
 void gfx_draw(GLFWwindow* w);
 void gfx_shutdown();
@@ -66,18 +71,15 @@ int main() {
     GLFWwindow* w = gfx_init();
 
     /* setup memory map, first fill memory with random values */
-    for (int i = 0; i < (int)sizeof(ram); i++) {
+    for (int i = 0; i < (int)sizeof(ram);) {
         uint32_t r = xorshift32();
-        ram[i++] = r>>24;
-        ram[i++] = r>>16;
-        ram[i++] = r>>8;
-        ram[i++] = r;
+        ram[i++]=r>>24; ram[i++]=r>>16; ram[i++]=r>>8; ram[i++]=r;
     }
     mem_init(&mem);
     /* 32 KByte RAM + 8 KByte vidmem */
     mem_map_ram(&mem, 0, 0x0000, 0xA000, ram);
     /* hole in 0xA000 to 0xAFFF for utility roms */
-    /* 0xB000 to 0xBFFF is memory-mapped IO area */
+    /* 0xB000 to 0xBFFF is memory-mapped IO area (not mapped to host memory) */
     /* 0xC000 to 0xFFFF are operating system roms */
     mem_map_rom(&mem, 0, 0xC000, 0x1000, dump_abasic);
     mem_map_rom(&mem, 0, 0xD000, 0x1000, dump_afloat);
@@ -85,42 +87,44 @@ int main() {
     mem_map_rom(&mem, 0, 0xF000, 0x1000, dump_abasic+0x1000);
 
     /*  setup the keyboard matrix
-        the Atom has a 10x7 keyboard matrix, where the
+        the Atom has a 10x8 keyboard matrix, where the
         entire line 6 is for the Ctrl key, and the entire
-        line 7 is the shift key
+        line 7 is the Shift key
     */
-    kbd_init(&kbd, 2);
+    kbd_init(&kbd, 1);
+    /* shift key is entire line 7 */
+    const int shift = (1<<0); kbd_register_modifier_line(&kbd, 0, 7);
+    /* ctrl key is entire line 6 */
+    const int ctrl = (1<<1); kbd_register_modifier_line(&kbd, 1, 6);
     /* alpha-numeric keys */
     const char* keymap = 
         /* no shift */
-        "     ^]\\[ "   /* line 0 */
-        "3210      "    /* line 1 */
-        "-,;:987654"    /* line 2 */
-        "GFEDCBA@/."    /* line 3 */
-        "QPONMLKJIH"    /* line 4 */
-        " ZYXWVUTSR"    /* line 5 */
+        "     ^]\\[ "/**/"3210      "/* */"-,;:987654"/**/"GFEDCBA@/."/**/"QPONMLKJIH"/**/" ZYXWVUTSR"
         /* shift */
-        "          "    /* line 0 */
-        "#\"!       "   /* line 1 */
-        "=<+*)('&%$"    /* line 2 */
-        "gfedcba ?>"    /* line 3 */
-        "qponmlkjih"    /* line 4 */
-        " zyxwvutsr";   /* line 5 */
-    for (int shift=0; shift < 2; shift++) {
+        "          "/* */"#\"!       "/**/"=<+*)('&%$"/**/"gfedcba ?>"/**/"qponmlkjih"/**/" zyxwvutsr";
+    for (int layer = 0; layer < 2; layer++) {
         for (int col = 0; col < 10; col++) {
             for (int line = 0; line < 6; line++) {
-                int c = keymap[shift*60 + line*10 + col];
+                int c = keymap[layer*60 + line*10 + col];
                 if (c != 0x20) {
-                    kbd_register_key(&kbd, c, col, line, shift?(1<<0):0);
+                    kbd_register_key(&kbd, c, col, line, layer?shift:0);
                 }
             }
         }
     }
-    /* FIXME: special keys */
+    /* special keys */
+    kbd_register_key(&kbd, 0x20, 9, 0, 0);      /* space */
+    kbd_register_key(&kbd, 0x01, 4, 1, 0);      /* backspace */
+    kbd_register_key(&kbd, 0x08, 3, 0, shift);  /* left */
+    kbd_register_key(&kbd, 0x09, 3, 0, 0);      /* right */
+    kbd_register_key(&kbd, 0x0A, 2, 0, shift);  /* down */
+    kbd_register_key(&kbd, 0x0B, 2, 0, 0);      /* up */
+    kbd_register_key(&kbd, 0x0D, 6, 1, 0);      /* return/enter */
+    kbd_register_key(&kbd, 0x1B, 0, 5, 0);      /* escape */
+    kbd_register_key(&kbd, 0x0C, 5, 4, ctrl);   /* Ctrl+L, clear screen, mapped to F1 */
 
     /* initialize chips */
     m6502_init(&cpu, cpu_tick);
-    m6502_reset(&cpu);
     mc6847_desc_t vdg_desc = {
         .tick_hz = ATOM_FREQ,
         .rgba8_buffer = rgba8_buffer,
@@ -138,6 +142,9 @@ int main() {
     /* GLFW keyboard callbacks */
     glfwSetKeyCallback(w, on_key);
     glfwSetCharCallback(w, on_char);
+
+    /* reset the CPU to go into 'start state' */
+    m6502_reset(&cpu);
 
     /* emulate and draw frames */
     uint32_t overrun_ticks = 0;
@@ -160,7 +167,7 @@ int main() {
 /* CPU tick callback */
 uint64_t cpu_tick(uint64_t pins) {
 
-    /* tick the VDG */
+    /* tick the video chip */
     mc6847_tick(&vdg);
 
     /* tick the 2.4khz counter */
@@ -170,37 +177,34 @@ uint64_t cpu_tick(uint64_t pins) {
         counter_2_4khz -= period_2_4khz;
     }
 
+    /* decode address for memory-mapped IO and memory read/write */
     const uint16_t addr = M6502_GET_ADDR(pins);
     if ((addr >= 0xB000) && (addr < 0xC000)) {
         /* memory-mapped IO area */
         if ((addr >= 0xB000) && (addr < 0xB400)) {
-            /* i8255: http://www.acornatom.nl/sites/fpga/www.howell1964.freeserve.co.uk/acorn/atom/amb/amb_8255.htm */
+            /* i8255 PPI: http://www.acornatom.nl/sites/fpga/www.howell1964.freeserve.co.uk/acorn/atom/amb/amb_8255.htm */
             uint64_t ppi_pins = (pins & M6502_PIN_MASK) | I8255_CS;
-            if (pins & M6502_RW) {
-                ppi_pins |= I8255_RD;
-            }
-            else {
-                ppi_pins |= I8255_WR;
-            }
-            if (pins & M6502_A0) { ppi_pins |= I8255_A0; }
+            if (pins & M6502_RW) { ppi_pins |= I8255_RD; }  /* PPI read access */
+            else { ppi_pins |= I8255_WR; }                  /* PPI write access */
+            if (pins & M6502_A0) { ppi_pins |= I8255_A0; }  /* PPI has 4 addresses (port A,B,C or control word */
             if (pins & M6502_A1) { ppi_pins |= I8255_A1; }
             pins = i8255_iorq(&ppi, ppi_pins) & M6502_PIN_MASK;
         }
-        else if (addr >= 0xB800) {
-            M6502_SET_DATA(pins, 0x00);
-        }
         else {
-            M6502_SET_DATA(pins, 0x00);
+            /* remaining IO space is for expansion devices */
+            if (pins & M6502_RW) {
+                M6502_SET_DATA(pins, 0x00);
+            }
         }
     }
     else {
         /* memory access */
         if (pins & M6502_RW) {
-            /* read access */
+            /* memory read */
             M6502_SET_DATA(pins, mem_rd(&mem, addr));
         }
         else {
-            /* write access */
+            /* memory access */
             mem_wr(&mem, addr, M6502_GET_DATA(pins));
         }
     }
@@ -210,7 +214,8 @@ uint64_t cpu_tick(uint64_t pins) {
 /* video memory fetch callback */
 uint64_t vdg_fetch(uint64_t pins) {
     const uint16_t addr = MC6847_GET_ADDR(pins);
-    uint8_t data = mem_rd(&mem, addr+0x8000);
+    uint8_t data = ram[(addr + 0x8000) & 0xFFFF];
+    MC6847_SET_DATA(pins, data);
 
     /*  the upper 2 databus bits are directly wired to MC6847 pins:
         bit 7 -> INV pin (in text mode, invert pixel pattern)
@@ -218,7 +223,6 @@ uint64_t vdg_fetch(uint64_t pins) {
                  and INT/EXT selects the 2x3 semigraphics pattern
                  (so 4x4 semigraphics isn't possible)
     */
-    MC6847_SET_DATA(pins, data);
     if (data & (1<<7)) { pins |= MC6847_INV; }
     else               { pins &= ~MC6847_INV; }
     if (data & (1<<6)) { pins |= (MC6847_AS|MC6847_INTEXT); }
@@ -226,34 +230,7 @@ uint64_t vdg_fetch(uint64_t pins) {
     return pins;
 }
 
-/* i8255 PPI input callback */
-uint8_t ppi_in(int port_id) {
-    uint8_t data = 0;
-    if (I8255_PORT_B == port_id) {
-        /* keyboard row state */
-        // FIXME
-        data = 0x00;
-    }
-    else if (I8255_PORT_C == port_id) {
-        /*  PPI port C input:
-            4:  input: 2400 Hz
-            5:  input: cassette
-            6:  input: keyboard repeat
-            7:  input: MC6847 FSYNC
-        */
-        if (state_2_4khz) {
-            data |= (1<<4);
-        }
-        // FIXME: always send REPEAT key as 'not pressed'
-        data |= (1<<6);
-        if (vdg.pins & MC6847_FS) {
-            data |= (1<<7);
-        }
-    }
-    return data;
-}
-
-/* i8255 PPI output callback */
+/* i8255 PPI output */
 uint64_t ppi_out(int port_id, uint64_t pins, uint8_t data) {
     /*
         FROM Atom Theory and Praxis (and MAME)
@@ -284,13 +261,13 @@ uint64_t ppi_out(int port_id, uint64_t pins, uint8_t data) {
     */
     if (I8255_PORT_A == port_id) {
         /* PPI port A
-            0..3:   keyboard matrix column
+            0..3:   keyboard matrix column to scan next
             4:      MC6847 A/G
             5:      MC6847 GM0
             6:      MC6847 GM1
             7:      MC6847 GM2
         */
-        kbd_set_active_columns(&kbd, data & 0x0F);
+        kbd_set_active_columns(&kbd, 1<<(data & 0x0F));
         uint64_t vdg_pins = 0;
         uint64_t vdg_mask = MC6847_AG|MC6847_GM0|MC6847_GM1|MC6847_GM2;
         if (data & (1<<4)) { vdg_pins |= MC6847_AG; }
@@ -306,14 +283,7 @@ uint64_t ppi_out(int port_id, uint64_t pins, uint8_t data) {
             2:  output: speaker
             3:  output: MC6847 CSS
 
-            the resulting cassette out signal is
-            created like this (see the Atom circuit diagram
-            right of the keyboard matrix:
-
-            (((not 2.4khz) and cass1) & and cass0)
-
-            but the cassette out bits seem to get stuck on 0
-            after saving a BASIC program, so don't make it audible
+            NOTE: only the MC6847 CSS pin is emulated here
         */
         uint64_t vdg_pins = 0;
         uint64_t vdg_mask = MC6847_CSS;
@@ -323,6 +293,34 @@ uint64_t ppi_out(int port_id, uint64_t pins, uint8_t data) {
         mc6847_ctrl(&vdg, vdg_pins, vdg_mask);
     }
     return pins;
+}
+
+/* i8255 PPI input callback */
+uint8_t ppi_in(int port_id) {
+    uint8_t data = 0;
+    if (I8255_PORT_B == port_id) {
+        /* keyboard row state */
+        data = ~kbd_scan_lines(&kbd);
+    }
+    else if (I8255_PORT_C == port_id) {
+        /*  PPI port C input:
+            4:  input: 2400 Hz
+            5:  input: cassette
+            6:  input: keyboard repeat
+            7:  input: MC6847 FSYNC
+
+            NOTE: only the 2400 Hz oscillator and FSYNC pins is emulated here
+        */
+        if (state_2_4khz) {
+            data |= (1<<4);
+        }
+        // FIXME: always send REPEAT key as 'not pressed'
+        data |= (1<<6);
+        if (vdg.pins & MC6847_FS) {
+            data |= (1<<7);
+        }
+    }
+    return data;
 }
 
 /* GLFW character callback */
@@ -344,14 +342,16 @@ void on_char(GLFWwindow* w, unsigned int codepoint) {
 void on_key(GLFWwindow* w, int glfw_key, int scancode, int action, int mods) {
     int key = 0;
     switch (glfw_key) {
-        case GLFW_KEY_ENTER:    key = 0x0D; break;
-        case GLFW_KEY_RIGHT:    key = 0x09; break;
-        case GLFW_KEY_LEFT:     key = 0x08; break;
-        case GLFW_KEY_DOWN:     key = 0x0A; break;
-        case GLFW_KEY_UP:       key = 0x0B; break;
-        case GLFW_KEY_ESCAPE:   key = (mods & GLFW_MOD_SHIFT)? 0x1B: 0x03; break;
-        case GLFW_KEY_INSERT:   key = 0x1A; break;
-        case GLFW_KEY_HOME:     key = 0x19; break;
+        case GLFW_KEY_ENTER:        key = 0x0D; break;
+        case GLFW_KEY_RIGHT:        key = 0x09; break;
+        case GLFW_KEY_LEFT:         key = 0x08; break;
+        case GLFW_KEY_DOWN:         key = 0x0A; break;
+        case GLFW_KEY_UP:           key = 0x0B; break;
+        case GLFW_KEY_INSERT:       key = 0x1A; break;
+        case GLFW_KEY_HOME:         key = 0x19; break;
+        case GLFW_KEY_BACKSPACE:    key = 0x01; break;
+        case GLFW_KEY_ESCAPE:       key = 0x1B; break;
+        case GLFW_KEY_F1:           key = 0x0C; break; /* mapped to Ctrl+L (clear screen) */
     }
     if (key) {
         if ((GLFW_PRESS == action) || (GLFW_REPEAT == action)) {
