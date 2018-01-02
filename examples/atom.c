@@ -314,8 +314,9 @@ uint8_t ppi_in(int port_id) {
         if (state_2_4khz) {
             data |= (1<<4);
         }
-        // FIXME: always send REPEAT key as 'not pressed'
+        /* FIXME: always send REPEAT key as 'not pressed' */
         data |= (1<<6);
+        /* vblank pin (cleared during vblank) */
         if (0 == (vdg.pins & MC6847_FS)) {
             data |= (1<<7);
         }
