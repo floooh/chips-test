@@ -113,7 +113,7 @@ char petscii2ascii(uint8_t p) {
 
 /* check for special trap addresses, and perform OS functions, return false to exit */
 bool trap() {
-    if (cpu.PC == 0xFFD2) {
+    if (cpu.trap_id == 0) {
         /* print character */
         mem_wr(&mem, 0x030C, 0x00);
         if (text_enabled) {
@@ -122,7 +122,7 @@ bool trap() {
         cpu.PC = pop();
         cpu.PC++;
     }
-    else if (cpu.PC == 0xE16F) {
+    else if (cpu.trap_id == 1) {
         /* load dump */
         uint8_t l = mem_rd(&mem, 0x00BB);   // petscii filename address, low byte
         uint8_t h = mem_rd(&mem, 0x00BC);   // petscii filename address, high byte
@@ -141,7 +141,7 @@ bool trap() {
         cpu.PC = 0x0816;
         text_enabled = true;
     }
-    else if (cpu.PC == 0xFFE4) {
+    else if (cpu.trap_id == 2) {
         /* scan keyboard, this is called when an error was encountered,
            we'll continue, but disable text output until the next test is loaded
         */
@@ -182,10 +182,20 @@ int main() {
 
     m6502_init(&cpu, tick);
     m6502_reset(&cpu);
+    /* trap for print character function */
+    m6502_set_trap(&cpu, 0, 0xFFD2, mem_readptr(&mem, 0xFFD2));
+    /* trap for load dump function */
+    m6502_set_trap(&cpu, 1, 0xE16F, mem_readptr(&mem, 0xE16F));
+    /* trap for 'scan keyboard' function */
+    m6502_set_trap(&cpu, 2, 0xFFE4, mem_readptr(&mem, 0xFFE4));
+    /* traps for error and finished */
+    m6502_set_trap(&cpu, 3, 0x8000, mem_readptr(&mem, 0x8000));
+    m6502_set_trap(&cpu, 4, 0xA474, mem_readptr(&mem, 0xA474));
+
     load_test("_start");
     bool done = false;
     while (!done) {
-        m6502_exec(&cpu, 0);
+        m6502_exec(&cpu, (1<<30));
         if (!trap()) {
             done = true;
         }
