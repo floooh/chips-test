@@ -236,6 +236,7 @@ uint64_t tick(int num_ticks, uint64_t pins) {
                     if (pins & Z80_A0) { pins |= Z80CTC_CS0; };
                     if (pins & Z80_A1) { pins |= Z80CTC_CS1; };
                     pins = z80ctc_iorq(&ctc, pins) & Z80_PIN_MASK;
+                    break;
                 /* IO request on PIO1? */
                 case 1:
                     /* PIO1 is mapped to ports 0x88 to 0x8F (each port is mapped twice) */
