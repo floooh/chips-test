@@ -325,9 +325,8 @@ GLFWwindow* gfx_init() {
             "}\n"
     });
     draw_state.pipeline = sg_make_pipeline(&(sg_pipeline_desc){
-        .vertex_layouts[0] = {
-            .stride = 8,
-            .attrs[0] = { .name="pos", .offset=0, .format=SG_VERTEXFORMAT_FLOAT2 }
+        .layout = {
+            .attrs[0] = { .name="pos", .format=SG_VERTEXFORMAT_FLOAT2 }
         },
         .shader = fsq_shd,
         .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP
