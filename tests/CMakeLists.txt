@@ -69,3 +69,8 @@ fips_begin_app(mc6847-test cmdline)
     fips_vs_warning_level(3)
     fips_files(mc6847-test.c)
 fips_end_app()
+
+fips_begin_app(m6522-test cmdline)
+    fips_vs_warning_level(3)
+    fips_files(m6522-test.c)
+fips_end_app()
