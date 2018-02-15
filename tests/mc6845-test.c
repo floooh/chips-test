@@ -187,7 +187,7 @@ void test_scanline_row_visual() {
 
 void test_frame_visual() {
     printf("\n\n\nMC6845 frame visualization:\n\n");
-    print_hori_ruler(7);
+    print_hori_ruler(17);
     mc6845_t crtc;
     mc6845_init(&crtc, MC6845_TYPE_MC6845);
     setup_80x24(&crtc);
@@ -203,7 +203,9 @@ void test_frame_visual() {
         }
         if (valid) {
             if (0 == crtc.h_ctr) {
-                printf("\n%2d %2d: ", crtc.scanline_ctr, crtc.row_ctr);
+                uint16_t ma = MC6845_GET_ADDR(pins);
+                uint8_t ra = MC6845_GET_RA(pins);
+                printf("\n%2d %2d (%04X|%02X): ", crtc.scanline_ctr, crtc.row_ctr, ma, ra);
             }
             if (pins & MC6845_DE) {
                 putchar('D');
