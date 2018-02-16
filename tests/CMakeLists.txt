@@ -79,3 +79,8 @@ fips_begin_app(mc6845-test cmdline)
     fips_vs_warning_level(3)
     fips_files(mc6845-test.c)
 fips_end_app()
+
+fips_begin_app(crt-test cmdline)
+    fips_vs_warning_level(3)
+    fips_files(crt-test.c)
+fips_end_app()
