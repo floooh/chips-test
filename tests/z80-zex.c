@@ -110,13 +110,11 @@ static bool zexdoc() {
     memcpy(&mem[0x0100], dump_zexdoc, sizeof(dump_zexdoc));
     z80_t cpu;
     z80_init(&cpu, tick);
-    /* break out of z80_exec when HALT instruction is encountered */
-    cpu.break_mask |= Z80_HALT;
     cpu.SP = 0xF000;
     cpu.PC = 0x0100;
-    /* patch a HALT instruction at address 0x0000 and 0x0005 */
-    mem[0] = 0x76;
-    mem[5] = 0x76;
+    /* trap when reaching address 0x0000 or 0x0005 */
+    z80_set_trap(&cpu, 0, 0x0000, &mem[0]);
+    z80_set_trap(&cpu, 1, 0x0005, &mem[5]);
     return run_test(&cpu, "ZEXDOC");
 }
 
@@ -127,13 +125,11 @@ static bool zexall() {
     memcpy(&mem[0x0100], dump_zexall, sizeof(dump_zexall));
     z80_t cpu;
     z80_init(&cpu, tick);
-    /* break out of z80_exec when HALT instruction is encountered */
-    cpu.break_mask |= Z80_HALT;
     cpu.SP = 0xF000;
     cpu.PC = 0x0100;
-    /* patch a HALT instruction at address 0x0000 and 0x0005 */
-    mem[0] = 0x76;
-    mem[5] = 0x76;
+    /* trap when reaching address 0x0000 or 0x0005 */
+    z80_set_trap(&cpu, 0, 0x0000, &mem[0]);
+    z80_set_trap(&cpu, 1, 0x0005, &mem[5]);
     return run_test(&cpu, "ZEXALL");
 }
 
