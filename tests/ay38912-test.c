@@ -23,7 +23,7 @@ uint32_t num_tests = 0;
 
 void test_read_write() {
     ay38912_t ay;
-    ay38912_init(&ay, 1, 1000*1000, 44100, 1.0f);
+    ay38912_init(&ay, 1000*1000, 44100, 1.0f);
 
     /* each register write is 2 ops, first the register address, then the value */
     ay38912_iorq(&ay, ADDR(AY38912_REG_PERIOD_B_FINE));
