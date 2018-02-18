@@ -14,12 +14,12 @@ uint32_t num_tests = 0;
 
 // write value to the MC6845
 void wr(mc6845_t* crtc, uint8_t reg, uint8_t val) {
-    uint64_t pins = MC6845_CS|MC6845_RS|MC6845_RW;
+    uint64_t pins = MC6845_CS|MC6845_RS;
     // first write register address
     MC6845_SET_DATA(pins, reg);
     mc6845_iorq(crtc, pins);
     // next write the value
-    pins = MC6845_CS|MC6845_RW;
+    pins = MC6845_CS;
     MC6845_SET_DATA(pins, val);
     mc6845_iorq(crtc, pins);
 }
