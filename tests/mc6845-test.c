@@ -220,7 +220,7 @@ void test_frame_visual() {
                 putchar('X');
             }
             if (!(pins & (MC6845_DE|MC6845_HS|MC6845_VS))) {
-                if (crtc.scanline_adjust) {
+                if (crtc.in_adj) {
                     putchar('.');
                 }
                 else {
