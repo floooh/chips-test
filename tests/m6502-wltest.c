@@ -180,7 +180,9 @@ int main() {
     memset(ram, 0, sizeof(ram));
     mem_map_ram(&mem, 0, 0x0000, sizeof(ram), ram);
 
-    m6502_init(&cpu, tick);
+    m6502_init(&cpu, &(m6502_desc_t){
+        .tick_cb = tick
+    });
     m6502_reset(&cpu);
     /* trap for print character function */
     m6502_set_trap(&cpu, 0, 0xFFD2, mem_readptr(&mem, 0xFFD2));

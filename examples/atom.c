@@ -124,14 +124,15 @@ int main() {
     kbd_register_key(&kbd, 0x0C, 5, 4, ctrl);   /* Ctrl+L, clear screen, mapped to F1 */
 
     /* initialize chips */
-    m6502_init(&cpu, cpu_tick);
-    mc6847_desc_t vdg_desc = {
+    m6502_init(&cpu, &(m6502_desc_t){
+        .tick_cb = cpu_tick
+    });
+    mc6847_init(&vdg, &(mc6847_desc_t){
         .tick_hz = ATOM_FREQ,
         .rgba8_buffer = rgba8_buffer,
         .rgba8_buffer_size = sizeof(rgba8_buffer),
         .fetch_cb = vdg_fetch
-    };
-    mc6847_init(&vdg, &vdg_desc);
+    });
     i8255_init(&ppi, ppi_in, ppi_out);
 
     /* initialize 2.4 khz counter */

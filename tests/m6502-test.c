@@ -42,7 +42,9 @@ uint16_t r16(uint16_t addr) {
 
 void init() {
     memset(mem, 0, sizeof(mem));
-    m6502_init(&cpu, tick);
+    m6502_init(&cpu, &(m6502_desc_t){
+        .tick_cb = tick
+    });
     w16(0xFFFC, 0x0200);
     m6502_reset(&cpu);
 }

@@ -58,8 +58,10 @@ int main() {
     mem_map_rom(&mem, 0, 0xC000, 0x4000, &(dump_nestest[16]));
 
     /* initialize the CPU */
-    m6502_init(&cpu, tick);
-    cpu.bcd_supported = false;
+    m6502_init(&cpu, &(m6502_desc_t){
+        .tick_cb = tick,
+        .bcd_disabled = true
+    });
     m6502_reset(&cpu);
     cpu.PC = 0xC000;
 
