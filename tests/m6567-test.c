@@ -14,9 +14,9 @@ uint32_t num_tests = 0;
 
 uint32_t rgba8_buffer[262144];
 
-uint64_t fetch(uint64_t pins) {
+uint16_t fetch(uint16_t addr) {
     // FIXME
-    return pins;
+    return 0;
 }
 
 void test_rw() {
