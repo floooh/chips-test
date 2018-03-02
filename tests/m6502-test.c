@@ -9,6 +9,10 @@
 #include "chips/m6502.h"
 #include <stdio.h>
 
+uint32_t num_tests = 0;
+#define T(x) { assert(x); num_tests++; }
+#define R(r) cpu.state.r
+
 m6502_t cpu;
 uint8_t mem[1<<16] = { 0 };
 
@@ -61,20 +65,17 @@ uint32_t step() {
 bool tf(uint8_t expected) {
     /* XF is always set */
     expected |= M6502_XF;
-    return (cpu.P & expected) == expected;
+    return (R(P) & expected) == expected;
 }
-
-uint32_t num_tests = 0;
-#define T(x) { assert(x); num_tests++; }
 
 void INIT() {
     puts(">>> INIT");
     init();
-    T(0 == cpu.A);
-    T(0 == cpu.X);
-    T(0 == cpu.Y);
-    T(0xFD == cpu.S);
-    T(0x0200 == cpu.PC);
+    T(0 == R(A));
+    T(0 == R(X));
+    T(0 == R(Y));
+    T(0xFD == R(S));
+    T(0x0200 == R(PC));
     T(tf(0));
 }
 
@@ -83,8 +84,8 @@ void RESET() {
     init();
     w16(0xFFFC, 0x1234);
     m6502_reset(&cpu);
-    T(0xFD == cpu.S);
-    T(0x1234 == cpu.PC);
+    T(0xFD == R(S));
+    T(0x1234 == R(PC));
     T(tf(M6502_IF));
 }
 
@@ -140,49 +141,49 @@ void LDA() {
     copy(0x0200, prog, sizeof(prog));
 
     // immediate
-    T(2 == step()); T(cpu.A == 0x00); T(tf(M6502_ZF));
-    T(2 == step()); T(cpu.A == 0x01); T(tf(0));
-    T(2 == step()); T(cpu.A == 0x00); T(tf(M6502_ZF));
-    T(2 == step()); T(cpu.A == 0x80); T(tf(M6502_NF));
+    T(2 == step()); T(R(A) == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(R(A) == 0x01); T(tf(0));
+    T(2 == step()); T(R(A) == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(R(A) == 0x80); T(tf(M6502_NF));
 
     // zero page
-    T(3 == step()); T(cpu.A == 0x01); T(tf(0));
-    T(3 == step()); T(cpu.A == 0x00); T(tf(M6502_ZF));
-    T(3 == step()); T(cpu.A == 0x80); T(tf(M6502_NF));
-    T(3 == step()); T(cpu.A == 0x03); T(tf(0));
+    T(3 == step()); T(R(A) == 0x01); T(tf(0));
+    T(3 == step()); T(R(A) == 0x00); T(tf(M6502_ZF));
+    T(3 == step()); T(R(A) == 0x80); T(tf(M6502_NF));
+    T(3 == step()); T(R(A) == 0x03); T(tf(0));
 
     // absolute
-    T(4 == step()); T(cpu.A == 0x12); T(tf(0));
-    T(4 == step()); T(cpu.A == 0x34); T(tf(0));
-    T(4 == step()); T(cpu.A == 0x56); T(tf(0));
+    T(4 == step()); T(R(A) == 0x12); T(tf(0));
+    T(4 == step()); T(R(A) == 0x34); T(tf(0));
+    T(4 == step()); T(R(A) == 0x56); T(tf(0));
 
     // zero page,X
-    T(2 == step()); T(cpu.X == 0x0F); T(tf(0));
-    T(4 == step()); T(cpu.A == 0xAA); T(tf(M6502_NF));
-    T(4 == step()); T(cpu.A == 0x33); T(tf(0));
-    T(4 == step()); T(cpu.A == 0x22); T(tf(0));
+    T(2 == step()); T(R(X) == 0x0F); T(tf(0));
+    T(4 == step()); T(R(A) == 0xAA); T(tf(M6502_NF));
+    T(4 == step()); T(R(A) == 0x33); T(tf(0));
+    T(4 == step()); T(R(A) == 0x22); T(tf(0));
 
     // absolute,X
-    T(5 == step()); T(cpu.A == 0x12); T(tf(0));
-    T(4 == step()); T(cpu.A == 0x34); T(tf(0));
-    T(4 == step()); T(cpu.A == 0x56); T(tf(0));
+    T(5 == step()); T(R(A) == 0x12); T(tf(0));
+    T(4 == step()); T(R(A) == 0x34); T(tf(0));
+    T(4 == step()); T(R(A) == 0x56); T(tf(0));
 
     // absolute,Y
-    T(2 == step()); T(cpu.Y == 0xF0); T(tf(0));
-    T(5 == step()); T(cpu.A == 0x12); T(tf(0));
-    T(4 == step()); T(cpu.A == 0x34); T(tf(0));
-    T(5 == step()); T(cpu.A == 0x56); T(tf(0));
+    T(2 == step()); T(R(Y) == 0xF0); T(tf(0));
+    T(5 == step()); T(R(A) == 0x12); T(tf(0));
+    T(4 == step()); T(R(A) == 0x34); T(tf(0));
+    T(5 == step()); T(R(A) == 0x56); T(tf(0));
 
     // indirect,X
     w8(0x00FF, 0x34); w8(0x0000, 0x12); w16(0x007f, 0x4321);
     w8(0x1234, 0x89); w8(0x4321, 0x8A);
-    T(6 == step()); T(cpu.A == 0x89); T(tf(M6502_NF));
-    T(6 == step()); T(cpu.A == 0x8A); T(tf(M6502_NF));
+    T(6 == step()); T(R(A) == 0x89); T(tf(M6502_NF));
+    T(6 == step()); T(R(A) == 0x8A); T(tf(M6502_NF));
 
     // indirect,Y (both 6 cycles because page boundary crossed)
     w8(0x1324, 0x98); w8(0x4411, 0xA8);
-    T(6 == step()); T(cpu.A == 0x98); T(tf(M6502_NF));
-    T(6 == step()); T(cpu.A == 0xA8); T(tf(M6502_NF));
+    T(6 == step()); T(R(A) == 0x98); T(tf(M6502_NF));
+    T(6 == step()); T(R(A) == 0xA8); T(tf(M6502_NF));
 }
 
 void LDX() {
@@ -224,33 +225,33 @@ void LDX() {
     copy(0x0200, prog, sizeof(prog));
 
     // immediate
-    T(2 == step()); T(cpu.X == 0x00); (tf(M6502_ZF));
-    T(2 == step()); T(cpu.X == 0x01); (tf(0));
-    T(2 == step()); T(cpu.X == 0x00); (tf(M6502_ZF));
-    T(2 == step()); T(cpu.X == 0x80); (tf(M6502_NF));
+    T(2 == step()); T(R(X) == 0x00); (tf(M6502_ZF));
+    T(2 == step()); T(R(X) == 0x01); (tf(0));
+    T(2 == step()); T(R(X) == 0x00); (tf(M6502_ZF));
+    T(2 == step()); T(R(X) == 0x80); (tf(M6502_NF));
 
     // zero page
-    T(3 == step()); T(cpu.X == 0x01); T(tf(0));
-    T(3 == step()); T(cpu.X == 0x00); T(tf(M6502_ZF));
-    T(3 == step()); T(cpu.X == 0x80); T(tf(M6502_NF));
-    T(3 == step()); T(cpu.X == 0x03); T(tf(0));
+    T(3 == step()); T(R(X) == 0x01); T(tf(0));
+    T(3 == step()); T(R(X) == 0x00); T(tf(M6502_ZF));
+    T(3 == step()); T(R(X) == 0x80); T(tf(M6502_NF));
+    T(3 == step()); T(R(X) == 0x03); T(tf(0));
 
     // absolute
-    T(4 == step()); T(cpu.X == 0x12); T(tf(0));
-    T(4 == step()); T(cpu.X == 0x34); T(tf(0));
-    T(4 == step()); T(cpu.X == 0x56); T(tf(0));
+    T(4 == step()); T(R(X) == 0x12); T(tf(0));
+    T(4 == step()); T(R(X) == 0x34); T(tf(0));
+    T(4 == step()); T(R(X) == 0x56); T(tf(0));
 
     // zero page,Y
-    T(2 == step()); T(cpu.Y == 0x0F); T(tf(0));
-    T(4 == step()); T(cpu.X == 0xAA); T(tf(M6502_NF));
-    T(4 == step()); T(cpu.X == 0x33); T(tf(0));
-    T(4 == step()); T(cpu.X == 0x22); T(tf(0));
+    T(2 == step()); T(R(Y) == 0x0F); T(tf(0));
+    T(4 == step()); T(R(X) == 0xAA); T(tf(M6502_NF));
+    T(4 == step()); T(R(X) == 0x33); T(tf(0));
+    T(4 == step()); T(R(X) == 0x22); T(tf(0));
 
     // absolute,X
-    T(2 == step()); T(cpu.Y == 0xF0); T(tf(0));
-    T(5 == step()); T(cpu.X == 0x12); T(tf(0));
-    T(4 == step()); T(cpu.X == 0x34); T(tf(0));
-    T(5 == step()); T(cpu.X == 0x56); T(tf(0));
+    T(2 == step()); T(R(Y) == 0xF0); T(tf(0));
+    T(5 == step()); T(R(X) == 0x12); T(tf(0));
+    T(4 == step()); T(R(X) == 0x34); T(tf(0));
+    T(5 == step()); T(R(X) == 0x56); T(tf(0));
 }
 
 void LDY() {
@@ -292,33 +293,33 @@ void LDY() {
     copy(0x0200, prog, sizeof(prog));
 
     // immediate
-    T(2 == step()); T(cpu.Y == 0x00); T(tf(M6502_ZF));
-    T(2 == step()); T(cpu.Y == 0x01); T(tf(0));
-    T(2 == step()); T(cpu.Y == 0x00); T(tf(M6502_ZF));
-    T(2 == step()); T(cpu.Y == 0x80); T(tf(M6502_NF));
+    T(2 == step()); T(R(Y) == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(R(Y) == 0x01); T(tf(0));
+    T(2 == step()); T(R(Y) == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(R(Y) == 0x80); T(tf(M6502_NF));
 
     // zero page
-    T(3 == step()); T(cpu.Y == 0x01); T(tf(0));
-    T(3 == step()); T(cpu.Y == 0x00); T(tf(M6502_ZF));
-    T(3 == step()); T(cpu.Y == 0x80); T(tf(M6502_NF));
-    T(3 == step()); T(cpu.Y == 0x03); T(tf(0));
+    T(3 == step()); T(R(Y) == 0x01); T(tf(0));
+    T(3 == step()); T(R(Y) == 0x00); T(tf(M6502_ZF));
+    T(3 == step()); T(R(Y) == 0x80); T(tf(M6502_NF));
+    T(3 == step()); T(R(Y) == 0x03); T(tf(0));
 
     // absolute
-    T(4 == step()); T(cpu.Y == 0x12); T(tf(0));
-    T(4 == step()); T(cpu.Y == 0x34); T(tf(0));
-    T(4 == step()); T(cpu.Y == 0x56); T(tf(0));
+    T(4 == step()); T(R(Y) == 0x12); T(tf(0));
+    T(4 == step()); T(R(Y) == 0x34); T(tf(0));
+    T(4 == step()); T(R(Y) == 0x56); T(tf(0));
 
     // zero page,Y
-    T(2 == step()); T(cpu.X == 0x0F); T(tf(0));
-    T(4 == step()); T(cpu.Y == 0xAA); T(tf(M6502_NF));
-    T(4 == step()); T(cpu.Y == 0x33); T(tf(0));
-    T(4 == step()); T(cpu.Y == 0x22); T(tf(0));
+    T(2 == step()); T(R(X) == 0x0F); T(tf(0));
+    T(4 == step()); T(R(Y) == 0xAA); T(tf(M6502_NF));
+    T(4 == step()); T(R(Y) == 0x33); T(tf(0));
+    T(4 == step()); T(R(Y) == 0x22); T(tf(0));
 
     // absolute,X
-    T(2 == step()); T(cpu.X == 0xF0); T(tf(0));
-    T(5 == step()); T(cpu.Y == 0x12); T(tf(0));
-    T(4 == step()); T(cpu.Y == 0x34); T(tf(0));
-    T(5 == step()); T(cpu.Y == 0x56); T(tf(0));
+    T(2 == step()); T(R(X) == 0xF0); T(tf(0));
+    T(5 == step()); T(R(Y) == 0x12); T(tf(0));
+    T(4 == step()); T(R(Y) == 0x34); T(tf(0));
+    T(5 == step()); T(R(Y) == 0x56); T(tf(0));
 }
 
 void STA() {
@@ -338,9 +339,9 @@ void STA() {
     };
     copy(0x0200, prog, sizeof(prog));
 
-    T(2 == step()); T(cpu.A == 0x23);
-    T(2 == step()); T(cpu.X == 0x10);
-    T(2 == step()); T(cpu.Y == 0xC0);
+    T(2 == step()); T(R(A) == 0x23);
+    T(2 == step()); T(R(X) == 0x10);
+    T(2 == step()); T(R(Y) == 0xC0);
     T(3 == step()); T(mem[0x0010] == 0x23);
     T(4 == step()); T(mem[0x1234] == 0x23);
     T(4 == step()); T(mem[0x0020] == 0x23);
@@ -364,8 +365,8 @@ void STX() {
     };
     copy(0x0200, prog, sizeof(prog));
 
-    T(2 == step()); T(cpu.X == 0x23);
-    T(2 == step()); T(cpu.Y == 0x10);
+    T(2 == step()); T(R(X) == 0x23);
+    T(2 == step()); T(R(Y) == 0x10);
     T(3 == step()); T(mem[0x0010] == 0x23);
     T(4 == step()); T(mem[0x1234] == 0x23);
     T(4 == step()); T(mem[0x0020] == 0x23);
@@ -384,8 +385,8 @@ void STY() {
     };
     copy(0x0200, prog, sizeof(prog));
 
-    T(2 == step()); T(cpu.Y == 0x23);
-    T(2 == step()); T(cpu.X == 0x10);
+    T(2 == step()); T(R(Y) == 0x23);
+    T(2 == step()); T(R(X) == 0x10);
     T(3 == step()); T(mem[0x0010] == 0x23);
     T(4 == step()); T(mem[0x1234] == 0x23);
     T(4 == step()); T(mem[0x0020] == 0x23);
@@ -408,16 +409,16 @@ void TAX_TXA() {
     };
     copy(0x0200, prog, sizeof(prog));
 
-    T(2 == step()); T(cpu.A == 0x00); T(tf(M6502_ZF));
-    T(2 == step()); T(cpu.X == 0x10); T(tf(0));
-    T(2 == step()); T(cpu.X == 0x00); T(tf(M6502_ZF));
-    T(2 == step()); T(cpu.A == 0xF0); T(tf(M6502_NF));
-    T(2 == step()); T(cpu.A == 0x00); T(tf(M6502_ZF));
-    T(2 == step()); T(cpu.A == 0xF0); T(tf(M6502_NF));
-    T(2 == step()); T(cpu.X == 0x00); T(tf(M6502_ZF));
-    T(2 == step()); T(cpu.X == 0xF0); T(tf(M6502_NF));
-    T(2 == step()); T(cpu.A == 0x01); T(tf(0));
-    T(2 == step()); T(cpu.A == 0xF0); T(tf(M6502_NF));
+    T(2 == step()); T(R(A) == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(R(X) == 0x10); T(tf(0));
+    T(2 == step()); T(R(X) == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(R(A) == 0xF0); T(tf(M6502_NF));
+    T(2 == step()); T(R(A) == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(R(A) == 0xF0); T(tf(M6502_NF));
+    T(2 == step()); T(R(X) == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(R(X) == 0xF0); T(tf(M6502_NF));
+    T(2 == step()); T(R(A) == 0x01); T(tf(0));
+    T(2 == step()); T(R(A) == 0xF0); T(tf(M6502_NF));
 }
 
 void TAY_TYA() {
@@ -437,16 +438,16 @@ void TAY_TYA() {
     };
     copy(0x0200, prog, sizeof(prog));
 
-    T(2 == step()); T(cpu.A == 0x00); T(tf(M6502_ZF));
-    T(2 == step()); T(cpu.Y == 0x10); T(tf(0));
-    T(2 == step()); T(cpu.Y == 0x00); T(tf(M6502_ZF));
-    T(2 == step()); T(cpu.A == 0xF0); T(tf(M6502_NF));
-    T(2 == step()); T(cpu.A == 0x00); T(tf(M6502_ZF));
-    T(2 == step()); T(cpu.A == 0xF0); T(tf(M6502_NF));
-    T(2 == step()); T(cpu.Y == 0x00); T(tf(M6502_ZF));
-    T(2 == step()); T(cpu.Y == 0xF0); T(tf(M6502_NF));
-    T(2 == step()); T(cpu.A == 0x01); T(tf(0));
-    T(2 == step()); T(cpu.A == 0xF0); T(tf(M6502_NF));
+    T(2 == step()); T(R(A) == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(R(Y) == 0x10); T(tf(0));
+    T(2 == step()); T(R(Y) == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(R(A) == 0xF0); T(tf(M6502_NF));
+    T(2 == step()); T(R(A) == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(R(A) == 0xF0); T(tf(M6502_NF));
+    T(2 == step()); T(R(Y) == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(R(Y) == 0xF0); T(tf(M6502_NF));
+    T(2 == step()); T(R(A) == 0x01); T(tf(0));
+    T(2 == step()); T(R(A) == 0xF0); T(tf(M6502_NF));
 }
 
 void DEX_INX_DEY_INY() {
@@ -466,16 +467,16 @@ void DEX_INX_DEY_INY() {
     };
     copy(0x0200, prog, sizeof(prog));
 
-    T(2 == step()); T(cpu.X == 0x01); T(tf(0));
-    T(2 == step()); T(cpu.X == 0x00); T(tf(M6502_ZF));
-    T(2 == step()); T(cpu.X == 0xFF); T(tf(M6502_NF));
-    T(2 == step()); T(cpu.X == 0x00); T(tf(M6502_ZF));
-    T(2 == step()); T(cpu.X == 0x01); T(tf(0));
-    T(2 == step()); T(cpu.Y == 0x01); T(tf(0));
-    T(2 == step()); T(cpu.Y == 0x00); T(tf(M6502_ZF));
-    T(2 == step()); T(cpu.Y == 0xFF); T(tf(M6502_NF));
-    T(2 == step()); T(cpu.Y == 0x00); T(tf(M6502_ZF));
-    T(2 == step()); T(cpu.Y == 0x01); T(tf(0));
+    T(2 == step()); T(R(X) == 0x01); T(tf(0));
+    T(2 == step()); T(R(X) == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(R(X) == 0xFF); T(tf(M6502_NF));
+    T(2 == step()); T(R(X) == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(R(X) == 0x01); T(tf(0));
+    T(2 == step()); T(R(Y) == 0x01); T(tf(0));
+    T(2 == step()); T(R(Y) == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(R(Y) == 0xFF); T(tf(M6502_NF));
+    T(2 == step()); T(R(Y) == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(R(Y) == 0x01); T(tf(0));
 }
 
 void TXS_TSX() {
@@ -490,11 +491,11 @@ void TXS_TSX() {
     };
     copy(0x0200, prog, sizeof(prog));
 
-    T(2 == step()); T(cpu.X == 0xAA); T(tf(M6502_NF));
-    T(2 == step()); T(cpu.A == 0x00); T(tf(M6502_ZF));
-    T(2 == step()); T(cpu.S == 0xAA); T(tf(M6502_ZF));
-    T(2 == step()); T(cpu.X == 0x00); T(tf(M6502_ZF));
-    T(2 == step()); T(cpu.X == 0xAA); T(tf(M6502_NF));
+    T(2 == step()); T(R(X) == 0xAA); T(tf(M6502_NF));
+    T(2 == step()); T(R(A) == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(R(S) == 0xAA); T(tf(M6502_ZF));
+    T(2 == step()); T(R(X) == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(R(X) == 0xAA); T(tf(M6502_NF));
 }
 
 void ORA() {
@@ -524,17 +525,17 @@ void ORA() {
     w8(0x1003, (1<<5));
     w8(0x1004, (1<<6));
 
-    T(2 == step()); T(cpu.A == 0x00); T(tf(M6502_ZF));
-    T(2 == step()); T(cpu.X == 0x01); T(tf(0));
-    T(2 == step()); T(cpu.Y == 0x02); T(tf(0));
-    T(2 == step()); T(cpu.A == 0x00); T(tf(M6502_ZF));
-    T(3 == step()); T(cpu.A == 0x01); T(tf(0));
-    T(4 == step()); T(cpu.A == 0x03); T(tf(0));
-    T(4 == step()); T(cpu.A == 0x07); T(tf(0));
-    T(4 == step()); T(cpu.A == 0x0F); T(tf(0));
-    T(4 == step()); T(cpu.A == 0x1F); T(tf(0));
-    T(6 == step()); T(cpu.A == 0x3F); T(tf(0));
-    T(5 == step()); T(cpu.A == 0x7F); T(tf(0));
+    T(2 == step()); T(R(A) == 0x00); T(tf(M6502_ZF));
+    T(2 == step()); T(R(X) == 0x01); T(tf(0));
+    T(2 == step()); T(R(Y) == 0x02); T(tf(0));
+    T(2 == step()); T(R(A) == 0x00); T(tf(M6502_ZF));
+    T(3 == step()); T(R(A) == 0x01); T(tf(0));
+    T(4 == step()); T(R(A) == 0x03); T(tf(0));
+    T(4 == step()); T(R(A) == 0x07); T(tf(0));
+    T(4 == step()); T(R(A) == 0x0F); T(tf(0));
+    T(4 == step()); T(R(A) == 0x1F); T(tf(0));
+    T(6 == step()); T(R(A) == 0x3F); T(tf(0));
+    T(5 == step()); T(R(A) == 0x7F); T(tf(0));
 }
 
 void AND() {
@@ -564,17 +565,17 @@ void AND() {
     w8(0x1003, 0x03);
     w8(0x1004, 0x01);
 
-    T(2 == step()); T(cpu.A == 0xFF); T(tf(M6502_NF));
-    T(2 == step()); T(cpu.X == 0x01); T(tf(0));
-    T(2 == step()); T(cpu.Y == 0x02); T(tf(0));
-    T(2 == step()); T(cpu.A == 0xFF); T(tf(M6502_NF));
-    T(3 == step()); T(cpu.A == 0x7F); T(tf(0));
-    T(4 == step()); T(cpu.A == 0x3F); T(tf(0));
-    T(4 == step()); T(cpu.A == 0x1F); T(tf(0));
-    T(4 == step()); T(cpu.A == 0x0F); T(tf(0));
-    T(4 == step()); T(cpu.A == 0x07); T(tf(0));
-    T(6 == step()); T(cpu.A == 0x03); T(tf(0));
-    T(5 == step()); T(cpu.A == 0x01); T(tf(0));
+    T(2 == step()); T(R(A) == 0xFF); T(tf(M6502_NF));
+    T(2 == step()); T(R(X) == 0x01); T(tf(0));
+    T(2 == step()); T(R(Y) == 0x02); T(tf(0));
+    T(2 == step()); T(R(A) == 0xFF); T(tf(M6502_NF));
+    T(3 == step()); T(R(A) == 0x7F); T(tf(0));
+    T(4 == step()); T(R(A) == 0x3F); T(tf(0));
+    T(4 == step()); T(R(A) == 0x1F); T(tf(0));
+    T(4 == step()); T(R(A) == 0x0F); T(tf(0));
+    T(4 == step()); T(R(A) == 0x07); T(tf(0));
+    T(6 == step()); T(R(A) == 0x03); T(tf(0));
+    T(5 == step()); T(R(A) == 0x01); T(tf(0));
 }
 
 void EOR() {
@@ -604,17 +605,17 @@ void EOR() {
     w8(0x1003, 0x03);
     w8(0x1004, 0x01);
 
-    T(2 == step()); T(cpu.A == 0xFF); T(tf(M6502_NF));
-    T(2 == step()); T(cpu.X == 0x01); T(tf(0));
-    T(2 == step()); T(cpu.Y == 0x02); T(tf(0));
-    T(2 == step()); T(cpu.A == 0x00); T(tf(M6502_ZF));
-    T(3 == step()); T(cpu.A == 0x7F); T(tf(0));
-    T(4 == step()); T(cpu.A == 0x40); T(tf(0));
-    T(4 == step()); T(cpu.A == 0x5F); T(tf(0));
-    T(4 == step()); T(cpu.A == 0x50); T(tf(0));
-    T(4 == step()); T(cpu.A == 0x57); T(tf(0));
-    T(6 == step()); T(cpu.A == 0x54); T(tf(0));
-    T(5 == step()); T(cpu.A == 0x55); T(tf(0));
+    T(2 == step()); T(R(A) == 0xFF); T(tf(M6502_NF));
+    T(2 == step()); T(R(X) == 0x01); T(tf(0));
+    T(2 == step()); T(R(Y) == 0x02); T(tf(0));
+    T(2 == step()); T(R(A) == 0x00); T(tf(M6502_ZF));
+    T(3 == step()); T(R(A) == 0x7F); T(tf(0));
+    T(4 == step()); T(R(A) == 0x40); T(tf(0));
+    T(4 == step()); T(R(A) == 0x5F); T(tf(0));
+    T(4 == step()); T(R(A) == 0x50); T(tf(0));
+    T(4 == step()); T(R(A) == 0x57); T(tf(0));
+    T(6 == step()); T(R(A) == 0x54); T(tf(0));
+    T(5 == step()); T(R(A) == 0x55); T(tf(0));
 }
 
 void NOP() {
@@ -641,13 +642,13 @@ void PHA_PLA_PHP_PLP() {
     };
     copy(0x0200, prog, sizeof(prog));
 
-    T(2 == step()); T(cpu.A == 0x23); T(cpu.S == 0xFD);
-    T(3 == step()); T(cpu.S == 0xFC); T(mem[0x01FD] == 0x23);
-    T(2 == step()); T(cpu.A == 0x32);
-    T(4 == step()); T(cpu.A == 0x23); T(cpu.S == 0xFD); T(tf(0));
-    T(3 == step()); T(cpu.S == 0xFC); T(mem[0x01FD] == (M6502_XF|M6502_IF|M6502_BF));
+    T(2 == step()); T(R(A) == 0x23); T(R(S) == 0xFD);
+    T(3 == step()); T(R(S) == 0xFC); T(mem[0x01FD] == 0x23);
+    T(2 == step()); T(R(A) == 0x32);
+    T(4 == step()); T(R(A) == 0x23); T(R(S) == 0xFD); T(tf(0));
+    T(3 == step()); T(R(S) == 0xFC); T(mem[0x01FD] == (M6502_XF|M6502_IF|M6502_BF));
     T(2 == step()); T(tf(M6502_ZF));
-    T(4 == step()); T(cpu.S == 0xFD); T(tf(0));
+    T(4 == step()); T(R(S) == 0xFD); T(tf(0));
 }
 
 void CLC_SEC_CLI_SEI_CLV_CLD_SED() {
@@ -663,7 +664,7 @@ void CLC_SEC_CLI_SEI_CLV_CLD_SED() {
         0xD8,       // CLD
     };
     copy(0x0200, prog, sizeof(prog));
-    cpu.P |= M6502_VF;
+    R(P) |= M6502_VF;
 
     T(2 == step()); T(tf(0));
     T(2 == step()); T(tf(M6502_IF));
@@ -690,7 +691,7 @@ void INC_DEC() {
     };
     copy(0x0200, prog, sizeof(prog));
 
-    T(2 == step()); T(0x10 == cpu.X);
+    T(2 == step()); T(0x10 == R(X));
     T(5 == step()); T(0x01 == mem[0x0033]); T(tf(0));
     T(6 == step()); T(0x01 == mem[0x0043]); T(tf(0));
     T(6 == step()); T(0x01 == mem[0x1000]); T(tf(0));
@@ -728,27 +729,27 @@ void ADC_SBC() {
     };
     copy(0x0200, prog, sizeof(prog));
 
-    T(2 == step()); T(0x01 == cpu.A);
+    T(2 == step()); T(0x01 == R(A));
     T(3 == step()); T(0x01 == mem[0x0010]);
     T(4 == step()); T(0x01 == mem[0x1000]);
-    T(2 == step()); T(0xFC == cpu.A);
-    T(2 == step()); T(0x08 == cpu.X);
-    T(2 == step()); T(0x04 == cpu.Y);
+    T(2 == step()); T(0xFC == R(A));
+    T(2 == step()); T(0x08 == R(X));
+    T(2 == step()); T(0x04 == R(Y));
     T(2 == step());  // CLC
     // ADC
-    T(2 == step()); T(0xFD == cpu.A); T(tf(M6502_NF));
-    T(3 == step()); T(0xFE == cpu.A); T(tf(M6502_NF));
-    T(4 == step()); T(0xFF == cpu.A); T(tf(M6502_NF));
-    T(4 == step()); T(0x00 == cpu.A); T(tf(M6502_ZF|M6502_CF));
-    T(5 == step()); T(0x02 == cpu.A); T(tf(0));
-    T(5 == step()); T(0x03 == cpu.A); T(tf(0));
+    T(2 == step()); T(0xFD == R(A)); T(tf(M6502_NF));
+    T(3 == step()); T(0xFE == R(A)); T(tf(M6502_NF));
+    T(4 == step()); T(0xFF == R(A)); T(tf(M6502_NF));
+    T(4 == step()); T(0x00 == R(A)); T(tf(M6502_ZF|M6502_CF));
+    T(5 == step()); T(0x02 == R(A)); T(tf(0));
+    T(5 == step()); T(0x03 == R(A)); T(tf(0));
     // SBC
-    T(5 == step()); T(0x01 == cpu.A); T(tf(M6502_CF));
-    T(5 == step()); T(0x00 == cpu.A); T(tf(M6502_ZF|M6502_CF));
-    T(4 == step()); T(0xFF == cpu.A); T(tf(M6502_NF));
-    T(4 == step()); T(0xFD == cpu.A); T(tf(M6502_NF|M6502_CF));
-    T(3 == step()); T(0xFC == cpu.A); T(tf(M6502_NF|M6502_CF));
-    T(2 == step()); T(0xFB == cpu.A); T(tf(M6502_NF|M6502_CF));
+    T(5 == step()); T(0x01 == R(A)); T(tf(M6502_CF));
+    T(5 == step()); T(0x00 == R(A)); T(tf(M6502_ZF|M6502_CF));
+    T(4 == step()); T(0xFF == R(A)); T(tf(M6502_NF));
+    T(4 == step()); T(0xFD == R(A)); T(tf(M6502_NF|M6502_CF));
+    T(3 == step()); T(0xFC == R(A)); T(tf(M6502_NF|M6502_CF));
+    T(2 == step()); T(0xFB == R(A)); T(tf(M6502_NF|M6502_CF));
 }
 
 void CMP_CPX_CPY() {
@@ -771,9 +772,9 @@ void CMP_CPX_CPY() {
     };
     copy(0x0200, prog, sizeof(prog));
 
-    T(2 == step()); T(0x01 == cpu.A);
-    T(2 == step()); T(0x02 == cpu.X);
-    T(2 == step()); T(0x03 == cpu.Y);
+    T(2 == step()); T(0x01 == R(A));
+    T(2 == step()); T(0x02 == R(X));
+    T(2 == step()); T(0x03 == R(Y));
     T(2 == step()); T(tf(M6502_CF));
     T(2 == step()); T(tf(M6502_ZF|M6502_CF));
     T(2 == step()); T(tf(M6502_NF));
@@ -797,13 +798,13 @@ void ASL() {
     };
     copy(0x0200, prog, sizeof(prog));
 
-    T(2 == step()); T(0x81 == cpu.A);
-    T(2 == step()); T(0x01 == cpu.X);
+    T(2 == step()); T(0x81 == R(A));
+    T(2 == step()); T(0x01 == R(X));
     T(3 == step()); T(0x81 == mem[0x0010]);
     T(5 == step()); T(0x02 == mem[0x0010]); T(tf(M6502_CF));
     T(6 == step()); T(0x04 == mem[0x0010]); T(tf(0));
-    T(2 == step()); T(0x02 == cpu.A); T(tf(M6502_CF));
-    T(2 == step()); T(0x04 == cpu.A); T(tf(0));
+    T(2 == step()); T(0x02 == R(A)); T(tf(M6502_CF));
+    T(2 == step()); T(0x04 == R(A)); T(tf(0));
 }
 
 void LSR() {
@@ -821,13 +822,13 @@ void LSR() {
     };
     copy(0x0200, prog, sizeof(prog));
 
-    T(2 == step()); T(0x81 == cpu.A);
-    T(2 == step()); T(0x01 == cpu.X);
+    T(2 == step()); T(0x81 == R(A));
+    T(2 == step()); T(0x01 == R(X));
     T(3 == step()); T(0x81 == mem[0x0010]);
     T(5 == step()); T(0x40 == mem[0x0010]); T(tf(M6502_CF));
     T(6 == step()); T(0x20 == mem[0x0010]); T(tf(0));
-    T(2 == step()); T(0x40 == cpu.A); T(tf(M6502_CF));
-    T(2 == step()); T(0x20 == cpu.A); T(tf(0));
+    T(2 == step()); T(0x40 == R(A)); T(tf(M6502_CF));
+    T(2 == step()); T(0x20 == R(A)); T(tf(0));
 }
 
 void ROR_ROL() {
@@ -849,17 +850,17 @@ void ROR_ROL() {
     };
     copy(0x0200, prog, sizeof(prog));
 
-    T(2 == step()); T(0x81 == cpu.A);
-    T(2 == step()); T(0x01 == cpu.X);
+    T(2 == step()); T(0x81 == R(A));
+    T(2 == step()); T(0x01 == R(X));
     T(3 == step()); T(0x81 == mem[0x0010]);
     T(5 == step()); T(0x02 == mem[0x0010]); T(tf(M6502_CF));
     T(6 == step()); T(0x05 == mem[0x0010]); T(tf(0));
     T(6 == step()); T(0x02 == mem[0x0010]); T(tf(M6502_CF));
     T(5 == step()); T(0x81 == mem[0x0010]); T(tf(M6502_NF));
-    T(2 == step()); T(0x40 == cpu.A); T(tf(M6502_CF));
-    T(2 == step()); T(0xA0 == cpu.A); T(tf(M6502_NF));
-    T(2 == step()); T(0x40 == cpu.A); T(tf(M6502_CF));
-    T(2 == step()); T(0x81 == cpu.A); T(tf(M6502_NF));
+    T(2 == step()); T(0x40 == R(A)); T(tf(M6502_CF));
+    T(2 == step()); T(0xA0 == R(A)); T(tf(M6502_NF));
+    T(2 == step()); T(0x40 == R(A)); T(tf(M6502_CF));
+    T(2 == step()); T(0x81 == R(A)); T(tf(M6502_NF));
 }
 
 void BIT() {
@@ -878,11 +879,11 @@ void BIT() {
     };
     copy(0x0200, prog, sizeof(prog));
 
-    T(2 == step()); T(0x00 == cpu.A);
+    T(2 == step()); T(0x00 == R(A));
     T(3 == step()); T(0x00 == mem[0x001F]);
-    T(2 == step()); T(0x80 == cpu.A);
+    T(2 == step()); T(0x80 == R(A));
     T(3 == step()); T(0x80 == mem[0x0020]);
-    T(2 == step()); T(0xC0 == cpu.A);
+    T(2 == step()); T(0xC0 == R(A));
     T(4 == step()); T(0xC0 == mem[0x1000]);
     T(3 == step()); T(tf(M6502_ZF));
     T(3 == step()); T(tf(M6502_NF));
@@ -903,21 +904,21 @@ void BNE_BEQ() {
     };
     copy(0x0200, prog, sizeof(prog));
 
-    T(2 == step()); T(0x10 == cpu.A);
+    T(2 == step()); T(0x10 == R(A));
     T(2 == step()); T(tf(M6502_ZF|M6502_CF));
-    T(3 == step()); T(cpu.PC == 0x0208);
+    T(3 == step()); T(R(PC) == 0x0208);
     T(2 == step()); T(tf(M6502_CF));
-    T(3 == step()); T(cpu.PC == 0x0206);
-    T(2 == step()); T(0x0F == cpu.A);
+    T(3 == step()); T(R(PC) == 0x0206);
+    T(2 == step()); T(0x0F == R(A));
     T(2 == step()); T(tf(M6502_ZF|M6502_CF));
-    T(2 == step()); T(cpu.PC == 0x020C);
+    T(2 == step()); T(R(PC) == 0x020C);
 
     // patch jump target, and test jumping across 256 bytes page
-    cpu.PC = 0x0200;
+    R(PC) = 0x0200;
     w8(0x0205, 0xC0);
-    T(2 == step()); T(0x10 == cpu.A);
+    T(2 == step()); T(0x10 == R(A));
     T(2 == step()); T(tf(M6502_ZF|M6502_CF));
-    T(4 == step()); T(cpu.PC == 0x01C6);
+    T(4 == step()); T(R(PC) == 0x01C6);
 
     // FIXME: test the other branches
 }
@@ -929,7 +930,7 @@ void JMP() {
         0x4C, 0x00, 0x10,   // JMP $1000
     };
     copy(0x0200, prog, sizeof(prog));
-    T(3 == step()); T(cpu.PC == 0x1000);
+    T(3 == step()); T(R(PC) == 0x1000);
 }
 
 void JMP_indirect_samepage() {
@@ -943,11 +944,11 @@ void JMP_indirect_samepage() {
         0x6C, 0x10, 0x21,   // JMP ($2110)
     };
     copy(0x0200, prog, sizeof(prog));
-    T(2 == step()); T(cpu.A == 0x33);
+    T(2 == step()); T(R(A) == 0x33);
     T(4 == step()); T(mem[0x2110] == 0x33);
-    T(2 == step()); T(cpu.A == 0x22);
+    T(2 == step()); T(R(A) == 0x22);
     T(4 == step()); T(mem[0x2111] == 0x22);
-    T(5 == step()); T(cpu.PC == 0x2233);
+    T(5 == step()); T(R(PC) == 0x2233);
 }
 
 void JMP_indirect_wrap() {
@@ -962,11 +963,11 @@ void JMP_indirect_wrap() {
     };
     copy(0x0200, prog, sizeof(prog));
 
-    T(2 == step()); T(cpu.A == 0x33);
+    T(2 == step()); T(R(A) == 0x33);
     T(4 == step()); T(mem[0x21FF] == 0x33);
-    T(2 == step()); T(cpu.A == 0x22);
+    T(2 == step()); T(R(A) == 0x22);
     T(4 == step()); T(mem[0x2100] == 0x22);
-    T(5 == step()); T(cpu.PC == 0x2233);
+    T(5 == step()); T(R(PC) == 0x2233);
 }
 
 void JSR_RTS() {
@@ -979,12 +980,12 @@ void JSR_RTS() {
         0x60,               // RTS
     };
     copy(0x0300, prog, sizeof(prog));
-    cpu.PC = 0x0300;
+    R(PC) = 0x0300;
 
-    T(cpu.S == 0xFD);
-    T(6 == step()); T(cpu.PC == 0x0305); T(cpu.S == 0xFB); T(r16(0x01FC)==0x0302);
+    T(R(S) == 0xFD);
+    T(6 == step()); T(R(PC) == 0x0305); T(R(S) == 0xFB); T(r16(0x01FC)==0x0302);
     T(2 == step());
-    T(6 == step()); T(cpu.PC == 0x0303); T(cpu.S == 0xFD);
+    T(6 == step()); T(R(PC) == 0x0303); T(R(S) == 0xFD);
 }
 
 void RTI() {
@@ -1000,16 +1001,16 @@ void RTI() {
         0x40,           // RTI
     };
     copy(0x0200, prog, sizeof(prog));
-    cpu.PC = 0x0200;
+    R(PC) = 0x0200;
 
-    T(cpu.S == 0xFD);
-    T(2 == step()); T(cpu.A == 0x11);
-    T(3 == step()); T(cpu.S == 0xFC);
-    T(2 == step()); T(cpu.A == 0x22);
-    T(3 == step()); T(cpu.S == 0xFB);
-    T(2 == step()); T(cpu.A == 0x33);
-    T(3 == step()); T(cpu.S == 0xFA);
-    T(6 == step()); T(cpu.S == 0xFD); T(cpu.PC == 0x1122); T(tf(M6502_ZF|M6502_CF));
+    T(R(S) == 0xFD);
+    T(2 == step()); T(R(A) == 0x11);
+    T(3 == step()); T(R(S) == 0xFC);
+    T(2 == step()); T(R(A) == 0x22);
+    T(3 == step()); T(R(S) == 0xFB);
+    T(2 == step()); T(R(A) == 0x33);
+    T(3 == step()); T(R(S) == 0xFA);
+    T(6 == step()); T(R(S) == 0xFD); T(R(PC) == 0x1122); T(tf(M6502_ZF|M6502_CF));
 }
 
 int main() {

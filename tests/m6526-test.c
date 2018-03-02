@@ -12,8 +12,8 @@
 uint32_t num_tests = 0;
 #define T(x) { assert(x); num_tests++; }
 
+// FIXME (check YAKC for reference implementation
 int main() {
-    // FIXME
     return 0;
 }
 

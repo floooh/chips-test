@@ -63,26 +63,26 @@ int main() {
         .bcd_disabled = true
     });
     m6502_reset(&cpu);
-    cpu.PC = 0xC000;
+    cpu.state.PC = 0xC000;
 
     /* run the test */
     int i = 0;
-    while (cpu.PC != 0xC66E) {
+    while (cpu.state.PC != 0xC66E) {
         cpu_state* state = &state_table[i++];
-        if ((cpu.PC != state->PC) ||
-            (cpu.A  != state->A) ||
-            (cpu.X  != state->X) ||
-            (cpu.Y  != state->Y) ||
-            (cpu.P  != state->P) ||
-            (cpu.S  != state->S))
+        if ((cpu.state.PC != state->PC) ||
+            (cpu.state.A  != state->A) ||
+            (cpu.state.X  != state->X) ||
+            (cpu.state.Y  != state->Y) ||
+            (cpu.state.P  != state->P) ||
+            (cpu.state.S  != state->S))
         {
-            printf("### NESTEST failed at pos %d, PC=0x%04X: %s", i, cpu.PC, state->desc);
-            assert(cpu.PC == state->PC);
-            assert(cpu.A == state->A);
-            assert(cpu.X == state->X);
-            assert(cpu.Y == state->Y);
-            assert(cpu.P == state->P);
-            assert(cpu.S == state->S);
+            printf("### NESTEST failed at pos %d, PC=0x%04X: %s", i, cpu.state.PC, state->desc);
+            assert(cpu.state.PC == state->PC);
+            assert(cpu.state.A == state->A);
+            assert(cpu.state.X == state->X);
+            assert(cpu.state.Y == state->Y);
+            assert(cpu.state.P == state->P);
+            assert(cpu.state.S == state->S);
             return 10;
         }
         m6502_exec(&cpu, 0);

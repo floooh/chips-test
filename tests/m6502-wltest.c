@@ -71,18 +71,18 @@ bool load_test(const char* name) {
     mem_write_range(&mem, 0xFF48, irq_handler, sizeof(irq_handler));
 
     /* init CPU registers */
-    cpu.S = 0xFD;
-    cpu.P = 0x04;
-    cpu.PC = 0x0801;
+    cpu.state.S = 0xFD;
+    cpu.state.P = 0x04;
+    cpu.state.PC = 0x0801;
 
     return true;
 }
 
 /* pop return address from CPU stack */
 uint16_t pop() {
-    cpu.S++;
-    uint8_t l = mem_rd(&mem, 0x0100|cpu.S++);
-    uint8_t h = mem_rd(&mem, 0x0100|cpu.S);
+    cpu.state.S++;
+    uint8_t l = mem_rd(&mem, 0x0100|cpu.state.S++);
+    uint8_t h = mem_rd(&mem, 0x0100|cpu.state.S);
     uint16_t addr = (h<<8)|l;
     return addr;
 }
@@ -117,10 +117,10 @@ bool trap() {
         /* print character */
         mem_wr(&mem, 0x030C, 0x00);
         if (text_enabled) {
-            putchar(petscii2ascii(cpu.A));
+            putchar(petscii2ascii(cpu.state.A));
         }
-        cpu.PC = pop();
-        cpu.PC++;
+        cpu.state.PC = pop();
+        cpu.state.PC++;
     }
     else if (cpu.trap_id == 1) {
         /* load dump */
@@ -138,7 +138,7 @@ bool trap() {
             return false;
         }
         pop();
-        cpu.PC = 0x0816;
+        cpu.state.PC = 0x0816;
         text_enabled = true;
     }
     else if (cpu.trap_id == 2) {
@@ -149,11 +149,11 @@ bool trap() {
             puts("\nSKIP TEXT OUTPUT UNTIL NEXT TEST\n");
         }
         text_enabled = false;
-        cpu.A = 0x02;
-        cpu.PC = pop();
-        cpu.PC++;
+        cpu.state.A = 0x02;
+        cpu.state.PC = pop();
+        cpu.state.PC++;
     }
-    else if ((cpu.PC == 0x8000) || (cpu.PC == 0xA474)) {
+    else if ((cpu.state.PC == 0x8000) || (cpu.state.PC == 0xA474)) {
         /* done */
         return false;
     }
