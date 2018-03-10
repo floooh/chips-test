@@ -1,0 +1,6 @@
+---
+platform: osx
+generator: Ninja 
+build_tool: vscode_cmake
+build_type: Debug
+vscode_additional_defines: [ 'CHIPS_IMPL', 'SOKOL_IMPL' ]
