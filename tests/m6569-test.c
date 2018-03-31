@@ -1,12 +1,12 @@
 //------------------------------------------------------------------------------
-//  m6567-test.c
+//  m6569-test.c
 //------------------------------------------------------------------------------
 // force assert() enabled
 #ifdef NDEBUG
 #undef NDEBUG
 #endif
 #define CHIPS_IMPL
-#include "chips/m6567.h"
+#include "chips/m6569.h"
 #include <stdio.h>
 
 uint32_t num_tests = 0;
@@ -20,17 +20,20 @@ uint16_t fetch(uint16_t addr) {
 }
 
 void test_rw() {
-    m6567_t vic;
-    m6567_init(&vic, &(m6567_desc_t){
-        .type = M6567_TYPE_6569,
+    m6569_t vic;
+    m6569_init(&vic, &(m6569_desc_t){
         .rgba8_buffer = rgba8_buffer,
         .rgba8_buffer_size = sizeof(rgba8_buffer),
-        .fetch_cb = fetch
+        .fetch_cb = fetch,
+        .vis_x = 64,
+        .vis_y = 24,
+        .vis_w = 392,
+        .vis_h = 272,
     });
     int w, h;
-    m6567_display_size(&vic, &w, &h);
-    T(w == 403);
-    T(h == 284);
+    m6569_display_size(&vic, &w, &h);
+    T(w == 392);
+    T(h == 272);
 }
 
 int main() {

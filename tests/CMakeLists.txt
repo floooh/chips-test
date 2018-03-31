@@ -90,9 +90,9 @@ fips_begin_app(z80-wait cmdline)
     fips_files(z80-wait.c)
 fips_end_app()
 
-fips_begin_app(m6567-test cmdline)
+fips_begin_app(m6569-test cmdline)
     fips_vs_warning_level(3)
-    fips_files(m6567-test.c)
+    fips_files(m6569-test.c)
 fips_end_app()
 
 fips_begin_app(m6526-test cmdline)
