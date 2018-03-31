@@ -185,14 +185,14 @@ int main() {
     });
     m6502_reset(&cpu);
     /* trap for print character function */
-    m6502_set_trap(&cpu, 0, 0xFFD2, mem_readptr(&mem, 0xFFD2));
+    m6502_set_trap(&cpu, 0, 0xFFD2);
     /* trap for load dump function */
-    m6502_set_trap(&cpu, 1, 0xE16F, mem_readptr(&mem, 0xE16F));
+    m6502_set_trap(&cpu, 1, 0xE16F);
     /* trap for 'scan keyboard' function */
-    m6502_set_trap(&cpu, 2, 0xFFE4, mem_readptr(&mem, 0xFFE4));
+    m6502_set_trap(&cpu, 2, 0xFFE4);
     /* traps for error and finished */
-    m6502_set_trap(&cpu, 3, 0x8000, mem_readptr(&mem, 0x8000));
-    m6502_set_trap(&cpu, 4, 0xA474, mem_readptr(&mem, 0xA474));
+    m6502_set_trap(&cpu, 3, 0x8000);
+    m6502_set_trap(&cpu, 4, 0xA474);
 
     load_test("_start");
     bool done = false;

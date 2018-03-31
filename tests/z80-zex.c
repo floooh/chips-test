@@ -113,8 +113,8 @@ static bool zexdoc() {
     cpu.SP = 0xF000;
     cpu.PC = 0x0100;
     /* trap when reaching address 0x0000 or 0x0005 */
-    z80_set_trap(&cpu, 0, 0x0000, &mem[0]);
-    z80_set_trap(&cpu, 1, 0x0005, &mem[5]);
+    z80_set_trap(&cpu, 0, 0x0000);
+    z80_set_trap(&cpu, 1, 0x0005);
     return run_test(&cpu, "ZEXDOC");
 }
 
@@ -128,8 +128,8 @@ static bool zexall() {
     cpu.SP = 0xF000;
     cpu.PC = 0x0100;
     /* trap when reaching address 0x0000 or 0x0005 */
-    z80_set_trap(&cpu, 0, 0x0000, &mem[0]);
-    z80_set_trap(&cpu, 1, 0x0005, &mem[5]);
+    z80_set_trap(&cpu, 0, 0x0000);
+    z80_set_trap(&cpu, 1, 0x0005);
     return run_test(&cpu, "ZEXALL");
 }
 
