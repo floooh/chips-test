@@ -154,7 +154,7 @@ int main() {
     memcpy(&mem[0xF000], dump_kc87_os_2+0x1000, 0x1000);
 
     /* execution starts at 0xF000 */
-    cpu.PC = 0xF000;
+    cpu.state.PC = 0xF000;
 
     /* emulate and draw frames */
     uint32_t overrun_ticks = 0;

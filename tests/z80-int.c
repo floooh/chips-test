@@ -81,7 +81,7 @@ int main() {
         0x21, 0x33, 0x33,   /* LD HL,0x3333 */
     };
     copy(0x0100, prog, sizeof(prog));
-    cpu.PC = 0x0100;
+    cpu.state.PC = 0x0100;
 
     /* the interrupt service routine */
     uint8_t int_prog[] = {
@@ -91,15 +91,15 @@ int main() {
     };
     copy(0x0200, int_prog, sizeof(int_prog));
 
-    T(10 == z80_exec(&cpu,0)); T(cpu.SP == 0x0300);   /* LD SP, 0x0300) */
-    T(4 == z80_exec(&cpu,0)); T(cpu.IFF2 == false);                       /* EI */
-    T(8 == z80_exec(&cpu,0)); T(cpu.IFF2 == true); T(cpu.IM == 2);        /* IM 2 */
-    T(4 == z80_exec(&cpu,0)); T(cpu.A == 0);                              /* XOR A */
-    T(9 == z80_exec(&cpu,0)); T(cpu.I == 0);                              /* LD I,A */
-    T(29 == z80_exec(&cpu,0)); T(cpu.PC == 0x0200); T(cpu.IFF2 == false); T(cpu.SP == 0x02FE);    /* OUT (0x01),A */
-    T(4 == z80_exec(&cpu,0)); T(cpu.IFF2 == false);                       /* EI */
-    T(10 == z80_exec(&cpu,0)); T(cpu.HL == 0x1111); T(cpu.IFF2 == true);  /* LD HL,0x1111 */
-    T(14 == z80_exec(&cpu,0)); T(cpu.PC == 0x010B); T(reti_executed);     /* RETI */
-    z80_exec(&cpu,0); T(cpu.HL == 0x3333); /* LD HL,0x3333 */
+    T(10 == z80_exec(&cpu,0)); T(cpu.state.SP == 0x0300);   /* LD SP, 0x0300) */
+    T(4 == z80_exec(&cpu,0)); T(cpu.state.IFF2 == false);                       /* EI */
+    T(8 == z80_exec(&cpu,0)); T(cpu.state.IFF2 == true); T(cpu.state.IM == 2);        /* IM 2 */
+    T(4 == z80_exec(&cpu,0)); T(cpu.state.A == 0);                              /* XOR A */
+    T(9 == z80_exec(&cpu,0)); T(cpu.state.I == 0);                              /* LD I,A */
+    T(29 == z80_exec(&cpu,0)); T(cpu.state.PC == 0x0200); T(cpu.state.IFF2 == false); T(cpu.state.SP == 0x02FE);    /* OUT (0x01),A */
+    T(4 == z80_exec(&cpu,0)); T(cpu.state.IFF2 == false);                       /* EI */
+    T(10 == z80_exec(&cpu,0)); T(cpu.state.HL == 0x1111); T(cpu.state.IFF2 == true);  /* LD HL,0x1111 */
+    T(14 == z80_exec(&cpu,0)); T(cpu.state.PC == 0x010B); T(reti_executed);     /* RETI */
+    z80_exec(&cpu,0); T(cpu.state.HL == 0x3333); /* LD HL,0x3333 */
 }
 

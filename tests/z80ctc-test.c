@@ -207,7 +207,7 @@ void test_interrupt() {
         0x18, 0xF9,         /* JR -> HALT, endless loop back to the HALT instruction */
     };
     copy(0x0100, main_prog, sizeof(main_prog));
-    cpu.PC = 0x0100;
+    cpu.state.PC = 0x0100;
 
     /* interrupt service routine, increment content of 0x0001 */
     uint8_t int_prog[] = {
