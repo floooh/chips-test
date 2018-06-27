@@ -1,6 +1,7 @@
 /*
     c64.c
     SID is emulated, but there's no sound output. No tape or disc emulation.
+    The original is part of the YAKC emulator: https://github.com/floooh/yakc
 */
 #include "sokol_app.h"
 #include "sokol_time.h"
@@ -494,7 +495,7 @@ uint16_t c64_vic_fetch(uint16_t addr) {
 
         The VIC-II has a 14-bit address bus and 12-bit data bus, and
         has a different memory mapping then the CPU (that's why it
-        goes through the board.mem2 pagetable):
+        goes through the mem_vic pagetable):
             - a full 16-bit address is formed by taking the address bits
               14 and 15 from the value written to CIA-1 port A
             - the lower 8 bits of the VIC-II data bus are connected
