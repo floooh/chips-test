@@ -35,7 +35,7 @@ void app_frame();
 void app_input();
 void app_cleanup();
 
-/* the Z1013 hardware and emulator state */
+/* Z1013 emulator callbacks and state */
 void z1013_init();
 uint64_t z1013_tick(int num, uint64_t pins);
 uint8_t z1013_pio_in(int port_id);
