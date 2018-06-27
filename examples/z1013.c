@@ -19,28 +19,16 @@
     Enter BASIC editing mode with 'AUTO', leave by pressing Esc.
 */
 #include "sokol_app.h"
-#include "sokol_gfx.h"
 #include "sokol_time.h"
 #define CHIPS_IMPL
 #include "chips/z80.h"
 #include "chips/z80pio.h"
 #include "chips/kbd.h"
 #include "roms/z1013-roms.h"
+#include "common/gfx.h"
 #include <ctype.h> /* isupper, islower, toupper, tolower */
-#include "shaders.h"
 
-/* application wrapper callbacks */
-void app_init();
-void app_frame();
-void app_input();
-void app_cleanup();
-
-/* Z1013 emulator callbacks and state */
-void z1013_init();
-uint64_t z1013_tick(int num, uint64_t pins);
-uint8_t z1013_pio_in(int port_id);
-void z1013_pio_out(int port_id, uint8_t data);
-void z1013_decode_vidmem();
+/* Z1013 emulator state and callbacks */
 z80_t cpu;
 z80pio_t pio;
 kbd_t kbd;
@@ -50,15 +38,17 @@ uint8_t mem[1<<16];
 uint32_t overrun_ticks;
 uint64_t last_time_stamp;
 
-/* rendering functions and resources */
-void gfx_init();
-void gfx_draw();
-void gfx_shutdown();
-const sg_pass_action pass_action = { .colors[0].action = SG_ACTION_DONTCARE };
-sg_draw_state draw_state;
-uint32_t rgba8_buffer[256*256];
+void z1013_init();
+uint64_t z1013_tick(int num, uint64_t pins);
+uint8_t z1013_pio_in(int port_id);
+void z1013_pio_out(int port_id, uint8_t data);
+void z1013_decode_vidmem();
 
 /* sokol-app entry, configure application callbacks and window */
+void app_init();
+void app_frame();
+void app_input();
+void app_cleanup();
 sapp_desc sokol_main() {
     return (sapp_desc) {
         .init_cb = app_init,
@@ -73,7 +63,7 @@ sapp_desc sokol_main() {
 
 /* one-time application init */
 void app_init() {
-    gfx_init();
+    gfx_init(256, 256);
     z1013_init();
     last_time_stamp = stm_now();
 }
@@ -304,62 +294,4 @@ void z1013_decode_vidmem() {
             }
         }
     }
-}
-
-/* setup sokol_gfx, sokol_time and create gfx resources */
-void gfx_init() {
-    sg_setup(&(sg_desc){
-        .mtl_device = sapp_metal_get_device(),
-        .mtl_renderpass_descriptor_cb = sapp_metal_get_renderpass_descriptor,
-        .mtl_drawable_cb = sapp_metal_get_drawable,
-        .d3d11_device = sapp_d3d11_get_device(),
-        .d3d11_device_context = sapp_d3d11_get_device_context(),
-        .d3d11_render_target_view_cb = sapp_d3d11_get_render_target_view(),
-        .d3d11_depth_stencil_view_cb = sapp_d3d11_get_depth_stencil_view()
-    });
-    stm_setup();
-
-    float quad_vertices[] = { 0.0f, 0.0f,  1.0f, 0.0f,  0.0f, 1.0f,  1.0f, 1.0f };
-    draw_state.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-        .size = sizeof(quad_vertices),
-        .content = quad_vertices,
-    });
-    sg_shader fsq_shd = sg_make_shader(&(sg_shader_desc){
-        .fs.images = {
-            [0] = { .name="tex", .type=SG_IMAGETYPE_2D },
-        },
-        .vs.source = vs_src,
-        .fs.source = fs_src,
-    });
-    draw_state.pipeline = sg_make_pipeline(&(sg_pipeline_desc){
-        .layout = {
-            .attrs[0] = { .name="pos", .format=SG_VERTEXFORMAT_FLOAT2 }
-        },
-        .shader = fsq_shd,
-        .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP
-    });
-    /* z1013 framebuffer is 32x32 characters at 8x8 pixels */
-    draw_state.fs_images[0] = sg_make_image(&(sg_image_desc){
-        .width = 256,
-        .height = 256,
-        .pixel_format = SG_PIXELFORMAT_RGBA8,
-        .usage = SG_USAGE_STREAM,
-    });
-}
-
-/* decode emulator framebuffer into texture, and draw fullscreen rect */
-void gfx_draw() {
-    sg_update_image(draw_state.fs_images[0], &(sg_image_content){
-        .subimage[0][0] = { .ptr = rgba8_buffer, .size = sizeof(rgba8_buffer) }
-    });
-    sg_begin_default_pass(&pass_action, sapp_width(), sapp_height());
-    sg_apply_draw_state(&draw_state);
-    sg_draw(0, 4, 1);
-    sg_end_pass();
-    sg_commit();
-}
-
-/* shutdown sokol and GLFW */
-void gfx_shutdown() {
-    sg_shutdown();
 }

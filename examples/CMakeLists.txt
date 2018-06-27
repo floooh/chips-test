@@ -1,3 +1,4 @@
+# select the sokol-gfx backend depending on platform
 if(FIPS_EMSCRIPTEN OR FIPS_RASPBERRYPI OR FIPS_ANDROID)
     add_definitions(-DSOKOL_GLES2)
 elseif(FIPS_WINDOWS)
@@ -8,8 +9,11 @@ else()
     add_definitions(-DSOKOL_GLCORE33)
 endif()
 
-fips_begin_lib(sokol)
+# a lib of common code shared between all emulators
+fips_begin_lib(common)
     fips_vs_warning_level(3)
+    fips_dir(common)
+    fips_files(gfx.c gfx.h)
     if (FIPS_OSX)
         fips_files(sokol.m)
         if (FIPS_IOS)
@@ -27,7 +31,7 @@ fips_begin_app(z1013 windowed)
     fips_files(z1013.c)
     fips_dir(roms)
     fips_generate(FROM z1013-roms.yml TYPE dump SOURCE z1013-roms.c HEADER z1013-roms.h)
-    fips_deps(sokol)
+    fips_deps(common)
 fips_end_app()
 
 #fips_begin_app(kc87 windowed)
