@@ -40,7 +40,6 @@ uint64_t last_time_stamp;
 
 void c64_init(void);
 void c64_update_memory_map(void);
-uint64_t c64_tick(int num, uint64_t pins);
 uint64_t c64_cpu_tick(uint64_t pins);
 uint8_t c64_cpu_port_in();
 void c64_cpu_port_out(uint8_t data);
@@ -55,6 +54,7 @@ void app_init(void);
 void app_frame(void);
 void app_input(const sapp_event*);
 void app_cleanup(void);
+
 sapp_desc sokol_main() {
     return (sapp_desc) {
         .init_cb = app_init,
@@ -108,23 +108,23 @@ void app_input(const sapp_event* event) {
         case SAPP_EVENTTYPE_KEY_UP:
             c = (int) event->key_code;
             switch (c) {
-                case SAPP_KEYCODE_SPACE:        c = 0x20;
-                case SAPP_KEYCODE_LEFT:         c = 0x08;
-                case SAPP_KEYCODE_RIGHT:        c = 0x09;
-                case SAPP_KEYCODE_DOWN:         c = 0x0A;
-                case SAPP_KEYCODE_UP:           c = 0x0B;
-                case SAPP_KEYCODE_ENTER:        c = 0x0D;
-                case SAPP_KEYCODE_BACKSPACE:    c = shift ? 0x0C : 0x01; // 0x0C: clear screen
-                case SAPP_KEYCODE_ESCAPE:       c = shift ? 0x13 : 0x03; // 0x13: break
-                case SAPP_KEYCODE_F1:           c = 0xF1;
-                case SAPP_KEYCODE_F2:           c = 0xF2;
-                case SAPP_KEYCODE_F3:           c = 0xF3;
-                case SAPP_KEYCODE_F4:           c = 0xF4;
-                case SAPP_KEYCODE_F5:           c = 0xF5;
-                case SAPP_KEYCODE_F6:           c = 0xF6;
-                case SAPP_KEYCODE_F7:           c = 0xF7;
-                case SAPP_KEYCODE_F8:           c = 0xF8;
-                default:                        c = 0;
+                case SAPP_KEYCODE_SPACE:        c = 0x20; break;
+                case SAPP_KEYCODE_LEFT:         c = 0x08; break;
+                case SAPP_KEYCODE_RIGHT:        c = 0x09; break;
+                case SAPP_KEYCODE_DOWN:         c = 0x0A; break;
+                case SAPP_KEYCODE_UP:           c = 0x0B; break;
+                case SAPP_KEYCODE_ENTER:        c = 0x0D; break;
+                case SAPP_KEYCODE_BACKSPACE:    c = shift ? 0x0C : 0x01; break;
+                case SAPP_KEYCODE_ESCAPE:       c = shift ? 0x13 : 0x03; break;
+                case SAPP_KEYCODE_F1:           c = 0xF1; break;
+                case SAPP_KEYCODE_F2:           c = 0xF2; break;
+                case SAPP_KEYCODE_F3:           c = 0xF3; break;
+                case SAPP_KEYCODE_F4:           c = 0xF4; break;
+                case SAPP_KEYCODE_F5:           c = 0xF5; break;
+                case SAPP_KEYCODE_F6:           c = 0xF6; break;
+                case SAPP_KEYCODE_F7:           c = 0xF7; break;
+                case SAPP_KEYCODE_F8:           c = 0xF8; break;
+                default:                        c = 0; break;
             }
             if (c) {
                 if (event->type == SAPP_EVENTTYPE_KEY_DOWN) {
