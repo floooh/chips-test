@@ -29,6 +29,9 @@
 #include <ctype.h> /* isupper, islower, toupper, tolower */
 
 /* Z1013 emulator state and callbacks */
+#define Z1013_FREQ (2000000)
+#define Z1013_DISP_WIDTH (256)
+#define Z1013_DISP_HEIGHT (256)
 z80_t cpu;
 z80pio_t pio;
 kbd_t kbd;
@@ -47,7 +50,7 @@ void z1013_decode_vidmem();
 /* sokol-app entry, configure application callbacks and window */
 void app_init();
 void app_frame();
-void app_input();
+void app_input(const sapp_event*);
 void app_cleanup();
 sapp_desc sokol_main() {
     return (sapp_desc) {
@@ -55,15 +58,15 @@ sapp_desc sokol_main() {
         .frame_cb = app_frame,
         .event_cb = app_input,
         .cleanup_cb = app_cleanup,
-        .width = 512,
-        .height = 512,
+        .width = 2 * Z1013_DISP_WIDTH,
+        .height = 2 * Z1013_DISP_HEIGHT,
         .window_title = "Z1013"
     };
 }
 
 /* one-time application init */
 void app_init() {
-    gfx_init(256, 256);
+    gfx_init(Z1013_DISP_WIDTH, Z1013_DISP_HEIGHT);
     z1013_init();
     last_time_stamp = stm_now();
 }
@@ -72,7 +75,7 @@ void app_init() {
 void app_frame() {
     double frame_time = stm_sec(stm_laptime(&last_time_stamp));
     /* number of 2MHz ticks in host frame */
-    uint32_t ticks_to_run = (uint32_t) ((2000000 * frame_time) - overrun_ticks);
+    uint32_t ticks_to_run = (uint32_t) ((Z1013_FREQ * frame_time) - overrun_ticks);
     uint32_t ticks_executed = z80_exec(&cpu, ticks_to_run);
     assert(ticks_executed >= ticks_to_run);
     overrun_ticks = ticks_executed - ticks_to_run;
@@ -87,17 +90,17 @@ void app_input(const sapp_event* event) {
         int c;
         case SAPP_EVENTTYPE_CHAR:
             c = (int) event->char_code;
-            /* need to invert case (unshifted is upper caps, shifted is lower caps */
             if (c < KBD_MAX_KEYS) {
+                /* need to invert case (unshifted is upper caps, shifted is lower caps */
                 if (isupper(c)) {
                     c = tolower(c);
                 }
                 else if (islower(c)) {
                     c = toupper(c);
                 }
+                kbd_key_down(&kbd, c);
+                kbd_key_up(&kbd, c);
             }
-            kbd_key_down(&kbd, c);
-            kbd_key_up(&kbd, c);
             break;
         case SAPP_EVENTTYPE_KEY_DOWN:
         case SAPP_EVENTTYPE_KEY_UP:
@@ -119,7 +122,8 @@ void app_input(const sapp_event* event) {
                 }
             }
             break;
-        default: break;
+        default:
+            break;
     }
 }
 

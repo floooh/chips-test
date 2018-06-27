@@ -6,23 +6,21 @@
 //
 //  not emulated: beeper sound, border color, 40x20 video mode
 //------------------------------------------------------------------------------
-#define SOKOL_IMPL
+#include "sokol_app.h"
 #include "sokol_time.h"
-#define GLFW_INCLUDE_NONE
-#include "GLFW/glfw3.h"
-#include "flextgl/flextGL.h"
-#define SOKOL_GLCORE33
-#include "sokol_gfx.h"
 #define CHIPS_IMPL
 #include "chips/z80.h"
 #include "chips/z80pio.h"
 #include "chips/z80ctc.h"
 #include "chips/kbd.h"
 #include "roms/kc87-roms.h"
+#include "common/gfx.h"
 #include <ctype.h> /* isupper, islower, toupper, tolower */
 
-/* the KC87 hardware */
+/* KC87 emulator state and callbacks */
 #define KC87_FREQ (2457600)
+#define KC87_DISP_WIDTH (320)
+#define KC87_DISP_HEIGHT (192)
 z80_t cpu;
 z80pio_t pio1;
 z80pio_t pio2;
@@ -32,7 +30,9 @@ uint32_t blink_counter = 0;
 bool blink_flip_flop = false;
 uint64_t ctc_zcto2 = 0;
 uint8_t mem[1<<16];
-const  uint32_t palette[8] = {
+uint32_t overrun_ticks;
+uint64_t last_time_stamp;
+const uint32_t palette[8] = {
     0xFF000000,     // black
     0xFF0000FF,     // red
     0xFF00FF00,     // green
@@ -42,24 +42,13 @@ const  uint32_t palette[8] = {
     0xFFFFFF00,     // cyan
     0xFFFFFFFF,     // white
 };
-
-/* emulator callbacks */
-uint64_t tick(int num, uint64_t pins);
-uint8_t pio1_in(int port_id);
-void pio1_out(int port_id, uint8_t data);
-uint8_t pio2_in(int port_id);
-void pio2_out(int port_id, uint8_t data);
-
-/* GLFW keyboard input callbacks */
-void on_key(GLFWwindow* w, int key, int scancode, int action, int mods);
-void on_char(GLFWwindow* w, unsigned int codepoint);
-
-/* rendering functions and resources */
-GLFWwindow* gfx_init();
-void gfx_draw(GLFWwindow* w);
-void gfx_shutdown();
-sg_draw_state draw_state;
-uint32_t rgba8_buffer[320*192];
+void kc87_init(void);
+uint64_t kc87_tick(int num, uint64_t pins);
+uint8_t kc87_pio1_in(int port_id);
+void kc87_pio1_out(int port_id, uint8_t data);
+uint8_t kc87_pio2_in(int port_id);
+void kc87_pio2_out(int port_id, uint8_t data);
+void kc87_decode_vidmem(void);
 
 /* xorshift randomness for memory initialization */
 uint32_t xorshift_state = 0x6D98302B;
@@ -70,15 +59,103 @@ uint32_t xorshift32() {
     return x;
 }
 
-int main() {
+/* sokol-app entry, configure application callbacks and window */
+void app_init(void);
+void app_frame(void);
+void app_input(const sapp_event*);
+void app_cleanup(void);
+sapp_desc sokol_main() {
+    return (sapp_desc) {
+        .init_cb = app_init,
+        .frame_cb = app_frame,
+        .event_cb = app_input,
+        .cleanup_cb = app_cleanup,
+        .width = 2 * KC87_DISP_WIDTH,
+        .height = 2 * KC87_DISP_HEIGHT,
+        .window_title = "KC87"
+    };
+}
 
-    /* setup rendering via GLFW and sokol_gfx */
-    GLFWwindow* w = gfx_init();
+/* one-time application init */
+void app_init() {
+    gfx_init(KC87_DISP_WIDTH, KC87_DISP_HEIGHT);
+    kc87_init();
+    last_time_stamp = stm_now();
+}
 
+/* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
+void app_frame() {
+    double frame_time = stm_sec(stm_laptime(&last_time_stamp));
+    uint32_t ticks_to_run = (uint32_t) ((KC87_FREQ * frame_time) - overrun_ticks);
+    uint32_t ticks_executed = z80_exec(&cpu, ticks_to_run);
+    assert(ticks_executed >= ticks_to_run);
+    overrun_ticks = ticks_executed - ticks_to_run;
+    kbd_update(&kbd);
+    kc87_decode_vidmem();
+    gfx_draw();
+}
+
+/* keyboard input handling */
+void app_input(const sapp_event* event) {
+    switch (event->type) {
+        int c;
+        case SAPP_EVENTTYPE_CHAR:
+            c = (int) event->char_code;
+            if (c < KBD_MAX_KEYS) {
+                /* need to invert case (unshifted is upper caps, shifted is lower caps */
+                if (isupper(c)) {
+                    c = tolower(c);
+                }
+                else if (islower(c)) {
+                    c = toupper(c);
+                }
+                kbd_key_down(&kbd, c);
+                kbd_key_up(&kbd, c);
+            }
+            /* keyboard matrix lines are directly connected to the PIO2's Port B */
+            z80pio_write_port(&pio2, Z80PIO_PORT_B, ~kbd_scan_lines(&kbd));
+            break;
+        case SAPP_EVENTTYPE_KEY_DOWN:
+        case SAPP_EVENTTYPE_KEY_UP:
+            c = (int) event->key_code;
+            switch (c) {
+                case SAPP_KEYCODE_ENTER:    c = 0x0D; break;
+                case SAPP_KEYCODE_RIGHT:    c = 0x09; break;
+                case SAPP_KEYCODE_LEFT:     c = 0x08; break;
+                case SAPP_KEYCODE_DOWN:     c = 0x0A; break;
+                case SAPP_KEYCODE_UP:       c = 0x0B; break;
+                case SAPP_KEYCODE_ESCAPE:   c = (event->modifiers & SAPP_MODIFIER_SHIFT)? 0x1B: 0x03; break;
+                case SAPP_KEYCODE_INSERT:   c = 0x1A; break;
+                case SAPP_KEYCODE_HOME:     c = 0x19; break;
+                default:                    c = 0; break;
+            }
+            if (c) {
+                if (event->type == SAPP_EVENTTYPE_KEY_DOWN) {
+                    kbd_key_down(&kbd, c);
+                }
+                else {
+                    kbd_key_up(&kbd, c);
+                }
+                /* keyboard matrix lines are directly connected to the PIO2's Port B */
+                z80pio_write_port(&pio2, Z80PIO_PORT_B, ~kbd_scan_lines(&kbd));
+            }
+            break;
+        default:
+            break;
+    }
+}
+
+/* application cleanup callbacl */
+void app_cleanup() {
+    gfx_shutdown();
+}
+
+/* KC87 emulator initialization */
+void kc87_init() {
     /* initialize CPU, PIOs and CTC */
-    z80_init(&cpu, tick);
-    z80pio_init(&pio1, pio1_in, pio1_out);
-    z80pio_init(&pio2, pio2_in, pio2_out);
+    z80_init(&cpu, kc87_tick);
+    z80pio_init(&pio1, kc87_pio1_in, kc87_pio1_out);
+    z80pio_init(&pio2, kc87_pio2_in, kc87_pio2_out);
     z80ctc_init(&ctc);
 
     /* setup keyboard matrix, keep keys pressed for N frames to give
@@ -133,10 +210,6 @@ int main() {
     kbd_register_key(&kbd, 0x1D, 5, 7, 0);      /* run */
     kbd_register_key(&kbd, 0x20, 7, 6, 0);      /* space */
 
-    /* GLFW keyboard callbacks */
-    glfwSetKeyCallback(w, on_key);
-    glfwSetCharCallback(w, on_char);
-
     /* fill memory with randonmess */
     for (int i = 0; i < (int) sizeof(mem);) {
         uint32_t r = xorshift32();
@@ -155,28 +228,10 @@ int main() {
 
     /* execution starts at 0xF000 */
     cpu.state.PC = 0xF000;
-
-    /* emulate and draw frames */
-    uint32_t overrun_ticks = 0;
-    uint64_t last_time_stamp = stm_now();
-    while (!glfwWindowShouldClose(w)) {
-        /* number of 2.4576MHz ticks in host frame */
-        double frame_time = stm_sec(stm_laptime(&last_time_stamp));
-        uint32_t ticks_to_run = (uint32_t) ((KC87_FREQ * frame_time) - overrun_ticks);
-        uint32_t ticks_executed = z80_exec(&cpu, ticks_to_run);
-        assert(ticks_executed >= ticks_to_run);
-        overrun_ticks = ticks_executed - ticks_to_run;
-        kbd_update(&kbd);
-        gfx_draw(w);
-    }
-    /* shutdown */
-    gfx_shutdown();
-    return 0;
 }
 
 /* the CPU tick callback performs memory and I/O reads/writes */
-uint64_t tick(int num_ticks, uint64_t pins) {
-
+uint64_t kc87_tick(int num_ticks, uint64_t pins) {
     /* tick the CTC channels, the CTC channel 2 output signal ZCTO2 is connected
        to CTC channel 3 input signal CLKTRG3 to form a timer cascade
        which drives the system clock, store the state of ZCTO2 for the
@@ -270,11 +325,11 @@ uint64_t tick(int num_ticks, uint64_t pins) {
     return (pins & Z80_PIN_MASK);
 }
 
-uint8_t pio1_in(int port_id) {
+uint8_t kc87_pio1_in(int port_id) {
     return 0x00;
 }
 
-void pio1_out(int port_id, uint8_t data) {
+void kc87_pio1_out(int port_id, uint8_t data) {
     if (Z80PIO_PORT_A == port_id) {
         /*
             PIO1-A bits:
@@ -296,7 +351,7 @@ void pio1_out(int port_id, uint8_t data) {
 
     FIXME: describe keyboard input
 */
-uint8_t pio2_in(int port_id) {
+uint8_t kc87_pio2_in(int port_id) {
     if (Z80PIO_PORT_A == port_id) {
         /* return keyboard matrix column bits for requested line bits */
         uint8_t columns = (uint8_t) kbd_scan_columns(&kbd);
@@ -309,7 +364,7 @@ uint8_t pio2_in(int port_id) {
     }
 }
 
-void pio2_out(int port_id, uint8_t data) {
+void kc87_pio2_out(int port_id, uint8_t data) {
     if (Z80PIO_PORT_A == port_id) {
         kbd_set_active_columns(&kbd, ~data);
     }
@@ -319,7 +374,7 @@ void pio2_out(int port_id, uint8_t data) {
 }
 
 /* decode the KC87 40x24 framebuffer to a linear 320x192 RGBA8 buffer */
-void decode_vidmem() {
+void kc87_decode_vidmem() {
     /* FIXME: there's also a 40x20 video mode */
     uint32_t* dst = rgba8_buffer;
     const uint8_t* vidmem = &mem[0xEC00];     /* 1 KB ASCII buffer at EC00 */
@@ -349,129 +404,4 @@ void decode_vidmem() {
         }
         offset += 40;
     }
-}
-
-/* GLFW character callback */
-void on_char(GLFWwindow* w, unsigned int codepoint) {
-    if (codepoint < KBD_MAX_KEYS) {
-        /* need to invert case (unshifted is upper caps, shifted is lower caps */
-        if (isupper(codepoint)) {
-            codepoint = tolower(codepoint);
-        }
-        else if (islower(codepoint)) {
-            codepoint = toupper(codepoint);
-        }
-        kbd_key_down(&kbd, (int)codepoint);
-        kbd_key_up(&kbd, (int)codepoint);
-        /* keyboard matrix lines are directly connected to the PIO2's Port B */
-        z80pio_write_port(&pio2, Z80PIO_PORT_B, ~kbd_scan_lines(&kbd));
-    }
-}
-
-/* GLFW 'raw key' callback */
-void on_key(GLFWwindow* w, int glfw_key, int scancode, int action, int mods) {
-    int key = 0;
-    switch (glfw_key) {
-        case GLFW_KEY_ENTER:    key = 0x0D; break;
-        case GLFW_KEY_RIGHT:    key = 0x09; break;
-        case GLFW_KEY_LEFT:     key = 0x08; break;
-        case GLFW_KEY_DOWN:     key = 0x0A; break;
-        case GLFW_KEY_UP:       key = 0x0B; break;
-        case GLFW_KEY_ESCAPE:   key = (mods & GLFW_MOD_SHIFT)? 0x1B: 0x03; break;
-        case GLFW_KEY_INSERT:   key = 0x1A; break;
-        case GLFW_KEY_HOME:     key = 0x19; break;
-    }
-    if (key) {
-        if ((GLFW_PRESS == action) || (GLFW_REPEAT == action)) {
-            kbd_key_down(&kbd, key);
-        }
-        else if (GLFW_RELEASE == action) {
-            kbd_key_up(&kbd, key);
-        }
-        /* keyboard matrix lines are directly connected to the PIO2's Port B */
-        z80pio_write_port(&pio2, Z80PIO_PORT_B, ~kbd_scan_lines(&kbd));
-    }
-}
-
-/* setup GLFW, flextGL, sokol_gfx, sokol_time and create gfx resources */
-GLFWwindow* gfx_init() {
-    glfwInit();
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    GLFWwindow* w = glfwCreateWindow(640, 512, "KC87 Example (type 'BASIC')", 0, 0);
-    glfwMakeContextCurrent(w);
-    glfwSwapInterval(1);
-    flextInit(w);
-    sg_setup(&(sg_desc){0});
-    stm_setup();
-
-    float quad_vertices[] = { 0.0f, 0.0f,  1.0f, 0.0f,  0.0f, 1.0f,  1.0f, 1.0f };
-    draw_state.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-        .size = sizeof(quad_vertices),
-        .content = quad_vertices,
-    });
-    sg_shader fsq_shd = sg_make_shader(&(sg_shader_desc){
-        .fs.images = {
-            [0] = { .name="tex", .type=SG_IMAGETYPE_2D },
-        },
-        .vs.source =
-            "#version 330\n"
-            "in vec2 pos;\n"
-            "out vec2 uv0;\n"
-            "void main() {\n"
-            "  gl_Position = vec4(pos*2.0-1.0, 0.5, 1.0);\n"
-            "  uv0 = vec2(pos.x, 1.0-pos.y);\n"
-            "}\n",
-        .fs.source =
-            "#version 330\n"
-            "uniform sampler2D tex0;\n"
-            "in vec2 uv0;\n"
-            "out vec4 frag_color;\n"
-            "void main() {\n"
-            "  frag_color = texture(tex0, uv0);\n"
-            "}\n"
-    });
-    draw_state.pipeline = sg_make_pipeline(&(sg_pipeline_desc){
-        .layout = {
-            .attrs[0] = { .name="pos", .format=SG_VERTEXFORMAT_FLOAT2 }
-        },
-        .shader = fsq_shd,
-        .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP
-    });
-    /* KC87 framebuffer is 40x24 characters at 8x8 pixels */
-    draw_state.fs_images[0] = sg_make_image(&(sg_image_desc){
-        .width = 320,
-        .height = 192,
-        .pixel_format = SG_PIXELFORMAT_RGBA8,
-        .usage = SG_USAGE_STREAM,
-    });
-    return w;
-}
-
-/* decode emulator framebuffer into texture, and draw fullscreen rect */
-void gfx_draw(GLFWwindow* w) {
-    decode_vidmem();
-    sg_update_image(draw_state.fs_images[0], &(sg_image_content){
-        .subimage[0][0] = { .ptr = rgba8_buffer, .size = sizeof(rgba8_buffer) }
-    });
-    int width, height;
-    glfwGetFramebufferSize(w, &width, &height);
-    sg_pass_action pass_action = {
-        .colors[0].action = SG_ACTION_DONTCARE
-    };
-    sg_begin_default_pass(&pass_action, width, height);
-    sg_apply_draw_state(&draw_state);
-    sg_draw(0, 4, 1);
-    sg_end_pass();
-    sg_commit();
-    glfwSwapBuffers(w);
-    glfwPollEvents();
-}
-
-/* shutdown sokol and GLFW */
-void gfx_shutdown() {
-    sg_shutdown();
-    glfwTerminate();
 }
