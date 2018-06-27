@@ -145,7 +145,7 @@ void app_input(const sapp_event* event) {
     }
 }
 
-/* application cleanup callbacl */
+/* application cleanup callback */
 void app_cleanup() {
     gfx_shutdown();
 }
