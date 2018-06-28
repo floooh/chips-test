@@ -32,26 +32,32 @@
 #define Z1013_FREQ (2000000)
 #define Z1013_DISP_WIDTH (256)
 #define Z1013_DISP_HEIGHT (256)
-z80_t cpu;
-z80pio_t pio;
-kbd_t kbd;
-uint8_t kbd_request_column;
-bool kbd_request_line_hilo;
-uint8_t mem[1<<16];
-uint32_t overrun_ticks;
-uint64_t last_time_stamp;
 
-void z1013_init();
-uint64_t z1013_tick(int num, uint64_t pins);
-uint8_t z1013_pio_in(int port_id);
-void z1013_pio_out(int port_id, uint8_t data);
-void z1013_decode_vidmem();
+typedef struct {
+    z80_t cpu;
+    z80pio_t pio;
+    kbd_t kbd;
+    uint8_t kbd_request_column;
+    bool kbd_request_line_hilo;
+    uint8_t mem[1<<16];
+} z1013_t;
+static z1013_t z1013;
+
+static void z1013_init();
+static uint64_t z1013_tick(int num, uint64_t pins);
+static uint8_t z1013_pio_in(int port_id);
+static void z1013_pio_out(int port_id, uint8_t data);
+static void z1013_decode_vidmem();
+
+static uint32_t overrun_ticks;
+static uint64_t last_time_stamp;
 
 /* sokol-app entry, configure application callbacks and window */
-void app_init();
-void app_frame();
-void app_input(const sapp_event*);
-void app_cleanup();
+static void app_init();
+static void app_frame();
+static void app_input(const sapp_event*);
+static void app_cleanup();
+
 sapp_desc sokol_main() {
     return (sapp_desc) {
         .init_cb = app_init,
@@ -80,10 +86,10 @@ void app_frame() {
     }
     /* number of 2MHz ticks in host frame */
     uint32_t ticks_to_run = (uint32_t) ((Z1013_FREQ * frame_time) - overrun_ticks);
-    uint32_t ticks_executed = z80_exec(&cpu, ticks_to_run);
+    uint32_t ticks_executed = z80_exec(&z1013.cpu, ticks_to_run);
     assert(ticks_executed >= ticks_to_run);
     overrun_ticks = ticks_executed - ticks_to_run;
-    kbd_update(&kbd);
+    kbd_update(&z1013.kbd);
     z1013_decode_vidmem();
     gfx_draw();
 }
@@ -102,8 +108,8 @@ void app_input(const sapp_event* event) {
                 else if (islower(c)) {
                     c = toupper(c);
                 }
-                kbd_key_down(&kbd, c);
-                kbd_key_up(&kbd, c);
+                kbd_key_down(&z1013.kbd, c);
+                kbd_key_up(&z1013.kbd, c);
             }
             break;
         case SAPP_EVENTTYPE_KEY_DOWN:
@@ -119,10 +125,10 @@ void app_input(const sapp_event* event) {
             }
             if (c) {
                 if (event->type == SAPP_EVENTTYPE_KEY_DOWN) {
-                    kbd_key_down(&kbd, c);
+                    kbd_key_down(&z1013.kbd, c);
                 }
                 else {
-                    kbd_key_up(&kbd, c);
+                    kbd_key_up(&z1013.kbd, c);
                 }
             }
             break;
@@ -139,20 +145,20 @@ void app_cleanup() {
 /* Z1013 emulator initialization */
 void z1013_init() {
     /* initialize the Z80 CPU and PIO */
-    z80_init(&cpu, z1013_tick);
-    z80pio_init(&pio, z1013_pio_in, z1013_pio_out);
+    z80_init(&z1013.cpu, z1013_tick);
+    z80pio_init(&z1013.pio, z1013_pio_in, z1013_pio_out);
 
     /* setup the 8x8 keyboard matrix (see http://www.z1013.de/images/21.gif)
        keep keys pressed for at least 2 frames to give the
        Z1013 enough time to scan the keyboard
     */
-    kbd_init(&kbd, 2);
+    kbd_init(&z1013.kbd, 2);
     /* shift key is column 7, line 6 */
     const int shift = 0, shift_mask = (1<<shift);
-    kbd_register_modifier(&kbd, shift, 7, 6);
+    kbd_register_modifier(&z1013.kbd, shift, 7, 6);
     /* ctrl key is column 6, line 5 */
     const int ctrl = 1, ctrl_mask = (1<<ctrl);
-    kbd_register_modifier(&kbd, ctrl, 6, 5);
+    kbd_register_modifier(&z1013.kbd, ctrl, 6, 5);
     /* alpha-numeric keys */
     const char* keymap =
         /* unshifted keys */
@@ -164,30 +170,30 @@ void z1013_init() {
             for (int col = 0; col < 8; col++) {
                 int c = keymap[layer*64 + line*8 + col];
                 if (c != 0x20) {
-                    kbd_register_key(&kbd, c, col, line, layer?shift_mask:0);
+                    kbd_register_key(&z1013.kbd, c, col, line, layer?shift_mask:0);
                 }
             }
         }
     }
     /* special keys */
-    kbd_register_key(&kbd, ' ',  6, 4, 0);  /* space */
-    kbd_register_key(&kbd, 0x08, 6, 2, 0);  /* cursor left */
-    kbd_register_key(&kbd, 0x09, 6, 3, 0);  /* cursor right */
-    kbd_register_key(&kbd, 0x0A, 6, 7, 0);  /* cursor down */
-    kbd_register_key(&kbd, 0x0B, 6, 6, 0);  /* cursor up */
-    kbd_register_key(&kbd, 0x0D, 6, 1, 0);  /* enter */
-    kbd_register_key(&kbd, 0x03, 1, 3, ctrl_mask); /* map Esc to Ctrl+C (STOP/BREAK) */
+    kbd_register_key(&z1013.kbd, ' ',  6, 4, 0);  /* space */
+    kbd_register_key(&z1013.kbd, 0x08, 6, 2, 0);  /* cursor left */
+    kbd_register_key(&z1013.kbd, 0x09, 6, 3, 0);  /* cursor right */
+    kbd_register_key(&z1013.kbd, 0x0A, 6, 7, 0);  /* cursor down */
+    kbd_register_key(&z1013.kbd, 0x0B, 6, 6, 0);  /* cursor up */
+    kbd_register_key(&z1013.kbd, 0x0D, 6, 1, 0);  /* enter */
+    kbd_register_key(&z1013.kbd, 0x03, 1, 3, ctrl_mask); /* map Esc to Ctrl+C (STOP/BREAK) */
 
     /* 2 KByte system rom starting at 0xF000 */
     assert(sizeof(dump_z1013_mon_a2) == 2048);
-    memcpy(&mem[0xF000], dump_z1013_mon_a2, sizeof(dump_z1013_mon_a2));
+    memcpy(&z1013.mem[0xF000], dump_z1013_mon_a2, sizeof(dump_z1013_mon_a2));
 
     /* copy BASIC interpreter to 0x0100, skip first 0x20 bytes .z80 file format header */
     assert(0x0100 + sizeof(dump_kc_basic) < 0xF000);
-    memcpy(&mem[0x0100], dump_kc_basic+0x20, sizeof(dump_kc_basic)-0x20);
+    memcpy(&z1013.mem[0x0100], dump_kc_basic+0x20, sizeof(dump_kc_basic)-0x20);
 
     /* execution starts at 0xF000 */
-    cpu.state.PC = 0xF000;
+    z1013.cpu.state.PC = 0xF000;
 }
 
 /* the CPU tick function needs to perform memory and I/O reads/writes */
@@ -197,12 +203,12 @@ uint64_t z1013_tick(int num_ticks, uint64_t pins) {
         const uint16_t addr = Z80_GET_ADDR(pins);
         if (pins & Z80_RD) {
             /* read memory byte */
-            Z80_SET_DATA(pins, mem[addr]);
+            Z80_SET_DATA(pins, z1013.mem[addr]);
         }
         else if (pins & Z80_WR) {
             /* write memory byte, don't overwrite ROM */
             if (addr < 0xF000) {
-                mem[addr] = Z80_GET_DATA(pins);
+                z1013.mem[addr] = Z80_GET_DATA(pins);
             }
         }
     }
@@ -243,13 +249,13 @@ uint64_t z1013_tick(int num_ticks, uint64_t pins) {
             if (pio_pins & (1<<0)) pio_pins |= Z80PIO_CDSEL;
             /* address bit 1 selects port A/B */
             if (pio_pins & (1<<1)) pio_pins |= Z80PIO_BASEL;
-            pins = z80pio_iorq(&pio, pio_pins) & Z80_PIN_MASK;
+            pins = z80pio_iorq(&z1013.pio, pio_pins) & Z80_PIN_MASK;
         }
         else if ((pins & (Z80_A3|Z80_WR)) == (Z80_A3|Z80_WR)) {
             /* port 8 is connected to a hardware latch to store the
                requested keyboard column for the next keyboard scan
             */
-            kbd_request_column = Z80_GET_DATA(pins);
+            z1013.kbd_request_column = Z80_GET_DATA(pins);
         }
     }
     /* there are no interrupts happening in a vanilla Z1013,
@@ -267,9 +273,9 @@ uint8_t z1013_pio_in(int port_id) {
     }
     else {
         /* port B is for cassette input (bit 7), and lower 4 bits for kbd matrix lines */
-        uint16_t column_mask = (1<<kbd_request_column);
-        uint16_t line_mask = kbd_test_lines(&kbd, column_mask);
-        if (kbd_request_line_hilo) {
+        uint16_t column_mask = (1<<z1013.kbd_request_column);
+        uint16_t line_mask = kbd_test_lines(&z1013.kbd, column_mask);
+        if (z1013.kbd_request_line_hilo) {
             line_mask >>= 4;
         }
         data = 0xF & ~(line_mask & 0xF);
@@ -281,7 +287,7 @@ uint8_t z1013_pio_in(int port_id) {
 void z1013_pio_out(int port_id, uint8_t data) {
     if (Z80PIO_PORT_B == port_id) {
         /* bit 4 for 8x8 keyboard selects upper or lower 4 kbd matrix line bits */
-        kbd_request_line_hilo = 0 != (data & (1<<4));
+        z1013.kbd_request_line_hilo = 0 != (data & (1<<4));
         /* bit 7 is cassette output, not emulated */
     }
 }
@@ -289,7 +295,7 @@ void z1013_pio_out(int port_id, uint8_t data) {
 /* decode the Z1013 32x32 ASCII framebuffer to a linear 256x256 RGBA8 buffer */
 void z1013_decode_vidmem() {
     uint32_t* dst = rgba8_buffer;
-    const uint8_t* src = &mem[0xEC00];   /* the 32x32 framebuffer starts at EC00 */
+    const uint8_t* src = &z1013.mem[0xEC00];   /* the 32x32 framebuffer starts at EC00 */
     const uint8_t* font = dump_z1013_font;
     for (int y = 0; y < 32; y++) {
         for (int py = 0; py < 8; py++) {

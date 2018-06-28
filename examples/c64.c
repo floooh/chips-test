@@ -115,8 +115,7 @@ void app_input(const sapp_event* event) {
             break;
         case SAPP_EVENTTYPE_KEY_DOWN:
         case SAPP_EVENTTYPE_KEY_UP:
-            c = (int) event->key_code;
-            switch (c) {
+            switch (event->key_code) {
                 case SAPP_KEYCODE_SPACE:        c = 0x20; break;
                 case SAPP_KEYCODE_LEFT:         c = 0x08; break;
                 case SAPP_KEYCODE_RIGHT:        c = 0x09; break;

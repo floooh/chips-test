@@ -26,26 +26,31 @@
 
 /* Atom emulator state and callbacks */
 #define ATOM_FREQ (1000000)
-m6502_t cpu;
-mc6847_t vdg;
-i8255_t ppi;
-kbd_t kbd;
-mem_t mem;
-int counter_2_4khz = 0;
-int period_2_4khz = 0;
-bool state_2_4khz = false;
-uint8_t ram[1<<16];     /* only 40 KByte used */
-uint32_t overrun_ticks;
-uint64_t last_time_stamp;
-void atom_init(void);
-uint64_t atom_cpu_tick(uint64_t pins);
-uint64_t atom_vdg_fetch(uint64_t pins);
-uint8_t atom_ppi_in(int port_id);
-uint64_t atom_ppi_out(int port_id, uint64_t pins, uint8_t data);
+typedef struct {
+    m6502_t cpu;
+    mc6847_t vdg;
+    i8255_t ppi;
+    kbd_t kbd;
+    mem_t mem;
+    int counter_2_4khz;
+    int period_2_4khz;
+    bool state_2_4khz;
+    uint8_t ram[1<<16];     /* only 40 KByte used */
+} atom_t;
+static atom_t atom;
+
+static void atom_init(void);
+static uint64_t atom_cpu_tick(uint64_t pins);
+static uint64_t atom_vdg_fetch(uint64_t pins);
+static uint8_t atom_ppi_in(int port_id);
+static uint64_t atom_ppi_out(int port_id, uint64_t pins, uint8_t data);
+
+static uint32_t overrun_ticks;
+static uint64_t last_time_stamp;
 
 /* xorshift randomness for memory initialization */
-uint32_t xorshift_state = 0x6D98302B;
-uint32_t xorshift32() {
+static uint32_t xorshift_state = 0x6D98302B;
+static uint32_t xorshift32() {
     uint32_t x = xorshift_state;
     x ^= x<<13; x ^= x>>17; x ^= x<<5;
     xorshift_state = x;
@@ -53,10 +58,10 @@ uint32_t xorshift32() {
 }
 
 /* sokol-app entry, configure application callbacks and window */
-void app_init(void);
-void app_frame(void);
-void app_input(const sapp_event*);
-void app_cleanup(void);
+static void app_init(void);
+static void app_frame(void);
+static void app_input(const sapp_event*);
+static void app_cleanup(void);
 sapp_desc sokol_main() {
     return (sapp_desc) {
         .init_cb = app_init,
@@ -84,10 +89,10 @@ void app_frame() {
         frame_time = 0.1;
     }
     uint32_t ticks_to_run = (uint32_t) ((ATOM_FREQ * frame_time) - overrun_ticks);
-    uint32_t ticks_executed = m6502_exec(&cpu, ticks_to_run);
+    uint32_t ticks_executed = m6502_exec(&atom.cpu, ticks_to_run);
     assert(ticks_executed >= ticks_to_run);
     overrun_ticks = ticks_executed - ticks_to_run;
-    kbd_update(&kbd);
+    kbd_update(&atom.kbd);
     gfx_draw();
 }
 
@@ -105,8 +110,8 @@ void app_input(const sapp_event* event) {
                 else if (islower(c)) {
                     c = toupper(c);
                 }
-                kbd_key_down(&kbd, c);
-                kbd_key_up(&kbd, c);
+                kbd_key_down(&atom.kbd, c);
+                kbd_key_up(&atom.kbd, c);
             }
             break;
         case SAPP_EVENTTYPE_KEY_UP:
@@ -126,10 +131,10 @@ void app_input(const sapp_event* event) {
             }
             if (c) {
                 if (event->type == SAPP_EVENTTYPE_KEY_DOWN) {
-                    kbd_key_down(&kbd, c);
+                    kbd_key_down(&atom.kbd, c);
                 }
                 else {
-                    kbd_key_up(&kbd, c);
+                    kbd_key_up(&atom.kbd, c);
                 }
             }
             break;
@@ -146,31 +151,31 @@ void app_cleanup() {
 /* Atom emulator initialization */
 void atom_init() {
     /* setup memory map, first fill memory with random values */
-    for (int i = 0; i < (int)sizeof(ram);) {
+    for (int i = 0; i < (int)sizeof(atom.ram);) {
         uint32_t r = xorshift32();
-        ram[i++]=r>>24; ram[i++]=r>>16; ram[i++]=r>>8; ram[i++]=r;
+        atom.ram[i++]=r>>24; atom.ram[i++]=r>>16; atom.ram[i++]=r>>8; atom.ram[i++]=r;
     }
-    mem_init(&mem);
+    mem_init(&atom.mem);
     /* 32 KByte RAM + 8 KByte vidmem */
-    mem_map_ram(&mem, 0, 0x0000, 0xA000, ram);
+    mem_map_ram(&atom.mem, 0, 0x0000, 0xA000, atom.ram);
     /* hole in 0xA000 to 0xAFFF for utility roms */
     /* 0xB000 to 0xBFFF is memory-mapped IO area (not mapped to host memory) */
     /* 0xC000 to 0xFFFF are operating system roms */
-    mem_map_rom(&mem, 0, 0xC000, 0x1000, dump_abasic);
-    mem_map_rom(&mem, 0, 0xD000, 0x1000, dump_afloat);
-    mem_map_rom(&mem, 0, 0xE000, 0x1000, dump_dosrom);
-    mem_map_rom(&mem, 0, 0xF000, 0x1000, dump_abasic+0x1000);
+    mem_map_rom(&atom.mem, 0, 0xC000, 0x1000, dump_abasic);
+    mem_map_rom(&atom.mem, 0, 0xD000, 0x1000, dump_afloat);
+    mem_map_rom(&atom.mem, 0, 0xE000, 0x1000, dump_dosrom);
+    mem_map_rom(&atom.mem, 0, 0xF000, 0x1000, dump_abasic+0x1000);
 
     /*  setup the keyboard matrix
         the Atom has a 10x8 keyboard matrix, where the
         entire line 6 is for the Ctrl key, and the entire
         line 7 is the Shift key
     */
-    kbd_init(&kbd, 1);
+    kbd_init(&atom.kbd, 1);
     /* shift key is entire line 7 */
-    const int shift = (1<<0); kbd_register_modifier_line(&kbd, 0, 7);
+    const int shift = (1<<0); kbd_register_modifier_line(&atom.kbd, 0, 7);
     /* ctrl key is entire line 6 */
-    const int ctrl = (1<<1); kbd_register_modifier_line(&kbd, 1, 6);
+    const int ctrl = (1<<1); kbd_register_modifier_line(&atom.kbd, 1, 6);
     /* alpha-numeric keys */
     const char* keymap = 
         /* no shift */
@@ -182,53 +187,53 @@ void atom_init() {
             for (int line = 0; line < 6; line++) {
                 int c = keymap[layer*60 + line*10 + col];
                 if (c != 0x20) {
-                    kbd_register_key(&kbd, c, col, line, layer?shift:0);
+                    kbd_register_key(&atom.kbd, c, col, line, layer?shift:0);
                 }
             }
         }
     }
     /* special keys */
-    kbd_register_key(&kbd, 0x20, 9, 0, 0);      /* space */
-    kbd_register_key(&kbd, 0x01, 4, 1, 0);      /* backspace */
-    kbd_register_key(&kbd, 0x08, 3, 0, shift);  /* left */
-    kbd_register_key(&kbd, 0x09, 3, 0, 0);      /* right */
-    kbd_register_key(&kbd, 0x0A, 2, 0, shift);  /* down */
-    kbd_register_key(&kbd, 0x0B, 2, 0, 0);      /* up */
-    kbd_register_key(&kbd, 0x0D, 6, 1, 0);      /* return/enter */
-    kbd_register_key(&kbd, 0x1B, 0, 5, 0);      /* escape */
-    kbd_register_key(&kbd, 0x0C, 5, 4, ctrl);   /* Ctrl+L, clear screen, mapped to F1 */
+    kbd_register_key(&atom.kbd, 0x20, 9, 0, 0);      /* space */
+    kbd_register_key(&atom.kbd, 0x01, 4, 1, 0);      /* backspace */
+    kbd_register_key(&atom.kbd, 0x08, 3, 0, shift);  /* left */
+    kbd_register_key(&atom.kbd, 0x09, 3, 0, 0);      /* right */
+    kbd_register_key(&atom.kbd, 0x0A, 2, 0, shift);  /* down */
+    kbd_register_key(&atom.kbd, 0x0B, 2, 0, 0);      /* up */
+    kbd_register_key(&atom.kbd, 0x0D, 6, 1, 0);      /* return/enter */
+    kbd_register_key(&atom.kbd, 0x1B, 0, 5, 0);      /* escape */
+    kbd_register_key(&atom.kbd, 0x0C, 5, 4, ctrl);   /* Ctrl+L, clear screen, mapped to F1 */
 
     /* initialize chips */
-    m6502_init(&cpu, &(m6502_desc_t){
+    m6502_init(&atom.cpu, &(m6502_desc_t){
         .tick_cb = atom_cpu_tick
     });
-    mc6847_init(&vdg, &(mc6847_desc_t){
+    mc6847_init(&atom.vdg, &(mc6847_desc_t){
         .tick_hz = ATOM_FREQ,
         .rgba8_buffer = rgba8_buffer,
         .rgba8_buffer_size = sizeof(rgba8_buffer),
         .fetch_cb = atom_vdg_fetch
     });
-    i8255_init(&ppi, atom_ppi_in, atom_ppi_out);
+    i8255_init(&atom.ppi, atom_ppi_in, atom_ppi_out);
 
     /* initialize 2.4 khz counter */
-    period_2_4khz = ATOM_FREQ / 2400;
-    counter_2_4khz = 0;
-    state_2_4khz = false;
+    atom.period_2_4khz = ATOM_FREQ / 2400;
+    atom.counter_2_4khz = 0;
+    atom.state_2_4khz = false;
 
     /* reset the CPU to go into 'start state' */
-    m6502_reset(&cpu);
+    m6502_reset(&atom.cpu);
 }
 
 /* CPU tick callback */
 uint64_t atom_cpu_tick(uint64_t pins) {
     /* tick the video chip */
-    mc6847_tick(&vdg);
+    mc6847_tick(&atom.vdg);
 
     /* tick the 2.4khz counter */
-    counter_2_4khz++;
-    if (counter_2_4khz >= period_2_4khz) {
-        state_2_4khz = !state_2_4khz;
-        counter_2_4khz -= period_2_4khz;
+    atom.counter_2_4khz++;
+    if (atom.counter_2_4khz >= atom.period_2_4khz) {
+        atom.state_2_4khz = !atom.state_2_4khz;
+        atom.counter_2_4khz -= atom.period_2_4khz;
     }
 
     /* decode address for memory-mapped IO and memory read/write */
@@ -242,7 +247,7 @@ uint64_t atom_cpu_tick(uint64_t pins) {
             else { ppi_pins |= I8255_WR; }                  /* PPI write access */
             if (pins & M6502_A0) { ppi_pins |= I8255_A0; }  /* PPI has 4 addresses (port A,B,C or control word */
             if (pins & M6502_A1) { ppi_pins |= I8255_A1; }
-            pins = i8255_iorq(&ppi, ppi_pins) & M6502_PIN_MASK;
+            pins = i8255_iorq(&atom.ppi, ppi_pins) & M6502_PIN_MASK;
         }
         else {
             /* remaining IO space is for expansion devices */
@@ -255,11 +260,11 @@ uint64_t atom_cpu_tick(uint64_t pins) {
         /* memory access */
         if (pins & M6502_RW) {
             /* memory read */
-            M6502_SET_DATA(pins, mem_rd(&mem, addr));
+            M6502_SET_DATA(pins, mem_rd(&atom.mem, addr));
         }
         else {
             /* memory access */
-            mem_wr(&mem, addr, M6502_GET_DATA(pins));
+            mem_wr(&atom.mem, addr, M6502_GET_DATA(pins));
         }
     }
     return pins;
@@ -268,7 +273,7 @@ uint64_t atom_cpu_tick(uint64_t pins) {
 /* video memory fetch callback */
 uint64_t atom_vdg_fetch(uint64_t pins) {
     const uint16_t addr = MC6847_GET_ADDR(pins);
-    uint8_t data = ram[(addr + 0x8000) & 0xFFFF];
+    uint8_t data = atom.ram[(addr + 0x8000) & 0xFFFF];
     MC6847_SET_DATA(pins, data);
 
     /*  the upper 2 databus bits are directly wired to MC6847 pins:
@@ -321,14 +326,14 @@ uint64_t atom_ppi_out(int port_id, uint64_t pins, uint8_t data) {
             6:      MC6847 GM1
             7:      MC6847 GM2
         */
-        kbd_set_active_columns(&kbd, 1<<(data & 0x0F));
+        kbd_set_active_columns(&atom.kbd, 1<<(data & 0x0F));
         uint64_t vdg_pins = 0;
         uint64_t vdg_mask = MC6847_AG|MC6847_GM0|MC6847_GM1|MC6847_GM2;
         if (data & (1<<4)) { vdg_pins |= MC6847_AG; }
         if (data & (1<<5)) { vdg_pins |= MC6847_GM0; }
         if (data & (1<<6)) { vdg_pins |= MC6847_GM1; }
         if (data & (1<<7)) { vdg_pins |= MC6847_GM2; }
-        mc6847_ctrl(&vdg, vdg_pins, vdg_mask);
+        mc6847_ctrl(&atom.vdg, vdg_pins, vdg_mask);
     }
     else if (I8255_PORT_C == port_id) {
         /* PPI port C output:
@@ -344,7 +349,7 @@ uint64_t atom_ppi_out(int port_id, uint64_t pins, uint8_t data) {
         if (data & (1<<3)) {
             vdg_pins |= MC6847_CSS;
         }
-        mc6847_ctrl(&vdg, vdg_pins, vdg_mask);
+        mc6847_ctrl(&atom.vdg, vdg_pins, vdg_mask);
     }
     return pins;
 }
@@ -354,7 +359,7 @@ uint8_t atom_ppi_in(int port_id) {
     uint8_t data = 0;
     if (I8255_PORT_B == port_id) {
         /* keyboard row state */
-        data = ~kbd_scan_lines(&kbd);
+        data = ~kbd_scan_lines(&atom.kbd);
     }
     else if (I8255_PORT_C == port_id) {
         /*  PPI port C input:
@@ -365,13 +370,13 @@ uint8_t atom_ppi_in(int port_id) {
 
             NOTE: only the 2400 Hz oscillator and FSYNC pins is emulated here
         */
-        if (state_2_4khz) {
+        if (atom.state_2_4khz) {
             data |= (1<<4);
         }
         /* FIXME: always send REPEAT key as 'not pressed' */
         data |= (1<<6);
         /* vblank pin (cleared during vblank) */
-        if (0 == (vdg.pins & MC6847_FS)) {
+        if (0 == (atom.vdg.pins & MC6847_FS)) {
             data |= (1<<7);
         }
     }
