@@ -86,6 +86,10 @@ void app_init() {
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
 void app_frame() {
     double frame_time = stm_sec(stm_laptime(&last_time_stamp));
+    /* skip long pauses when the app was suspended */
+    if (frame_time > 0.1) {
+        frame_time = 0.1;
+    }
     uint32_t ticks_to_run = (uint32_t) ((KC87_FREQ * frame_time) - overrun_ticks);
     uint32_t ticks_executed = z80_exec(&cpu, ticks_to_run);
     assert(ticks_executed >= ticks_to_run);
