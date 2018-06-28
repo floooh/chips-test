@@ -10,11 +10,11 @@ from string import Template
 from mod import log, util, project
 
 samples = [
-    [ 'Robotron Z1013', 'z1013'],
-    [ 'Robotron KC87', 'kc87'],
-    [ 'Acorn Atom', 'atom'],
-    [ 'ZX Spectrum 128', 'zx128k'],
-    [ 'Commodore C64', 'c64']
+    [ 'ZX Spectrum 128', 'zx128k', ''],
+    [ 'Commodore C64', 'c64', ''],
+    [ 'Acorn Atom', 'atom', ''],
+    [ 'Robotron Z1013', 'z1013', 'J 300[Enter] => BASIC'],
+    [ 'Robotron KC87', 'kc87', 'BASIC[Enter]'],
 ]
 GitHubSamplesURL = 'https://github.com/floooh/chips-test/master/examples'
 BuildConfig = 'wasm-ninja-release'
@@ -29,6 +29,7 @@ def deploy_webpage(fips_dir, proj_dir, webpage_dir) :
     for sample in samples :
         display_name = sample[0]
         name = sample[1]
+        note = sample[2]
         log.info('> adding thumbnail for {}'.format(name))
         img_name = name + '.jpg'
         img_path = proj_dir + '/webpage/' + img_name
@@ -38,6 +39,7 @@ def deploy_webpage(fips_dir, proj_dir, webpage_dir) :
         content += '<div class="thumb">\n'
         content += '  <div class="thumb-title">{}</div>\n'.format(display_name)
         content += '  <div class="img-frame"><a href="{}.html"><img class="image" src="{}"></img></a></div>\n'.format(name,img_name)
+        content += '  <div class="thumb-bar">{}</div>\n'.format(note)
         content += '</div>\n'
 
     # populate the html template, and write to the build directory
