@@ -38,29 +38,29 @@ typedef struct {
     uint8_t color_ram[1024];    // special static color ram
     uint8_t ram[1<<16];         // general ram
 } c64_t;
-static c64_t c64;
+c64_t c64;
 
-static uint32_t overrun_ticks;
-static uint64_t last_time_stamp;
+uint32_t overrun_ticks;
+uint64_t last_time_stamp;
 
-static void c64_init(void);
-static void c64_update_memory_map(void);
-static uint64_t c64_cpu_tick(uint64_t pins);
-static uint8_t c64_cpu_port_in();
-static void c64_cpu_port_out(uint8_t data);
-static void c64_cia1_out(int port_id, uint8_t data);
-static uint8_t c64_cia1_in(int port_id);
-static void c64_cia2_out(int port_id, uint8_t data);
-static uint8_t c64_cia2_in(int port_id);
-static uint16_t c64_vic_fetch(uint16_t addr);
+void c64_init(void);
+void c64_update_memory_map(void);
+uint64_t c64_cpu_tick(uint64_t pins);
+uint8_t c64_cpu_port_in();
+void c64_cpu_port_out(uint8_t data);
+void c64_cia1_out(int port_id, uint8_t data);
+uint8_t c64_cia1_in(int port_id);
+void c64_cia2_out(int port_id, uint8_t data);
+uint8_t c64_cia2_in(int port_id);
+uint16_t c64_vic_fetch(uint16_t addr);
 
 /* sokol-app entry, configure application callbacks and window */
-static void app_init(void);
-static void app_frame(void);
-static void app_input(const sapp_event*);
-static void app_cleanup(void);
+void app_init(void);
+void app_frame(void);
+void app_input(const sapp_event*);
+void app_cleanup(void);
 
-sapp_desc sokol_main() {
+sapp_desc sokol_main(int argc, char* argv[]) {
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,

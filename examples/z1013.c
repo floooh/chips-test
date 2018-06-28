@@ -41,24 +41,24 @@ typedef struct {
     bool kbd_request_line_hilo;
     uint8_t mem[1<<16];
 } z1013_t;
-static z1013_t z1013;
+z1013_t z1013;
 
-static void z1013_init();
-static uint64_t z1013_tick(int num, uint64_t pins);
-static uint8_t z1013_pio_in(int port_id);
-static void z1013_pio_out(int port_id, uint8_t data);
-static void z1013_decode_vidmem();
+void z1013_init();
+uint64_t z1013_tick(int num, uint64_t pins);
+uint8_t z1013_pio_in(int port_id);
+void z1013_pio_out(int port_id, uint8_t data);
+void z1013_decode_vidmem();
 
-static uint32_t overrun_ticks;
-static uint64_t last_time_stamp;
+uint32_t overrun_ticks;
+uint64_t last_time_stamp;
 
 /* sokol-app entry, configure application callbacks and window */
-static void app_init();
-static void app_frame();
-static void app_input(const sapp_event*);
-static void app_cleanup();
+void app_init();
+void app_frame();
+void app_input(const sapp_event*);
+void app_cleanup();
 
-sapp_desc sokol_main() {
+sapp_desc sokol_main(int argc, char* argv[]) {
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,

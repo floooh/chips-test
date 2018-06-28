@@ -37,20 +37,20 @@ typedef struct {
     bool state_2_4khz;
     uint8_t ram[1<<16];     /* only 40 KByte used */
 } atom_t;
-static atom_t atom;
+atom_t atom;
 
-static void atom_init(void);
-static uint64_t atom_cpu_tick(uint64_t pins);
-static uint64_t atom_vdg_fetch(uint64_t pins);
-static uint8_t atom_ppi_in(int port_id);
-static uint64_t atom_ppi_out(int port_id, uint64_t pins, uint8_t data);
+void atom_init(void);
+uint64_t atom_cpu_tick(uint64_t pins);
+uint64_t atom_vdg_fetch(uint64_t pins);
+uint8_t atom_ppi_in(int port_id);
+uint64_t atom_ppi_out(int port_id, uint64_t pins, uint8_t data);
 
-static uint32_t overrun_ticks;
-static uint64_t last_time_stamp;
+uint32_t overrun_ticks;
+uint64_t last_time_stamp;
 
 /* xorshift randomness for memory initialization */
-static uint32_t xorshift_state = 0x6D98302B;
-static uint32_t xorshift32() {
+uint32_t xorshift_state = 0x6D98302B;
+uint32_t xorshift32() {
     uint32_t x = xorshift_state;
     x ^= x<<13; x ^= x>>17; x ^= x<<5;
     xorshift_state = x;
@@ -58,11 +58,11 @@ static uint32_t xorshift32() {
 }
 
 /* sokol-app entry, configure application callbacks and window */
-static void app_init(void);
-static void app_frame(void);
-static void app_input(const sapp_event*);
-static void app_cleanup(void);
-sapp_desc sokol_main() {
+void app_init(void);
+void app_frame(void);
+void app_input(const sapp_event*);
+void app_cleanup(void);
+sapp_desc sokol_main(int argc, char* argv[]) {
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,

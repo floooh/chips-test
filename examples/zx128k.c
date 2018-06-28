@@ -54,17 +54,17 @@ uint32_t zx_palette[8] = {
     0xFFFFFFFF,     // white
 };
 
-static void zx_init(void);
-static uint64_t zx_cpu_tick(int num_ticks, uint64_t pins);
-static bool zx_decode_scanline(void);
+void zx_init(void);
+uint64_t zx_cpu_tick(int num_ticks, uint64_t pins);
+bool zx_decode_scanline(void);
 
 /* sokol-app entry, configure application callbacks and window */
-static void app_init(void);
-static void app_frame(void);
-static void app_input(const sapp_event*);
-static void app_cleanup(void);
+void app_init(void);
+void app_frame(void);
+void app_input(const sapp_event*);
+void app_cleanup(void);
 
-sapp_desc sokol_main() {
+sapp_desc sokol_main(int argc, char* argv[]) {
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,
@@ -76,8 +76,8 @@ sapp_desc sokol_main() {
     };
 }
 
-static uint32_t overrun_ticks;
-static uint64_t last_time_stamp;
+uint32_t overrun_ticks;
+uint64_t last_time_stamp;
 
 /* one-time application init */
 void app_init() {

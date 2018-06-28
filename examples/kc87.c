@@ -33,9 +33,9 @@ typedef struct {
     uint64_t ctc_zcto2;
     uint8_t mem[1<<16];
 } kc87_t;
-static kc87_t kc87;
+kc87_t kc87;
 
-static const uint32_t kc87_palette[8] = {
+const uint32_t kc87_palette[8] = {
     0xFF000000,     // black
     0xFF0000FF,     // red
     0xFF00FF00,     // green
@@ -46,20 +46,20 @@ static const uint32_t kc87_palette[8] = {
     0xFFFFFFFF,     // white
 };
 
-static void kc87_init(void);
-static uint64_t kc87_tick(int num, uint64_t pins);
-static uint8_t kc87_pio1_in(int port_id);
-static void kc87_pio1_out(int port_id, uint8_t data);
-static uint8_t kc87_pio2_in(int port_id);
-static void kc87_pio2_out(int port_id, uint8_t data);
-static void kc87_decode_vidmem(void);
+void kc87_init(void);
+uint64_t kc87_tick(int num, uint64_t pins);
+uint8_t kc87_pio1_in(int port_id);
+void kc87_pio1_out(int port_id, uint8_t data);
+uint8_t kc87_pio2_in(int port_id);
+void kc87_pio2_out(int port_id, uint8_t data);
+void kc87_decode_vidmem(void);
 
-static uint32_t overrun_ticks;
-static uint64_t last_time_stamp;
+uint32_t overrun_ticks;
+uint64_t last_time_stamp;
 
 /* xorshift randomness for memory initialization */
-static uint32_t xorshift_state = 0x6D98302B;
-static uint32_t xorshift32() {
+uint32_t xorshift_state = 0x6D98302B;
+uint32_t xorshift32() {
     uint32_t x = xorshift_state;
     x ^= x<<13; x ^= x>>17; x ^= x<<5;
     xorshift_state = x;
@@ -67,12 +67,12 @@ static uint32_t xorshift32() {
 }
 
 /* sokol-app entry, configure application callbacks and window */
-static void app_init(void);
-static void app_frame(void);
-static void app_input(const sapp_event*);
-static void app_cleanup(void);
+void app_init(void);
+void app_frame(void);
+void app_input(const sapp_event*);
+void app_cleanup(void);
 
-sapp_desc sokol_main() {
+sapp_desc sokol_main(int argc, char* argv[]) {
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,
