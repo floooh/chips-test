@@ -1,6 +1,8 @@
 # chips-test
 Tests and sample code for https://github.com/floooh/chips
 
+Live demos of the example emulators: https://floooh.github.com/tiny8bit
+
 Build and run (exact versions of tools don't matter):
 
 ```bash
