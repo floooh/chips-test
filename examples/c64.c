@@ -22,39 +22,43 @@
 #define C64_DISP_Y (24)
 #define C64_DISP_WIDTH (392)
 #define C64_DISP_HEIGHT (272)
-m6502_t cpu;
-m6526_t cia_1;
-m6526_t cia_2;
-m6569_t vic;
-m6581_t sid;
-kbd_t kbd;
-mem_t mem_cpu;
-mem_t mem_vic;
 
-uint8_t cpu_port = 0;
-uint16_t vic_bank_select = 0;   // upper 4 address bits from CIA-2 port A
-bool io_mapped = false;
-uint8_t color_ram[1024];    // special static color ram
-uint8_t ram[1<<16];         // general ram
-uint32_t overrun_ticks;
-uint64_t last_time_stamp;
+typedef struct {
+    m6502_t cpu;
+    m6526_t cia_1;
+    m6526_t cia_2;
+    m6569_t vic;
+    m6581_t sid;
+    kbd_t kbd;                  // keyboard matrix
+    mem_t mem_cpu;              // how the CPU sees memory
+    mem_t mem_vic;              // how the VIC sees memory
+    uint8_t cpu_port;           // last state of CPU port (for memory mapping)
+    uint16_t vic_bank_select;   // upper 4 address bits from CIA-2 port A
+    bool io_mapped;             // true when D000..DFFF is has IO area mapped in
+    uint8_t color_ram[1024];    // special static color ram
+    uint8_t ram[1<<16];         // general ram
+} c64_t;
+static c64_t c64;
 
-void c64_init(void);
-void c64_update_memory_map(void);
-uint64_t c64_cpu_tick(uint64_t pins);
-uint8_t c64_cpu_port_in();
-void c64_cpu_port_out(uint8_t data);
-void c64_cia1_out(int port_id, uint8_t data);
-uint8_t c64_cia1_in(int port_id);
-void c64_cia2_out(int port_id, uint8_t data);
-uint8_t c64_cia2_in(int port_id);
-uint16_t c64_vic_fetch(uint16_t addr);
+static uint32_t overrun_ticks;
+static uint64_t last_time_stamp;
+
+static void c64_init(void);
+static void c64_update_memory_map(void);
+static uint64_t c64_cpu_tick(uint64_t pins);
+static uint8_t c64_cpu_port_in();
+static void c64_cpu_port_out(uint8_t data);
+static void c64_cia1_out(int port_id, uint8_t data);
+static uint8_t c64_cia1_in(int port_id);
+static void c64_cia2_out(int port_id, uint8_t data);
+static uint8_t c64_cia2_in(int port_id);
+static uint16_t c64_vic_fetch(uint16_t addr);
 
 /* sokol-app entry, configure application callbacks and window */
-void app_init(void);
-void app_frame(void);
-void app_input(const sapp_event*);
-void app_cleanup(void);
+static void app_init(void);
+static void app_frame(void);
+static void app_input(const sapp_event*);
+static void app_cleanup(void);
 
 sapp_desc sokol_main() {
     return (sapp_desc) {
@@ -83,10 +87,10 @@ void app_frame() {
         frame_time = 0.1;
     }
     uint32_t ticks_to_run = (uint32_t) ((C64_FREQ * frame_time) - overrun_ticks);
-    uint32_t ticks_executed = m6502_exec(&cpu, ticks_to_run);
+    uint32_t ticks_executed = m6502_exec(&c64.cpu, ticks_to_run);
     assert(ticks_executed >= ticks_to_run);
     overrun_ticks = ticks_executed - ticks_to_run;
-    kbd_update(&kbd);
+    kbd_update(&c64.kbd);
     gfx_draw();
 }
 
@@ -105,8 +109,8 @@ void app_input(const sapp_event* event) {
                 else if (islower(c)) {
                     c = toupper(c);
                 }
-                kbd_key_down(&kbd, c);
-                kbd_key_up(&kbd, c);
+                kbd_key_down(&c64.kbd, c);
+                kbd_key_up(&c64.kbd, c);
             }
             break;
         case SAPP_EVENTTYPE_KEY_DOWN:
@@ -133,10 +137,10 @@ void app_input(const sapp_event* event) {
             }
             if (c) {
                 if (event->type == SAPP_EVENTTYPE_KEY_DOWN) {
-                    kbd_key_down(&kbd, c);
+                    kbd_key_down(&c64.kbd, c);
                 }
                 else {
-                    kbd_key_up(&kbd, c);
+                    kbd_key_up(&c64.kbd, c);
                 }
             }
             break;
@@ -152,11 +156,11 @@ void app_cleanup() {
 
 /* C64 emulator init */
 void c64_init() {
-    cpu_port = 0xF7;        // for initial memory configuration
-    io_mapped = true;
+    c64.cpu_port = 0xF7;        // for initial memory configuration
+    c64.io_mapped = true;
 
     /* initialize the CPU */
-    m6502_init(&cpu, &(m6502_desc_t){
+    m6502_init(&c64.cpu, &(m6502_desc_t){
         .tick_cb = c64_cpu_tick,
         .in_cb = c64_cpu_port_in,
         .out_cb = c64_cpu_port_out,
@@ -165,11 +169,11 @@ void c64_init() {
     });
 
     /* initialize the CIAs */
-    m6526_init(&cia_1, c64_cia1_in, c64_cia1_out);
-    m6526_init(&cia_2, c64_cia2_in, c64_cia2_out);
+    m6526_init(&c64.cia_1, c64_cia1_in, c64_cia1_out);
+    m6526_init(&c64.cia_2, c64_cia2_in, c64_cia2_out);
 
     /* initialize the VIC-II display chip */
-    m6569_init(&vic, &(m6569_desc_t){
+    m6569_init(&c64.vic, &(m6569_desc_t){
         .fetch_cb = c64_vic_fetch,
         .rgba8_buffer = rgba8_buffer,
         .rgba8_buffer_size = sizeof(rgba8_buffer),
@@ -180,7 +184,7 @@ void c64_init() {
     });
 
     /* initialize the SID audio chip */
-    m6581_init(&sid, &(m6581_desc_t){
+    m6581_init(&c64.sid, &(m6581_desc_t){
         .tick_hz = C64_FREQ,
         .sound_hz = 44100,
         .magnitude = 1.0
@@ -195,32 +199,32 @@ void c64_init() {
         which is 0xFF
     */
     for (int i = 0; i < (1<<16); i++) {
-        ram[i] = (i & (1<<6)) ? 0xFF : 0x00;
+        c64.ram[i] = (i & (1<<6)) ? 0xFF : 0x00;
     }
 
     /* setup the initial CPU memory map
        0000..9FFF and C000.CFFF is always RAM
     */
-    mem_map_ram(&mem_cpu, 0, 0x0000, 0xA000, ram);
-    mem_map_ram(&mem_cpu, 0, 0xC000, 0x1000, ram+0xC000);
+    mem_map_ram(&c64.mem_cpu, 0, 0x0000, 0xA000, c64.ram);
+    mem_map_ram(&c64.mem_cpu, 0, 0xC000, 0x1000, c64.ram+0xC000);
     /* A000..BFFF, D000..DFFF and E000..FFFF are configurable */
     c64_update_memory_map();
 
     /* setup the separate VIC-II memory map (64 KByte RAM) overlayed with
        character ROMS at 0x1000.0x1FFF and 0x9000..0x9FFF
     */
-    mem_map_ram(&mem_vic, 1, 0x0000, 0x10000, ram);
-    mem_map_rom(&mem_vic, 0, 0x1000, 0x1000, dump_c64_char);
-    mem_map_rom(&mem_vic, 0, 0x9000, 0x1000, dump_c64_char);
+    mem_map_ram(&c64.mem_vic, 1, 0x0000, 0x10000, c64.ram);
+    mem_map_rom(&c64.mem_vic, 0, 0x1000, 0x1000, dump_c64_char);
+    mem_map_rom(&c64.mem_vic, 0, 0x9000, 0x1000, dump_c64_char);
 
     /* put the CPU into start state */
-    m6502_reset(&cpu);
+    m6502_reset(&c64.cpu);
 
     /* setup the keyboard matrix
         http://sta.c64.org/cbm64kbdlay.html
         http://sta.c64.org/cbm64petkey.html
     */
-    kbd_init(&kbd, 1);
+    kbd_init(&c64.kbd, 1);
     const char* keymap =
         // no shift
         "        "
@@ -243,38 +247,38 @@ void c64_init() {
         "!  \"  q ";
     assert(strlen(keymap) == 128);
     /* shift is column 7, line 1 */
-    kbd_register_modifier(&kbd, 0, 7, 1);
+    kbd_register_modifier(&c64.kbd, 0, 7, 1);
     /* ctrl is column 2, line 7 */
-    kbd_register_modifier(&kbd, 1, 2, 7);
+    kbd_register_modifier(&c64.kbd, 1, 2, 7);
     for (int shift = 0; shift < 2; shift++) {
         for (int col = 0; col < 8; col++) {
             for (int line = 0; line < 8; line++) {
                 int c = keymap[shift*64 + line*8 + col];
                 if (c != 0x20) {
-                    kbd_register_key(&kbd, c, col, line, shift?(1<<0):0);
+                    kbd_register_key(&c64.kbd, c, col, line, shift?(1<<0):0);
                 }
             }
         }
     }
 
     /* special keys */
-    kbd_register_key(&kbd, 0x20, 4, 7, 0);    // space
-    kbd_register_key(&kbd, 0x08, 2, 0, 1);    // cursor left
-    kbd_register_key(&kbd, 0x09, 2, 0, 0);    // cursor right
-    kbd_register_key(&kbd, 0x0A, 7, 0, 0);    // cursor down
-    kbd_register_key(&kbd, 0x0B, 7, 0, 1);    // cursor up
-    kbd_register_key(&kbd, 0x01, 0, 0, 0);    // delete
-    kbd_register_key(&kbd, 0x0C, 3, 6, 1);    // clear
-    kbd_register_key(&kbd, 0x0D, 1, 0, 0);    // return
-    kbd_register_key(&kbd, 0x03, 7, 7, 0);    // stop
-    kbd_register_key(&kbd, 0xF1, 4, 0, 0);
-    kbd_register_key(&kbd, 0xF2, 4, 0, 1);
-    kbd_register_key(&kbd, 0xF3, 5, 0, 0);
-    kbd_register_key(&kbd, 0xF4, 5, 0, 1);
-    kbd_register_key(&kbd, 0xF5, 6, 0, 0);
-    kbd_register_key(&kbd, 0xF6, 6, 0, 1);
-    kbd_register_key(&kbd, 0xF7, 3, 0, 0);
-    kbd_register_key(&kbd, 0xF8, 3, 0, 1);
+    kbd_register_key(&c64.kbd, 0x20, 4, 7, 0);    // space
+    kbd_register_key(&c64.kbd, 0x08, 2, 0, 1);    // cursor left
+    kbd_register_key(&c64.kbd, 0x09, 2, 0, 0);    // cursor right
+    kbd_register_key(&c64.kbd, 0x0A, 7, 0, 0);    // cursor down
+    kbd_register_key(&c64.kbd, 0x0B, 7, 0, 1);    // cursor up
+    kbd_register_key(&c64.kbd, 0x01, 0, 0, 0);    // delete
+    kbd_register_key(&c64.kbd, 0x0C, 3, 6, 1);    // clear
+    kbd_register_key(&c64.kbd, 0x0D, 1, 0, 0);    // return
+    kbd_register_key(&c64.kbd, 0x03, 7, 7, 0);    // stop
+    kbd_register_key(&c64.kbd, 0xF1, 4, 0, 0);
+    kbd_register_key(&c64.kbd, 0xF2, 4, 0, 1);
+    kbd_register_key(&c64.kbd, 0xF3, 5, 0, 0);
+    kbd_register_key(&c64.kbd, 0xF4, 5, 0, 1);
+    kbd_register_key(&c64.kbd, 0xF5, 6, 0, 0);
+    kbd_register_key(&c64.kbd, 0xF6, 6, 0, 1);
+    kbd_register_key(&c64.kbd, 0xF7, 3, 0, 0);
+    kbd_register_key(&c64.kbd, 0xF8, 3, 0, 1);
 }
 
 uint64_t c64_cpu_tick(uint64_t pins) {
@@ -291,7 +295,7 @@ uint64_t c64_cpu_tick(uint64_t pins) {
     */
 
     /* tick the SID */
-    if (m6581_tick(&sid)) {
+    if (m6581_tick(&c64.sid)) {
         /* FIXME: new sample ready, copy to audio buffer */
     }
 
@@ -300,10 +304,10 @@ uint64_t c64_cpu_tick(uint64_t pins) {
         - the CIA-1 IRQ pin is connected to the CPU IRQ pin
         - the CIA-2 IRQ pin is connected to the CPU NMI pin
     */
-    if (m6526_tick(&cia_1, cia1_pins & ~M6502_IRQ) & M6502_IRQ) {
+    if (m6526_tick(&c64.cia_1, cia1_pins & ~M6502_IRQ) & M6502_IRQ) {
         pins |= M6502_IRQ;
     }
-    if (m6526_tick(&cia_2, pins & ~M6502_IRQ) & M6502_IRQ) {
+    if (m6526_tick(&c64.cia_2, pins & ~M6502_IRQ) & M6502_IRQ) {
         pins |= M6502_NMI;
     }
 
@@ -315,7 +319,7 @@ uint64_t c64_cpu_tick(uint64_t pins) {
         - the VIC-II AEC pin is connected to the CPU AEC pin, currently
         this goes active during a badline, but is not checked
     */
-    pins = m6569_tick(&vic, pins);
+    pins = m6569_tick(&c64.vic, pins);
 
     /* Special handling when the VIC-II asks the CPU to stop during a
         'badline' via the BA=>RDY pin. If the RDY pin is active, the
@@ -333,39 +337,39 @@ uint64_t c64_cpu_tick(uint64_t pins) {
     /* handle IO requests */
     if (M6510_CHECK_IO(pins)) {
         /* ...the integrated IO port in the M6510 CPU at addresses 0 and 1 */
-        pins = m6510_iorq(&cpu, pins);
+        pins = m6510_iorq(&c64.cpu, pins);
     }
     else {
         /* ...the memory-mapped IO area from 0xD000 to 0xDFFF */
-        if (io_mapped && ((addr & 0xF000) == 0xD000)) {
+        if (c64.io_mapped && ((addr & 0xF000) == 0xD000)) {
             if (addr < 0xD400) {
                 /* VIC-II (D000..D3FF) */
                 uint64_t vic_pins = (pins & M6502_PIN_MASK)|M6569_CS;
-                pins = m6569_iorq(&vic, vic_pins) & M6502_PIN_MASK;
+                pins = m6569_iorq(&c64.vic, vic_pins) & M6502_PIN_MASK;
             }
             else if (addr < 0xD800) {
                 /* SID (D400..D7FF) */
                 uint64_t sid_pins = (pins & M6502_PIN_MASK)|M6581_CS;
-                pins = m6581_iorq(&sid, sid_pins) & M6502_PIN_MASK;
+                pins = m6581_iorq(&c64.sid, sid_pins) & M6502_PIN_MASK;
             }
             else if (addr < 0xDC00) {
                 /* read or write the special color Static-RAM bank (D800..DBFF) */
                 if (pins & M6502_RW) {
-                    M6502_SET_DATA(pins, color_ram[addr & 0x03FF]);
+                    M6502_SET_DATA(pins, c64.color_ram[addr & 0x03FF]);
                 }
                 else {
-                    color_ram[addr & 0x03FF] = M6502_GET_DATA(pins);
+                    c64.color_ram[addr & 0x03FF] = M6502_GET_DATA(pins);
                 }
             }
             else if (addr < 0xDD00) {
                 /* CIA-1 (DC00..DCFF) */
                 uint64_t cia_pins = (pins & M6502_PIN_MASK)|M6526_CS;
-                pins = m6526_iorq(&cia_1, cia_pins) & M6502_PIN_MASK;
+                pins = m6526_iorq(&c64.cia_1, cia_pins) & M6502_PIN_MASK;
             }
             else if (addr < 0xDE00) {
                 /* CIA-2 (DD00..DDFF) */
                 uint64_t cia_pins = (pins & M6502_PIN_MASK)|M6526_CS;
-                pins = m6526_iorq(&cia_2, cia_pins) & M6502_PIN_MASK;
+                pins = m6526_iorq(&c64.cia_2, cia_pins) & M6502_PIN_MASK;
             }
             else {
                 /* FIXME: expansion system (not implemented) */
@@ -375,11 +379,11 @@ uint64_t c64_cpu_tick(uint64_t pins) {
             /* a regular memory access */
             if (pins & M6502_RW) {
                 /* memory read */
-                M6502_SET_DATA(pins, mem_rd(&mem_cpu, addr));
+                M6502_SET_DATA(pins, mem_rd(&c64.mem_cpu, addr));
             }
             else {
                 /* memory write */
-                mem_wr(&mem_cpu, addr, M6502_GET_DATA(pins));
+                mem_wr(&c64.mem_cpu, addr, M6502_GET_DATA(pins));
             }
         }
     }
@@ -419,8 +423,8 @@ void c64_cpu_port_out(uint8_t data) {
     }
     */
     /* only update memory configuration if the relevant bits have changed */
-    bool need_mem_update = 0 != ((cpu_port ^ data) & 7);
-    cpu_port = data;
+    bool need_mem_update = 0 != ((c64.cpu_port ^ data) & 7);
+    c64.cpu_port = data;
     if (need_mem_update) {
         c64_update_memory_map();
     }
@@ -436,7 +440,7 @@ void c64_cia1_out(int port_id, uint8_t data) {
             ---
     */
     if (port_id == M6526_PORT_A) {
-        kbd_set_active_lines(&kbd, ~data);
+        kbd_set_active_lines(&c64.kbd, ~data);
     }
 }
 
@@ -455,7 +459,7 @@ uint8_t c64_cia1_in(int port_id) {
     }
     else {
         /* read keyboard matrix columns (joystick 1 not implemented) */
-        return ~kbd_scan_columns(&kbd);
+        return ~kbd_scan_columns(&c64.kbd);
     }
 }
 
@@ -476,7 +480,7 @@ void c64_cia2_out(int port_id, uint8_t data) {
             RS232 / user functionality (not implemented)
     */
     if (port_id == M6526_PORT_A) {
-        vic_bank_select = ((~data)&3)<<14;
+        c64.vic_bank_select = ((~data)&3)<<14;
     }
 }
 
@@ -508,46 +512,46 @@ uint16_t c64_vic_fetch(uint16_t addr) {
             - the upper 4 bits of the VIC-II data bus are hardwired to the
               static color RAM
     */
-    addr |= vic_bank_select;
-    uint16_t data = (color_ram[addr & 0x03FF]<<8) | mem_rd(&mem_vic, addr);
+    addr |= c64.vic_bank_select;
+    uint16_t data = (c64.color_ram[addr & 0x03FF]<<8) | mem_rd(&c64.mem_vic, addr);
     return data;
 }
 
 void c64_update_memory_map() {
-    io_mapped = false;
+    c64.io_mapped = false;
     uint8_t* read_ptr;
     const uint8_t charen = (1<<2);
     const uint8_t hiram = (1<<1);
     const uint8_t loram = (1<<0);
     /* shortcut if HIRAM and LORAM is 0, everything is RAM */
-    if ((cpu_port & (hiram|loram)) == 0) {
-        mem_map_ram(&mem_cpu, 0, 0xA000, 0x6000, ram+0xA000);
+    if ((c64.cpu_port & (hiram|loram)) == 0) {
+        mem_map_ram(&c64.mem_cpu, 0, 0xA000, 0x6000, c64.ram+0xA000);
     }
     else {
         /* A000..BFFF is either RAM-behind-BASIC-ROM or RAM */
-        if ((cpu_port & (hiram|loram)) == (hiram|loram)) {
+        if ((c64.cpu_port & (hiram|loram)) == (hiram|loram)) {
             read_ptr = dump_c64_basic;
         }
         else {
-            read_ptr = ram + 0xA000;
+            read_ptr = c64.ram + 0xA000;
         }
-        mem_map_rw(&mem_cpu, 0, 0xA000, 0x2000, read_ptr, ram+0xA000);
+        mem_map_rw(&c64.mem_cpu, 0, 0xA000, 0x2000, read_ptr, c64.ram+0xA000);
 
         /* E000..FFFF is either RAM-behind-KERNAL-ROM or RAM */
-        if (cpu_port & hiram) {
+        if (c64.cpu_port & hiram) {
             read_ptr = dump_c64_kernalv3;
         }
         else {
-            read_ptr = ram + 0xE000;
+            read_ptr = c64.ram + 0xE000;
         }
-        mem_map_rw(&mem_cpu, 0, 0xE000, 0x2000, read_ptr, ram+0xE000);
+        mem_map_rw(&c64.mem_cpu, 0, 0xE000, 0x2000, read_ptr, c64.ram+0xE000);
 
         /* D000..DFFF can be Char-ROM or I/O */
-        if  (cpu_port & charen) {
-            io_mapped = true;
+        if  (c64.cpu_port & charen) {
+            c64.io_mapped = true;
         }
         else {
-            mem_map_rw(&mem_cpu, 0, 0xD000, 0x1000, dump_c64_char, ram+0xD000);
+            mem_map_rw(&c64.mem_cpu, 0, 0xD000, 0x1000, dump_c64_char, c64.ram+0xD000);
         }
     }
 }
