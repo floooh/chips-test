@@ -1,0 +1,124 @@
+body {
+    margin: 0;
+    background-color: rgb(2, 43, 2);
+}
+
+/** sample header styling **/
+.title {    
+    text-decoration: none;
+    color: limegreen;
+    text-align: left;
+    padding-left: 20px;
+    font-family: monospace;
+    font-size: 60px;
+    margin-top: 0px;
+}
+
+.main-menu-item {
+    font-size: 18px;
+    padding-left: 10px;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.main-menu-link {
+    text-decoration: none;
+    color: limegreen;
+}
+
+/** game page styling **/
+.game-title {
+    pointer-events: none;
+    position: absolute;
+    color: white;
+    text-decoration: none;
+    z-index: 1;
+    text-align: left;
+    font-family: "Arial Black", Gadget, sans-serif;
+    font-size: 30px;
+    margin-top: 0px;
+    padding-left: 10px;
+}
+.game-menu-item {
+    pointer-events: auto;
+    font-size: 18px;
+    padding-left: 10px;
+    font-family: Arial, Helvetica, sans-serif;
+}
+.game-menu-link {
+    text-decoration: none;
+    color: white;
+}
+
+/** thumbnail gallery **/
+.gallery {
+    margin-left: 50px;
+    margin-right: auto;
+    display: block;
+    height: auto;
+}
+.thumb {
+    width: 270px;
+    height: 220px;
+    margin-left: 15px;
+    margin-right: 15px;
+    margin-top: 30px;
+    padding: 1px;
+    float: left;
+    background-color: rgb(1, 26, 1);
+    border: 1px solid rgb(3, 61, 3);
+}
+.thumb-title {
+    text-align: center;
+    color: limegreen;
+    font-family: monospace;
+    font-size: 20px;        
+}
+.img-frame {
+    margin: 2px;
+    width: auto;
+    height: 165px;
+}
+.image {
+    display: block;
+    height: 165px;
+    width: auto;
+    max-width: 236px;
+    margin-left: auto;
+    margin-right: auto;
+    border: 1px solid black;
+}
+.thumb-bar {
+    vertical-align: bottom;
+    padding-top: 5px;
+    font-family: monospace;
+    font-size: 14px;    
+    width: 100%;
+    color: limegreen;
+    text-align: center;
+    text-decoration: none;
+}
+.gallery-bottom {
+    height: 30px;
+    clear: both;
+}
+
+/* the emscripten canvas must not have any border or padding, or mouse coords will be wrong */
+.game {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    margin: 0px;
+    border: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    display: block;
+    image-rendering: optimizeSpeed;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -o-crisp-edges;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: optimize-contrast;
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
+    -ms-interpolation-mode: nearest-neighbor;
+}

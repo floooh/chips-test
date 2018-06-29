@@ -7,7 +7,5 @@ imports:
         git: https://github.com/floooh/chips
     sokol:
         git: https://github.com/floooh/sokol
-    fips-glfw:
-        git: https://github.com/fips-libs/fips-glfw
 
 

@@ -1,0 +1,7 @@
+---
+platform: osx
+generator: Xcode
+build_tool: xcodebuild
+build_type: Debug
+defines:
+    FIPS_OSX_USE_ARC: ON

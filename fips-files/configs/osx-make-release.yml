@@ -1,0 +1,8 @@
+---
+platform: osx 
+generator: Unix Makefiles
+build_tool: make
+build_type: Release
+defines:
+    FIPS_OSX_USE_ARC: ON
+
