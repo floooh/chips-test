@@ -12,6 +12,7 @@ from mod import log, util, project
 samples = [
     [ 'ZX Spectrum 128', 'zx128k', ''],
     [ 'Commodore C64', 'c64', ''],
+    [ 'Amstrad CPC6128', 'cpc6128', ''],
     [ 'Acorn Atom', 'atom', ''],
     [ 'Robotron Z1013', 'z1013', 'J 300[Enter] => BASIC'],
     [ 'Robotron KC87', 'kc87', 'BASIC[Enter]'],
