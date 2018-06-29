@@ -43,20 +43,20 @@ typedef struct {
 } z1013_t;
 z1013_t z1013;
 
-void z1013_init();
+void z1013_init(void);
 uint64_t z1013_tick(int num, uint64_t pins);
 uint8_t z1013_pio_in(int port_id);
 void z1013_pio_out(int port_id, uint8_t data);
-void z1013_decode_vidmem();
+void z1013_decode_vidmem(void);
 
 uint32_t overrun_ticks;
 uint64_t last_time_stamp;
 
 /* sokol-app entry, configure application callbacks and window */
-void app_init();
-void app_frame();
+void app_init(void);
+void app_frame(void);
 void app_input(const sapp_event*);
-void app_cleanup();
+void app_cleanup(void);
 
 sapp_desc sokol_main(int argc, char* argv[]) {
     return (sapp_desc) {
@@ -71,14 +71,14 @@ sapp_desc sokol_main(int argc, char* argv[]) {
 }
 
 /* one-time application init */
-void app_init() {
+void app_init(void) {
     gfx_init(Z1013_DISP_WIDTH, Z1013_DISP_HEIGHT);
     z1013_init();
     last_time_stamp = stm_now();
 }
 
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
-void app_frame() {
+void app_frame(void) {
     double frame_time = stm_sec(stm_laptime(&last_time_stamp));
     /* skip long pauses when the app was suspended */
     if (frame_time > 0.1) {
@@ -138,12 +138,12 @@ void app_input(const sapp_event* event) {
 }
 
 /* application cleanup callback */
-void app_cleanup() {
+void app_cleanup(void) {
     gfx_shutdown();
 }
 
 /* Z1013 emulator initialization */
-void z1013_init() {
+void z1013_init(void) {
     /* initialize the Z80 CPU and PIO */
     z80_init(&z1013.cpu, z1013_tick);
     z80pio_init(&z1013.pio, z1013_pio_in, z1013_pio_out);
@@ -293,7 +293,7 @@ void z1013_pio_out(int port_id, uint8_t data) {
 }
 
 /* decode the Z1013 32x32 ASCII framebuffer to a linear 256x256 RGBA8 buffer */
-void z1013_decode_vidmem() {
+void z1013_decode_vidmem(void) {
     uint32_t* dst = rgba8_buffer;
     const uint8_t* src = &z1013.mem[0xEC00];   /* the 32x32 framebuffer starts at EC00 */
     const uint8_t* font = dump_z1013_font;

@@ -41,7 +41,7 @@ void gfx_init(int w, int h) {
     });
     draw_state.pipeline = sg_make_pipeline(&(sg_pipeline_desc){
         .layout = {
-            .attrs[0] = { .name="pos", .format=SG_VERTEXFORMAT_FLOAT2 }
+            .attrs[0] = { .name="pos", .sem_name="POSITION", .format=SG_VERTEXFORMAT_FLOAT2 }
         },
         .shader = fsq_shd,
         .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP
@@ -139,7 +139,24 @@ const char* fs_src =
     "  return tex.sample(smp, in.uv);\n"
     "}\n";
 #elif defined(SOKOL_D3D11)
-#error "FIXME: SOKOL_D3D11"
-const char* vs_src = "";
-const char* fs_src = "";
+const char* vs_src =
+    "struct vs_in {\n"
+    "  float2 pos: POSITION;\n"
+    "};\n"
+    "struct vs_out {\n"
+    "  float2 uv: TEXCOORD0;\n"
+    "  float4 pos: SV_Position;\n"
+    "};\n"
+    "vs_out main(vs_in inp) {\n"
+    "  vs_out outp;\n"
+    "  outp.pos = float4(inp.pos*2.0-1.0, 0.5, 1.0);\n"
+    "  outp.uv = float2(inp.pos.x, 1.0-inp.pos.y);\n"
+    "  return outp;\n"
+    "}\n";
+const char* fs_src =
+    "Texture2D<float4> tex: register(t0);\n"
+    "sampler smp: register(s0);\n"
+    "float4 main(float2 uv: TEXCOORD0): SV_Target0 {\n"
+    "  return tex.Sample(smp, uv);\n"
+    "}\n";
 #endif

@@ -75,14 +75,14 @@ sapp_desc sokol_main(int argc, char* argv[]) {
 }
 
 /* one-time application init */
-void app_init() {
+void app_init(void) {
     gfx_init(MC6847_DISPLAY_WIDTH, MC6847_DISPLAY_HEIGHT);
     atom_init();
     last_time_stamp = stm_now();
 }
 
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
-void app_frame() {
+void app_frame(void) {
     double frame_time = stm_sec(stm_laptime(&last_time_stamp));
     /* skip long pauses when the app was suspended */
     if (frame_time > 0.1) {
@@ -144,12 +144,12 @@ void app_input(const sapp_event* event) {
 }
 
 /* application cleanup callback */
-void app_cleanup() {
+void app_cleanup(void) {
     gfx_shutdown();
 }
 
 /* Atom emulator initialization */
-void atom_init() {
+void atom_init(void) {
     /* setup memory map, first fill memory with random values */
     for (int i = 0; i < (int)sizeof(atom.ram);) {
         uint32_t r = xorshift32();

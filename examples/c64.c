@@ -46,7 +46,7 @@ uint64_t last_time_stamp;
 void c64_init(void);
 void c64_update_memory_map(void);
 uint64_t c64_cpu_tick(uint64_t pins);
-uint8_t c64_cpu_port_in();
+uint8_t c64_cpu_port_in(void);
 void c64_cpu_port_out(uint8_t data);
 void c64_cia1_out(int port_id, uint8_t data);
 uint8_t c64_cia1_in(int port_id);
@@ -73,14 +73,14 @@ sapp_desc sokol_main(int argc, char* argv[]) {
 }
 
 /* one-time application init */
-void app_init() {
+void app_init(void) {
     gfx_init(C64_DISP_WIDTH, C64_DISP_HEIGHT);
     c64_init();
     last_time_stamp = stm_now();
 }
 
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
-void app_frame() {
+void app_frame(void) {
     double frame_time = stm_sec(stm_laptime(&last_time_stamp));
     /* skip long pauses when the app was suspended */
     if (frame_time > 0.1) {
@@ -149,12 +149,12 @@ void app_input(const sapp_event* event) {
 }
 
 /* application cleanup callback */
-void app_cleanup() {
+void app_cleanup(void) {
     gfx_shutdown();
 }
 
 /* C64 emulator init */
-void c64_init() {
+void c64_init(void) {
     c64.cpu_port = 0xF7;        // for initial memory configuration
     c64.io_mapped = true;
 
@@ -389,7 +389,7 @@ uint64_t c64_cpu_tick(uint64_t pins) {
     return pins;
 }
 
-uint8_t c64_cpu_port_in() {
+uint8_t c64_cpu_port_in(void) {
     /*
         Input from the integrated M6510 CPU IO port
 
@@ -516,7 +516,7 @@ uint16_t c64_vic_fetch(uint16_t addr) {
     return data;
 }
 
-void c64_update_memory_map() {
+void c64_update_memory_map(void) {
     c64.io_mapped = false;
     uint8_t* read_ptr;
     const uint8_t charen = (1<<2);
