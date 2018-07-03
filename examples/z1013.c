@@ -66,7 +66,8 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .cleanup_cb = app_cleanup,
         .width = 2 * Z1013_DISP_WIDTH,
         .height = 2 * Z1013_DISP_HEIGHT,
-        .window_title = "Z1013"
+        .window_title = "Z1013",
+        .ios_keyboard_resizes_canvas = true
     };
 }
 
@@ -131,6 +132,9 @@ void app_input(const sapp_event* event) {
                     kbd_key_up(&z1013.kbd, c);
                 }
             }
+            break;
+        case SAPP_EVENTTYPE_TOUCHES_BEGAN:
+            sapp_show_keyboard(true);
             break;
         default:
             break;

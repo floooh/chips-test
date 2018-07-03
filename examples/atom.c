@@ -70,7 +70,8 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .cleanup_cb = app_cleanup,
         .width = 2 * MC6847_DISPLAY_WIDTH,
         .height = 2 * MC6847_DISPLAY_HEIGHT,
-        .window_title = "Acorn Atom"
+        .window_title = "Acorn Atom",
+        .ios_keyboard_resizes_canvas = true
     };
 }
 
@@ -137,6 +138,9 @@ void app_input(const sapp_event* event) {
                     kbd_key_up(&atom.kbd, c);
                 }
             }
+            break;
+        case SAPP_EVENTTYPE_TOUCHES_BEGAN:
+            sapp_show_keyboard(true);
             break;
         default:
             break;

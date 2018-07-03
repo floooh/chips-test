@@ -128,7 +128,8 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .cleanup_cb = app_cleanup,
         .width = CPC_DISP_WIDTH,
         .height = 2 * CPC_DISP_HEIGHT,
-        .window_title = "CPC 6128"
+        .window_title = "CPC 6128",
+        .ios_keyboard_resizes_canvas = true
     };
 }
 
@@ -200,6 +201,9 @@ void app_input(const sapp_event* event) {
                     kbd_key_up(&cpc.kbd, c);
                 }
             }
+            break;
+        case SAPP_EVENTTYPE_TOUCHES_BEGAN:
+            sapp_show_keyboard(true);
             break;
         default:
             break;

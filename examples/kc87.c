@@ -80,7 +80,8 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .cleanup_cb = app_cleanup,
         .width = 2 * KC87_DISP_WIDTH,
         .height = 2 * KC87_DISP_HEIGHT,
-        .window_title = "KC87"
+        .window_title = "KC87",
+        .ios_keyboard_resizes_canvas = true
     };
 }
 
@@ -150,6 +151,9 @@ void app_input(const sapp_event* event) {
                 /* keyboard matrix lines are directly connected to the PIO2's Port B */
                 z80pio_write_port(&kc87.pio2, Z80PIO_PORT_B, ~kbd_scan_lines(&kc87.kbd));
             }
+            break;
+        case SAPP_EVENTTYPE_TOUCHES_BEGAN:
+            sapp_show_keyboard(true);
             break;
         default:
             break;
