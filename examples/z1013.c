@@ -73,7 +73,7 @@ sapp_desc sokol_main(int argc, char* argv[]) {
 
 /* one-time application init */
 void app_init(void) {
-    gfx_init(Z1013_DISP_WIDTH, Z1013_DISP_HEIGHT);
+    gfx_init(Z1013_DISP_WIDTH, Z1013_DISP_HEIGHT, 1, 1);
     z1013_init();
     last_time_stamp = stm_now();
 }

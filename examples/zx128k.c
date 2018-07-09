@@ -82,7 +82,7 @@ uint64_t last_time_stamp;
 
 /* one-time application init */
 void app_init() {
-    gfx_init(ZX128K_DISP_WIDTH, ZX128K_DISP_HEIGHT);
+    gfx_init(ZX128K_DISP_WIDTH, ZX128K_DISP_HEIGHT, 1, 1);
     zx_init();
     last_time_stamp = stm_now();
 }

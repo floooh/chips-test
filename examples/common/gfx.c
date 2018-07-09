@@ -6,16 +6,22 @@
 extern const char* vs_src; 
 extern const char* fs_src;
 
-static const sg_pass_action pass_action = { .colors[0].action = SG_ACTION_DONTCARE };
+static const sg_pass_action pass_action = {
+    .colors[0] = { .action = SG_ACTION_CLEAR, .val = { 0.25f, 0.25f, 0.25f, 1.0f } }
+};
 static sg_draw_state draw_state;
 static int fb_width;
 static int fb_height;
+static int fb_aspect_scale_x;
+static int fb_aspect_scale_y;
 
 uint32_t rgba8_buffer[GFX_MAX_FB_WIDTH * GFX_MAX_FB_HEIGHT];
 
-void gfx_init(int w, int h) {
+void gfx_init(int w, int h, int sx, int sy) {
     fb_width = w;
     fb_height = h;
+    fb_aspect_scale_x = sx;
+    fb_aspect_scale_y = sy;
     sg_setup(&(sg_desc){
         .mtl_device = sapp_metal_get_device(),
         .mtl_renderpass_descriptor_cb = sapp_metal_get_renderpass_descriptor,
@@ -58,6 +64,29 @@ void gfx_init(int w, int h) {
     });
 }
 
+static void apply_viewport(void) {
+    const int canvas_width = sapp_width();
+    const int canvas_height = sapp_height();
+    const float canvas_aspect = (float)canvas_width / (float)canvas_height;
+    const float fb_aspect = (float)(fb_width*fb_aspect_scale_x) / (float)(fb_height*fb_aspect_scale_y);
+    const int frame_x = 5;
+    const int frame_y = 5;
+    int vp_x, vp_y, vp_w, vp_h;
+    if (fb_aspect < canvas_aspect) {
+        vp_y = frame_y;
+        vp_h = canvas_height - 2 * frame_y;
+        vp_w = (int) (canvas_height * fb_aspect) - 2 * frame_x;
+        vp_x = (canvas_width - vp_w) / 2;
+    }
+    else {
+        vp_x = frame_x;
+        vp_w = canvas_width - 2 * frame_x;
+        vp_h = (int) (canvas_width / fb_aspect) - 2 * frame_y;
+        vp_y = frame_y;
+    }
+    sg_apply_viewport(vp_x, vp_y, vp_w, vp_h, true);
+}
+
 void gfx_draw() {
     sg_update_image(draw_state.fs_images[0], &(sg_image_content){
         .subimage[0][0] = { 
@@ -66,6 +95,7 @@ void gfx_draw() {
         }
     });
     sg_begin_default_pass(&pass_action, sapp_width(), sapp_height());
+    apply_viewport();
     sg_apply_draw_state(&draw_state);
     sg_draw(0, 4, 1);
     sg_end_pass();
