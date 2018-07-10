@@ -99,8 +99,8 @@ void app_frame(void) {
 
 /* keyboard input handling */
 void app_input(const sapp_event* event) {
+    int c = 0;
     switch (event->type) {
-        int c = 0;
         case SAPP_EVENTTYPE_CHAR:
             c = (int) event->char_code;
             if (c < KBD_MAX_KEYS) {

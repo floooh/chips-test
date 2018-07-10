@@ -36,7 +36,7 @@ void test_rw() {
     M6522_SET_ADDR(pins, M6522_REG_RB);
     M6522_SET_DATA(pins, 0xF0);
     pins = m6522_iorq(&via, pins);
-    T(via.out_b = 0xF0);
+    T(via.out_b == 0xF0);
     T(values[M6522_PORT_B] == 0xF5);
 
     /* read back B values */
