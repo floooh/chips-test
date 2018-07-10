@@ -108,16 +108,14 @@ void gfx_shutdown() {
 
 /* shader source code for GL, GLES2, Metal and D3D11 */
 #if defined(SOKOL_GLCORE33)
-#error "FIXME: SOKOL_GLCORE33"
-/*
 const char* vs_src =
     "#version 330\n"
     "in vec2 pos;\n"
     "out vec2 uv;\n"
     "void main() {\n"
     "  gl_Position = vec4(pos*2.0-1.0, 0.5, 1.0);\n"
-    "  uv0 = vec2(pos.x, 1.0-pos.y);\n"
-    "}\n",
+    "  uv = vec2(pos.x, 1.0-pos.y);\n"
+    "}\n";
 const char* fs_src =
     "#version 330\n"
     "uniform sampler2D tex;\n"
@@ -125,8 +123,7 @@ const char* fs_src =
     "out vec4 frag_color;\n"
     "void main() {\n"
     "  frag_color = texture(tex, uv);\n"
-    "}\n"
-*/
+    "}\n";
 #elif defined(SOKOL_GLES2)
 const char* vs_src =
     "attribute vec2 pos;\n"
