@@ -241,7 +241,7 @@ const char* vs_src =
     "vs_out main(vs_in inp) {\n"
     "  vs_out outp;\n"
     "  outp.pos = float4(inp.pos*2.0-1.0, 0.5, 1.0);\n"
-    "  outp.uv = in.uv;\n"
+    "  outp.uv = inp.uv;\n"
     "  return outp;\n"
     "}\n";
 const char* fs_src =
