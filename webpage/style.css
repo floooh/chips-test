@@ -25,30 +25,6 @@ body {
     color: limegreen;
 }
 
-/** game page styling **/
-.game-title {
-    pointer-events: none;
-    position: absolute;
-    color: white;
-    text-decoration: none;
-    z-index: 1;
-    text-align: left;
-    font-family: "Arial Black", Gadget, sans-serif;
-    font-size: 30px;
-    margin-top: 0px;
-    padding-left: 10px;
-}
-.game-menu-item {
-    pointer-events: auto;
-    font-size: 18px;
-    padding-left: 10px;
-    font-family: Arial, Helvetica, sans-serif;
-}
-.game-menu-link {
-    text-decoration: none;
-    color: white;
-}
-
 /** thumbnail gallery **/
 .gallery {
     margin-left: 50px;
