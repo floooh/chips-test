@@ -3,7 +3,7 @@ Tests and sample emulators for https://github.com/floooh/chips
 
 Live demos of the example emulators: https://floooh.github.com/tiny8bit
 
-For a more feature-complete multi-system emulaotr, check the YAKC project
+For a more feature-complete multi-system emulator, check the YAKC project
 here: https://github.com/floooh/yakc
 
 To build and run on Windows, OSX or Linux (exact versions of tools shouldn't matter):
