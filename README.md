@@ -1,9 +1,12 @@
 # chips-test
-Tests and sample code for https://github.com/floooh/chips
+Tests and sample emulators for https://github.com/floooh/chips
 
 Live demos of the example emulators: https://floooh.github.com/tiny8bit
 
-Build and run (exact versions of tools don't matter):
+For a more feature-complete multi-system emulaotr, check the YAKC project
+here: https://github.com/floooh/yakc
+
+To build and run on Windows, OSX or Linux (exact versions of tools shouldn't matter):
 
 ```bash
 > python --version
@@ -53,6 +56,36 @@ To open project in IDE:
 > ./fips set config [linux|osx|win64]-vscode-debug
 > ./fips gen
 > ./fips open
+```
+
+To build the WebAssembly demos (Linux or OSX recommended here, Windows
+might work too, but this is not well tested).
+
+```bash
+# first get ninja (on Windows a ninja.exe comes with the fips build system)
+> ninja --version
+1.8.2
+# now install the emscripten toolchain, this needs a lot of time and memory
+> ./fips setup emscripten
+...
+# from here on as usual...
+> ./fips set config wasm-ninja-release
+> ./fips build
+...
+> ./fips list targets
+...
+> ./fips run c64
+...
+```
+
+When the above emscripten build steps work, you can also build and test the
+entire samples webpage like this:
+
+```bash
+> ./fips webpage build
+...
+> ./fips webpage serve
+...
 ```
 
 Enjoy!
