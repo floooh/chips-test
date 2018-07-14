@@ -30,6 +30,8 @@ typedef struct {
     mc6845_t vdg;
     i8255_t ppi;
 
+    bool joy_enabled;
+    uint8_t joy_mask;
     uint32_t tick_count;
     uint8_t upper_rom_select;
 
@@ -186,6 +188,7 @@ void app_frame(void) {
     if (fs_ptr() && frame_count > 120) {
         cpc_load_sna(fs_ptr(), fs_size());
         fs_free();
+        cpc.joy_enabled = true;
     }
 }
 
@@ -204,11 +207,11 @@ void app_input(const sapp_event* event) {
         case SAPP_EVENTTYPE_KEY_DOWN:
         case SAPP_EVENTTYPE_KEY_UP:
             switch (event->key_code) {
-                case SAPP_KEYCODE_SPACE:        c = 0x20; break; 
-                case SAPP_KEYCODE_LEFT:         c = 0x08; break;
-                case SAPP_KEYCODE_RIGHT:        c = 0x09; break;
-                case SAPP_KEYCODE_DOWN:         c = 0x0A; break;
-                case SAPP_KEYCODE_UP:           c = 0x0B; break;
+                case SAPP_KEYCODE_SPACE:        c = cpc.joy_enabled ? 0 : 0x20; break;
+                case SAPP_KEYCODE_LEFT:         c = cpc.joy_enabled ? 0 : 0x08; break;
+                case SAPP_KEYCODE_RIGHT:        c = cpc.joy_enabled ? 0 : 0x09; break;
+                case SAPP_KEYCODE_DOWN:         c = cpc.joy_enabled ? 0 : 0x0A; break;
+                case SAPP_KEYCODE_UP:           c = cpc.joy_enabled ? 0 : 0x0B; break;
                 case SAPP_KEYCODE_ENTER:        c = 0x0D; break;
                 case SAPP_KEYCODE_LEFT_SHIFT:   c = 0x02; break;
                 case SAPP_KEYCODE_BACKSPACE:    c = shift ? 0x0C : 0x01; break; // 0x0C: clear screen
@@ -233,6 +236,28 @@ void app_input(const sapp_event* event) {
                 }
                 else {
                     kbd_key_up(&cpc.kbd, c);
+                }
+            }
+            else if (cpc.joy_enabled) {
+                if (event->type == SAPP_EVENTTYPE_KEY_DOWN) {
+                    switch (event->key_code) {
+                        case SAPP_KEYCODE_SPACE:        cpc.joy_mask |= 1<<4; break;
+                        case SAPP_KEYCODE_LEFT:         cpc.joy_mask |= 1<<2; break;
+                        case SAPP_KEYCODE_RIGHT:        cpc.joy_mask |= 1<<3; break;
+                        case SAPP_KEYCODE_DOWN:         cpc.joy_mask |= 1<<1; break;
+                        case SAPP_KEYCODE_UP:           cpc.joy_mask |= 1<<0; break;
+                        default: break;
+                    }
+                }
+                else {
+                    switch (event->key_code) {
+                        case SAPP_KEYCODE_SPACE:        cpc.joy_mask &= ~(1<<4); break;
+                        case SAPP_KEYCODE_LEFT:         cpc.joy_mask &= ~(1<<2); break;
+                        case SAPP_KEYCODE_RIGHT:        cpc.joy_mask &= ~(1<<3); break;
+                        case SAPP_KEYCODE_DOWN:         cpc.joy_mask &= ~(1<<1); break;
+                        case SAPP_KEYCODE_UP:           cpc.joy_mask &= ~(1<<0); break;
+                        default: break;
+                    }
                 }
             }
             break;
@@ -689,7 +714,7 @@ uint8_t cpc_psg_in(int port_id) {
                   joystick input will be provided on the keyboard
                   matrix lines
             */
-            // data |= cpc.joymask;
+            data |= cpc.joy_mask;
         }
         return ~data;
     }
