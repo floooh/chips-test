@@ -54,7 +54,6 @@ bool fs_load_file(const char* path) {
 }
 
 EMSCRIPTEN_KEEPALIVE void emsc_loadfile(const uint8_t* ptr, int size) {
-    printf("emsc_loadfile(%p, %d)\n", ptr, size);
     fs_load_mem(ptr, size);
 }
 
