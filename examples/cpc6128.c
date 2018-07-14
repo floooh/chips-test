@@ -17,6 +17,7 @@
 #include "chips/mem.h"
 #include "roms/cpc-roms.h"
 #include "common/gfx.h"
+#include "common/fs.h"
 
 /* CPC 6128 emulator state and callbacks */
 #define CPC_FREQ (4000000)
@@ -56,6 +57,8 @@ typedef struct {
 } cpc_t;
 cpc_t cpc;
 
+uint32_t load_frame_count;
+uint32_t frame_count;
 uint32_t overrun_ticks;
 uint64_t last_time_stamp;
 
@@ -116,6 +119,7 @@ uint64_t cpc_ga_tick(uint64_t pins);
 void cpc_ga_int_ack();
 void cpc_ga_decode_video(uint64_t crtc_pins);
 void cpc_ga_decode_pixels(uint32_t* dst, uint64_t crtc_pins);
+bool cpc_load_sna(const uint8_t* ptr, uint32_t num_bytes);
 
 /* sokol-app entry, configure application callbacks and window */
 void app_init(void);
@@ -124,6 +128,13 @@ void app_input(const sapp_event*);
 void app_cleanup(void);
 
 sapp_desc sokol_main(int argc, char* argv[]) {
+    if (argc > 1) {
+        /* delay-load SNA file after 120 frames (2 seconds) */
+        const char* path = argv[1];
+        if (fs_load_file(path)) {
+            load_frame_count = 120;
+        }
+    }
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,
@@ -139,17 +150,14 @@ sapp_desc sokol_main(int argc, char* argv[]) {
 /* one-time application init */
 void app_init(void) {
     gfx_init(CPC_DISP_WIDTH, CPC_DISP_HEIGHT, 1, 2);
-    saudio_setup(&(saudio_desc){
-        .buffer_frames = 512,
-        .packet_frames = 64,
-        .num_packets = 32,
-    });
+    saudio_setup(&(saudio_desc){0});
     cpc_init();
     last_time_stamp = stm_now();
 }
 
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
 void app_frame(void) {
+    frame_count++;
     int32_t ticks_to_run = 0;
     if (saudio_isvalid()) {
         double audio_needed = (double)saudio_expect();
@@ -158,12 +166,14 @@ void app_frame(void) {
     }
     else {
         /* no audio available, use normal clock */
-        double frame_time = stm_sec(stm_laptime(&last_time_stamp));
-        /* skip long pauses when the app was suspended */
-        if (frame_time > 0.1) {
-            frame_time = 0.1;
+        double frame_time_ms = stm_ms(stm_laptime(&last_time_stamp));
+        if (frame_time_ms < 24.0) {
+            frame_time_ms = 16.666667;
         }
-        ticks_to_run = (uint32_t) ((CPC_FREQ * frame_time) - overrun_ticks);
+        else {
+            frame_time_ms = 33.333334;
+        }
+        ticks_to_run = (uint32_t) (((CPC_FREQ * frame_time_ms) / 1000.0) - overrun_ticks);
     }
     if (ticks_to_run > 0) {
         int32_t ticks_executed = z80_exec(&cpc.cpu, ticks_to_run);
@@ -175,6 +185,11 @@ void app_frame(void) {
         overrun_ticks = 0;
     }
     gfx_draw();
+    /* delay load SNA file? */
+    if ((load_frame_count > 0) && (load_frame_count == frame_count)) {
+        cpc_load_sna(fs_ptr(), fs_size());
+        fs_free();
+    }
 }
 
 /* keyboard input handling */
@@ -258,7 +273,7 @@ void cpc_init(void) {
         .out_cb = cpc_psg_out,
         .tick_hz = 1000000,
         .sound_hz = 44100,
-        .magnitude = 0.5
+        .magnitude = 0.7f
     });
 
     /* CPU start address */
@@ -896,4 +911,102 @@ void cpc_ga_decode_video(uint64_t crtc_pins) {
             }
         }
     }
+}
+
+// CPC SNA fileformat header: http://cpctech.cpc-live.com/docs/snapshot.html
+typedef struct {
+    uint8_t magic[8];     // must be "MV - SNA"
+    uint8_t pad0[8];
+    uint8_t version;
+    uint8_t F, A, C, B, E, D, L, H, R, I;
+    uint8_t IFF1, IFF2;
+    uint8_t IX_l, IX_h;
+    uint8_t IY_l, IY_h;
+    uint8_t SP_l, SP_h;
+    uint8_t PC_l, PC_h;
+    uint8_t IM;
+    uint8_t F_, A_, C_, B_, E_, D_, L_, H_;
+    uint8_t selected_pen;
+    uint8_t pens[17];             // palette + border colors
+    uint8_t gate_array_config;
+    uint8_t ram_config;
+    uint8_t crtc_selected;
+    uint8_t crtc_regs[18];
+    uint8_t rom_config;
+    uint8_t ppi_a;
+    uint8_t ppi_b;
+    uint8_t ppi_c;
+    uint8_t ppi_control;
+    uint8_t psg_selected;
+    uint8_t psg_regs[16];
+    uint8_t dump_size_l;
+    uint8_t dump_size_h;
+    uint8_t pad1[0x93];
+} sna_header;
+
+bool cpc_load_sna(const uint8_t* ptr, uint32_t num_bytes) {
+    if (num_bytes < sizeof(sna_header)) {
+        return false;
+    }
+    const sna_header* hdr = (const sna_header*) ptr;
+    if ((hdr->magic[5] != 'S') || (hdr->magic[6] != 'N') || (hdr->magic[7] != 'A')) {
+        return false;
+    }
+    ptr += sizeof(sna_header);
+
+    /* copy 64 or 128 KByte memory dump */
+    const uint16_t dump_size = hdr->dump_size_h<<8 | hdr->dump_size_l;
+    const uint32_t dump_num_bytes = (dump_size == 64) ? 0x10000 : 0x20000;
+    if (num_bytes > (sizeof(sna_header) + dump_num_bytes)) {
+        return false;
+    }
+    if (dump_num_bytes > sizeof(cpc.ram)) {
+        return false;
+    }
+    memcpy(cpc.ram, ptr, dump_num_bytes);
+
+    cpc.cpu.state.F = hdr->F; cpc.cpu.state.A = hdr->A;
+    cpc.cpu.state.C = hdr->C; cpc.cpu.state.B = hdr->B;
+    cpc.cpu.state.E = hdr->E; cpc.cpu.state.D = hdr->D;
+    cpc.cpu.state.L = hdr->L; cpc.cpu.state.H = hdr->H;
+    cpc.cpu.state.R = hdr->R; cpc.cpu.state.I = hdr->I;
+    cpc.cpu.state.IFF1 = (hdr->IFF1 & 1) != 0;
+    cpc.cpu.state.IFF2 = (hdr->IFF2 & 1) != 0;
+    cpc.cpu.state.IX = hdr->IX_h<<8 | hdr->IX_l;
+    cpc.cpu.state.IY = hdr->IY_h<<8 | hdr->IY_l;
+    cpc.cpu.state.SP = hdr->SP_h<<8 | hdr->SP_l;
+    cpc.cpu.state.PC = hdr->PC_h<<8 | hdr->PC_l;
+    cpc.cpu.state.IM = hdr->IM;
+    cpc.cpu.state.AF_ = hdr->A_<<8 | hdr->F_;
+    cpc.cpu.state.BC_ = hdr->B_<<8 | hdr->C_;
+    cpc.cpu.state.DE_ = hdr->D_<<8 | hdr->E_;
+    cpc.cpu.state.HL_ = hdr->H_<<8 | hdr->L_;
+
+    for (int i = 0; i < 16; i++) {
+        cpc.ga_palette[i] = cpc_colors[hdr->pens[i] & 0x1F];
+    }
+    cpc.ga_border_color = cpc_colors[hdr->pens[16] & 0x1F];
+    cpc.ga_pen = hdr->selected_pen & 0x1F;
+    cpc.ga_config = hdr->gate_array_config & 0x3F;
+    cpc.ga_next_video_mode = hdr->gate_array_config & 3;
+    cpc.ga_ram_config = hdr->ram_config & 0x3F;
+    cpc.upper_rom_select = hdr->rom_config;
+    cpc_update_memory_mapping();
+
+    for (int i = 0; i < 18; i++) {
+        cpc.vdg.reg[i] = hdr->crtc_regs[i];
+    }
+    cpc.vdg.sel = hdr->crtc_selected;
+
+    cpc.ppi.output[I8255_PORT_A] = hdr->ppi_a;
+    cpc.ppi.output[I8255_PORT_B] = hdr->ppi_b;
+    cpc.ppi.output[I8255_PORT_C] = hdr->ppi_c;
+    cpc.ppi.control = hdr->ppi_control;
+
+    for (int i = 0; i < 16; i++) {
+        ay38910_iorq(&cpc.psg, AY38910_BDIR|AY38910_BC1|(i<<16));
+        ay38910_iorq(&cpc.psg, AY38910_BDIR|(hdr->psg_regs[i]<<16));
+    }
+    ay38910_iorq(&cpc.psg, AY38910_BDIR|AY38910_BC1|(hdr->psg_selected<<16));
+    return true;
 }
