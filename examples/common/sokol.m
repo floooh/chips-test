@@ -7,3 +7,4 @@ must be a *.m file on MacOS/iOS, and *.c file everywhere else
 #include "sokol_app.h"
 #include "sokol_gfx.h"
 #include "sokol_time.h"
+#include "sokol_audio.h"

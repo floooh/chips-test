@@ -6,6 +6,7 @@
 */
 #include "sokol_app.h"
 #include "sokol_time.h"
+#include "sokol_audio.h"
 #define CHIPS_IMPL
 #include "chips/z80.h"
 #include "chips/ay38910.h"
@@ -21,7 +22,7 @@
 #define CPC_FREQ (4000000)
 #define CPC_DISP_WIDTH (768)
 #define CPC_DISP_HEIGHT (272)
-
+#define CPC_SAMPLE_BUFFER_SIZE (32)
 typedef struct {
     z80_t cpu;
     ay38910_t psg;
@@ -49,6 +50,8 @@ typedef struct {
     crt_t crt;
     kbd_t kbd;
     mem_t mem;
+    int sample_pos;
+    float sample_buffer[CPC_SAMPLE_BUFFER_SIZE];
     uint8_t ram[8][0x4000];
 } cpc_t;
 cpc_t cpc;
@@ -136,22 +139,41 @@ sapp_desc sokol_main(int argc, char* argv[]) {
 /* one-time application init */
 void app_init(void) {
     gfx_init(CPC_DISP_WIDTH, CPC_DISP_HEIGHT, 1, 2);
+    saudio_setup(&(saudio_desc){
+        .buffer_frames = 512,
+        .packet_frames = 64,
+        .num_packets = 32,
+    });
     cpc_init();
     last_time_stamp = stm_now();
 }
 
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
 void app_frame(void) {
-    double frame_time = stm_sec(stm_laptime(&last_time_stamp));
-    /* skip long pauses when the app was suspended */
-    if (frame_time > 0.1) {
-        frame_time = 0.1;
+    int32_t ticks_to_run = 0;
+    if (saudio_isvalid()) {
+        double audio_needed = (double)saudio_expect();
+        double sample_rate = (double)saudio_sample_rate();
+        ticks_to_run = (uint32_t) (((CPC_FREQ * audio_needed)/sample_rate) - overrun_ticks);
     }
-    uint32_t ticks_to_run = (uint32_t) ((CPC_FREQ * frame_time) - overrun_ticks);
-    uint32_t ticks_executed = z80_exec(&cpc.cpu, ticks_to_run);
-    assert(ticks_executed >= ticks_to_run);
-    overrun_ticks = ticks_executed - ticks_to_run;
-    kbd_update(&cpc.kbd);
+    else {
+        /* no audio available, use normal clock */
+        double frame_time = stm_sec(stm_laptime(&last_time_stamp));
+        /* skip long pauses when the app was suspended */
+        if (frame_time > 0.1) {
+            frame_time = 0.1;
+        }
+        ticks_to_run = (uint32_t) ((CPC_FREQ * frame_time) - overrun_ticks);
+    }
+    if (ticks_to_run > 0) {
+        int32_t ticks_executed = z80_exec(&cpc.cpu, ticks_to_run);
+        assert(ticks_executed >= ticks_to_run);
+        overrun_ticks = ticks_executed - ticks_to_run;
+        kbd_update(&cpc.kbd);
+    }
+    else {
+        overrun_ticks = 0;
+    }
     gfx_draw();
 }
 
@@ -212,6 +234,7 @@ void app_input(const sapp_event* event) {
 
 /* application cleanup callback */
 void app_cleanup(void) {
+    saudio_shutdown();
     gfx_shutdown();
 }
 
@@ -415,7 +438,11 @@ uint64_t cpc_cpu_tick(int num_ticks, uint64_t pins) {
             /* on every 4th clock cycle, tick the system */
             if (!wait_pin) {
                 if (ay38910_tick(&cpc.psg)) {
-                    /* FIXME: new sample ready, write to audio buffer */
+                    cpc.sample_buffer[cpc.sample_pos++] = cpc.psg.sample;
+                    if (cpc.sample_pos == CPC_SAMPLE_BUFFER_SIZE) {
+                        cpc.sample_pos = 0;
+                        saudio_push(cpc.sample_buffer, CPC_SAMPLE_BUFFER_SIZE);
+                    }
                 }
                 pins = cpc_ga_tick(pins);
             }
