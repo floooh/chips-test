@@ -36,6 +36,7 @@ function id(id) {
     return document.getElementById(id);
 }
 
+/* drag'n'drop support to load local files into emulators */
 function init_drag_and_drop() {
     // add a drag'n'drop handler to the WebGL canvas
     id('canvas').addEventListener('dragenter', load_dragenter, false);
@@ -67,7 +68,7 @@ function load_drop(e) {
 
 function load_file(files) {
     if (files.length > 0) {
-        var file = files[0];
+        let file = files[0];
         console.log('--- load file:');
         console.log('  name: ' + file.name);
         console.log('  type: ' + file.type);
@@ -75,14 +76,14 @@ function load_file(files) {
         
         // load the file content (ignore big files)
         if (file.size < 256000) {
-            var reader = new FileReader();
+            let reader = new FileReader();
             reader.onload = function(loadEvent) {
                 console.log('file loaded!')
-                var content = loadEvent.target.result;
+                let content = loadEvent.target.result;
                 if (content) {
                     console.log('content length: ' + content.byteLength);
-                    var uint8Array = new Uint8Array(content);
-                    var res = Module.ccall('emsc_loadfile',  // C function name
+                    let uint8Array = new Uint8Array(content);
+                    let res = Module.ccall('emsc_loadfile',  // C function name
                         'int',
                         ['array', 'number'],  // name, data, size
                         [uint8Array, uint8Array.length]);

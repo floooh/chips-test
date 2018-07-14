@@ -87,6 +87,15 @@ def deploy_webpage(fips_dir, proj_dir, webpage_dir) :
             log.info('> copy screenshot: {}'.format(img_name))
             shutil.copy(img_path, webpage_dir + '/' + img_name)
 
+    # copy the game files
+    for sample in samples:
+        src_dir = proj_dir + '/webpage/' + sample[1]
+        if os.path.exists(src_dir):
+            dst_dir = webpage_dir + '/' + sample[1]
+            if os.path.isdir(dst_dir):
+                shutil.rmtree(dst_dir)
+            shutil.copytree(src_dir, dst_dir)
+
 #-------------------------------------------------------------------------------
 def build_deploy_webpage(fips_dir, proj_dir, rebuild) :
     # if webpage dir exists, clear it first

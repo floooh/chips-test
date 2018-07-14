@@ -54,9 +54,36 @@ bool fs_load_file(const char* path) {
 }
 
 EMSCRIPTEN_KEEPALIVE void emsc_loadfile(const uint8_t* ptr, int size) {
+    printf("emsc_loadfile(%p, %d)\n", ptr, size);
     fs_load_mem(ptr, size);
 }
+
+EM_JS(void, emsc_check_url_params, (), {
+    var params = new URLSearchParams(window.location.search);
+    if (params.has("file")) {
+        var file = params.get("file");
+        console.log("loading file: ", file);
+        var req = new XMLHttpRequest();
+        req.open("GET", file);
+        req.responseType = "arraybuffer";
+        req.onload = function(e) {
+            var uint8Array = new Uint8Array(req.response);
+            console.log("loaded!");
+            var res = Module.ccall('emsc_loadfile',
+                'int',
+                ['array', 'number'],
+                [uint8Array, uint8Array.length]);
+        };
+        req.send();
+    };
+});
 #endif
+
+void fs_init(void) {
+    #if defined(__EMSCRIPTEN__)
+    emsc_check_url_params();
+    #endif
+}
 
 const uint8_t* fs_ptr(void) {
     return _fs_ptr;

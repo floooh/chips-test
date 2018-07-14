@@ -127,6 +127,7 @@ void app_input(const sapp_event*);
 void app_cleanup(void);
 
 sapp_desc sokol_main(int argc, char* argv[]) {
+    fs_init();
     if (argc > 1) {
         const char* path = argv[1];
         fs_load_file(path);
