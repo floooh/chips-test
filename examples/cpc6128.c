@@ -57,7 +57,6 @@ typedef struct {
 } cpc_t;
 cpc_t cpc;
 
-uint32_t load_frame_count;
 uint32_t frame_count;
 uint32_t overrun_ticks;
 uint64_t last_time_stamp;
@@ -129,11 +128,8 @@ void app_cleanup(void);
 
 sapp_desc sokol_main(int argc, char* argv[]) {
     if (argc > 1) {
-        /* delay-load SNA file after 120 frames (2 seconds) */
         const char* path = argv[1];
-        if (fs_load_file(path)) {
-            load_frame_count = 120;
-        }
+        fs_load_file(path);
     }
     return (sapp_desc) {
         .init_cb = app_init,
@@ -185,8 +181,8 @@ void app_frame(void) {
         overrun_ticks = 0;
     }
     gfx_draw();
-    /* delay load SNA file? */
-    if ((load_frame_count > 0) && (load_frame_count == frame_count)) {
+    /* load SNA file? */
+    if (fs_ptr() && frame_count > 120) {
         cpc_load_sna(fs_ptr(), fs_size());
         fs_free();
     }

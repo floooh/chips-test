@@ -1,5 +1,7 @@
 #if !defined(__EMSCRIPTEN__)
 #include <stdio.h>
+#else
+#include <emscripten/emscripten.h>
 #endif
 #include <stdint.h>
 #include <stdbool.h>
@@ -17,7 +19,16 @@ void fs_free(void) {
     }
 }
 
-#if !defined(__EMSCRIPTEN)
+void fs_load_mem(const uint8_t* ptr, uint32_t size) {
+    fs_free();
+    if (size > 0) {
+        _fs_size = size;
+        _fs_ptr = malloc(size);
+        memcpy(_fs_ptr, ptr, size);
+    }
+}
+
+#if !defined(__EMSCRIPTEN__)
 bool fs_load_file(const char* path) {
     fs_free();
     FILE* fp = fopen(path, "rb");
@@ -39,17 +50,13 @@ bool fs_load_file(const char* path) {
 #else
 bool fs_load_file(const char* path) {
     fs_free();
+    return false;
+}
+
+EMSCRIPTEN_KEEPALIVE void emsc_loadfile(const uint8_t* ptr, int size) {
+    fs_load_mem(ptr, size);
 }
 #endif
-
-void fs_load_mem(const uint8_t* ptr, uint32_t size) {
-    fs_free();
-    if (size > 0) {
-        _fs_size = size;
-        _fs_ptr = malloc(size);
-        memcpy(_fs_ptr, ptr, size);
-    }
-}
 
 const uint8_t* fs_ptr(void) {
     return _fs_ptr;
