@@ -158,12 +158,14 @@ void app_init(void) {
 void app_frame(void) {
     frame_count++;
     int32_t ticks_to_run = 0;
+    /*
     if (saudio_isvalid()) {
         double audio_needed = (double)saudio_expect();
         double sample_rate = (double)saudio_sample_rate();
         ticks_to_run = (uint32_t) (((CPC_FREQ * audio_needed)/sample_rate) - overrun_ticks);
     }
     else {
+    */
         /* no audio available, use normal clock */
         double frame_time_ms = stm_ms(stm_laptime(&last_time_stamp));
         if (frame_time_ms < 24.0) {
@@ -173,7 +175,7 @@ void app_frame(void) {
             frame_time_ms = 33.333334;
         }
         ticks_to_run = (uint32_t) (((CPC_FREQ * frame_time_ms) / 1000.0) - overrun_ticks);
-    }
+    //}
     if (ticks_to_run > 0) {
         int32_t ticks_executed = z80_exec(&cpc.cpu, ticks_to_run);
         assert(ticks_executed >= ticks_to_run);
