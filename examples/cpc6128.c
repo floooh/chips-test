@@ -296,7 +296,7 @@ void cpc_init(void) {
         .in_cb = cpc_psg_in,
         .out_cb = cpc_psg_out,
         .tick_hz = 1000000,
-        .sound_hz = 44100,
+        .sound_hz = saudio_sample_rate(),
         .magnitude = 0.7f
     });
 
