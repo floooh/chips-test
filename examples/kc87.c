@@ -7,7 +7,6 @@
 //  not emulated: beeper sound, border color, 40x20 video mode
 //------------------------------------------------------------------------------
 #include "sokol_app.h"
-#include "sokol_time.h"
 #define CHIPS_IMPL
 #include "chips/z80.h"
 #include "chips/z80pio.h"
@@ -15,6 +14,7 @@
 #include "chips/kbd.h"
 #include "roms/kc87-roms.h"
 #include "common/gfx.h"
+#include "common/clock.h"
 #include <ctype.h> /* isupper, islower, toupper, tolower */
 
 /* KC87 emulator state and callbacks */
@@ -54,9 +54,6 @@ uint8_t kc87_pio2_in(int port_id);
 void kc87_pio2_out(int port_id, uint8_t data);
 void kc87_decode_vidmem(void);
 
-uint32_t overrun_ticks;
-uint64_t last_time_stamp;
-
 /* xorshift randomness for memory initialization */
 uint32_t xorshift_state = 0x6D98302B;
 uint32_t xorshift32() {
@@ -88,21 +85,13 @@ sapp_desc sokol_main(int argc, char* argv[]) {
 /* one-time application init */
 void app_init() {
     gfx_init(KC87_DISP_WIDTH, KC87_DISP_HEIGHT, 1, 1);
+    clock_init(KC87_FREQ);
     kc87_init();
-    last_time_stamp = stm_now();
 }
 
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
 void app_frame() {
-    double frame_time = stm_sec(stm_laptime(&last_time_stamp));
-    /* skip long pauses when the app was suspended */
-    if (frame_time > 0.1) {
-        frame_time = 0.1;
-    }
-    uint32_t ticks_to_run = (uint32_t) ((KC87_FREQ * frame_time) - overrun_ticks);
-    uint32_t ticks_executed = z80_exec(&kc87.cpu, ticks_to_run);
-    assert(ticks_executed >= ticks_to_run);
-    overrun_ticks = ticks_executed - ticks_to_run;
+    clock_ticks_executed(z80_exec(&kc87.cpu, clock_ticks_to_run()));
     kbd_update(&kc87.kbd);
     kc87_decode_vidmem();
     gfx_draw();

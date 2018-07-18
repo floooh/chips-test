@@ -5,8 +5,6 @@
     not output.
 */
 #include "sokol_app.h"
-#include "sokol_time.h"
-#include "sokol_audio.h"
 #define CHIPS_IMPL
 #include "chips/z80.h"
 #include "chips/ay38910.h"
@@ -18,12 +16,13 @@
 #include "roms/cpc-roms.h"
 #include "common/gfx.h"
 #include "common/fs.h"
+#include "common/sound.h"
+#include "common/clock.h"
 
 /* CPC 6128 emulator state and callbacks */
 #define CPC_FREQ (4000000)
 #define CPC_DISP_WIDTH (768)
 #define CPC_DISP_HEIGHT (272)
-#define CPC_SAMPLE_BUFFER_SIZE (32)
 typedef struct {
     z80_t cpu;
     ay38910_t psg;
@@ -53,15 +52,9 @@ typedef struct {
     crt_t crt;
     kbd_t kbd;
     mem_t mem;
-    int sample_pos;
-    float sample_buffer[CPC_SAMPLE_BUFFER_SIZE];
     uint8_t ram[8][0x4000];
 } cpc_t;
 cpc_t cpc;
-
-uint32_t frame_count;
-uint32_t overrun_ticks;
-uint64_t last_time_stamp;
 
 /*
     the fixed hardware color palette
@@ -149,45 +142,18 @@ sapp_desc sokol_main(int argc, char* argv[]) {
 /* one-time application init */
 void app_init(void) {
     gfx_init(CPC_DISP_WIDTH, CPC_DISP_HEIGHT, 1, 2);
-    saudio_setup(&(saudio_desc){0});
+    sound_init();
+    clock_init(CPC_FREQ);
     cpc_init();
-    last_time_stamp = stm_now();
 }
 
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
 void app_frame(void) {
-    frame_count++;
-    int32_t ticks_to_run = 0;
-    /*
-    if (saudio_isvalid()) {
-        double audio_needed = (double)saudio_expect();
-        double sample_rate = (double)saudio_sample_rate();
-        ticks_to_run = (uint32_t) (((CPC_FREQ * audio_needed)/sample_rate) - overrun_ticks);
-    }
-    else {
-    */
-        /* no audio available, use normal clock */
-        double frame_time_ms = stm_ms(stm_laptime(&last_time_stamp));
-        if (frame_time_ms < 24.0) {
-            frame_time_ms = 16.666667;
-        }
-        else {
-            frame_time_ms = 33.333334;
-        }
-        ticks_to_run = (uint32_t) (((CPC_FREQ * frame_time_ms) / 1000.0) - overrun_ticks);
-    //}
-    if (ticks_to_run > 0) {
-        int32_t ticks_executed = z80_exec(&cpc.cpu, ticks_to_run);
-        assert(ticks_executed >= ticks_to_run);
-        overrun_ticks = ticks_executed - ticks_to_run;
-        kbd_update(&cpc.kbd);
-    }
-    else {
-        overrun_ticks = 0;
-    }
+    clock_ticks_executed(z80_exec(&cpc.cpu, clock_ticks_to_run()));
+    kbd_update(&cpc.kbd);
     gfx_draw();
     /* load SNA file? */
-    if (fs_ptr() && frame_count > 120) {
+    if (fs_ptr() && clock_frame_count() > 20) {
         cpc_load_sna(fs_ptr(), fs_size());
         fs_free();
         cpc.joy_enabled = true;
@@ -273,7 +239,7 @@ void app_input(const sapp_event* event) {
 
 /* application cleanup callback */
 void app_cleanup(void) {
-    saudio_shutdown();
+    sound_shutdown();
     gfx_shutdown();
 }
 
@@ -286,7 +252,6 @@ void cpc_init(void) {
     cpc.ga_hsync_delay_counter = 2;
     cpc_init_keymap();
     cpc_update_memory_mapping();
-
     z80_init(&cpc.cpu, cpc_cpu_tick);
     i8255_init(&cpc.ppi, cpc_ppi_in, cpc_ppi_out);
     mc6845_init(&cpc.vdg, MC6845_TYPE_UM6845R);
@@ -296,7 +261,7 @@ void cpc_init(void) {
         .in_cb = cpc_psg_in,
         .out_cb = cpc_psg_out,
         .tick_hz = 1000000,
-        .sound_hz = saudio_sample_rate(),
+        .sound_hz = sound_sample_rate(),
         .magnitude = 0.7f
     });
 
@@ -477,11 +442,7 @@ uint64_t cpc_cpu_tick(int num_ticks, uint64_t pins) {
             /* on every 4th clock cycle, tick the system */
             if (!wait_pin) {
                 if (ay38910_tick(&cpc.psg)) {
-                    cpc.sample_buffer[cpc.sample_pos++] = cpc.psg.sample;
-                    if (cpc.sample_pos == CPC_SAMPLE_BUFFER_SIZE) {
-                        cpc.sample_pos = 0;
-                        saudio_push(cpc.sample_buffer, CPC_SAMPLE_BUFFER_SIZE);
-                    }
+                    sound_push(cpc.psg.sample);
                 }
                 pins = cpc_ga_tick(pins);
             }

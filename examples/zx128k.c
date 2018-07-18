@@ -7,7 +7,6 @@
     - no tape or disc emulation
 */
 #include "sokol_app.h"
-#include "sokol_time.h"
 #define CHIPS_IMPL
 #include "chips/z80.h"
 #include "chips/beeper.h"
@@ -16,6 +15,7 @@
 #include "chips/kbd.h"
 #include "roms/zx128k-roms.h"
 #include "common/gfx.h"
+#include "common/clock.h"
 
 /* ZX Spectrum state and callbacks */
 #define ZX128K_FREQ (3546894)
@@ -77,27 +77,16 @@ sapp_desc sokol_main(int argc, char* argv[]) {
     };
 }
 
-uint32_t overrun_ticks;
-uint64_t last_time_stamp;
-
 /* one-time application init */
 void app_init() {
     gfx_init(ZX128K_DISP_WIDTH, ZX128K_DISP_HEIGHT, 1, 1);
+    clock_init(ZX128K_FREQ);
     zx_init();
-    last_time_stamp = stm_now();
 }
 
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
 void app_frame() {
-    double frame_time = stm_sec(stm_laptime(&last_time_stamp));
-    /* skip long pauses when the app was suspended */
-    if (frame_time > 0.1) {
-        frame_time = 0.1;
-    }
-    uint32_t ticks_to_run = (uint32_t) ((ZX128K_FREQ * frame_time) - overrun_ticks);
-    uint32_t ticks_executed = z80_exec(&zx.cpu, ticks_to_run);
-    assert(ticks_executed >= ticks_to_run);
-    overrun_ticks = ticks_executed - ticks_to_run;
+    clock_ticks_executed(z80_exec(&zx.cpu, clock_ticks_to_run()));
     kbd_update(&zx.kbd);
     gfx_draw();
 }

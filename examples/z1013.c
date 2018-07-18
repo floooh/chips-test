@@ -19,13 +19,13 @@
     Enter BASIC editing mode with 'AUTO', leave by pressing Esc.
 */
 #include "sokol_app.h"
-#include "sokol_time.h"
 #define CHIPS_IMPL
 #include "chips/z80.h"
 #include "chips/z80pio.h"
 #include "chips/kbd.h"
 #include "roms/z1013-roms.h"
 #include "common/gfx.h"
+#include "common/clock.h"
 #include <ctype.h> /* isupper, islower, toupper, tolower */
 
 /* Z1013 emulator state and callbacks */
@@ -49,9 +49,6 @@ uint8_t z1013_pio_in(int port_id);
 void z1013_pio_out(int port_id, uint8_t data);
 void z1013_decode_vidmem(void);
 
-uint32_t overrun_ticks;
-uint64_t last_time_stamp;
-
 /* sokol-app entry, configure application callbacks and window */
 void app_init(void);
 void app_frame(void);
@@ -74,22 +71,13 @@ sapp_desc sokol_main(int argc, char* argv[]) {
 /* one-time application init */
 void app_init(void) {
     gfx_init(Z1013_DISP_WIDTH, Z1013_DISP_HEIGHT, 1, 1);
+    clock_init(Z1013_FREQ);
     z1013_init();
-    last_time_stamp = stm_now();
 }
 
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
 void app_frame(void) {
-    double frame_time = stm_sec(stm_laptime(&last_time_stamp));
-    /* skip long pauses when the app was suspended */
-    if (frame_time > 0.1) {
-        frame_time = 0.1;
-    }
-    /* number of 2MHz ticks in host frame */
-    uint32_t ticks_to_run = (uint32_t) ((Z1013_FREQ * frame_time) - overrun_ticks);
-    uint32_t ticks_executed = z80_exec(&z1013.cpu, ticks_to_run);
-    assert(ticks_executed >= ticks_to_run);
-    overrun_ticks = ticks_executed - ticks_to_run;
+    clock_ticks_executed(z80_exec(&z1013.cpu, clock_ticks_to_run()));
     kbd_update(&z1013.kbd);
     z1013_decode_vidmem();
     gfx_draw();

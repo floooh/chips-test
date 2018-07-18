@@ -4,7 +4,6 @@
     The original is part of the YAKC emulator: https://github.com/floooh/yakc
 */
 #include "sokol_app.h"
-#include "sokol_time.h"
 #define CHIPS_IMPL
 #include "chips/m6502.h"
 #include "chips/m6526.h"
@@ -14,6 +13,7 @@
 #include "chips/mem.h"
 #include "roms/c64-roms.h"
 #include "common/gfx.h"
+#include "common/clock.h"
 #include <ctype.h> /* isupper, islower, toupper, tolower */
 
 /* C64 (PAL) emulator state and callbacks */
@@ -39,9 +39,6 @@ typedef struct {
     uint8_t ram[1<<16];         // general ram
 } c64_t;
 c64_t c64;
-
-uint32_t overrun_ticks;
-uint64_t last_time_stamp;
 
 void c64_init(void);
 void c64_update_memory_map(void);
@@ -76,21 +73,13 @@ sapp_desc sokol_main(int argc, char* argv[]) {
 /* one-time application init */
 void app_init(void) {
     gfx_init(C64_DISP_WIDTH, C64_DISP_HEIGHT, 1, 1);
+    clock_init(C64_FREQ);
     c64_init();
-    last_time_stamp = stm_now();
 }
 
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
 void app_frame(void) {
-    double frame_time = stm_sec(stm_laptime(&last_time_stamp));
-    /* skip long pauses when the app was suspended */
-    if (frame_time > 0.1) {
-        frame_time = 0.1;
-    }
-    uint32_t ticks_to_run = (uint32_t) ((C64_FREQ * frame_time) - overrun_ticks);
-    uint32_t ticks_executed = m6502_exec(&c64.cpu, ticks_to_run);
-    assert(ticks_executed >= ticks_to_run);
-    overrun_ticks = ticks_executed - ticks_to_run;
+    clock_ticks_executed(m6502_exec(&c64.cpu, clock_ticks_to_run()));
     kbd_update(&c64.kbd);
     gfx_draw();
 }

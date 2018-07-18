@@ -13,7 +13,6 @@
         - REPT key (and some other special keys)
 */
 #include "sokol_app.h"
-#include "sokol_time.h"
 #define CHIPS_IMPL
 #include "chips/m6502.h"
 #include "chips/mc6847.h"
@@ -22,6 +21,7 @@
 #include "chips/mem.h"
 #include "roms/atom-roms.h"
 #include "common/gfx.h"
+#include "common/clock.h"
 #include <ctype.h> /* isupper, islower, toupper, tolower */
 
 /* Atom emulator state and callbacks */
@@ -44,9 +44,6 @@ uint64_t atom_cpu_tick(uint64_t pins);
 uint64_t atom_vdg_fetch(uint64_t pins);
 uint8_t atom_ppi_in(int port_id);
 uint64_t atom_ppi_out(int port_id, uint64_t pins, uint8_t data);
-
-uint32_t overrun_ticks;
-uint64_t last_time_stamp;
 
 /* xorshift randomness for memory initialization */
 uint32_t xorshift_state = 0x6D98302B;
@@ -78,21 +75,13 @@ sapp_desc sokol_main(int argc, char* argv[]) {
 /* one-time application init */
 void app_init(void) {
     gfx_init(MC6847_DISPLAY_WIDTH, MC6847_DISPLAY_HEIGHT, 1, 1);
+    clock_init(ATOM_FREQ);
     atom_init();
-    last_time_stamp = stm_now();
 }
 
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
 void app_frame(void) {
-    double frame_time = stm_sec(stm_laptime(&last_time_stamp));
-    /* skip long pauses when the app was suspended */
-    if (frame_time > 0.1) {
-        frame_time = 0.1;
-    }
-    uint32_t ticks_to_run = (uint32_t) ((ATOM_FREQ * frame_time) - overrun_ticks);
-    uint32_t ticks_executed = m6502_exec(&atom.cpu, ticks_to_run);
-    assert(ticks_executed >= ticks_to_run);
-    overrun_ticks = ticks_executed - ticks_to_run;
+    clock_ticks_executed(m6502_exec(&atom.cpu, clock_ticks_to_run()));
     kbd_update(&atom.kbd);
     gfx_draw();
 }
