@@ -1,6 +1,6 @@
 #include "sokol_audio.h"
 
-#define SAMPLE_BUFFER_SIZE (32)
+#define SAMPLE_BUFFER_SIZE (16)
 static int sample_pos;
 static float sample_buffer[SAMPLE_BUFFER_SIZE];
 
