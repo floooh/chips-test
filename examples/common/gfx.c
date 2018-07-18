@@ -10,7 +10,7 @@ static const sg_pass_action upscale_pass_action = {
     .colors[0] = { .action = SG_ACTION_DONTCARE }
 };
 static const sg_pass_action draw_pass_action = {
-    .colors[0] = { .action = SG_ACTION_CLEAR, .val = { 0.25f, 0.25f, 0.25f, 1.0f } }
+    .colors[0] = { .action = SG_ACTION_CLEAR, .val = { 0.05f, 0.05f, 0.05f, 1.0f } }
 };
 static sg_draw_state upscale_draw_state;
 static sg_pass upscale_pass;
