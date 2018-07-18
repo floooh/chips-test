@@ -15,6 +15,7 @@
 #include "chips/kbd.h"
 #include "roms/zx128k-roms.h"
 #include "common/gfx.h"
+#include "common/sound.h"
 #include "common/clock.h"
 
 /* ZX Spectrum state and callbacks */
@@ -80,6 +81,7 @@ sapp_desc sokol_main(int argc, char* argv[]) {
 /* one-time application init */
 void app_init() {
     gfx_init(ZX128K_DISP_WIDTH, ZX128K_DISP_HEIGHT, 1, 1);
+    sound_init();
     clock_init(ZX128K_FREQ);
     zx_init();
 }
@@ -135,6 +137,7 @@ void app_input(const sapp_event* event) {
 
 /* application cleanup callback */
 void app_cleanup() {
+    sound_shutdown();
     gfx_shutdown();
 }
 
@@ -145,11 +148,11 @@ void zx_init() {
     zx.scanline_counter = ZX128K_SCANLINE_PERIOD;
 
     z80_init(&zx.cpu, zx_cpu_tick);
-    beeper_init(&zx.beeper, ZX128K_FREQ, 44100, 0.5f);
+    beeper_init(&zx.beeper, ZX128K_FREQ, sound_sample_rate(), 0.5f);
     ay38910_init(&zx.ay, &(ay38910_desc_t){
         .type = AY38910_TYPE_8912,
         .tick_hz = ZX128K_FREQ/2,
-        .sound_hz = 44100,
+        .sound_hz = sound_sample_rate(),
         .magnitude = 0.5
     });
     zx.cpu.state.PC = 0x0000;
@@ -236,14 +239,13 @@ uint64_t zx_cpu_tick(int num_ticks, uint64_t pins) {
     /* tick audio systems */
     for (int i = 0; i < num_ticks; i++) {
         zx.tick_count++;
-        if (beeper_tick(&zx.beeper)) {
-            /* FIXME: new beeper sample ready, write to audio buffer */
-        }
+        bool sample_ready = beeper_tick(&zx.beeper);
         /* the AY-3-8912 chip runs at half CPU frequency */
         if (zx.tick_count & 1) {
-            if (ay38910_tick(&zx.ay)) {
-                /* FIXME: new AY sample ready, write to audio buffer */
-            }
+            ay38910_tick(&zx.ay);
+        }
+        if (sample_ready) {
+            sound_push(zx.beeper.sample + zx.ay.sample);
         }
     }
 
