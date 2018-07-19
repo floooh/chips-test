@@ -9,6 +9,10 @@ else()
     add_definitions(-DSOKOL_GLCORE33)
 endif()
 
+if (FIPS_WINDOWS)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+endif()
+
 # a lib of common code shared between all emulators
 fips_begin_lib(common)
     fips_vs_warning_level(3)
