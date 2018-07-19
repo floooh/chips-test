@@ -18,6 +18,7 @@
 #include "common/fs.h"
 #include "common/sound.h"
 #include "common/clock.h"
+#include "common/args.h"
 
 /* CPC 6128 emulator state and callbacks */
 #define CPC_FREQ (4000000)
@@ -122,10 +123,10 @@ void app_input(const sapp_event*);
 void app_cleanup(void);
 
 sapp_desc sokol_main(int argc, char* argv[]) {
+    args_init(argc, argv);
     fs_init();
-    if (argc > 1) {
-        const char* path = argv[1];
-        fs_load_file(path);
+    if (args_has("file")) {
+        fs_load_file(args_string("file"));
     }
     return (sapp_desc) {
         .init_cb = app_init,
@@ -145,6 +146,9 @@ void app_init(void) {
     sound_init();
     clock_init(CPC_FREQ);
     cpc_init();
+    if (args_has("joystick")) {
+        cpc.joy_enabled = args_bool("joystick");
+    }
 }
 
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
@@ -156,7 +160,6 @@ void app_frame(void) {
     if (fs_ptr() && clock_frame_count() > 20) {
         cpc_load_sna(fs_ptr(), fs_size());
         fs_free();
-        cpc.joy_enabled = true;
     }
 }
 
