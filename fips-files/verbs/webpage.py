@@ -20,11 +20,13 @@ items = [
     { 'type':'demo', 'title':'DTC',                 'system':'cpc6128',     'url':'cpc6128.html?file=cpc6128/dtc.sna', 'img':'cpc6128/dtc.jpg', 'note':'by Overlanders (CPC)' },
     { 'type':'demo', 'title':'Ecole Buissonniere',  'system':'cpc6128',     'url':'cpc6128.html?file=cpc6128/ecole_buissonniere.sna', 'img':'cpc6128/ecole_buissonniere.jpg', 'note':'by MadRam/OVL (CPC)'},
     { 'type':'game', 'title':'Boulderdash (CPC)',   'system':'cpc6128',     'url':'cpc6128.html?file=cpc6128/boulder_dash.sna&joystick=true', 'img':'cpc6128/boulderdash_cpc.jpg', 'note':''},
-    { 'type':'game', 'title':'Boulderdash (ZX)',   'system':'zx',           'url':'zx.html?file=zx/boulderdash_zx.z80&joystick=true&type=zx48k', 'img':'zx/boulderdash_zx.jpg', 'note':'select Kempston joystick'},
+    { 'type':'game', 'title':'Boulderdash (ZX48k)',    'system':'zx',          'url':'zx.html?file=zx/boulderdash_zx.z80&joystick=kempston&type=zx48k', 'img':'zx/boulderdash_zx.jpg', 'note':'select Kempston joystick!'},
     { 'type':'game', 'title':'Bomb Jack (CPC)',     'system':'cpc6128',     'url':'cpc6128.html?file=cpc6128/bomb_jack.sna&joystick=true', 'img':'cpc6128/bombjack_cpc.jpg', 'note':''},
-    { 'type':'game', 'title':'Bomb Jack (ZX)',      'system':'zx',          'url':'zx.html?file=zx/bombjack_zx.z80&joystick=true&type=zx48k', 'img':'zx/bombjack_zx.jpg', 'note':'select Kempston joystick' },
+    { 'type':'game', 'title':'Bomb Jack (ZX48k)',      'system':'zx',          'url':'zx.html?file=zx/bombjack_zx.z80&joystick=kempston&type=zx48k', 'img':'zx/bombjack_zx.jpg', 'note':'select Kempston joystick!' },
     { 'type':'game', 'title':'Cybernoid (CPC)',     'system':'cpc6128',     'url':'cpc6128.html?file=cpc6128/cybernoid.sna&joystick=true', 'img':'cpc6128/cybernoid_cpc.jpg', 'note':''},
     { 'type':'game', 'title':'Arkanoid (CPC)',      'system':'cpc6128',     'url':'cpc6128.html?file=cpc6128/arkanoid.sna&joystick=true', 'img':'cpc6128/arkanoid_cpc.jpg', 'note':''},
+    { 'type':'game', 'title':'Arkanoid RoD (ZX128k)',   'system':'zx',          'url':'zx.html?file=zx/arkanoid_zx128k.z80&joystick=sinclair1', 'img':'zx/arkanoid_zx128k.jpg', 'note':''},
+    { 'type':'game', 'title':'Silkworm (ZX128k)',       'system':'zx',          'url':'zx.html?file=zx/silkworm_zx128k.z80&joystick=kempston', 'img':'zx/silkworm_zx128k.jpg', 'note':'select Kempston joystick!'},
     { 'type':'game', 'title':'Chase HQ (CPC)',      'system':'cpc6128',     'url':'cpc6128.html?file=cpc6128/chase_hq.sna&joystick=true', 'img':'cpc6128/chasehq_cpc.jpg', 'note':''},
     { 'type':'game', 'title':"Ghosts'n'Goblins (CPC)", 'system':'cpc6128',  'url':'cpc6128.html?file=cpc6128/ghosts_n_goblins.sna&joystick=true', 'img':'cpc6128/ghostsngoblins_cpc.jpg', 'note':''},
 #    { 'type':'game', 'title':"Fruity Frank (CPC)",  'system':'cpc6128',     'url':'cpc6128.html?file=cpc6128/fruity_frank.sna', 'img':'cpc6128/fruityfrank_cpc.jpg', 'note':''},
@@ -35,6 +37,8 @@ items = [
     { 'type':'game', 'title':"Head over Heels (CPC)", 'system':'cpc6128',   'url':'cpc6128.html?file=cpc6128/head_over_heels.sna&joystick=true', 'img':'cpc6128/headoverheels_cpc.jpg', 'note':''},
     { 'type':'game', 'title':"Rick Dangerous (CPC)",  'system':'cpc6128',   'url':'cpc6128.html?file=cpc6128/rick_dangerous.sna&joystick=true', 'img':'cpc6128/rickdangerous_cpc.jpg', 'note':''},
     { 'type':'game', 'title':"Donkey Kong (CPC)",     'system':'cpc6128',   'url':'cpc6128.html?file=cpc6128/donkey_kong.sna&joystick=true', 'img':'cpc6128/donkeykong_cpc.jpg', 'note':''},
+    { 'type':'game', 'title':"Cyclone (ZX48k)",    'system':'zx', 'url':'zx.html?file=zx/cyclone.z80&joystick=kempston&type=zx48k', 'img':'zx/cyclone.jpg', 'note':'select Kempston joystick!' },
+    { 'type':'game', 'title':"Exolon (ZX48k)",     'system':'zx', 'url':'zx.html?file=zx/exolon.z80&joystick=kempston&type=zx48k', 'img':'zx/exolon.jpg', 'note':'select Kempston joystick!' }
 ]
 GitHubSamplesURL = 'https://github.com/floooh/chips-test/master/examples'
 BuildConfig = 'wasm-ninja-release'
