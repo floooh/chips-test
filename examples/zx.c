@@ -32,6 +32,13 @@ typedef enum {
     ZX_TYPE_48K
 } zx_type_t;
 
+typedef enum {
+    ZX_JOYSTICK_NONE,
+    ZX_JOYSTICK_KEMPSTON,
+    ZX_JOYSTICK_SINCLAIR_1,
+    ZX_JOYSTICK_SINCLAIR_2,
+} zx_joystick_type_t;
+
 typedef struct {
     zx_type_t type;
     z80_t cpu;
@@ -40,8 +47,9 @@ typedef struct {
     kbd_t kbd;
     mem_t mem;
     bool memory_paging_disabled;
-    bool joy_enabled;
-    uint8_t joy_mask;
+
+    zx_joystick_type_t joystick_type;
+    uint8_t kempston_mask;
     uint32_t tick_count;
     uint8_t last_fe_out;            // last out value to 0xFE port */
     uint8_t blink_counter;          // incremented on each vblank
@@ -110,7 +118,15 @@ void app_init() {
     clock_init((type == ZX_TYPE_128K) ? ZX128K_FREQ : ZX48K_FREQ);
     zx_init(type);
     if (args_has("joystick")) {
-        zx.joy_enabled = args_bool("joystick");
+        if (args_string_compare("joystick", "kempston")) {
+            zx.joystick_type = ZX_JOYSTICK_KEMPSTON;
+        }
+        else if (args_string_compare("joystick", "sinclair1")) {
+            zx.joystick_type = ZX_JOYSTICK_SINCLAIR_1;
+        }
+        else if (args_string_compare("joystick", "sinclair2")) {
+            zx.joystick_type = ZX_JOYSTICK_SINCLAIR_2;
+        }
     }
 }
 
@@ -128,6 +144,7 @@ void app_frame() {
 
 /* keyboard input handling */
 void app_input(const sapp_event* event) {
+    const bool joy_enabled = zx.joystick_type != ZX_JOYSTICK_NONE;
     switch (event->type) {
         int c;
         case SAPP_EVENTTYPE_CHAR:
@@ -140,11 +157,11 @@ void app_input(const sapp_event* event) {
         case SAPP_EVENTTYPE_KEY_DOWN:
         case SAPP_EVENTTYPE_KEY_UP:
             switch (event->key_code) {
-                case SAPP_KEYCODE_SPACE:        c = zx.joy_enabled ? 0 : 0x20; break;
-                case SAPP_KEYCODE_LEFT:         c = zx.joy_enabled ? 0 : 0x08; break;
-                case SAPP_KEYCODE_RIGHT:        c = zx.joy_enabled ? 0 : 0x09; break;
-                case SAPP_KEYCODE_DOWN:         c = zx.joy_enabled ? 0 : 0x0A; break;
-                case SAPP_KEYCODE_UP:           c = zx.joy_enabled ? 0 : 0x0B; break;
+                case SAPP_KEYCODE_SPACE:        c = joy_enabled ? 0 : 0x20; break;
+                case SAPP_KEYCODE_LEFT:         c = joy_enabled ? 0 : 0x08; break;
+                case SAPP_KEYCODE_RIGHT:        c = joy_enabled ? 0 : 0x09; break;
+                case SAPP_KEYCODE_DOWN:         c = joy_enabled ? 0 : 0x0A; break;
+                case SAPP_KEYCODE_UP:           c = joy_enabled ? 0 : 0x0B; break;
                 case SAPP_KEYCODE_ENTER:        c = 0x0D; break;
                 case SAPP_KEYCODE_BACKSPACE:    c = 0x0C; break;
                 case SAPP_KEYCODE_ESCAPE:       c = 0x07; break;
@@ -159,25 +176,71 @@ void app_input(const sapp_event* event) {
                     kbd_key_up(&zx.kbd, c);
                 }
             }
-            if (zx.joy_enabled) {
-                if (event->type == SAPP_EVENTTYPE_KEY_DOWN) {
-                    switch (event->key_code) {
-                        case SAPP_KEYCODE_SPACE:    zx.joy_mask |= 1<<4; break;
-                        case SAPP_KEYCODE_LEFT:     zx.joy_mask |= 1<<1; break;
-                        case SAPP_KEYCODE_RIGHT:    zx.joy_mask |= 1<<0; break;
-                        case SAPP_KEYCODE_DOWN:     zx.joy_mask |= 1<<2; break;
-                        case SAPP_KEYCODE_UP:       zx.joy_mask |= 1<<3; break;
-                        default: break;
+            if (joy_enabled) {
+                if (zx.joystick_type == ZX_JOYSTICK_KEMPSTON) {
+                    if (event->type == SAPP_EVENTTYPE_KEY_DOWN) {
+                        switch (event->key_code) {
+                            case SAPP_KEYCODE_SPACE:    zx.kempston_mask |= 1<<4; break;
+                            case SAPP_KEYCODE_LEFT:     zx.kempston_mask |= 1<<1; break;
+                            case SAPP_KEYCODE_RIGHT:    zx.kempston_mask |= 1<<0; break;
+                            case SAPP_KEYCODE_DOWN:     zx.kempston_mask |= 1<<2; break;
+                            case SAPP_KEYCODE_UP:       zx.kempston_mask |= 1<<3; break;
+                            default: break;
+                        }
+                    }
+                    else {
+                        switch (event->key_code) {
+                            case SAPP_KEYCODE_SPACE:    zx.kempston_mask &= ~(1<<4); break;
+                            case SAPP_KEYCODE_LEFT:     zx.kempston_mask &= ~(1<<1); break;
+                            case SAPP_KEYCODE_RIGHT:    zx.kempston_mask &= ~(1<<0); break;
+                            case SAPP_KEYCODE_DOWN:     zx.kempston_mask &= ~(1<<2); break;
+                            case SAPP_KEYCODE_UP:       zx.kempston_mask &= ~(1<<3); break;
+                            default: break;
+                        }
                     }
                 }
-                else {
-                    switch (event->key_code) {
-                        case SAPP_KEYCODE_SPACE:    zx.joy_mask &= ~(1<<4); break;
-                        case SAPP_KEYCODE_LEFT:     zx.joy_mask &= ~(1<<1); break;
-                        case SAPP_KEYCODE_RIGHT:    zx.joy_mask &= ~(1<<0); break;
-                        case SAPP_KEYCODE_DOWN:     zx.joy_mask &= ~(1<<2); break;
-                        case SAPP_KEYCODE_UP:       zx.joy_mask &= ~(1<<3); break;
-                        default: break;
+                else if (zx.joystick_type == ZX_JOYSTICK_SINCLAIR_1) {
+                    if (event->type == SAPP_EVENTTYPE_KEY_DOWN) {
+                        switch (event->key_code) {
+                            case SAPP_KEYCODE_SPACE:    kbd_key_down(&zx.kbd, '5'); break;
+                            case SAPP_KEYCODE_LEFT:     kbd_key_down(&zx.kbd, '1'); break;
+                            case SAPP_KEYCODE_RIGHT:    kbd_key_down(&zx.kbd, '2'); break;
+                            case SAPP_KEYCODE_DOWN:     kbd_key_down(&zx.kbd, '3'); break;
+                            case SAPP_KEYCODE_UP:       kbd_key_down(&zx.kbd, '4'); break;
+                            default: break;
+                        }
+                    }
+                    else {
+                        switch (event->key_code) {
+                            case SAPP_KEYCODE_SPACE:    kbd_key_up(&zx.kbd, '5'); break;
+                            case SAPP_KEYCODE_LEFT:     kbd_key_up(&zx.kbd, '1'); break;
+                            case SAPP_KEYCODE_RIGHT:    kbd_key_up(&zx.kbd, '2'); break;
+                            case SAPP_KEYCODE_DOWN:     kbd_key_up(&zx.kbd, '3'); break;
+                            case SAPP_KEYCODE_UP:       kbd_key_up(&zx.kbd, '4'); break;
+                            default: break;
+                        }
+                    }
+                }
+                else if (zx.joystick_type == ZX_JOYSTICK_SINCLAIR_2) {
+                    if (event->type == SAPP_EVENTTYPE_KEY_DOWN) {
+                        switch (event->key_code) {
+                            case SAPP_KEYCODE_SPACE:    kbd_key_down(&zx.kbd, '0'); break;
+                            case SAPP_KEYCODE_LEFT:     kbd_key_down(&zx.kbd, '6'); break;
+                            case SAPP_KEYCODE_RIGHT:    kbd_key_down(&zx.kbd, '7'); break;
+                            case SAPP_KEYCODE_DOWN:     kbd_key_down(&zx.kbd, '8'); break;
+                            case SAPP_KEYCODE_UP:       kbd_key_down(&zx.kbd, '9'); break;
+                            default: break;
+                        }
+                    }
+                    else {
+                        switch (event->key_code) {
+                            case SAPP_KEYCODE_SPACE:    kbd_key_up(&zx.kbd, '0'); break;
+                            case SAPP_KEYCODE_LEFT:     kbd_key_up(&zx.kbd, '6'); break;
+                            case SAPP_KEYCODE_RIGHT:    kbd_key_up(&zx.kbd, '7'); break;
+                            case SAPP_KEYCODE_DOWN:     kbd_key_up(&zx.kbd, '8'); break;
+                            case SAPP_KEYCODE_UP:       kbd_key_up(&zx.kbd, '9'); break;
+                            default: break;
+                        }
                     }
                 }
             }
@@ -371,7 +434,7 @@ uint64_t zx_cpu_tick(int num_ticks, uint64_t pins) {
             }
             else if ((pins & (Z80_A7|Z80_A6|Z80_A5)) == 0) {
                 /* Kempston Joystick (........000.....) */
-                Z80_SET_DATA(pins, zx.joy_mask);
+                Z80_SET_DATA(pins, zx.kempston_mask);
             }
             else if (zx.type == ZX_TYPE_128K){
                 /* read from AY-3-8912 (11............0.) */
@@ -601,8 +664,8 @@ bool zx_load_z80(const uint8_t* ptr, uint32_t num_bytes) {
             return false;
         }
         ext_hdr = (zx_z80_ext_header*) ptr;
-        int ext_hdr_len = 2 + (ext_hdr->len_h<<8)|ext_hdr->len_l;
-        ptr += ext_hdr_len;
+        int ext_hdr_len = (ext_hdr->len_h<<8)|ext_hdr->len_l;
+        ptr += 2 + ext_hdr_len;
         if (ext_hdr->hw_mode < 3) {
             if (zx.type != ZX_TYPE_48K) {
                 return false;
