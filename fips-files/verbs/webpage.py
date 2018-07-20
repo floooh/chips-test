@@ -9,14 +9,14 @@ from string import Template
 
 from mod import log, util, project
 
-systems = [ 'zx128k', 'c64', 'cpc6128', 'atom', 'z1013', 'kc87' ]
+systems = [ 'zx', 'c64', 'cpc6128', 'atom', 'z1013', 'kc87' ]
 items = [
-    { 'type':'emu',  'title':'ZX Spectrum 128', 'system':'zx128k',     'url':'zx128k.html',  'img':'zx128k/zx128k.jpg', 'note':'' },
-    { 'type':'emu',  'title':'Commodore C64',   'system':'c64',        'url':'c64.html',     'img':'c64/c64.jpg',       'note':'' },
-    { 'type':'emu',  'title':'Amstrad CPC6128', 'system':'cpc6128',    'url':'cpc6128.html', 'img':'cpc6128/cpc6128.jpg',   'note':'' },
-    { 'type':'emu',  'title':'Acorn Atom',      'system':'atom',       'url':'atom.html',    'img':'atom/atom.jpg',     'note':'' },
-    { 'type':'emu',  'title':'Robotron Z1013',  'system':'z1013',      'url':'z1013.html',   'img':'z1013/z1013.jpg',   'note':'J 300[Enter] => BASIC' },
-    { 'type':'emu',  'title':'Robotron KC87',   'system':'kc87',       'url':'kc87.html',    'img':'kc87/kc87.jpg',     'note':'BASIC[Enter]' },
+    { 'type':'emu',  'title':'ZX Spectrum 128', 'system':'zx',      'url':'zx.html?type=zx128k', 'img':'zx/zx128k.jpg', 'note':'' },
+    { 'type':'emu',  'title':'Commodore C64',   'system':'c64',     'url':'c64.html',     'img':'c64/c64.jpg',       'note':'' },
+    { 'type':'emu',  'title':'Amstrad CPC6128', 'system':'cpc6128', 'url':'cpc6128.html', 'img':'cpc6128/cpc6128.jpg',   'note':'' },
+    { 'type':'emu',  'title':'Acorn Atom',      'system':'atom',    'url':'atom.html',    'img':'atom/atom.jpg',     'note':'' },
+    { 'type':'emu',  'title':'Robotron Z1013',  'system':'z1013',   'url':'z1013.html',   'img':'z1013/z1013.jpg',   'note':'J 300[Enter] => BASIC' },
+    { 'type':'emu',  'title':'Robotron KC87',   'system':'kc87',    'url':'kc87.html',    'img':'kc87/kc87.jpg',     'note':'BASIC[Enter]' },
     { 'type':'demo', 'title':'DTC',                 'system':'cpc6128',     'url':'cpc6128.html?file=cpc6128/dtc.sna', 'img':'cpc6128/dtc.jpg', 'note':'by Overlanders (CPC)' },
     { 'type':'demo', 'title':'Ecole Buissonniere',  'system':'cpc6128',     'url':'cpc6128.html?file=cpc6128/ecole_buissonniere.sna', 'img':'cpc6128/ecole_buissonniere.jpg', 'note':'by MadRam/OVL (CPC)'},
     { 'type':'game', 'title':'Boulderdash (CPC)',   'system':'cpc6128',     'url':'cpc6128.html?file=cpc6128/boulder_dash.sna&joystick=true', 'img':'cpc6128/boulderdash_cpc.jpg', 'note':''},

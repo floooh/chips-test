@@ -7,4 +7,5 @@
 extern void args_init(int argc, char* argv[]);
 extern bool args_has(const char* key);
 extern const char* args_string(const char* key);
+extern bool args_string_compare(const char* key, const char* val);
 extern bool args_bool(const char* key);

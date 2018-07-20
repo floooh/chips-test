@@ -81,6 +81,7 @@ bool args_has(const char* key) {
     return -1 != find_key(key);
 }
 
+/* returns empty string when key not found, will never return a nullptr */
 const char* args_string(const char* key) {
     if (key) {
         int i = find_key(key);
@@ -88,7 +89,16 @@ const char* args_string(const char* key) {
             return vals[i];
         }
     }
-    return "INVALID";
+    return "";
+}
+
+bool args_string_compare(const char* key, const char* val) {
+    if (key && val) {
+        return 0 == strcmp(args_string(key), val);
+    }
+    else {
+        return false;
+    }
 }
 
 bool args_bool(const char* key) {
@@ -107,4 +117,3 @@ bool args_bool(const char* key) {
     }
     return false;
 }
-

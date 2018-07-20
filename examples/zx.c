@@ -1,7 +1,6 @@
 /*
-    zx128k.c
-    ZX Spectrum 128 emulator.
-    - the beeper and AY-3-8192 are both emulated, but there's no sound output
+    zx.c
+    ZX Spectrum 48/128 emulator.
     - wait states when accessing contended memory are not emulated
     - video decoding works with scanline accuracy, not cycle accuracy
     - no tape or disc emulation
@@ -13,36 +12,47 @@
 #include "chips/ay38910.h"
 #include "chips/mem.h"
 #include "chips/kbd.h"
-#include "roms/zx128k-roms.h"
+#include "roms/zx-roms.h"
 #include "common/gfx.h"
 #include "common/sound.h"
 #include "common/clock.h"
+#include "common/fs.h"
+#include "common/args.h"
 
 /* ZX Spectrum state and callbacks */
+#define ZX48K_FREQ (3500000)
 #define ZX128K_FREQ (3546894)
-#define ZX128K_DISP_WIDTH (320)
-#define ZX128K_DISP_HEIGHT (256)
-#define ZX128K_SCANLINES (311)
-#define ZX128K_TOP_BORDER_SCANLINES (63)
-#define ZX128K_SCANLINE_PERIOD (228)
+#define ZX_DISP_WIDTH (320)
+#define ZX_DISP_HEIGHT (256)
+
+typedef enum {
+    ZX_TYPE_128K,
+    ZX_TYPE_48K
+} zx_type_t;
 
 typedef struct {
+    zx_type_t type;
     z80_t cpu;
     beeper_t beeper;
     ay38910_t ay;
     kbd_t kbd;
     mem_t mem;
     bool memory_paging_disabled;
+    bool joy_enabled;
+    uint8_t joy_mask;
     uint32_t tick_count;
     uint8_t last_fe_out;            // last out value to 0xFE port */
     uint8_t blink_counter;          // incremented on each vblank
+    int frame_scan_lines;
+    int top_border_scanlines;
+    int scanline_period;
     int scanline_counter;
     int scanline_y;
     uint32_t display_ram_bank;
     uint32_t border_color;
     uint8_t ram[8][0x4000];
-} zx128k_t;
-zx128k_t zx;
+} zx_t;
+zx_t zx;
 
 uint32_t zx_palette[8] = {
     0xFF000000,     // black
@@ -55,7 +65,7 @@ uint32_t zx_palette[8] = {
     0xFFFFFFFF,     // white
 };
 
-void zx_init(void);
+void zx_init(zx_type_t type);
 uint64_t zx_cpu_tick(int num_ticks, uint64_t pins);
 bool zx_decode_scanline(void);
 
@@ -66,24 +76,38 @@ void app_input(const sapp_event*);
 void app_cleanup(void);
 
 sapp_desc sokol_main(int argc, char* argv[]) {
+    args_init(argc, argv);
+    fs_init();
+    if (args_has("file")) {
+        fs_load_file(args_string("file"));
+    }
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,
         .event_cb = app_input,
         .cleanup_cb = app_cleanup,
-        .width = 2 * ZX128K_DISP_WIDTH,
-        .height = 2 * ZX128K_DISP_HEIGHT,
-        .window_title = "ZX Spectrum 128",
+        .width = 2 * ZX_DISP_WIDTH,
+        .height = 2 * ZX_DISP_HEIGHT,
+        .window_title = "ZX Spectrum",
         .ios_keyboard_resizes_canvas = true
     };
 }
 
 /* one-time application init */
 void app_init() {
-    gfx_init(ZX128K_DISP_WIDTH, ZX128K_DISP_HEIGHT, 1, 1);
+    zx_type_t type = ZX_TYPE_128K;
+    if (args_has("type")) {
+        if (args_string_compare("type", "zx48k")) {
+            type = ZX_TYPE_48K;
+        }
+    }
+    gfx_init(ZX_DISP_WIDTH, ZX_DISP_HEIGHT, 1, 1);
     sound_init();
-    clock_init(ZX128K_FREQ);
-    zx_init();
+    clock_init((type == ZX_TYPE_128K) ? ZX128K_FREQ : ZX48K_FREQ);
+    zx_init(type);
+    if (args_has("joystick")) {
+        zx.joy_enabled = args_bool("joystick");
+    }
 }
 
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
@@ -107,11 +131,11 @@ void app_input(const sapp_event* event) {
         case SAPP_EVENTTYPE_KEY_DOWN:
         case SAPP_EVENTTYPE_KEY_UP:
             switch (event->key_code) {
-                case SAPP_KEYCODE_SPACE:        c = 0x20; break;
-                case SAPP_KEYCODE_LEFT:         c = 0x08; break;
-                case SAPP_KEYCODE_RIGHT:        c = 0x09; break;
-                case SAPP_KEYCODE_DOWN:         c = 0x0A; break;
-                case SAPP_KEYCODE_UP:           c = 0x0B; break;
+                case SAPP_KEYCODE_SPACE:        c = zx.joy_enabled ? 0 : 0x20; break;
+                case SAPP_KEYCODE_LEFT:         c = zx.joy_enabled ? 0 : 0x08; break;
+                case SAPP_KEYCODE_RIGHT:        c = zx.joy_enabled ? 0 : 0x09; break;
+                case SAPP_KEYCODE_DOWN:         c = zx.joy_enabled ? 0 : 0x0A; break;
+                case SAPP_KEYCODE_UP:           c = zx.joy_enabled ? 0 : 0x0B; break;
                 case SAPP_KEYCODE_ENTER:        c = 0x0D; break;
                 case SAPP_KEYCODE_BACKSPACE:    c = 0x0C; break;
                 case SAPP_KEYCODE_ESCAPE:       c = 0x07; break;
@@ -124,6 +148,28 @@ void app_input(const sapp_event* event) {
                 }
                 else {
                     kbd_key_up(&zx.kbd, c);
+                }
+            }
+            if (zx.joy_enabled) {
+                if (event->type == SAPP_EVENTTYPE_KEY_DOWN) {
+                    switch (event->key_code) {
+                        case SAPP_KEYCODE_SPACE:    zx.joy_mask |= 1<<4; break;
+                        case SAPP_KEYCODE_LEFT:     zx.joy_mask |= 1<<1; break;
+                        case SAPP_KEYCODE_RIGHT:    zx.joy_mask |= 1<<0; break;
+                        case SAPP_KEYCODE_DOWN:     zx.joy_mask |= 1<<3; break;
+                        case SAPP_KEYCODE_UP:       zx.joy_mask |= 1<<2; break;
+                        default: break;
+                    }
+                }
+                else {
+                    switch (event->key_code) {
+                        case SAPP_KEYCODE_SPACE:    zx.joy_mask &= ~(1<<4); break;
+                        case SAPP_KEYCODE_LEFT:     zx.joy_mask &= ~(1<<1); break;
+                        case SAPP_KEYCODE_RIGHT:    zx.joy_mask &= ~(1<<0); break;
+                        case SAPP_KEYCODE_DOWN:     zx.joy_mask &= ~(1<<3); break;
+                        case SAPP_KEYCODE_UP:       zx.joy_mask &= ~(1<<2); break;
+                        default: break;
+                    }
                 }
             }
             break;
@@ -142,26 +188,49 @@ void app_cleanup() {
 }
 
 /* ZX Spectrum 128 emulator init */
-void zx_init() {
+void zx_init(zx_type_t type) {
+    zx.type = type;
     zx.border_color = 0xFF000000;
-    zx.display_ram_bank = 5;
-    zx.scanline_counter = ZX128K_SCANLINE_PERIOD;
+    if (ZX_TYPE_128K == zx.type) {
+        zx.display_ram_bank = 5;
+        zx.frame_scan_lines = 311;
+        zx.top_border_scanlines = 63;
+        zx.scanline_period = 228;
+    }
+    else {
+        zx.display_ram_bank = 0;
+        zx.frame_scan_lines = 312;
+        zx.top_border_scanlines = 64;
+        zx.scanline_period = 224;
+    }
+    zx.scanline_counter = zx.scanline_period;
 
+    const int freq = (zx.type == ZX_TYPE_128K) ? ZX128K_FREQ : ZX48K_FREQ;
     z80_init(&zx.cpu, zx_cpu_tick);
-    beeper_init(&zx.beeper, ZX128K_FREQ, sound_sample_rate(), 0.5f);
-    ay38910_init(&zx.ay, &(ay38910_desc_t){
-        .type = AY38910_TYPE_8912,
-        .tick_hz = ZX128K_FREQ/2,
-        .sound_hz = sound_sample_rate(),
-        .magnitude = 0.5
-    });
+    beeper_init(&zx.beeper, freq, sound_sample_rate(), 0.5f);
+    if (ZX_TYPE_128K == zx.type) {
+        ay38910_init(&zx.ay, &(ay38910_desc_t){
+            .type = AY38910_TYPE_8912,
+            .tick_hz = freq/2,
+            .sound_hz = sound_sample_rate(),
+            .magnitude = 0.5
+        });
+    }
     zx.cpu.state.PC = 0x0000;
 
     /* initial memory map */
-    mem_map_ram(&zx.mem, 0, 0x4000, 0x4000, zx.ram[5]);
-    mem_map_ram(&zx.mem, 0, 0x8000, 0x4000, zx.ram[2]);
-    mem_map_ram(&zx.mem, 0, 0xC000, 0x4000, zx.ram[0]);
-    mem_map_rom(&zx.mem, 0, 0x0000, 0x4000, dump_amstrad_zx128k_0);
+    if (zx.type == ZX_TYPE_128K) {
+        mem_map_ram(&zx.mem, 0, 0x4000, 0x4000, zx.ram[5]);
+        mem_map_ram(&zx.mem, 0, 0x8000, 0x4000, zx.ram[2]);
+        mem_map_ram(&zx.mem, 0, 0xC000, 0x4000, zx.ram[0]);
+        mem_map_rom(&zx.mem, 0, 0x0000, 0x4000, dump_amstrad_zx128k_0);
+    }
+    else {
+        mem_map_ram(&zx.mem, 0, 0x4000, 0x4000, zx.ram[0]);
+        mem_map_ram(&zx.mem, 0, 0x8000, 0x4000, zx.ram[1]);
+        mem_map_ram(&zx.mem, 0, 0xC000, 0x4000, zx.ram[2]);
+        mem_map_rom(&zx.mem, 0, 0x0000, 0x4000, dump_amstrad_zx48k);
+    }
 
     /* setup keyboard matrix */
     kbd_init(&zx.kbd, 1);
@@ -228,7 +297,7 @@ uint64_t zx_cpu_tick(int num_ticks, uint64_t pins) {
     /* video decoding and vblank interrupt */
     zx.scanline_counter -= num_ticks;
     if (zx.scanline_counter <= 0) {
-        zx.scanline_counter += ZX128K_SCANLINE_PERIOD;
+        zx.scanline_counter += zx.scanline_period;
         // decode next video scanline
         if (zx_decode_scanline()) {
             // request vblank interrupt
@@ -241,11 +310,17 @@ uint64_t zx_cpu_tick(int num_ticks, uint64_t pins) {
         zx.tick_count++;
         bool sample_ready = beeper_tick(&zx.beeper);
         /* the AY-3-8912 chip runs at half CPU frequency */
-        if (zx.tick_count & 1) {
-            ay38910_tick(&zx.ay);
+        if (zx.type == ZX_TYPE_128K) {
+            if (zx.tick_count & 1) {
+                ay38910_tick(&zx.ay);
+            }
         }
         if (sample_ready) {
-            sound_push(zx.beeper.sample + zx.ay.sample);
+            float sample = zx.beeper.sample;
+            if (zx.type == ZX_TYPE_128K) {
+                sample += zx.ay.sample;
+            }
+            sound_push(sample);
         }
     }
 
@@ -286,9 +361,10 @@ uint64_t zx_cpu_tick(int num_ticks, uint64_t pins) {
                 Z80_SET_DATA(pins, data);
             }
             else if ((pins & (Z80_A7|Z80_A6|Z80_A5)) == 0) {
-                /* FIXME: Kempston Joystick (........000.....) */
+                /* Kempston Joystick (........000.....) */
+                Z80_SET_DATA(pins, zx.joy_mask);
             }
-            else {
+            else if (zx.type == ZX_TYPE_128K){
                 /* read from AY-3-8912 (11............0.) */
                 if ((pins & (Z80_A15|Z80_A14|Z80_A1)) == (Z80_A15|Z80_A14)) {
                     pins = ay38910_iorq(&zx.ay, AY38910_BC1|pins) & Z80_PIN_MASK;
@@ -299,34 +375,34 @@ uint64_t zx_cpu_tick(int num_ticks, uint64_t pins) {
             // an IO write
             const uint8_t data = Z80_GET_DATA(pins);
             if ((pins & Z80_A0) == 0) {
-                // Spectrum ULA (...............0)
-                // "every even IO port addresses the ULA but to avoid
-                // problems with other I/O devices, only FE should be used"
+                /* Spectrum ULA (...............0)
+                    "every even IO port addresses the ULA but to avoid
+                    problems with other I/O devices, only FE should be used"
+                    FIXME:
+                        bit 3: MIC output (CAS SAVE, 0=On, 1=Off)
+                */
                 zx.border_color = zx_palette[data & 7] & 0xFFD7D7D7;
-                // FIXME:
-                //      bit 3: MIC output (CAS SAVE, 0=On, 1=Off)
-                //      bit 4: Beep output (ULA sound, 0=Off, 1=On)
                 zx.last_fe_out = data;
                 beeper_set(&zx.beeper, 0 != (data & (1<<4)));
             }
-            else {
+            else if (zx.type == ZX_TYPE_128K) {
                 /* Spectrum 128 memory control (0.............0.)
                     http://8bit.yarek.pl/computer/zx.128/
                 */
                 if ((pins & (Z80_A15|Z80_A1)) == 0) {
                     if (!zx.memory_paging_disabled) {
-                        // bit 3 defines the video scanout memory bank (5 or 7)
+                        /* bit 3 defines the video scanout memory bank (5 or 7) */
                         zx.display_ram_bank = (data & (1<<3)) ? 7 : 5;
-                        // only last memory bank is mappable
+                        /* only last memory bank is mappable */
                         mem_map_ram(&zx.mem, 0, 0xC000, 0x4000, zx.ram[data & 0x7]);
 
-                        // ROM0 or ROM1
+                        /* ROM0 or ROM1 */
                         if (data & (1<<4)) {
-                            // bit 4 set: ROM1
+                            /* bit 4 set: ROM1 */
                             mem_map_rom(&zx.mem, 0, 0x0000, 0x4000, dump_amstrad_zx128k_1);
                         }
                         else {
-                            // bit 4 clear: ROM0
+                            /* bit 4 clear: ROM0 */
                             mem_map_rom(&zx.mem, 0, 0x0000, 0x4000, dump_amstrad_zx128k_0);
                         }
                     }
@@ -371,17 +447,17 @@ bool zx_decode_scanline() {
         56 border lines bottom border
         48 pixels on each side horizontal border
     */
-    const int top_decode_line = ZX128K_TOP_BORDER_SCANLINES - 32;
-    const int btm_decode_line = ZX128K_TOP_BORDER_SCANLINES + 192 + 32;
+    const int top_decode_line = zx.top_border_scanlines - 32;
+    const int btm_decode_line = zx.top_border_scanlines + 192 + 32;
     if ((zx.scanline_y >= top_decode_line) && (zx.scanline_y < btm_decode_line)) {
         const uint16_t y = zx.scanline_y - top_decode_line;
-        uint32_t* dst = &rgba8_buffer[y * ZX128K_DISP_WIDTH];
+        uint32_t* dst = &rgba8_buffer[y * ZX_DISP_WIDTH];
         const uint8_t* vidmem_bank = zx.ram[zx.display_ram_bank];
         const bool blink = 0 != (zx.blink_counter & 0x10);
         uint32_t fg, bg;
         if ((y < 32) || (y >= 224)) {
             /* upper/lower border */
-            for (int x = 0; x < ZX128K_DISP_WIDTH; x++) {
+            for (int x = 0; x < ZX_DISP_WIDTH; x++) {
                 *dst++ = zx.border_color;
             }
         }
@@ -434,7 +510,7 @@ bool zx_decode_scanline() {
         }
     }
 
-    if (zx.scanline_y++ >= ZX128K_SCANLINES) {
+    if (zx.scanline_y++ >= zx.frame_scan_lines) {
         /* start new frame, request vblank interrupt */
         zx.scanline_y = 0;
         zx.blink_counter++;
