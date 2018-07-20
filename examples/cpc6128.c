@@ -901,7 +901,7 @@ void cpc_ga_decode_video(uint64_t crtc_pins) {
     }
 }
 
-// CPC SNA fileformat header: http://cpctech.cpc-live.com/docs/snapshot.html
+/* CPC SNA fileformat header: http://cpctech.cpc-live.com/docs/snapshot.html */
 typedef struct {
     uint8_t magic[8];     // must be "MV - SNA"
     uint8_t pad0[8];
