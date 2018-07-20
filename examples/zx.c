@@ -19,6 +19,8 @@
 #include "common/fs.h"
 #include "common/args.h"
 
+#include <stdio.h>
+
 /* ZX Spectrum state and callbacks */
 #define ZX48K_FREQ (3500000)
 #define ZX128K_FREQ (3546894)
@@ -51,6 +53,7 @@ typedef struct {
     uint32_t display_ram_bank;
     uint32_t border_color;
     uint8_t ram[8][0x4000];
+    uint8_t junk[0x4000];
 } zx_t;
 zx_t zx;
 
@@ -68,6 +71,7 @@ uint32_t zx_palette[8] = {
 void zx_init(zx_type_t type);
 uint64_t zx_cpu_tick(int num_ticks, uint64_t pins);
 bool zx_decode_scanline(void);
+bool zx_load_z80(const uint8_t* ptr, uint32_t num_bytes);
 
 /* sokol-app entry, configure application callbacks and window */
 void app_init(void);
@@ -115,6 +119,11 @@ void app_frame() {
     clock_ticks_executed(z80_exec(&zx.cpu, clock_ticks_to_run()));
     kbd_update(&zx.kbd);
     gfx_draw();
+    /* load snapshot file? */
+    if (fs_ptr() && clock_frame_count() > 120) {
+        zx_load_z80(fs_ptr(), fs_size());
+        fs_free();
+    }
 }
 
 /* keyboard input handling */
@@ -156,8 +165,8 @@ void app_input(const sapp_event* event) {
                         case SAPP_KEYCODE_SPACE:    zx.joy_mask |= 1<<4; break;
                         case SAPP_KEYCODE_LEFT:     zx.joy_mask |= 1<<1; break;
                         case SAPP_KEYCODE_RIGHT:    zx.joy_mask |= 1<<0; break;
-                        case SAPP_KEYCODE_DOWN:     zx.joy_mask |= 1<<3; break;
-                        case SAPP_KEYCODE_UP:       zx.joy_mask |= 1<<2; break;
+                        case SAPP_KEYCODE_DOWN:     zx.joy_mask |= 1<<2; break;
+                        case SAPP_KEYCODE_UP:       zx.joy_mask |= 1<<3; break;
                         default: break;
                     }
                 }
@@ -166,8 +175,8 @@ void app_input(const sapp_event* event) {
                         case SAPP_KEYCODE_SPACE:    zx.joy_mask &= ~(1<<4); break;
                         case SAPP_KEYCODE_LEFT:     zx.joy_mask &= ~(1<<1); break;
                         case SAPP_KEYCODE_RIGHT:    zx.joy_mask &= ~(1<<0); break;
-                        case SAPP_KEYCODE_DOWN:     zx.joy_mask &= ~(1<<3); break;
-                        case SAPP_KEYCODE_UP:       zx.joy_mask &= ~(1<<2); break;
+                        case SAPP_KEYCODE_DOWN:     zx.joy_mask &= ~(1<<2); break;
+                        case SAPP_KEYCODE_UP:       zx.joy_mask &= ~(1<<3); break;
                         default: break;
                     }
                 }
@@ -207,7 +216,7 @@ void zx_init(zx_type_t type) {
 
     const int freq = (zx.type == ZX_TYPE_128K) ? ZX128K_FREQ : ZX48K_FREQ;
     z80_init(&zx.cpu, zx_cpu_tick);
-    beeper_init(&zx.beeper, freq, sound_sample_rate(), 0.5f);
+    beeper_init(&zx.beeper, freq, sound_sample_rate(), 0.25f);
     if (ZX_TYPE_128K == zx.type) {
         ay38910_init(&zx.ay, &(ay38910_desc_t){
             .type = AY38910_TYPE_8912,
@@ -519,4 +528,223 @@ bool zx_decode_scanline() {
     else {
         return false;
     }
+}
+
+/* ZX Z80 file format header (http://www.worldofspectrum.org/faq/reference/z80format.htm ) */
+typedef struct {
+    uint8_t A, F;
+    uint8_t C, B;
+    uint8_t L, H;
+    uint8_t PC_l, PC_h;
+    uint8_t SP_l, SP_h;
+    uint8_t I, R;
+    uint8_t flags0;
+    uint8_t E, D;
+    uint8_t C_, B_;
+    uint8_t E_, D_;
+    uint8_t L_, H_;
+    uint8_t A_, F_;
+    uint8_t IY_l, IY_h;
+    uint8_t IX_l, IX_h;
+    uint8_t EI;
+    uint8_t IFF2;
+    uint8_t flags1;
+} zx_z80_header;
+
+typedef struct {
+    uint8_t len_l;
+    uint8_t len_h;
+    uint8_t PC_l, PC_h;
+    uint8_t hw_mode;
+    uint8_t out_7ffd;
+    uint8_t rom1;
+    uint8_t flags;
+    uint8_t out_fffd;
+    uint8_t audio[16];
+    uint8_t tlow_l;
+    uint8_t tlow_h;
+    uint8_t spectator_flags;
+    uint8_t mgt_rom_paged;
+    uint8_t multiface_rom_paged;
+    uint8_t rom_0000_1fff;
+    uint8_t rom_2000_3fff;
+    uint8_t joy_mapping[10];
+    uint8_t kbd_mapping[10];
+    uint8_t mgt_type;
+    uint8_t disciple_button_state;
+    uint8_t disciple_flags;
+    uint8_t out_1ffd;
+} zx_z80_ext_header;
+
+typedef struct {
+    uint8_t len_l;
+    uint8_t len_h;
+    uint8_t page_nr;
+} zx_z80_page_header;
+
+static bool overflow(const uint8_t* ptr, intptr_t num_bytes, const uint8_t* end_ptr) {
+    return (ptr + num_bytes) > end_ptr;
+}
+
+bool zx_load_z80(const uint8_t* ptr, uint32_t num_bytes) {
+    const uint8_t* end_ptr = ptr + num_bytes;
+    if (overflow(ptr, sizeof(zx_z80_header), end_ptr)) {
+        return false;
+    }
+    const zx_z80_header* hdr = (const zx_z80_header*) ptr;
+    ptr += sizeof(zx_z80_header);
+    const zx_z80_ext_header* ext_hdr = 0;
+    uint16_t pc = (hdr->PC_h<<8 | hdr->PC_l) & 0xFFFF;
+    const bool is_version1 = 0 != pc;
+    if (!is_version1) {
+        if (overflow(ptr, sizeof(zx_z80_ext_header), end_ptr)) {
+            return false;
+        }
+        ext_hdr = (zx_z80_ext_header*) ptr;
+        int ext_hdr_len = 2 + (ext_hdr->len_h<<8)|ext_hdr->len_l;
+        ptr += ext_hdr_len;
+        if (ext_hdr->hw_mode < 3) {
+            if (zx.type != ZX_TYPE_48K) {
+                return false;
+            }
+        }
+        else {
+            if (zx.type != ZX_TYPE_128K) {
+                return false;
+            }
+        }
+    }
+    else {
+        if (zx.type != ZX_TYPE_48K) {
+            return false;
+        }
+    }
+    const bool v1_compr = 0 != (hdr->flags0 & (1<<5));
+    while (ptr < end_ptr) {
+        int page_index = 0;
+        int src_len = 0, dst_len = 0;
+        if (is_version1) {
+            src_len = num_bytes - sizeof(zx_z80_header);
+            dst_len = 48 * 1024;
+        }
+        else {
+            zx_z80_page_header* phdr = (zx_z80_page_header*) ptr;
+            if (overflow(ptr, sizeof(zx_z80_page_header), end_ptr)) {
+                return false;
+            }
+            ptr += sizeof(zx_z80_page_header);
+            src_len = (phdr->len_h<<8 | phdr->len_l) & 0xFFFF;
+            dst_len = 0x4000;
+            page_index = phdr->page_nr - 3;
+            if ((zx.type == ZX_TYPE_48K) && (page_index == 5)) {
+                page_index = 0;
+            }
+            if ((page_index < 0) || (page_index > 7)) {
+                page_index = -1;
+            }
+        }
+        uint8_t* dst_ptr;
+        if (-1 == page_index) {
+            dst_ptr = zx.junk;
+        }
+        else {
+            dst_ptr = zx.ram[page_index];
+        }
+        if (0xFFFF == src_len) {
+            // FIXME: uncompressed not supported yet
+            return false;
+        }
+        else {
+            /* compressed */
+            int src_pos = 0;
+            bool v1_done = false;
+            uint8_t val[4];
+            while ((src_pos < src_len) && !v1_done) {
+                val[0] = ptr[src_pos];
+                val[1] = ptr[src_pos+1];
+                val[2] = ptr[src_pos+2];
+                val[3] = ptr[src_pos+3];
+                /* check for version 1 end marker */
+                if (v1_compr && (0==val[0]) && (0xED==val[1]) && (0xED==val[2]) && (0==val[3])) {
+                    v1_done = true;
+                    src_pos += 4;
+                }
+                else if (0xED == val[0]) {
+                    if (0xED == val[1]) {
+                        uint8_t count = val[2];
+                        assert(0 != count);
+                        uint8_t data = val[3];
+                        src_pos += 4;
+                        for (int i = 0; i < count; i++) {
+                            *dst_ptr++ = data;
+                        }
+                    }
+                    else {
+                        /* single ED */
+                        *dst_ptr++ = val[0];
+                        src_pos++;
+                    }
+                }
+                else {
+                    /* any value */
+                    *dst_ptr++ = val[0];
+                    src_pos++;
+                }
+            }
+            assert(src_pos == src_len);
+        }
+        if (0xFFFF == src_len) {
+            ptr += 0x4000;
+        }
+        else {
+            ptr += src_len;
+        }
+    }
+
+    /* start loaded image */
+    zx.cpu.state.A = hdr->A; zx.cpu.state.F = hdr->F;
+    zx.cpu.state.B = hdr->B; zx.cpu.state.C = hdr->C;
+    zx.cpu.state.D = hdr->D; zx.cpu.state.E = hdr->E;
+    zx.cpu.state.H = hdr->H; zx.cpu.state.L = hdr->L;
+    zx.cpu.state.IXH = hdr->IX_h; zx.cpu.state.IXL = hdr->IX_l;
+    zx.cpu.state.IYH = hdr->IY_h; zx.cpu.state.IYL = hdr->IY_l;
+    zx.cpu.state.AF_ = (hdr->A_<<8 | hdr->F_) & 0xFFFF;
+    zx.cpu.state.BC_ = (hdr->B_<<8 | hdr->C_) & 0xFFFF;
+    zx.cpu.state.DE_ = (hdr->D_<<8 | hdr->E_) & 0xFFFF;
+    zx.cpu.state.HL_ = (hdr->H_<<8 | hdr->L_) & 0xFFFF;
+    zx.cpu.state.SP = (hdr->SP_h<<8 | hdr->SP_l) & 0xFFFF;
+    zx.cpu.state.I = hdr->I;
+    zx.cpu.state.R = (hdr->R & 0x7F) | ((hdr->flags0 & 1)<<7);
+    zx.cpu.state.IFF2 = hdr->IFF2 != 0;
+    zx.cpu.state.ei_pending = hdr->EI != 0;
+    if (hdr->flags1 != 0xFF) {
+        zx.cpu.state.IM = (hdr->flags1 & 3);
+    }
+    else {
+        zx.cpu.state.IM = 1;
+    }
+    if (ext_hdr) {
+        zx.cpu.state.PC = (ext_hdr->PC_h<<8 | ext_hdr->PC_l) & 0xFFFF;
+        if (zx.type == ZX_TYPE_128K) {
+            for (int i = 0; i < 16; i++) {
+                /* latch AY-3-8912 register address */
+                ay38910_iorq(&zx.ay, AY38910_BDIR|AY38910_BC1|(i<<16));
+                /* write AY-3-8912 register value */
+                ay38910_iorq(&zx.ay, AY38910_BDIR|(ext_hdr->audio[i]<<16));
+            }
+        }
+        /* simulate an out of port 0xFFFD and 0x7FFD */
+        uint64_t pins = Z80_IORQ|Z80_WR;
+        Z80_SET_ADDR(pins, 0xFFFD);
+        Z80_SET_DATA(pins, ext_hdr->out_fffd);
+        zx_cpu_tick(4, pins);
+        Z80_SET_ADDR(pins, 0x7FFD);
+        Z80_SET_DATA(pins, ext_hdr->out_7ffd);
+        zx_cpu_tick(4, pins);
+    }
+    else {
+        zx.cpu.state.PC = (hdr->PC_h<<8 | hdr->PC_l) & 0xFFFF;
+    }
+    zx.border_color = zx_palette[(hdr->flags0>>1) & 7] & 0xFFD7D7D7;
+    return true;
 }

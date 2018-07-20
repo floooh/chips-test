@@ -55,7 +55,7 @@ EMSCRIPTEN_KEEPALIVE void emsc_load_data(const uint8_t* ptr, int size) {
 EM_JS(void, emsc_load_file, (const char* path_cstr), {
     var path = Pointer_stringify(path_cstr);
     var req = new XMLHttpRequest();
-    req.open("GET", file);
+    req.open("GET", path);
     req.responseType = "arraybuffer";
     req.onload = function(e) {
         var uint8Array = new Uint8Array(req.response);
