@@ -14,7 +14,7 @@ uint32_t num_tests = 0;
 
 uint32_t rgba8_buffer[262144];
 
-uint16_t fetch(uint16_t addr) {
+uint16_t fetch(uint16_t addr, void* user_data) {
     // FIXME
     return 0;
 }
@@ -25,6 +25,7 @@ void test_rw() {
         .rgba8_buffer = rgba8_buffer,
         .rgba8_buffer_size = sizeof(rgba8_buffer),
         .fetch_cb = fetch,
+        .user_data = 0,
         .vis_x = 64,
         .vis_y = 24,
         .vis_w = 392,

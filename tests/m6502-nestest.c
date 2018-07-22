@@ -17,7 +17,7 @@ mem_t mem;
 uint8_t ram[0x0800];
 uint8_t sram[0x2000];
 
-uint64_t tick(uint64_t pins) {
+uint64_t tick(uint64_t pins, void* user_data) {
     const uint16_t addr = M6502_GET_ADDR(pins);
     /* memory-mapped IO range from 2000..401F is ignored */
     /* ignore memory-mapped-io requests */
@@ -60,7 +60,8 @@ int main() {
     /* initialize the CPU */
     m6502_init(&cpu, &(m6502_desc_t){
         .tick_cb = tick,
-        .bcd_disabled = true
+        .bcd_disabled = true,
+        .user_data = 0
     });
     m6502_reset(&cpu);
     cpu.state.PC = 0xC000;
@@ -77,7 +78,6 @@ int main() {
             (cpu.state.S  != state->S))
         {
             printf("### NESTEST failed at pos %d, PC=0x%04X: %s", i, cpu.state.PC, state->desc);
-            assert(cpu.state.PC == state->PC);
             assert(cpu.state.A == state->A);
             assert(cpu.state.X == state->X);
             assert(cpu.state.Y == state->Y);

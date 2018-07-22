@@ -160,7 +160,7 @@ bool trap() {
     return true;
 }
 
-uint64_t tick(uint64_t pins) {
+uint64_t tick(uint64_t pins, void* user_data) {
     const uint16_t addr = M6502_GET_ADDR(pins);
     if (pins & M6502_RW) {
         /* memory read */
