@@ -25,6 +25,8 @@
 #include "chips/kbd.h"
 #include "roms/z1013-roms.h"
 #include "common/gfx.h"
+#include "common/fs.h"
+#include "common/args.h"
 #include "common/clock.h"
 #include <ctype.h> /* isupper, islower, toupper, tolower */
 
@@ -48,6 +50,7 @@ uint64_t z1013_tick(int num, uint64_t pins);
 uint8_t z1013_pio_in(int port_id);
 void z1013_pio_out(int port_id, uint8_t data);
 void z1013_decode_vidmem(void);
+bool z1013_load_z80(const uint8_t* ptr, uint32_t num_bytes);
 
 /* sokol-app entry, configure application callbacks and window */
 void app_init(void);
@@ -56,6 +59,11 @@ void app_input(const sapp_event*);
 void app_cleanup(void);
 
 sapp_desc sokol_main(int argc, char* argv[]) {
+    args_init(argc, argv);
+    fs_init();
+    if (args_has("file")) {
+        fs_load_file(args_string("file"));
+    }
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,
@@ -81,6 +89,11 @@ void app_frame(void) {
     kbd_update(&z1013.kbd);
     z1013_decode_vidmem();
     gfx_draw();
+    /* load game file? */
+    if (fs_ptr() && clock_frame_count() > 20) {
+        z1013_load_z80(fs_ptr(), fs_size());
+        fs_free();
+    }
 }
 
 /* keyboard input handling */
@@ -300,4 +313,47 @@ void z1013_decode_vidmem(void) {
             }
         }
     }
+}
+
+/* load a "KC Z80" file */
+typedef struct {
+    uint8_t load_addr_l;
+    uint8_t load_addr_h;
+    uint8_t end_addr_l;
+    uint8_t end_addr_h;
+    uint8_t exec_addr_l;
+    uint8_t exec_addr_h;
+    uint8_t free[6];
+    uint8_t typ;
+    uint8_t d3[3];        /* d3 d3 d3 */
+    uint8_t name[16];
+} kcz80_header;
+
+bool z1013_load_z80(const uint8_t* ptr, uint32_t num_bytes) {
+    if (num_bytes < sizeof(kcz80_header)) {
+        return false;
+    }
+    const kcz80_header* hdr = (const kcz80_header*) ptr;
+    if ((hdr->d3[0] != 0xD3) || (hdr->d3[1] != 0xD3) || (hdr->d3[2] != 0xD3)) {
+        return false;
+    }
+    ptr += sizeof(kcz80_header);
+    uint16_t exec_addr = 0;
+    int addr = (hdr->load_addr_h<<8 | hdr->load_addr_l) & 0xFFFF;
+    int end_addr = (hdr->end_addr_h<<8 | hdr->end_addr_l) & 0xFFFF;
+    if (end_addr <= addr) {
+        return false;
+    }
+    exec_addr = (hdr->exec_addr_h<<8 | hdr->exec_addr_l) & 0xFFFF;
+    memcpy(&z1013.mem[addr], ptr, end_addr - addr);
+
+    z1013.cpu.state.A = 0x00;
+    z1013.cpu.state.F = 0x10;
+    z1013.cpu.state.BC = z1013.cpu.state.BC_ = 0x0000;
+    z1013.cpu.state.DE = z1013.cpu.state.DE_ = 0x0000;
+    z1013.cpu.state.HL = z1013.cpu.state.HL_ = 0x0000;
+    z1013.cpu.state.AF_ = 0x0000;
+    z1013.cpu.state.PC = exec_addr;
+
+    return true;
 }
