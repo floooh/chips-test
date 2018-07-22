@@ -27,7 +27,7 @@ body {
 
 /** thumbnail gallery **/
 .gallery {
-    margin-left: 50px;
+    margin-left: 40px;
     margin-right: auto;
     display: block;
     height: auto;
@@ -35,9 +35,9 @@ body {
 .thumb {
     width: 270px;
     height: 220px;
-    margin-left: 15px;
-    margin-right: 15px;
-    margin-top: 30px;
+    margin-left: 10px;
+    margin-right: 10px;
+    margin-top: 20px;
     padding: 1px;
     float: left;
     background-color: rgb(1, 26, 1);
