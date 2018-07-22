@@ -128,7 +128,7 @@ z80_t cpu;
 z80ctc_t ctc;
 uint8_t mem[1<<16];
 
-uint64_t tick(int num_ticks, uint64_t pins) {
+uint64_t tick(int num_ticks, uint64_t pins, void* user_data) {
     for (int i = 0; i < num_ticks; i++) {
         pins = z80ctc_tick(&ctc, pins);
     }
@@ -165,7 +165,10 @@ void copy(uint16_t addr, uint8_t* bytes, size_t num) {
 }
 
 void test_interrupt() {
-    z80_init(&cpu, tick);
+    z80_init(&cpu, &(z80_desc_t){
+        .tick_cb = tick,
+        .user_data = 0
+    });
     z80ctc_init(&ctc);
     memset(mem, 0, sizeof(mem));
 
