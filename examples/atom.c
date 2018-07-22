@@ -42,8 +42,8 @@ atom_t atom;
 void atom_init(void);
 uint64_t atom_cpu_tick(uint64_t pins);
 uint64_t atom_vdg_fetch(uint64_t pins);
-uint8_t atom_ppi_in(int port_id);
-uint64_t atom_ppi_out(int port_id, uint64_t pins, uint8_t data);
+uint8_t atom_ppi_in(int port_id, void* user_data);
+uint64_t atom_ppi_out(int port_id, uint64_t pins, uint8_t data, void* user_data);
 
 /* xorshift randomness for memory initialization */
 uint32_t xorshift_state = 0x6D98302B;
@@ -206,8 +206,11 @@ void atom_init(void) {
         .rgba8_buffer_size = sizeof(rgba8_buffer),
         .fetch_cb = atom_vdg_fetch
     });
-    i8255_init(&atom.ppi, atom_ppi_in, atom_ppi_out);
-
+    i8255_init(&atom.ppi, &(i8255_desc_t){
+        .in_cb = atom_ppi_in,
+        .out_cb = atom_ppi_out,
+        .user_data = &atom
+    });
     /* initialize 2.4 khz counter */
     atom.period_2_4khz = ATOM_FREQ / 2400;
     atom.counter_2_4khz = 0;
@@ -283,7 +286,7 @@ uint64_t atom_vdg_fetch(uint64_t pins) {
 }
 
 /* i8255 PPI output */
-uint64_t atom_ppi_out(int port_id, uint64_t pins, uint8_t data) {
+uint64_t atom_ppi_out(int port_id, uint64_t pins, uint8_t data, void* user_data) {
     /*
         FROM Atom Theory and Praxis (and MAME)
         The  8255  Programmable  Peripheral  Interface  Adapter  contains  three
@@ -348,7 +351,7 @@ uint64_t atom_ppi_out(int port_id, uint64_t pins, uint8_t data) {
 }
 
 /* i8255 PPI input callback */
-uint8_t atom_ppi_in(int port_id) {
+uint8_t atom_ppi_in(int port_id, void* user_data) {
     uint8_t data = 0;
     if (I8255_PORT_B == port_id) {
         /* keyboard row state */
