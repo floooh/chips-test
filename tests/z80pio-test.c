@@ -18,19 +18,22 @@ uint32_t num_tests = 0;
 uint8_t PORT_A = 0;
 uint8_t PORT_B = 0;
 
-uint8_t in_cb(int port_id) {
+uint8_t in_cb(int port_id, void* user_data) {
     return (port_id == Z80PIO_PORT_A) ? PORT_A : PORT_B;
 }
 
-void out_cb(int port_id, uint8_t data) {
+void out_cb(int port_id, uint8_t data, void* user_data) {
     if (port_id == Z80PIO_PORT_A) { PORT_A = data; }
     else { PORT_B = data; }
 }
 
 void test_read_write_control() {
     z80pio_t pio;
-    z80pio_init(&pio, in_cb, out_cb);
-
+    z80pio_init(&pio, &(z80pio_desc_t){
+        .in_cb = in_cb,
+        .out_cb = out_cb,
+        .user_data = 0
+    });
     /* write interrupt vector 0xEE for port A */
     T(pio.reset_active);
     _z80pio_write_ctrl(&pio, Z80PIO_PORT_A, 0xEE);

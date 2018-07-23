@@ -14,7 +14,7 @@ z80_t cpu;
 uint8_t mem[1<<16] = { 0 };
 uint32_t tick_count = 0;
 
-uint64_t tick(int num, uint64_t pins) {
+uint64_t tick(int num, uint64_t pins, void* user_data) {
     // depending on the machine cycle type, the CPU samples the
     // wait pin either on the second, third or fourth machine cycle tick
     int wait_sample_tick = -1;
@@ -82,7 +82,7 @@ void log_ticks(uint32_t ticks) {
 }
 
 int main() {
-    z80_init(&cpu, tick);
+    z80_init(&cpu, &(z80_desc_t) { .tick_cb=tick });
 
     uint8_t prog[] = {
         0x00,               // NOP

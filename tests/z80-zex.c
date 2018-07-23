@@ -30,7 +30,7 @@ static void put_char(char c) {
 }
 
 /* Z80 tick callback */
-static uint64_t tick(int num, uint64_t pins) {
+static uint64_t tick(int num, uint64_t pins, void* user_data) {
     if (pins & Z80_MREQ) {
         if (pins & Z80_RD) {
             Z80_SET_DATA(pins, mem[Z80_GET_ADDR(pins)]);
@@ -109,7 +109,7 @@ static bool zexdoc() {
     memset(mem, 0, sizeof(mem));
     memcpy(&mem[0x0100], dump_zexdoc, sizeof(dump_zexdoc));
     z80_t cpu;
-    z80_init(&cpu, tick);
+    z80_init(&cpu, &(z80_desc_t){ .tick_cb=tick });
     cpu.state.SP = 0xF000;
     cpu.state.PC = 0x0100;
     /* trap when reaching address 0x0000 or 0x0005 */
@@ -124,7 +124,7 @@ static bool zexall() {
     memset(mem, 0, sizeof(mem));
     memcpy(&mem[0x0100], dump_zexall, sizeof(dump_zexall));
     z80_t cpu;
-    z80_init(&cpu, tick);
+    z80_init(&cpu, &(z80_desc_t){ .tick_cb=tick });
     cpu.state.SP = 0xF000;
     cpu.state.PC = 0x0100;
     /* trap when reaching address 0x0000 or 0x0005 */

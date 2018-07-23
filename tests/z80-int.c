@@ -13,7 +13,7 @@ z80_t cpu;
 uint8_t mem[1<<16] = { 0 };
 bool reti_executed = false;
 
-uint64_t tick(int num, uint64_t pins) {
+uint64_t tick(int num, uint64_t pins, void* user_data) {
     if (pins & Z80_MREQ) {
         const uint16_t addr = Z80_GET_ADDR(pins);
         if (pins & Z80_RD) {
@@ -62,7 +62,7 @@ uint32_t num_tests = 0;
 #define T(x) { assert(x); num_tests++; }
 
 int main() {
-    z80_init(&cpu, tick);
+    z80_init(&cpu, &(z80_desc_t){ .tick_cb = tick });
 
     /* place the address 0x0200 of an interrupt service routine at 0x00E0 */
     w16(0x00E0, 0x0200);

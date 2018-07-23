@@ -16,7 +16,7 @@ uint32_t num_tests = 0;
 m6502_t cpu;
 uint8_t mem[1<<16] = { 0 };
 
-uint64_t tick(uint64_t pins) {
+uint64_t tick(uint64_t pins, void* user_data) {
     const uint16_t addr = M6502_GET_ADDR(pins);
     if (pins & M6502_RW) {
         /* memory read */
@@ -47,7 +47,7 @@ uint16_t r16(uint16_t addr) {
 void init() {
     memset(mem, 0, sizeof(mem));
     m6502_init(&cpu, &(m6502_desc_t){
-        .tick_cb = tick
+        .tick_cb = tick,
     });
     w16(0xFFFC, 0x0200);
     m6502_reset(&cpu);

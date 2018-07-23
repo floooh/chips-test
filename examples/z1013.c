@@ -43,14 +43,14 @@ typedef struct {
     bool kbd_request_line_hilo;
     uint8_t mem[1<<16];
 } z1013_t;
-z1013_t z1013;
+static z1013_t _z1013;
 
-void z1013_init(void);
-uint64_t z1013_tick(int num, uint64_t pins);
-uint8_t z1013_pio_in(int port_id);
-void z1013_pio_out(int port_id, uint8_t data);
-void z1013_decode_vidmem(void);
-bool z1013_load_z80(const uint8_t* ptr, uint32_t num_bytes);
+void z1013_init(z1013_t* z1013);
+uint64_t z1013_tick(int num, uint64_t pins, void* user_data);
+uint8_t z1013_pio_in(int port_id, void* user_data);
+void z1013_pio_out(int port_id, uint8_t data, void* user_data);
+void z1013_decode_vidmem(z1013_t* z1013);
+bool z1013_load_z80(z1013_t* z1013, const uint8_t* ptr, uint32_t num_bytes);
 
 /* sokol-app entry, configure application callbacks and window */
 void app_init(void);
@@ -80,24 +80,26 @@ sapp_desc sokol_main(int argc, char* argv[]) {
 void app_init(void) {
     gfx_init(Z1013_DISP_WIDTH, Z1013_DISP_HEIGHT, 1, 1);
     clock_init(Z1013_FREQ);
-    z1013_init();
+    z1013_init(&_z1013);
 }
 
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
 void app_frame(void) {
-    clock_ticks_executed(z80_exec(&z1013.cpu, clock_ticks_to_run()));
-    kbd_update(&z1013.kbd);
-    z1013_decode_vidmem();
+    z1013_t* z1013 = &_z1013;
+    clock_ticks_executed(z80_exec(&z1013->cpu, clock_ticks_to_run()));
+    kbd_update(&z1013->kbd);
+    z1013_decode_vidmem(z1013);
     gfx_draw();
     /* load game file? */
     if (fs_ptr() && clock_frame_count() > 20) {
-        z1013_load_z80(fs_ptr(), fs_size());
+        z1013_load_z80(z1013, fs_ptr(), fs_size());
         fs_free();
     }
 }
 
 /* keyboard input handling */
 void app_input(const sapp_event* event) {
+    z1013_t* z1013 = &_z1013;
     switch (event->type) {
         int c;
         case SAPP_EVENTTYPE_CHAR:
@@ -110,8 +112,8 @@ void app_input(const sapp_event* event) {
                 else if (islower(c)) {
                     c = toupper(c);
                 }
-                kbd_key_down(&z1013.kbd, c);
-                kbd_key_up(&z1013.kbd, c);
+                kbd_key_down(&z1013->kbd, c);
+                kbd_key_up(&z1013->kbd, c);
             }
             break;
         case SAPP_EVENTTYPE_KEY_DOWN:
@@ -127,10 +129,10 @@ void app_input(const sapp_event* event) {
             }
             if (c) {
                 if (event->type == SAPP_EVENTTYPE_KEY_DOWN) {
-                    kbd_key_down(&z1013.kbd, c);
+                    kbd_key_down(&z1013->kbd, c);
                 }
                 else {
-                    kbd_key_up(&z1013.kbd, c);
+                    kbd_key_up(&z1013->kbd, c);
                 }
             }
             break;
@@ -148,22 +150,29 @@ void app_cleanup(void) {
 }
 
 /* Z1013 emulator initialization */
-void z1013_init(void) {
+void z1013_init(z1013_t* z1013) {
     /* initialize the Z80 CPU and PIO */
-    z80_init(&z1013.cpu, z1013_tick);
-    z80pio_init(&z1013.pio, z1013_pio_in, z1013_pio_out);
+    z80_init(&z1013->cpu, &(z80_desc_t) {
+        .tick_cb = z1013_tick,
+        .user_data = z1013
+    });
+    z80pio_init(&z1013->pio, &(z80pio_desc_t){
+        .in_cb = z1013_pio_in,
+        .out_cb = z1013_pio_out,
+        .user_data = z1013
+    });
 
     /* setup the 8x8 keyboard matrix (see http://www.z1013.de/images/21.gif)
        keep keys pressed for at least 2 frames to give the
        Z1013 enough time to scan the keyboard
     */
-    kbd_init(&z1013.kbd, 2);
+    kbd_init(&z1013->kbd, 2);
     /* shift key is column 7, line 6 */
     const int shift = 0, shift_mask = (1<<shift);
-    kbd_register_modifier(&z1013.kbd, shift, 7, 6);
+    kbd_register_modifier(&z1013->kbd, shift, 7, 6);
     /* ctrl key is column 6, line 5 */
     const int ctrl = 1, ctrl_mask = (1<<ctrl);
-    kbd_register_modifier(&z1013.kbd, ctrl, 6, 5);
+    kbd_register_modifier(&z1013->kbd, ctrl, 6, 5);
     /* alpha-numeric keys */
     const char* keymap =
         /* unshifted keys */
@@ -175,45 +184,46 @@ void z1013_init(void) {
             for (int col = 0; col < 8; col++) {
                 int c = keymap[layer*64 + line*8 + col];
                 if (c != 0x20) {
-                    kbd_register_key(&z1013.kbd, c, col, line, layer?shift_mask:0);
+                    kbd_register_key(&z1013->kbd, c, col, line, layer?shift_mask:0);
                 }
             }
         }
     }
     /* special keys */
-    kbd_register_key(&z1013.kbd, ' ',  6, 4, 0);  /* space */
-    kbd_register_key(&z1013.kbd, 0x08, 6, 2, 0);  /* cursor left */
-    kbd_register_key(&z1013.kbd, 0x09, 6, 3, 0);  /* cursor right */
-    kbd_register_key(&z1013.kbd, 0x0A, 6, 7, 0);  /* cursor down */
-    kbd_register_key(&z1013.kbd, 0x0B, 6, 6, 0);  /* cursor up */
-    kbd_register_key(&z1013.kbd, 0x0D, 6, 1, 0);  /* enter */
-    kbd_register_key(&z1013.kbd, 0x03, 1, 3, ctrl_mask); /* map Esc to Ctrl+C (STOP/BREAK) */
+    kbd_register_key(&z1013->kbd, ' ',  6, 4, 0);  /* space */
+    kbd_register_key(&z1013->kbd, 0x08, 6, 2, 0);  /* cursor left */
+    kbd_register_key(&z1013->kbd, 0x09, 6, 3, 0);  /* cursor right */
+    kbd_register_key(&z1013->kbd, 0x0A, 6, 7, 0);  /* cursor down */
+    kbd_register_key(&z1013->kbd, 0x0B, 6, 6, 0);  /* cursor up */
+    kbd_register_key(&z1013->kbd, 0x0D, 6, 1, 0);  /* enter */
+    kbd_register_key(&z1013->kbd, 0x03, 1, 3, ctrl_mask); /* map Esc to Ctrl+C (STOP/BREAK) */
 
     /* 2 KByte system rom starting at 0xF000 */
     assert(sizeof(dump_z1013_mon_a2) == 2048);
-    memcpy(&z1013.mem[0xF000], dump_z1013_mon_a2, sizeof(dump_z1013_mon_a2));
+    memcpy(&z1013->mem[0xF000], dump_z1013_mon_a2, sizeof(dump_z1013_mon_a2));
 
     /* copy BASIC interpreter to 0x0100, skip first 0x20 bytes .z80 file format header */
     assert(0x0100 + sizeof(dump_kc_basic) < 0xF000);
-    memcpy(&z1013.mem[0x0100], dump_kc_basic+0x20, sizeof(dump_kc_basic)-0x20);
+    memcpy(&z1013->mem[0x0100], dump_kc_basic+0x20, sizeof(dump_kc_basic)-0x20);
 
     /* execution starts at 0xF000 */
-    z1013.cpu.state.PC = 0xF000;
+    z1013->cpu.state.PC = 0xF000;
 }
 
 /* the CPU tick function needs to perform memory and I/O reads/writes */
-uint64_t z1013_tick(int num_ticks, uint64_t pins) {
+uint64_t z1013_tick(int num_ticks, uint64_t pins, void* user_data) {
+    z1013_t* z1013 = (z1013_t*) user_data;
     if (pins & Z80_MREQ) {
         /* a memory request */
         const uint16_t addr = Z80_GET_ADDR(pins);
         if (pins & Z80_RD) {
             /* read memory byte */
-            Z80_SET_DATA(pins, z1013.mem[addr]);
+            Z80_SET_DATA(pins, z1013->mem[addr]);
         }
         else if (pins & Z80_WR) {
             /* write memory byte, don't overwrite ROM */
             if (addr < 0xF000) {
-                z1013.mem[addr] = Z80_GET_DATA(pins);
+                z1013->mem[addr] = Z80_GET_DATA(pins);
             }
         }
     }
@@ -254,13 +264,13 @@ uint64_t z1013_tick(int num_ticks, uint64_t pins) {
             if (pio_pins & (1<<0)) pio_pins |= Z80PIO_CDSEL;
             /* address bit 1 selects port A/B */
             if (pio_pins & (1<<1)) pio_pins |= Z80PIO_BASEL;
-            pins = z80pio_iorq(&z1013.pio, pio_pins) & Z80_PIN_MASK;
+            pins = z80pio_iorq(&z1013->pio, pio_pins) & Z80_PIN_MASK;
         }
         else if ((pins & (Z80_A3|Z80_WR)) == (Z80_A3|Z80_WR)) {
             /* port 8 is connected to a hardware latch to store the
                requested keyboard column for the next keyboard scan
             */
-            z1013.kbd_request_column = Z80_GET_DATA(pins);
+            z1013->kbd_request_column = Z80_GET_DATA(pins);
         }
     }
     /* there are no interrupts happening in a vanilla Z1013,
@@ -270,7 +280,8 @@ uint64_t z1013_tick(int num_ticks, uint64_t pins) {
 }
 
 /* PIO input callback, scan the upper or lower 4 lines of the keyboard matrix */
-uint8_t z1013_pio_in(int port_id) {
+uint8_t z1013_pio_in(int port_id, void* user_data) {
+    z1013_t* z1013 = (z1013_t*) user_data;
     uint8_t data = 0;
     if (Z80PIO_PORT_A == port_id) {
         /* PIO port A is reserved for user devices */
@@ -278,9 +289,9 @@ uint8_t z1013_pio_in(int port_id) {
     }
     else {
         /* port B is for cassette input (bit 7), and lower 4 bits for kbd matrix lines */
-        uint16_t column_mask = (1<<z1013.kbd_request_column);
-        uint16_t line_mask = kbd_test_lines(&z1013.kbd, column_mask);
-        if (z1013.kbd_request_line_hilo) {
+        uint16_t column_mask = (1<<z1013->kbd_request_column);
+        uint16_t line_mask = kbd_test_lines(&z1013->kbd, column_mask);
+        if (z1013->kbd_request_line_hilo) {
             line_mask >>= 4;
         }
         data = 0xF & ~(line_mask & 0xF);
@@ -289,18 +300,19 @@ uint8_t z1013_pio_in(int port_id) {
 }
 
 /* the PIO output callback selects the upper or lower 4 lines for the next keyboard scan */
-void z1013_pio_out(int port_id, uint8_t data) {
+void z1013_pio_out(int port_id, uint8_t data, void* user_data) {
+    z1013_t* z1013 = (z1013_t*) user_data;
     if (Z80PIO_PORT_B == port_id) {
         /* bit 4 for 8x8 keyboard selects upper or lower 4 kbd matrix line bits */
-        z1013.kbd_request_line_hilo = 0 != (data & (1<<4));
+        z1013->kbd_request_line_hilo = 0 != (data & (1<<4));
         /* bit 7 is cassette output, not emulated */
     }
 }
 
 /* decode the Z1013 32x32 ASCII framebuffer to a linear 256x256 RGBA8 buffer */
-void z1013_decode_vidmem(void) {
+void z1013_decode_vidmem(z1013_t* z1013) {
     uint32_t* dst = rgba8_buffer;
-    const uint8_t* src = &z1013.mem[0xEC00];   /* the 32x32 framebuffer starts at EC00 */
+    const uint8_t* src = &z1013->mem[0xEC00];   /* the 32x32 framebuffer starts at EC00 */
     const uint8_t* font = dump_z1013_font;
     for (int y = 0; y < 32; y++) {
         for (int py = 0; py < 8; py++) {
@@ -329,7 +341,7 @@ typedef struct {
     uint8_t name[16];
 } kcz80_header;
 
-bool z1013_load_z80(const uint8_t* ptr, uint32_t num_bytes) {
+bool z1013_load_z80(z1013_t* z1013, const uint8_t* ptr, uint32_t num_bytes) {
     if (num_bytes < sizeof(kcz80_header)) {
         return false;
     }
@@ -345,15 +357,15 @@ bool z1013_load_z80(const uint8_t* ptr, uint32_t num_bytes) {
         return false;
     }
     exec_addr = (hdr->exec_addr_h<<8 | hdr->exec_addr_l) & 0xFFFF;
-    memcpy(&z1013.mem[addr], ptr, end_addr - addr);
+    memcpy(&z1013->mem[addr], ptr, end_addr - addr);
 
-    z1013.cpu.state.A = 0x00;
-    z1013.cpu.state.F = 0x10;
-    z1013.cpu.state.BC = z1013.cpu.state.BC_ = 0x0000;
-    z1013.cpu.state.DE = z1013.cpu.state.DE_ = 0x0000;
-    z1013.cpu.state.HL = z1013.cpu.state.HL_ = 0x0000;
-    z1013.cpu.state.AF_ = 0x0000;
-    z1013.cpu.state.PC = exec_addr;
+    z1013->cpu.state.A = 0x00;
+    z1013->cpu.state.F = 0x10;
+    z1013->cpu.state.BC = z1013->cpu.state.BC_ = 0x0000;
+    z1013->cpu.state.DE = z1013->cpu.state.DE_ = 0x0000;
+    z1013->cpu.state.HL = z1013->cpu.state.HL_ = 0x0000;
+    z1013->cpu.state.AF_ = 0x0000;
+    z1013->cpu.state.PC = exec_addr;
 
     return true;
 }

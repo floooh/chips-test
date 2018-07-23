@@ -13,7 +13,7 @@ z80_t cpu;
 uint8_t mem[1<<16] = { 0 };
 uint16_t out_port = 0;
 uint8_t out_byte = 0;
-uint64_t tick(int num, uint64_t pins) {
+uint64_t tick(int num, uint64_t pins, void* user_data) {
     if (pins & Z80_MREQ) {
         if (pins & Z80_RD) {
             /* memory read */
@@ -39,7 +39,7 @@ uint64_t tick(int num, uint64_t pins) {
 }
 
 void init() {
-    z80_init(&cpu, tick);
+    z80_init(&cpu, &(z80_desc_t) { .tick_cb = tick, });
     cpu.state.F = 0;
     cpu.state.AF_ = 0xFF00;
 }

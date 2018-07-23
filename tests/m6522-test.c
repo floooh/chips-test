@@ -14,17 +14,21 @@ uint32_t num_tests = 0;
 
 uint8_t values[M6522_NUM_PORTS] = { 0 };
 
-void out_cb(int port_id, uint8_t data) {
+void out_cb(int port_id, uint8_t data, void* user_data) {
     values[port_id] = data;
 }
 
-uint8_t in_cb(int port_id) {
+uint8_t in_cb(int port_id, void* user_data) {
     return values[port_id];
 }
 
 void test_rw() {
     m6522_t via;
-    m6522_init(&via, in_cb, out_cb);
+    m6522_init(&via, &(m6522_desc_t){
+        .in_cb = in_cb,
+        .out_cb = out_cb,
+        .user_data = 0
+    });
 
     /* write DDR and OUT value of port B */
     uint64_t pins = M6522_CS1;

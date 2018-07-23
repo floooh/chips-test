@@ -14,18 +14,22 @@ uint32_t num_tests = 0;
 
 uint8_t values[I8255_NUM_PORTS] = { 0 };
 
-uint8_t in_cb(int port_id) {
+uint8_t in_cb(int port_id, void* user_data) {
     return values[port_id];
 }
 
-uint64_t out_cb(int port_id, uint64_t pins, uint8_t data) {
+uint64_t out_cb(int port_id, uint64_t pins, uint8_t data, void* user_data) {
     values[port_id] = data;
     return pins;
 }
 
 void test_mode_select() {
     i8255_t ppi;
-    i8255_init(&ppi, in_cb, out_cb);
+    i8255_init(&ppi, &(i8255_desc_t){
+        .in_cb = in_cb,
+        .out_cb = out_cb,
+        .user_data = 0
+    });
     values[0] = 0x12; values[1] = 0x34; values[2] = 0x45;
 
     /* configure mode:
@@ -60,7 +64,11 @@ void test_mode_select() {
 
 void test_bit_set_clear() {
     i8255_t ppi;
-    i8255_init(&ppi, in_cb, out_cb);
+    i8255_init(&ppi, &(i8255_desc_t){
+        .in_cb = in_cb,
+        .out_cb = out_cb,
+        .user_data = 0
+    });
     values[0] = 0x12; values[1] = 0x34; values[2] = 0x45;
 
     /* set port C to output */
@@ -95,7 +103,11 @@ void test_bit_set_clear() {
 
 void test_in_out() {
     i8255_t ppi;
-    i8255_init(&ppi, in_cb, out_cb);
+    i8255_init(&ppi, &(i8255_desc_t){
+        .in_cb = in_cb,
+        .out_cb = out_cb,
+        .user_data = 0
+    });
     values[0] = 0x12; values[1] = 0x34; values[2] = 0x45;
 
     /* configure mode:

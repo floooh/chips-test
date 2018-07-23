@@ -11,7 +11,7 @@
 
 uint32_t rgba8_buffer[MC6847_DISPLAY_WIDTH * MC6847_DISPLAY_HEIGHT];
 
-uint64_t fetch(uint64_t pins) {
+uint64_t fetch(uint64_t pins, void* user_data) {
     return pins;
 }
 
@@ -21,7 +21,8 @@ int main() {
         .tick_hz = 1000000,
         .rgba8_buffer = rgba8_buffer,
         .rgba8_buffer_size = sizeof(rgba8_buffer),
-        .fetch_cb = fetch
+        .fetch_cb = fetch,
+        .user_data = 0
     };
     mc6847_init(&vdg, &desc);
 
