@@ -37,7 +37,6 @@ items = [
     { 'type':'game', 'title':"Ikari Warriors (CPC)", 'system':'cpc6128',    'url':'cpc6128.html?file=cpc6128/ikari_warriors.sna&joystick=true', 'img':'cpc6128/ikariwarriors_cpc.jpg', 'note':''},
     { 'type':'game', 'title':"Head over Heels (CPC)", 'system':'cpc6128',   'url':'cpc6128.html?file=cpc6128/head_over_heels.sna&joystick=true', 'img':'cpc6128/headoverheels_cpc.jpg', 'note':''},
     { 'type':'game', 'title':"Rick Dangerous (CPC)",  'system':'cpc6128',   'url':'cpc6128.html?file=cpc6128/rick_dangerous.sna&joystick=true', 'img':'cpc6128/rickdangerous_cpc.jpg', 'note':''},
-    { 'type':'game', 'title':"Donkey Kong (CPC)",     'system':'cpc6128',   'url':'cpc6128.html?file=cpc6128/donkey_kong.sna&joystick=true', 'img':'cpc6128/donkeykong_cpc.jpg', 'note':''},
     { 'type':'game', 'title':"Cyclone (ZX48k)",    'system':'zx', 'url':'zx.html?file=zx/cyclone.z80&joystick=kempston&type=zx48k', 'img':'zx/cyclone.jpg', 'note':'select Kempston joystick!' },
     { 'type':'game', 'title':"Exolon (ZX48k)",     'system':'zx', 'url':'zx.html?file=zx/exolon.z80&joystick=kempston&type=zx48k', 'img':'zx/exolon.jpg', 'note':'select Kempston joystick!' },
     { 'type':'game', 'title':"Mazogs (Z1013)",     'system':'z1013', 'url':'z1013.html?file=z1013/mazog_deutsch.z80', 'img':'z1013/mazogs_z1013.jpg', 'note':'' },
