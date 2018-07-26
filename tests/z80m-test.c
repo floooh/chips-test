@@ -99,13 +99,15 @@ void SET_GET() {
     z80m_set_pc(&cpu, 0xCEDF);
     z80m_set_wz(&cpu, 0x1324);
     z80m_set_sp(&cpu, 0x2435);
-    z80m_set_ir(&cpu, 0x3546);
+    z80m_set_i(&cpu, 0x35);
+    z80m_set_r(&cpu, 0x46);
     z80m_set_ix(&cpu, 0x4657);
     z80m_set_iy(&cpu, 0x5768);
     T(0xCEDF == z80m_pc(&cpu));
     T(0x1324 == z80m_wz(&cpu));
     T(0x2435 == z80m_sp(&cpu));
-    T(0x3546 == z80m_ir(&cpu));
+    T(0x35 == z80m_i(&cpu));
+    T(0x46 == z80m_r(&cpu));
     T(0x4657 == z80m_ix(&cpu));
     T(0x5768 == z80m_iy(&cpu));
 
@@ -125,7 +127,13 @@ void SET_GET() {
     T(!z80m_ei_pending(&cpu));
 }
 
+void EXEC() {
+    init();
+    z80m_exec(&cpu, 0);
+}
+
 int main() {
+    EXEC();
     SET_GET();
     printf("%d tests run ok.\n", num_tests);
     return 0;
