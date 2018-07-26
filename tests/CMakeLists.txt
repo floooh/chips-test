@@ -104,3 +104,8 @@ fips_begin_app(m6581-test cmdline)
     fips_vs_warning_level(3)
     fips_files(m6581-test.c)
 fips_end_app()
+
+fips_begin_app(z80m-test cmdline)
+    fips_vs_warning_level(3)
+    fips_files(z80m-test.c)
+fips_end_app()
