@@ -374,12 +374,37 @@ void LD_iHLi_n() {
     T(10==step()); T(0x65 == mem[0x1000]);
 }
 
+/* LD A,(BC); LD A,(DE); LD A,(nn) */
+void LD_A_iBCDEnni() {
+    puts(">>> LD A,(BC); LD A,(DE); LD A,(nn)");
+    uint8_t data[] = {
+        0x11, 0x22, 0x33
+    };
+    copy(0x1000, data, sizeof(data));
+    uint8_t prog[] = {
+        0x01, 0x00, 0x10,   // LD BC,0x1000
+        0x11, 0x01, 0x10,   // LD DE,0x1001
+        0x0A,               // LD A,(BC)
+        0x1A,               // LD A,(DE)
+        0x3A, 0x02, 0x10,   // LD A,(0x1002)
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+
+    T(10==step()); T(0x1000 == _BC);
+    T(10==step()); T(0x1001 == _DE);
+    T(7 ==step()); T(0x11 == _A); T(0x1001 == _WZ);
+    T(7 ==step()); T(0x22 == _A); T(0x1002 == _WZ);
+    T(13==step()); T(0x33 == _A); T(0x1003 == _WZ);
+}
+
 int main() {
     SET_GET();
     LD_r_sn();
     LD_r_iHLi();
     LD_iHLi_r();
     LD_iHLi_n();
+    LD_A_iBCDEnni();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
