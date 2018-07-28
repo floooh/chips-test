@@ -398,6 +398,27 @@ void LD_A_iBCDEnni() {
     T(13==step()); T(0x33 == _A); T(0x1003 == _WZ);
 }
 
+/* LD (BC),A; LD (DE),A; LD (nn),A */
+void LD_iBCDEnni_A() {
+    puts(">>> LD (BC),A; LD (DE),A; LD (nn),A");
+    uint8_t prog[] = {
+        0x01, 0x00, 0x10,   // LD BC,0x1000
+        0x11, 0x01, 0x10,   // LD DE,0x1001
+        0x3E, 0x77,         // LD A,0x77
+        0x02,               // LD (BC),A
+        0x12,               // LD (DE),A
+        0x32, 0x02, 0x10,   // LD (0x1002),A
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(10==step()); T(0x1000 == _BC);
+    T(10==step()); T(0x1001 == _DE);
+    T(7 ==step()); T(0x77 == _A);
+    T(7 ==step()); T(0x77 == mem[0x1000]); T(0x7701 == _WZ);
+    T(7 ==step()); T(0x77 == mem[0x1001]); T(0x7702 == _WZ);
+    T(13==step()); T(0x77 == mem[0x1002]); T(0x7703 == _WZ);
+}
+
 int main() {
     SET_GET();
     LD_r_sn();
@@ -405,6 +426,7 @@ int main() {
     LD_iHLi_r();
     LD_iHLi_n();
     LD_A_iBCDEnni();
+    LD_iBCDEnni_A();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
