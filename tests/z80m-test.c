@@ -284,9 +284,46 @@ void LD_r_sn() {
     T(4==step()); T(0x18==_A);
 }
 
+/* LD r,(HL) */
+void LD_r_iHLi() {
+    puts(">>> LD r,(HL)");
+    uint8_t prog[] = {
+        0x21, 0x00, 0x10,   // LD HL,0x1000
+        0x3E, 0x33,         // LD A,0x33
+        0x77,               // LD (HL),A
+        0x3E, 0x22,         // LD A,0x22
+        0x46,               // LD B,(HL)
+        0x4E,               // LD C,(HL)
+        0x56,               // LD D,(HL)
+        0x5E,               // LD E,(HL)
+        0x66,               // LD H,(HL)
+        0x26, 0x10,         // LD H,0x10
+        0x6E,               // LD L,(HL)
+        0x2E, 0x00,         // LD L,0x00
+        0x7E,               // LD A,(HL)
+    };
+    init();
+    copy(0x0000, prog, sizeof(prog));
+
+    T(10==step()); T(0x1000 == _HL);
+    T(7==step()); T(0x33 == _A);
+    T(7==step()); T(0x33 == mem[0x1000]);
+    T(7==step()); T(0x22 == _A);
+    T(7==step()); T(0x33 == _B);
+    T(7==step()); T(0x33 == _C);
+    T(7==step()); T(0x33 == _D);
+    T(7==step()); T(0x33 == _E);
+    T(7==step()); T(0x33 == _H);
+    T(7==step()); T(0x10 == _H);
+    T(7==step()); T(0x33 == _L);
+    T(7==step()); T(0x00 == _L);
+    T(7==step()); T(0x33 == _A);       
+}
+
 int main() {
     SET_GET();
     LD_r_sn();
+    LD_r_iHLi();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
