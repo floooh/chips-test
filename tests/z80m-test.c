@@ -79,7 +79,7 @@ void copy(uint16_t addr, uint8_t* bytes, size_t num) {
 }
 
 uint32_t step() {
-    return z80m_exec(&cpu, 0);
+    return z80m_exec(&cpu,0);
 }
 
 bool flags(uint8_t expected) {
@@ -320,6 +320,76 @@ void LD_r_iHLi() {
     T(7==step()); T(0x33 == _A);       
 }
 
+/* LD r,(IX|IY+d) */
+void LD_r_iIXIYi() {
+    puts(">>> LD r,(IX+d); LD r,(IY+d)");
+    uint8_t prog[] = {
+        0xDD, 0x21, 0x03, 0x10,     // LD IX,0x1003
+        0x3E, 0x12,                 // LD A,0x12
+        0xDD, 0x77, 0x00,           // LD (IX+0),A
+        0x06, 0x13,                 // LD B,0x13
+        0xDD, 0x70, 0x01,           // LD (IX+1),B
+        0x0E, 0x14,                 // LD C,0x14
+        0xDD, 0x71, 0x02,           // LD (IX+2),C
+        0x16, 0x15,                 // LD D,0x15
+        0xDD, 0x72, 0xFF,           // LD (IX-1),D
+        0x1E, 0x16,                 // LD E,0x16
+        0xDD, 0x73, 0xFE,           // LD (IX-2),E
+        0x26, 0x17,                 // LD H,0x17
+        0xDD, 0x74, 0x03,           // LD (IX+3),H
+        0x2E, 0x18,                 // LD L,0x18
+        0xDD, 0x75, 0xFD,           // LD (IX-3),L
+        0xFD, 0x21, 0x03, 0x10,     // LD IY,0x1003
+        0x3E, 0x12,                 // LD A,0x12
+        0xFD, 0x77, 0x00,           // LD (IY+0),A
+        0x06, 0x13,                 // LD B,0x13
+        0xFD, 0x70, 0x01,           // LD (IY+1),B
+        0x0E, 0x14,                 // LD C,0x14
+        0xFD, 0x71, 0x02,           // LD (IY+2),C
+        0x16, 0x15,                 // LD D,0x15
+        0xFD, 0x72, 0xFF,           // LD (IY-1),D
+        0x1E, 0x16,                 // LD E,0x16
+        0xFD, 0x73, 0xFE,           // LD (IY-2),E
+        0x26, 0x17,                 // LD H,0x17
+        0xFD, 0x74, 0x03,           // LD (IY+3),H
+        0x2E, 0x18,                 // LD L,0x18
+        0xFD, 0x75, 0xFD,           // LD (IY-3),L
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+
+    T(14==step()); T(0x1003 == _IX);
+    T(7 ==step()); T(0x12 == _A);
+    T(19==step()); T(0x12 == mem[0x1003]); T(0x1003 == _WZ);
+    T(7 ==step()); T(0x13 == _B);
+    T(19==step()); T(0x13 == mem[0x1004]); T(0x1004 == _WZ);
+    T(7 ==step()); T(0x14 == _C);
+    T(19==step()); T(0x14 == mem[0x1005]); T(0x1005 == _WZ);
+    T(7 ==step()); T(0x15 == _D);
+    T(19==step()); T(0x15 == mem[0x1002]); T(0x1002 == _WZ);
+    T(7 ==step()); T(0x16 == _E);
+    T(19==step()); T(0x16 == mem[0x1001]);
+    T(7 ==step()); T(0x17 == _H);
+    T(19==step()); T(0x17 == mem[0x1006]);
+    T(7 ==step()); T(0x18 == _L);
+    T(19==step()); T(0x18 == mem[0x1000]);
+    T(14==step()); T(0x1003 == _IY);
+    T(7 ==step()); T(0x12 == _A);
+    T(19==step()); T(0x12 == mem[0x1003]);
+    T(7 ==step()); T(0x13 == _B);
+    T(19==step()); T(0x13 == mem[0x1004]);
+    T(7 ==step()); T(0x14 == _C);
+    T(19==step()); T(0x14 == mem[0x1005]);
+    T(7 ==step()); T(0x15 == _D);
+    T(19==step()); T(0x15 == mem[0x1002]);
+    T(7 ==step()); T(0x16 == _E);
+    T(19==step()); T(0x16 == mem[0x1001]);
+    T(7 ==step()); T(0x17 == _H);
+    T(19==step()); T(0x17 == mem[0x1006]);
+    T(7 ==step()); T(0x18 == _L);
+    T(19==step()); T(0x18 == mem[0x1000]);
+}
+
 /* LD (HL),r */
 void LD_iHLi_r() {
     puts(">>> LD (HL),r");
@@ -356,6 +426,76 @@ void LD_iHLi_r() {
     T(7==step()); T(0x00 == mem[0x1000]);
 }
 
+/* LD (IX|IY+d),r */
+void LD_iIXIYi_r() {
+    puts(">>> LD (IX+d),r; LD (IY+d)");
+    uint8_t prog[] = {
+        0xDD, 0x21, 0x03, 0x10,     // LD IX,0x1003
+        0x3E, 0x12,                 // LD A,0x12
+        0xDD, 0x77, 0x00,           // LD (IX+0),A
+        0x06, 0x13,                 // LD B,0x13
+        0xDD, 0x70, 0x01,           // LD (IX+1),B
+        0x0E, 0x14,                 // LD C,0x14
+        0xDD, 0x71, 0x02,           // LD (IX+2),C
+        0x16, 0x15,                 // LD D,0x15
+        0xDD, 0x72, 0xFF,           // LD (IX-1),D
+        0x1E, 0x16,                 // LD E,0x16
+        0xDD, 0x73, 0xFE,           // LD (IX-2),E
+        0x26, 0x17,                 // LD H,0x17
+        0xDD, 0x74, 0x03,           // LD (IX+3),H
+        0x2E, 0x18,                 // LD L,0x18
+        0xDD, 0x75, 0xFD,           // LD (IX-3),L
+        0xFD, 0x21, 0x03, 0x10,     // LD IY,0x1003
+        0x3E, 0x12,                 // LD A,0x12
+        0xFD, 0x77, 0x00,           // LD (IY+0),A
+        0x06, 0x13,                 // LD B,0x13
+        0xFD, 0x70, 0x01,           // LD (IY+1),B
+        0x0E, 0x14,                 // LD C,0x14
+        0xFD, 0x71, 0x02,           // LD (IY+2),C
+        0x16, 0x15,                 // LD D,0x15
+        0xFD, 0x72, 0xFF,           // LD (IY-1),D
+        0x1E, 0x16,                 // LD E,0x16
+        0xFD, 0x73, 0xFE,           // LD (IY-2),E
+        0x26, 0x17,                 // LD H,0x17
+        0xFD, 0x74, 0x03,           // LD (IY+3),H
+        0x2E, 0x18,                 // LD L,0x18
+        0xFD, 0x75, 0xFD,           // LD (IY-3),L
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+
+    T(14==step()); T(0x1003 == _IX);
+    T(7 ==step()); T(0x12 == _A);
+    T(19==step()); T(0x12 == mem[0x1003]);
+    T(7 ==step()); T(0x13 == _B);
+    T(19==step()); T(0x13 == mem[0x1004]);
+    T(7 ==step()); T(0x14 == _C);
+    T(19==step()); T(0x14 == mem[0x1005]);
+    T(7 ==step()); T(0x15 == _D);
+    T(19==step()); T(0x15 == mem[0x1002]);
+    T(7 ==step()); T(0x16 == _E);
+    T(19==step()); T(0x16 == mem[0x1001]);
+    T(7 ==step()); T(0x17 == _H);
+    T(19==step()); T(0x17 == mem[0x1006]);
+    T(7 ==step()); T(0x18 == _L);
+    T(19==step()); T(0x18 == mem[0x1000]);
+    T(14==step()); T(0x1003 == _IY);
+    T(7 ==step()); T(0x12 == _A);
+    T(19==step()); T(0x12 == mem[0x1003]);
+    T(7 ==step()); T(0x13 == _B);
+    T(19==step()); T(0x13 == mem[0x1004]);
+    T(7 ==step()); T(0x14 == _C);
+    T(19==step()); T(0x14 == mem[0x1005]);
+    T(7 ==step()); T(0x15 == _D);
+    T(19==step()); T(0x15 == mem[0x1002]);
+    T(7 ==step()); T(0x16 == _E);
+    T(19==step()); T(0x16 == mem[0x1001]);
+    T(7 ==step()); T(0x17 == _H);
+    T(19==step()); T(0x17 == mem[0x1006]);
+    T(7 ==step()); T(0x18 == _L);
+    T(19==step()); T(0x18 == mem[0x1000]);
+}
+
 /* LD (HL),n */
 void LD_iHLi_n() {
     puts(">>> LD (HL),n");
@@ -372,6 +512,28 @@ void LD_iHLi_n() {
     T(10==step()); T(0x33 == mem[0x2000]);
     T(10==step()); T(0x1000 == _HL);
     T(10==step()); T(0x65 == mem[0x1000]);
+}
+
+/* LD (IX|IY+d),n */
+void LD_iIXIYi_n() {
+    puts(">>> LD (IX+d),n; LD (IY+d),n");
+    uint8_t prog[] = {
+        0xDD, 0x21, 0x00, 0x20,     // LD IX,0x2000
+        0xDD, 0x36, 0x02, 0x33,     // LD (IX+2),0x33
+        0xDD, 0x36, 0xFE, 0x11,     // LD (IX-2),0x11
+        0xFD, 0x21, 0x00, 0x10,     // LD IY,0x1000
+        0xFD, 0x36, 0x01, 0x22,     // LD (IY+1),0x22
+        0xFD, 0x36, 0xFF, 0x44,     // LD (IY-1),0x44
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+
+    T(14==step()); T(0x2000 == _IX);
+    T(19==step()); T(0x33 == mem[0x2002]);
+    T(19==step()); T(0x11 == mem[0x1FFE]);
+    T(14==step()); T(0x1000 == _IY);
+    T(19==step()); T(0x22 == mem[0x1001]);
+    T(19==step()); T(0x44 == mem[0x0FFF]);
 }
 
 /* LD A,(BC); LD A,(DE); LD A,(nn) */
@@ -419,6 +581,54 @@ void LD_iBCDEnni_A() {
     T(13==step()); T(0x77 == mem[0x1002]); T(0x7703 == _WZ);
 }
 
+/* LD dd,nn; LD IX,nn; LD IY,nn */
+void LD_ddIXIY_nn() {
+    puts(">>> LD dd,nn; LD IX,nn; LD IY,nn");
+    uint8_t prog[] = {
+        0x01, 0x34, 0x12,       // LD BC,0x1234
+        0x11, 0x78, 0x56,       // LD DE,0x5678
+        0x21, 0xBC, 0x9A,       // LD HL,0x9ABC
+        0x31, 0x68, 0x13,       // LD SP,0x1368
+        0xDD, 0x21, 0x21, 0x43, // LD IX,0x4321
+        0xFD, 0x21, 0x65, 0x87, // LD IY,0x8765
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(10==step()); T(0x1234 == _BC);
+    T(10==step()); T(0x5678 == _DE);
+    T(10==step()); T(0x9ABC == _HL);
+    T(10==step()); T(0x1368 == _SP);
+    T(14==step()); T(0x4321 == _IX);
+    T(14==step()); T(0x8765 == _IY);
+}
+
+/* LD HL,(nn); LD dd,(nn); LD IX,(nn); LD IY,(nn) */
+void LD_HLddIXIY_inni() {
+    puts(">>> LD dd,(nn); LD IX,(nn); LD IY,(nn)");
+    uint8_t data[] = {
+        0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08
+    };
+    uint8_t prog[] = {
+        0x2A, 0x00, 0x10,           // LD HL,(0x1000)
+        0xED, 0x4B, 0x01, 0x10,     // LD BC,(0x1001)
+        0xED, 0x5B, 0x02, 0x10,     // LD DE,(0x1002)
+        0xED, 0x6B, 0x03, 0x10,     // LD HL,(0x1003) undocumented 'long' version
+        0xED, 0x7B, 0x04, 0x10,     // LD SP,(0x1004)
+        0xDD, 0x2A, 0x05, 0x10,     // LD IX,(0x1005)
+        0xFD, 0x2A, 0x06, 0x10,     // LD IY,(0x1006)
+    };
+    copy(0x1000, data, sizeof(data));
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(16==step()); T(0x0201 == _HL); T(0x1001 == _WZ);
+    T(20==step()); T(0x0302 == _BC); T(0x1002 == _WZ);
+    T(20==step()); T(0x0403 == _DE); T(0x1003 == _WZ);
+    T(20==step()); T(0x0504 == _HL); T(0x1004 == _WZ);
+    T(20==step()); T(0x0605 == _SP); T(0x1005 == _WZ);
+    T(20==step()); T(0x0706 == _IX); T(0x1006 == _WZ);
+    T(20==step()); T(0x0807 == _IY); T(0x1007 == _WZ);
+}
+
 /* ADD A,r; ADD A,n */
 void ADD_A_rn() {
     puts(">>> ADD A,r; ADD A,n");
@@ -461,6 +671,31 @@ void ADD_A_rn() {
     T(7==step()); T(0x37 == _A); T(flags(Z80M_CF));
 }
 
+/* ADD A,(HL); ADD A,(IX+d); ADD A,(IY+d) */
+void ADD_A_iHLIXIYi() {
+    puts(">>> ADD A,(HL); ADD A,(IX+d); ADD A,(IY+d)");
+    uint8_t data[] = { 0x41, 0x61, 0x81 };
+    uint8_t prog[] = {
+        0x21, 0x00, 0x10,       // LD HL,0x1000
+        0xDD, 0x21, 0x00, 0x10, // LD IX,0x1000
+        0xFD, 0x21, 0x03, 0x10, // LD IY,0x1003
+        0x3E, 0x00,             // LD A,0x00
+        0x86,                   // ADD A,(HL)
+        0xDD, 0x86, 0x01,       // ADD A,(IX+1)
+        0xFD, 0x86, 0xFF,       // ADD A,(IY-1)
+    };
+    copy(0x1000, data, sizeof(data));
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(10==step()); T(0x1000 == _HL);
+    T(14==step()); T(0x1000 == _IX);
+    T(14==step()); T(0x1003 == _IY);
+    T(7 ==step()); T(0x00 == _A);
+    T(7 ==step()); T(0x41 == _A); T(flags(0));
+    T(19==step()); T(0xA2 == _A); T(flags(Z80M_SF|Z80M_VF));
+    T(19==step()); T(0x23 == _A); T(flags(Z80M_VF|Z80M_CF));
+}
+
 /* ADC A,r; ADC A,n */
 void ADC_A_rn() {
     puts(">>> ADC A,r; ADD A,n");
@@ -499,6 +734,33 @@ void ADC_A_rn() {
     T(4==step()); T(0xC6 == _A); T(flags(Z80M_SF|Z80M_VF));
     T(4==step()); T(0x47 == _A); T(flags(Z80M_VF|Z80M_CF));
     T(7==step()); T(0x49 == _A); T(flags(0));
+}
+
+/* ADC A,(HL); ADC A,(IX+d); ADC A,(IY+d) */
+void ADC_A_iHLIXIYi() {
+    puts(">>> ADC A,(HL); ADC A,(IX+d); ADC A,(IY+d)");
+    uint8_t data[] = { 0x41, 0x61, 0x81, 0x2 };
+    uint8_t prog[] = {
+        0x21, 0x00, 0x10,       // LD HL,0x1000
+        0xDD, 0x21, 0x00, 0x10, // LD IX,0x1000
+        0xFD, 0x21, 0x03, 0x10, // LD IY,0x1003
+        0x3E, 0x00,             // LD A,0x00
+        0x86,                   // ADD A,(HL)
+        0xDD, 0x8E, 0x01,       // ADC A,(IX+1)
+        0xFD, 0x8E, 0xFF,       // ADC A,(IY-1)
+        0xDD, 0x8E, 0x03,       // ADC A,(IX+3)
+    };
+    copy(0x1000, data, sizeof(data));
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(10==step()); T(0x1000 == _HL);
+    T(14==step()); T(0x1000 == _IX);
+    T(14==step()); T(0x1003 == _IY);
+    T(7 ==step()); T(0x00 == _A);
+    T(7 ==step()); T(0x41 == _A); T(flags(0));
+    T(19==step()); T(0xA2 == _A); T(flags(Z80M_SF|Z80M_VF));
+    T(19==step()); T(0x23 == _A); T(flags(Z80M_VF|Z80M_CF));
+    T(19==step()); T(0x26 == _A); T(flags(0));
 }
 
 /* SUB A,r; SUB A,n */
@@ -542,6 +804,31 @@ void SUB_A_rn() {
     T(7==step()); T(0x01 == _A); T(flags(Z80M_NF));
 }
 
+/* SUB A,(HL); SUB A,(IX+d); SUB A,(IY+d) */
+void SUB_A_iHLIXIYi() {
+    puts(">>> SUB A,(HL); SUB A,(IX+d); SUB A,(IY+d)");
+    uint8_t data[] = { 0x41, 0x61, 0x81 };
+    uint8_t prog[] = {
+        0x21, 0x00, 0x10,       // LD HL,0x1000
+        0xDD, 0x21, 0x00, 0x10, // LD IX,0x1000
+        0xFD, 0x21, 0x03, 0x10, // LD IY,0x1003
+        0x3E, 0x00,             // LD A,0x00
+        0x96,                   // SUB A,(HL)
+        0xDD, 0x96, 0x01,       // SUB A,(IX+1)
+        0xFD, 0x96, 0xFE,       // SUB A,(IY-2)
+    };
+    copy(0x1000, data, sizeof(data));
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(10==step()); T(0x1000 == _HL);
+    T(14==step()); T(0x1000 == _IX);
+    T(14==step()); T(0x1003 == _IY);
+    T(7 ==step()); T(0x00 == _A);
+    T(7 ==step()); T(0xBF == _A); T(flags(Z80M_SF|Z80M_HF|Z80M_NF|Z80M_CF));
+    T(19==step()); T(0x5E == _A); T(flags(Z80M_VF|Z80M_NF));
+    T(19==step()); T(0xFD == _A); T(flags(Z80M_SF|Z80M_NF|Z80M_CF));
+}
+
 /* SBC A,r; SBC A,n */
 void SBC_A_rn() {
     puts(">>> SBC A,r; SBC A,n");
@@ -578,6 +865,31 @@ void SBC_A_rn() {
     T(4==step()); T(0xFD == _A); T(flags(Z80M_SF|Z80M_HF|Z80M_NF|Z80M_CF));
     T(7==step()); T(0xFB == _A); T(flags(Z80M_SF|Z80M_NF));
     T(7==step()); T(0xFD == _A); T(flags(Z80M_SF|Z80M_HF|Z80M_NF|Z80M_CF));
+}
+
+/* SBC A,(HL); SBC A,(IX+d); SBC A,(IY+d) */
+void SBC_A_iHLIXIYi() {
+    puts(">>> SBC A,(HL); SBC A,(IX+d); SBC A,(IY+d)");
+    uint8_t data[] = { 0x41, 0x61, 0x81 };
+    uint8_t prog[] = {
+        0x21, 0x00, 0x10,       // LD HL,0x1000
+        0xDD, 0x21, 0x00, 0x10, // LD IX,0x1000
+        0xFD, 0x21, 0x03, 0x10, // LD IY,0x1003
+        0x3E, 0x00,             // LD A,0x00
+        0x9E,                   // SBC A,(HL)
+        0xDD, 0x9E, 0x01,       // SBC A,(IX+1)
+        0xFD, 0x9E, 0xFE,       // SBC A,(IY-2)
+    };
+    copy(0x1000, data, sizeof(data));
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(10==step()); T(0x1000 == _HL);
+    T(14==step()); T(0x1000 == _IX);
+    T(14==step()); T(0x1003 == _IY);
+    T(7 ==step()); T(0x00 == _A);
+    T(7 ==step()); T(0xBF == _A); T(flags(Z80M_SF|Z80M_HF|Z80M_NF|Z80M_CF));
+    T(19==step()); T(0x5D == _A); T(flags(Z80M_VF|Z80M_NF));
+    T(19==step()); T(0xFC == _A); T(flags(Z80M_SF|Z80M_NF|Z80M_CF));
 }
 
 /* CP A,r; CP A,n */
@@ -618,6 +930,31 @@ void CP_A_rn() {
     T(4==step()); T(0x04 == _A); T(flags(Z80M_SF|Z80M_VF|Z80M_NF|Z80M_CF));
     T(4==step()); T(0x04 == _A); T(flags(Z80M_SF|Z80M_HF|Z80M_NF|Z80M_CF));
     T(7==step()); T(0x04 == _A); T(flags(Z80M_ZF|Z80M_NF));
+}
+
+/* CP A,(HL); CP A,(IX+d); CP A,(IY+d) */
+void CP_A_iHLIXIYi() {
+    puts(">>> CP A,(HL); CP A,(IX+d); CP A,(IY+d)");
+    uint8_t data[] = { 0x41, 0x61, 0x22 };
+    uint8_t prog[] = {
+        0x21, 0x00, 0x10,       // LD HL,0x1000
+        0xDD, 0x21, 0x00, 0x10, // LD IX,0x1000
+        0xFD, 0x21, 0x03, 0x10, // LD IY,0x1003
+        0x3E, 0x41,             // LD A,0x41
+        0xBE,                   // CP (HL)
+        0xDD, 0xBE, 0x01,       // CP (IX+1)
+        0xFD, 0xBE, 0xFF,       // CP (IY-1)
+    };
+    copy(0x1000, data, sizeof(data));
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(10==step()); T(0x1000 == _HL);
+    T(14==step()); T(0x1000 == _IX);
+    T(14==step()); T(0x1003 == _IY);
+    T(7 ==step()); T(0x41 == _A);
+    T(7 ==step()); T(0x41 == _A); T(flags(Z80M_ZF|Z80M_NF));
+    T(19==step()); T(0x41 == _A); T(flags(Z80M_SF|Z80M_NF|Z80M_CF));
+    T(19==step()); T(0x41 == _A); T(flags(Z80M_HF|Z80M_NF));
 }
 
 /* AND A,r; AND A,n */
@@ -669,6 +1006,28 @@ void AND_A_rn() {
     T(7==step()); T(0x40 == _A); T(flags(Z80M_HF));
     T(7==step()); T(0xFF == _A); T(flags(Z80M_SF|Z80M_PF));
     T(7==step()); T(0xAA == _A); T(flags(Z80M_SF|Z80M_HF|Z80M_PF));
+}
+
+/* AND A,(HL); AND A,(IX+d); AND A,(IY+d) */
+void AND_A_iHLIXIYi() {
+    puts(">>> AND A,(HL); AND A,(IX+d); AND A,(IY+d)");
+    uint8_t data[] = { 0xFE, 0xAA, 0x99 };
+    uint8_t prog[] = {
+        0x21, 0x00, 0x10,           // LD HL,0x1000
+        0xDD, 0x21, 0x00, 0x10,     // LD IX,0x1000
+        0xFD, 0x21, 0x03, 0x10,     // LD IY,0x1003
+        0x3E, 0xFF,                 // LD A,0xFF
+        0xA6,                       // AND (HL)
+        0xDD, 0xA6, 0x01,           // AND (IX+1)
+        0xFD, 0xA6, 0xFF,           // AND (IX-1)
+    };
+    copy(0x1000, data, sizeof(data));
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    step(); step(); step(); step();
+    T(7 ==step()); T(0xFE == _A); T(flags(Z80M_SF|Z80M_HF));
+    T(19==step()); T(0xAA == _A); T(flags(Z80M_SF|Z80M_HF|Z80M_PF));
+    T(19==step()); T(0x88 == _A); T(flags(Z80M_SF|Z80M_HF|Z80M_PF));
 }
 
 /* XOR A,r; XOR A,n */
@@ -749,22 +1108,63 @@ void OR_A_rn() {
     T(7==step()); T(0xFF == _A); T(flags(Z80M_SF|Z80M_PF));
 }
 
+/* OR A,(HL); OR A,(IX+d); OR A,(IY+d) */
+/* XOR A,(HL); XOR A,(IX+d); XOR A,(IY+d) */
+void OR_XOR_A_iHLIXIYi() {
+    puts(">>> OR/XOR A,(HL); OR/XOR A,(IX+d); OR/XOR A,(IY+d)");
+    uint8_t data[] = { 0x41, 0x62, 0x84 };
+    uint8_t prog[] = {
+        0x3E, 0x00,                 // LD A,0x00
+        0x21, 0x00, 0x10,           // LD HL,0x1000
+        0xDD, 0x21, 0x00, 0x10,     // LD IX,0x1000
+        0xFD, 0x21, 0x03, 0x10,     // LD IY,0x1003
+        0xB6,                       // OR (HL)
+        0xDD, 0xB6, 0x01,           // OR (IX+1)
+        0xFD, 0xB6, 0xFF,           // OR (IY-1)
+        0xAE,                       // XOR (HL)
+        0xDD, 0xAE, 0x01,           // XOR (IX+1)
+        0xFD, 0xAE, 0xFF,           // XOR (IY-1)
+    };
+    copy(0x1000, data, sizeof(data));
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    step(); step(); step(); step();
+    T(7 ==step()); T(0x41 == _A); T(flags(Z80M_PF));
+    T(19==step()); T(0x63 == _A); T(flags(Z80M_PF));
+    T(19==step()); T(0xE7 == _A); T(flags(Z80M_SF|Z80M_PF));
+    T(7 ==step()); T(0xA6 == _A); T(flags(Z80M_SF|Z80M_PF));
+    T(19==step()); T(0xC4 == _A); T(flags(Z80M_SF));
+    T(19==step()); T(0x40 == _A); T(flags(0));
+}
+
 int main() {
     SET_GET();
     LD_r_sn();
     LD_r_iHLi();
+    LD_r_iIXIYi();
     LD_iHLi_r();
+    LD_iIXIYi_r();
     LD_iHLi_n();
+    LD_iIXIYi_n();
     LD_A_iBCDEnni();
     LD_iBCDEnni_A();
+    LD_ddIXIY_nn();
+//    LD_HLddIXIY_inni();
     ADD_A_rn();
+    ADD_A_iHLIXIYi();
     ADC_A_rn();
+    ADC_A_iHLIXIYi();
     SUB_A_rn();
+    SUB_A_iHLIXIYi();
     SBC_A_rn();
+    SBC_A_iHLIXIYi();
     CP_A_rn();
+    CP_A_iHLIXIYi();
     AND_A_rn();
+    AND_A_iHLIXIYi();
     XOR_A_rn();
     OR_A_rn();
+    OR_XOR_A_iHLIXIYi();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
