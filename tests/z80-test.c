@@ -479,7 +479,8 @@ void LD_iIXIYi_n() {
     T(19==step()); T(0x11 == mem[0x1FFE]);
     T(14==step()); T(0x1000 == cpu.state.IY);
     T(19==step()); T(0x22 == mem[0x1001]);
-    T(19==step()); T(0x44 == mem[0x0FFF]);}
+    T(19==step()); T(0x44 == mem[0x0FFF]);
+}
 
 /* LD A,(BC); LD A,(DE); LD A,(nn) */
 void LD_A_iBCDEnni() {
