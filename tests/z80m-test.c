@@ -156,6 +156,41 @@ void SET_GET() {
     T(!_EI_PENDING);
 }
 
+/* LD A,R; LD A,I */
+void LD_A_RI() {
+    puts(">>> LD A,R; LD A,I");
+    uint8_t prog[] = {
+        0xED, 0x57,         // LD A,I
+        0x97,               // SUB A
+        0xED, 0x5F,         // LD A,R
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    z80m_set_iff1(&cpu, true);
+    z80m_set_iff2(&cpu, true);
+    z80m_set_r(&cpu, 0x34);
+    z80m_set_i(&cpu, 0x01);
+    z80m_set_f(&cpu, Z80M_CF);
+    T(9 == step()); T(0x01 == _A); T(flags(Z80M_PF|Z80M_CF));
+    T(4 == step()); T(0x00 == _A); T(flags(Z80M_ZF|Z80M_NF));
+    T(9 == step()); T(0x39 == _A); T(flags(Z80M_PF));
+}
+
+/* LD I,A; LD R,A */
+void LD_IR_A() {
+    puts(">>> LD I,A; LD R,A");
+    uint8_t prog[] = {
+        0x3E, 0x45,     // LD A,0x45
+        0xED, 0x47,     // LD I,A
+        0xED, 0x4F,     // LD R,A
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(7==step()); T(0x45 == _A);
+    T(9==step()); T(0x45 == _I);
+    T(9==step()); T(0x45 == _R);
+}
+
 /* LD r,s; LD r,n */
 void LD_r_sn() {
     puts(">>> LD r,s; LD r,n");
@@ -1176,6 +1211,8 @@ void OR_XOR_A_iHLIXIYi() {
 
 int main() {
     SET_GET();
+    LD_A_RI();
+    LD_IR_A();
     LD_r_sn();
     LD_r_iHLi();
     LD_r_iIXIYi();
