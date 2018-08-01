@@ -629,6 +629,43 @@ void LD_HLddIXIY_inni() {
     T(20==step()); T(0x0807 == _IY); T(0x1007 == _WZ);
 }
 
+/* LD (nn),HL; LD (nn),dd; LD (nn),IX; LD (nn),IY */
+void LD_inni_HLddIXIY() {
+    puts(">>> LD (nn),dd; LD (nn),IX; LD (nn),IY");
+    uint8_t prog[] = {
+        0x21, 0x01, 0x02,           // LD HL,0x0201
+        0x22, 0x00, 0x10,           // LD (0x1000),HL
+        0x01, 0x34, 0x12,           // LD BC,0x1234
+        0xED, 0x43, 0x02, 0x10,     // LD (0x1002),BC
+        0x11, 0x78, 0x56,           // LD DE,0x5678
+        0xED, 0x53, 0x04, 0x10,     // LD (0x1004),DE
+        0x21, 0xBC, 0x9A,           // LD HL,0x9ABC
+        0xED, 0x63, 0x06, 0x10,     // LD (0x1006),HL undocumented 'long' version
+        0x31, 0x68, 0x13,           // LD SP,0x1368
+        0xED, 0x73, 0x08, 0x10,     // LD (0x1008),SP
+        0xDD, 0x21, 0x21, 0x43,     // LD IX,0x4321
+        0xDD, 0x22, 0x0A, 0x10,     // LD (0x100A),IX
+        0xFD, 0x21, 0x65, 0x87,     // LD IY,0x8765
+        0xFD, 0x22, 0x0C, 0x10,     // LD (0x100C),IY
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(10==step()); T(0x0201 == _HL);
+    T(16==step()); T(0x0201 == mem16(0x1000)); T(0x1001 == _WZ);
+    T(10==step()); T(0x1234 == _BC);
+    T(20==step()); T(0x1234 == mem16(0x1002)); T(0x1003 == _WZ);
+    T(10==step()); T(0x5678 == _DE);
+    T(20==step()); T(0x5678 == mem16(0x1004)); T(0x1005 == _WZ);
+    T(10==step()); T(0x9ABC == _HL);
+    T(20==step()); T(0x9ABC == mem16(0x1006)); T(0x1007 == _WZ);
+    T(10==step()); T(0x1368 == _SP);
+    T(20==step()); T(0x1368 == mem16(0x1008)); T(0x1009 == _WZ);
+    T(14==step()); T(0x4321 == _IX);
+    T(20==step()); T(0x4321 == mem16(0x100A)); T(0x100B == _WZ);
+    T(14==step()); T(0x8765 == _IY);
+    T(20==step()); T(0x8765 == mem16(0x100C)); T(0x100D == _WZ);
+}
+
 /* ADD A,r; ADD A,n */
 void ADD_A_rn() {
     puts(">>> ADD A,r; ADD A,n");
@@ -1149,7 +1186,8 @@ int main() {
     LD_A_iBCDEnni();
     LD_iBCDEnni_A();
     LD_ddIXIY_nn();
-//    LD_HLddIXIY_inni();
+    LD_HLddIXIY_inni();
+    LD_inni_HLddIXIY();
     ADD_A_rn();
     ADD_A_iHLIXIYi();
     ADC_A_rn();
