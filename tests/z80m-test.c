@@ -701,6 +701,27 @@ void LD_inni_HLddIXIY() {
     T(20==step()); T(0x8765 == mem16(0x100C)); T(0x100D == _WZ);
 }
 
+/* LD SP,HL; LD SP,IX; LD SP,IY */
+void LD_SP_HLIXIY() {
+    puts(">>> LD SP,HL; LD SP,IX; LD SP,IY");
+    uint8_t prog[] = {
+        0x21, 0x34, 0x12,           // LD HL,0x1234
+        0xDD, 0x21, 0x78, 0x56,     // LD IX,0x5678
+        0xFD, 0x21, 0xBC, 0x9A,     // LD IY,0x9ABC
+        0xF9,                       // LD SP,HL
+        0xDD, 0xF9,                 // LD SP,IX
+        0xFD, 0xF9,                 // LD SP,IY
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(10==step()); T(0x1234 == _HL);
+    T(14==step()); T(0x5678 == _IX);
+    T(14==step()); T(0x9ABC == _IY);
+    T(6 ==step()); T(0x1234 == _SP);
+    T(10==step()); T(0x5678 == _SP);
+    T(10==step()); T(0x9ABC == _SP);
+}
+
 /* ADD A,r; ADD A,n */
 void ADD_A_rn() {
     puts(">>> ADD A,r; ADD A,n");
@@ -1225,6 +1246,7 @@ int main() {
     LD_ddIXIY_nn();
     LD_HLddIXIY_inni();
     LD_inni_HLddIXIY();
+    LD_SP_HLIXIY();
     ADD_A_rn();
     ADD_A_iHLIXIYi();
     ADC_A_rn();
