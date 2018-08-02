@@ -722,6 +722,53 @@ void LD_SP_HLIXIY() {
     T(10==step()); T(0x9ABC == _SP);
 }
 
+/* PUSH qq; PUSH IX; PUSH IY; POP qq; POP IX; POP IY */
+void PUSH_POP_qqIXIY() {
+    puts(">>> PUSH qq; PUSH IX; PUSH IY; POP qq; POP IX; POP IY");
+    uint8_t prog[] = {
+        0x01, 0x34, 0x12,       // LD BC,0x1234
+        0x11, 0x78, 0x56,       // LD DE,0x5678
+        0x21, 0xBC, 0x9A,       // LD HL,0x9ABC
+        0x3E, 0xEF,             // LD A,0xEF
+        0xDD, 0x21, 0x45, 0x23, // LD IX,0x2345
+        0xFD, 0x21, 0x89, 0x67, // LD IY,0x6789
+        0x31, 0x00, 0x01,       // LD SP,0x0100
+        0xF5,                   // PUSH AF
+        0xC5,                   // PUSH BC
+        0xD5,                   // PUSH DE
+        0xE5,                   // PUSH HL
+        0xDD, 0xE5,             // PUSH IX
+        0xFD, 0xE5,             // PUSH IY
+        0xF1,                   // POP AF
+        0xC1,                   // POP BC
+        0xD1,                   // POP DE
+        0xE1,                   // POP HL
+        0xDD, 0xE1,             // POP IX
+        0xFD, 0xE1,             // POP IY
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(10==step()); T(0x1234 == _BC);
+    T(10==step()); T(0x5678 == _DE);
+    T(10==step()); T(0x9ABC == _HL);
+    T(7 ==step()); T(0x00EF == _FA);
+    T(14==step()); T(0x2345 == _IX);
+    T(14==step()); T(0x6789 == _IY);
+    T(10==step()); T(0x0100 == _SP);
+    T(11==step()); T(0xEF00 == mem16(0x00FE)); T(0x00FE == _SP);
+    T(11==step()); T(0x1234 == mem16(0x00FC)); T(0x00FC == _SP);
+    T(11==step()); T(0x5678 == mem16(0x00FA)); T(0x00FA == _SP);
+    T(11==step()); T(0x9ABC == mem16(0x00F8)); T(0x00F8 == _SP);
+    T(15==step()); T(0x2345 == mem16(0x00F6)); T(0x00F6 == _SP);
+    T(15==step()); T(0x6789 == mem16(0x00F4)); T(0x00F4 == _SP);
+    T(10==step()); T(0x8967 == _FA); T(0x00F6 == _SP);
+    T(10==step()); T(0x2345 == _BC); T(0x00F8 == _SP);
+    T(10==step()); T(0x9ABC == _DE); T(0x00FA == _SP);
+    T(10==step()); T(0x5678 == _HL); T(0x00FC == _SP);
+    T(14==step()); T(0x1234 == _IX); T(0x00FE == _SP);
+    T(14==step()); T(0xEF00 == _IY); T(0x0100 == _SP);
+}
+
 /* ADD A,r; ADD A,n */
 void ADD_A_rn() {
     puts(">>> ADD A,r; ADD A,n");
@@ -1247,6 +1294,7 @@ int main() {
     LD_HLddIXIY_inni();
     LD_inni_HLddIXIY();
     LD_SP_HLIXIY();
+    PUSH_POP_qqIXIY();
     ADD_A_rn();
     ADD_A_iHLIXIYi();
     ADC_A_rn();
