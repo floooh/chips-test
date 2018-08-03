@@ -79,7 +79,11 @@ void copy(uint16_t addr, uint8_t* bytes, size_t num) {
 }
 
 uint32_t step() {
-    return z80m_exec(&cpu,0);
+    uint32_t ticks = z80m_exec(&cpu,0);
+    while (!z80m_opdone(&cpu)) {
+        ticks += z80m_exec(&cpu,0);
+    }
+    return ticks;
 }
 
 bool flags(uint8_t expected) {
