@@ -1866,6 +1866,113 @@ void RLD_RRD() {
     T(7 ==step()); T(0x00 == _A);
 }
 
+/* HALT */
+void HALT() {
+    puts(">>> HALT");
+    uint8_t prog[] = {
+        0x76,       // HALT
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(4==step()); T(0x0000 == _PC); T(cpu.pins & Z80M_HALT);
+    T(4==step()); T(0x0000 == _PC); T(cpu.pins & Z80M_HALT);
+    T(4==step()); T(0x0000 == _PC); T(cpu.pins & Z80M_HALT);
+}
+
+/* BIT b,r; BIT b,(HL); BIT b,(IX+d); BIT b,(IY+d) */
+void BIT() {
+    puts(" FIXME FIXME FIXME >>> BIT b,r; BIT b,(HL); BIT b,(IX+d); BIT b,(IY+d)");
+    /* only test cycle count for now */
+    uint8_t prog[] = {
+        0xCB, 0x47,             // BIT 0,A
+        0xCB, 0x46,             // BIT 0,(HL)
+        0xDD, 0xCB, 0x01, 0x46, // BIT 0,(IX+1)
+        0xFD, 0xCB, 0xFF, 0x46, // BIT 0,(IY-1)
+        0xDD, 0xCB, 0x02, 0x47, // undocumented: BIT 0,(IX+2),A
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(8 ==step());
+    T(12==step());
+    T(20==step());
+    T(20==step());
+    T(20==step());
+}
+
+/* SET b,r; SET b,(HL); SET b,(IX+d); SET b,(IY+d) */
+void SET() {
+    puts(" FIXME FIXME FIXME >>> SET b,r; SET b,(HL); SET b,(IX+d); SET b,(IY+d)");
+    /* only test cycle count for now */
+    uint8_t prog[] = {
+        0xCB, 0xC7,             // SET 0,A
+        0xCB, 0xC6,             // SET 0,(HL)
+        0xDD, 0xCB, 0x01, 0xC6, // SET 0,(IX+1)
+        0xFD, 0xCB, 0xFF, 0xC6, // SET 0,(IY-1)
+        0xDD, 0xCB, 0x02, 0xC7, // undocumented: SET 0,(IX+2),A
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(8 ==step());
+    T(15==step());
+    T(23==step());
+    T(23==step());
+    T(23==step());
+}
+
+/* RES b,r; RES b,(HL); RES b,(IX+d); RES b,(IY+d) */
+void RES() {
+    puts(" FIXME FIXME FIXME >>> RES b,r; RES b,(HL); RES b,(IX+d); RES b,(IY+d)");
+    /* only test cycle count for now */
+    uint8_t prog[] = {
+        0xCB, 0x87,             // RES 0,A
+        0xCB, 0x86,             // RES 0,(HL)
+        0xDD, 0xCB, 0x01, 0x86, // RES 0,(IX+1)
+        0xFD, 0xCB, 0xFF, 0x86, // RES 0,(IY-1)
+        0xDD, 0xCB, 0x02, 0x87, // undocumented: RES 0,(IX+2),A
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(8 ==step());
+    T(15==step());
+    T(23==step());
+    T(23==step());
+    T(23==step());
+}
+
+/* DAA */
+void DAA() {
+    puts(">>> DAA");
+    uint8_t prog[] = {
+        0x3e, 0x15,         // ld a,0x15
+        0x06, 0x27,         // ld b,0x27
+        0x80,               // add a,b
+        0x27,               // daa
+        0x90,               // sub b
+        0x27,               // daa
+        0x3e, 0x90,         // ld a,0x90
+        0x06, 0x15,         // ld b,0x15
+        0x80,               // add a,b
+        0x27,               // daa
+        0x90,               // sub b
+        0x27                // daa
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+
+    T(7==step()); T(0x15 == _A);
+    T(7==step()); T(0x27 == _B);
+    T(4==step()); T(0x3C == _A); T(flags(0));
+    T(4==step()); T(0x42 == _A); T(flags(Z80M_HF|Z80M_PF));
+    T(4==step()); T(0x1B == _A); T(flags(Z80M_HF|Z80M_NF));
+    T(4==step()); T(0x15 == _A); T(flags(Z80M_NF));
+    T(7==step()); T(0x90 == _A); T(flags(Z80M_NF));
+    T(7==step()); T(0x15 == _B); T(flags(Z80M_NF));
+    T(4==step()); T(0xA5 == _A); T(flags(Z80M_SF));
+    T(4==step()); T(0x05 == _A); T(flags(Z80M_PF|Z80M_CF));
+    T(4==step()); T(0xF0 == _A); T(flags(Z80M_SF|Z80M_NF|Z80M_CF));
+    T(4==step()); T(0x90 == _A); T(flags(Z80M_SF|Z80M_PF|Z80M_NF|Z80M_CF));
+}
+
 int main() {
     SET_GET();
     LD_A_RI();
@@ -1913,6 +2020,14 @@ int main() {
     SRL_r();
     SRL_iHLIXIYi();
     RLD_RRD();
+    HALT();
+    /* FIXME: undocumented DD/FD+CB bit instructions */
+    /*
+    BIT();
+    SET();
+    RES();
+    */
+    DAA();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
