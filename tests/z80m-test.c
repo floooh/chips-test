@@ -1824,6 +1824,48 @@ void SRL_iHLIXIYi() {
     T(19==step()); T(0x55 == _A);
 }
 
+/* RLD; RRD */
+void RLD_RRD() {
+    puts(">>> RLD; RRD");
+    uint8_t prog[] = {
+        0x3E, 0x12,         // LD A,0x12
+        0x21, 0x00, 0x10,   // LD HL,0x1000
+        0x36, 0x34,         // LD (HL),0x34
+        0xED, 0x67,         // RRD
+        0xED, 0x6F,         // RLD
+        0x7E,               // LD A,(HL)
+        0x3E, 0xFE,         // LD A,0xFE
+        0x36, 0x00,         // LD (HL),0x00
+        0xED, 0x6F,         // RLD
+        0xED, 0x67,         // RRD
+        0x7E,               // LD A,(HL)
+        0x3E, 0x01,         // LD A,0x01
+        0x36, 0x00,         // LD (HL),0x00
+        0xED, 0x6F,         // RLD
+        0xED, 0x67,         // RRD
+        0x7E
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(7 ==step()); T(0x12 == _A);
+    T(10==step()); T(0x1000 == _HL);
+    T(10==step()); T(0x34 == mem[0x1000]);
+    T(18==step()); T(0x14 == _A); T(0x23 == mem[0x1000]); T(0x1001 == _WZ);
+    T(18==step()); T(0x12 == _A); T(0x34 == mem[0x1000]); T(0x1001 == _WZ);
+    T(7 ==step()); T(0x34 == _A);
+    T(7 ==step()); T(0xFE == _A);
+    T(10==step()); T(0x00 == mem[0x1000]);
+    T(18==step()); T(0xF0 == _A); T(0x0E == mem[0x1000]); T(flags(Z80M_SF|Z80M_PF)); T(0x1001 == _WZ);
+    T(18==step()); T(0xFE == _A); T(0x00 == mem[0x1000]); T(flags(Z80M_SF)); T(0x1001 == _WZ);
+    T(7 ==step()); T(0x00 == _A);
+    T(7 ==step()); T(0x01 == _A);
+    T(10 ==step()); T(0x00 == mem[0x1000]);
+    z80m_set_f(&cpu, z80m_f(&cpu) | Z80M_CF);
+    T(18==step()); T(0x00 == _A); T(0x01 == mem[0x1000]); T(flags(Z80M_ZF|Z80M_PF|Z80M_CF)); T(0x1001 == _WZ);
+    T(18==step()); T(0x01 == _A); T(0x00 == mem[0x1000]); T(flags(Z80M_CF)); T(0x1001 == _WZ);
+    T(7 ==step()); T(0x00 == _A);
+}
+
 int main() {
     SET_GET();
     LD_A_RI();
@@ -1870,6 +1912,7 @@ int main() {
     SRA_iHLIXIYi();
     SRL_r();
     SRL_iHLIXIYi();
+    RLD_RRD();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
