@@ -1458,6 +1458,35 @@ void INC_DEC_ssIXIY() {
     T(10==step()); T(0x1234 == _IY);
 }
 
+/* RLCA; RLA; RRCA; RRA */
+void RLCA_RLA_RRCA_RRA() {
+    puts(">>> RLCA; RLA; RRCA; RRA");
+    uint8_t prog[] = {
+        0x3E, 0xA0,     // LD A,0xA0
+        0x07,           // RLCA
+        0x07,           // RLCA
+        0x0F,           // RRCA
+        0x0F,           // RRCA
+        0x17,           // RLA
+        0x17,           // RLA
+        0x1F,           // RRA
+        0x1F,           // RRA
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+
+    z80m_set_f(&cpu, 0xff);
+    T(7==step()); T(0xA0 == _A);
+    T(4==step()); T(0x41 == _A); T(flags(Z80M_SF|Z80M_ZF|Z80M_VF|Z80M_CF));
+    T(4==step()); T(0x82 == _A); T(flags(Z80M_SF|Z80M_ZF|Z80M_VF));
+    T(4==step()); T(0x41 == _A); T(flags(Z80M_SF|Z80M_ZF|Z80M_VF));
+    T(4==step()); T(0xA0 == _A); T(flags(Z80M_SF|Z80M_ZF|Z80M_VF|Z80M_CF));
+    T(4==step()); T(0x41 == _A); T(flags(Z80M_SF|Z80M_ZF|Z80M_VF|Z80M_CF));
+    T(4==step()); T(0x83 == _A); T(flags(Z80M_SF|Z80M_ZF|Z80M_VF));
+    T(4==step()); T(0x41 == _A); T(flags(Z80M_SF|Z80M_ZF|Z80M_VF|Z80M_CF));
+    T(4==step()); T(0xA0 == _A); T(flags(Z80M_SF|Z80M_ZF|Z80M_VF|Z80M_CF));
+}
+
 int main() {
     SET_GET();
     LD_A_RI();
@@ -1495,6 +1524,7 @@ int main() {
     INC_DEC_r();
     INC_DEC_iHLIXIYi();
     INC_DEC_ssIXIY();
+    RLCA_RLA_RRCA_RRA();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
