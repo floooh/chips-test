@@ -1973,6 +1973,48 @@ void DAA() {
     T(4==step()); T(0x90 == _A); T(flags(Z80M_SF|Z80M_PF|Z80M_NF|Z80M_CF));
 }
 
+/* CPL */
+void CPL() {
+    puts(">>> CPL");
+    uint8_t prog[] = {
+        0x97,               // SUB A
+        0x2F,               // CPL
+        0x2F,               // CPL
+        0xC6, 0xAA,         // ADD A,0xAA
+        0x2F,               // CPL
+        0x2F,               // CPL
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(4==step()); T(0x00 == _A); T(flags(Z80M_ZF|Z80M_NF));
+    T(4==step()); T(0xFF == _A); T(flags(Z80M_ZF|Z80M_HF|Z80M_NF));
+    T(4==step()); T(0x00 == _A); T(flags(Z80M_ZF|Z80M_HF|Z80M_NF));
+    T(7==step()); T(0xAA == _A); T(flags(Z80M_SF));
+    T(4==step()); T(0x55 == _A); T(flags(Z80M_SF|Z80M_HF|Z80M_NF));
+    T(4==step()); T(0xAA == _A); T(flags(Z80M_SF|Z80M_HF|Z80M_NF));
+}
+
+/* CCF/SCF */
+void CCF_SCF() {
+    puts(">>> CCF; SCF");
+    uint8_t prog[] = {
+        0x97,           // SUB A
+        0x37,           // SCF
+        0x3F,           // CCF
+        0xD6, 0xCC,     // SUB 0xCC
+        0x3F,           // CCF
+        0x37,           // SCF
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(4==step()); T(0x00 == _A); T(flags(Z80M_ZF|Z80M_NF));
+    T(4==step()); T(0x00 == _A); T(flags(Z80M_ZF|Z80M_CF));
+    T(4==step()); T(0x00 == _A); T(flags(Z80M_ZF|Z80M_HF));
+    T(7==step()); T(0x34 == _A); T(flags(Z80M_HF|Z80M_NF|Z80M_CF));
+    T(4==step()); T(0x34 == _A); T(flags(Z80M_HF));
+    T(4==step()); T(0x34 == _A); T(flags(Z80M_CF));
+}
+
 int main() {
     SET_GET();
     LD_A_RI();
@@ -2028,6 +2070,8 @@ int main() {
     RES();
     */
     DAA();
+    CPL();
+    CCF_SCF();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
