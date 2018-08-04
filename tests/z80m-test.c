@@ -2015,6 +2015,30 @@ void CCF_SCF() {
     T(4==step()); T(0x34 == _A); T(flags(Z80M_CF));
 }
 
+void NEG() {
+    puts(">>> NEG");
+    uint8_t prog[] = {
+        0x3E, 0x01,         // LD A,0x01
+        0xED, 0x44,         // NEG
+        0xC6, 0x01,         // ADD A,0x01
+        0xED, 0x44,         // NEG
+        0xD6, 0x80,         // SUB A,0x80
+        0xED, 0x44,         // NEG
+        0xC6, 0x40,         // ADD A,0x40
+        0xED, 0x44,         // NEG
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(7==step()); T(0x01 == _A);
+    T(8==step()); T(0xFF == _A); T(flags(Z80M_SF|Z80M_HF|Z80M_NF|Z80M_CF));
+    T(7==step()); T(0x00 == _A); T(flags(Z80M_ZF|Z80M_HF|Z80M_CF));
+    T(8==step()); T(0x00 == _A); T(flags(Z80M_ZF|Z80M_NF));
+    T(7==step()); T(0x80 == _A); T(flags(Z80M_SF|Z80M_PF|Z80M_NF|Z80M_CF));
+    T(8==step()); T(0x80 == _A); T(flags(Z80M_SF|Z80M_PF|Z80M_NF|Z80M_CF));
+    T(7==step()); T(0xC0 == _A); T(flags(Z80M_SF));
+    T(8==step()); T(0x40 == _A); T(flags(Z80M_NF|Z80M_CF));
+}
+
 int main() {
     SET_GET();
     LD_A_RI();
@@ -2072,6 +2096,7 @@ int main() {
     DAA();
     CPL();
     CCF_SCF();
+    NEG();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
