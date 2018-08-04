@@ -1416,6 +1416,48 @@ void INC_DEC_iHLIXIYi() {
     T(23==step()); T(0x7F == mem[0x1002]); T(flags(Z80M_HF|Z80M_PF|Z80M_NF));
 }
 
+/* INC ss; INC IX; INC IY; DEC ss; DEC IX; DEC IY */
+void INC_DEC_ssIXIY() {
+    puts(">>> INC/DEC ss/IX/IY");
+    uint8_t prog[] = {
+        0x01, 0x00, 0x00,       // LD BC,0x0000
+        0x11, 0xFF, 0xFF,       // LD DE,0xffff
+        0x21, 0xFF, 0x00,       // LD HL,0x00ff
+        0x31, 0x11, 0x11,       // LD SP,0x1111
+        0xDD, 0x21, 0xFF, 0x0F, // LD IX,0x0fff
+        0xFD, 0x21, 0x34, 0x12, // LD IY,0x1234
+        0x0B,                   // DEC BC
+        0x03,                   // INC BC
+        0x13,                   // INC DE
+        0x1B,                   // DEC DE
+        0x23,                   // INC HL
+        0x2B,                   // DEC HL
+        0x33,                   // INC SP
+        0x3B,                   // DEC SP
+        0xDD, 0x23,             // INC IX
+        0xDD, 0x2B,             // DEC IX
+        0xFD, 0x23,             // INC IX
+        0xFD, 0x2B,             // DEC IX
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    for (int i = 0; i < 6; i++) {
+        step();
+    }
+    T(6 ==step()); T(0xFFFF == _BC);
+    T(6 ==step()); T(0x0000 == _BC);
+    T(6 ==step()); T(0x0000 == _DE);
+    T(6 ==step()); T(0xFFFF == _DE);
+    T(6 ==step()); T(0x0100 == _HL);
+    T(6 ==step()); T(0x00FF == _HL);
+    T(6 ==step()); T(0x1112 == _SP);
+    T(6 ==step()); T(0x1111 == _SP);
+    T(10==step()); T(0x1000 == _IX);
+    T(10==step()); T(0x0FFF == _IX);
+    T(10==step()); T(0x1235 == _IY);
+    T(10==step()); T(0x1234 == _IY);
+}
+
 int main() {
     SET_GET();
     LD_A_RI();
@@ -1452,6 +1494,7 @@ int main() {
     OR_XOR_A_iHLIXIYi();
     INC_DEC_r();
     INC_DEC_iHLIXIYi();
+    INC_DEC_ssIXIY();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
