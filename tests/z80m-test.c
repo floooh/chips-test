@@ -2539,6 +2539,30 @@ void DJNZ() {
     T(8 ==step()); T(0x00 == _B); T(0x020A == _PC); T(0x0207 == _WZ);
 }
 
+/* CALL; RET */
+void CALL_RET() {
+    puts(">>> CALL; RET");
+    uint8_t prog[] = {
+        0xCD, 0x0A, 0x02,       //      CALL l0
+        0xCD, 0x0A, 0x02,       //      CALL l0
+        0xC9,                   // l0:  RET
+    };
+    copy(0x0204, prog, sizeof(prog));
+    init();
+    z80m_set_sp(&cpu, 0x0100);
+    z80m_set_pc(&cpu, 0x0204);
+    T(17 == step());
+    T(0x020A == _PC); T(0x020A == _WZ); T(0x00FE == _SP);
+    T(0x07 == mem[0x00FE]); T(0x02 == mem[0x00FF]);
+    T(10 == step());
+    T(0x0207 == _PC); T(0x0207 == _WZ); T(0x0100 == _SP);
+    T(17 == step());
+    T(0x020A == _PC); T(0x020A == _WZ); T(0x00FE == _SP);
+    T(0x0A == mem[0x00FE]); T(0x02 == mem[0x00FF]);
+    T(10 == step());
+    T(0x020A == _PC); T(0x020A == _WZ); T(0x0100 == _SP);
+}
+
 int main() {
     SET_GET();
     LD_A_RI();
@@ -2607,6 +2631,7 @@ int main() {
     JP_JR();
     JR_cc_e();
     DJNZ();
+    CALL_RET();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
