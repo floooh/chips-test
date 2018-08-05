@@ -2563,6 +2563,66 @@ void CALL_RET() {
     T(0x020A == _PC); T(0x020A == _WZ); T(0x0100 == _SP);
 }
 
+/* CALL cc/RET cc */
+void CALL_RET_cc() {
+    puts(">>> CALL cc; RET cc");
+    uint8_t prog[] = {
+        0x97,               //      SUB A
+        0xC4, 0x29, 0x02,   //      CALL NZ,l0
+        0xCC, 0x29, 0x02,   //      CALL Z,l0
+        0xC6, 0x01,         //      ADD A,0x01
+        0xCC, 0x2B, 0x02,   //      CALL Z,l1
+        0xC4, 0x2B, 0x02,   //      CALL NZ,l1
+        0x07,               //      RLCA
+        0xEC, 0x2D, 0x02,   //      CALL PE,l2
+        0xE4, 0x2D, 0x02,   //      CALL PO,l2
+        0xD6, 0x03,         //      SUB 0x03
+        0xF4, 0x2F, 0x02,   //      CALL P,l3
+        0xFC, 0x2F, 0x02,   //      CALL M,l3
+        0xD4, 0x31, 0x02,   //      CALL NC,l4
+        0xDC, 0x31, 0x02,   //      CALL C,l4
+        0xC9,               //      RET
+        0xC0,               // l0:  RET NZ
+        0xC8,               //      RET Z
+        0xC8,               // l1:  RET Z
+        0xC0,               //      RET NZ
+        0xE8,               // l2:  RET PE
+        0xE0,               //      RET PO
+        0xF0,               // l3:  RET P
+        0xF8,               //      RET M
+        0xD0,               // l4:  RET NC
+        0xD8,               //      RET C
+    };
+    copy(0x0204, prog, sizeof(prog));
+    init();
+    z80m_set_pc(&cpu, 0x0204);
+    z80m_set_sp(&cpu, 0x0100);
+    T(4 ==step()); T(0x00 == _A);
+    T(10==step()); T(0x0208 == _PC); T(0x0229 == _WZ);
+    T(17==step()); T(0x0229 == _PC); T(0x0229 == _WZ);
+    T(5 ==step()); T(0x022A == _PC); T(0x0229 == _WZ);
+    T(11==step()); T(0x020B == _PC); T(0x020B == _WZ);
+    T(7 ==step()); T(0x01 == _A);
+    T(10==step()); T(0x0210 == _PC);
+    T(17==step()); T(0x022B == _PC);
+    T(5 ==step()); T(0x022C == _PC);
+    T(11==step()); T(0x0213 == _PC);
+    T(4 ==step()); T(0x02 == _A);
+    T(10==step()); T(0x0217 == _PC);
+    T(17==step()); T(0x022D == _PC);
+    T(5 ==step()); T(0x022E == _PC);
+    T(11==step()); T(0x021A == _PC);
+    T(7 ==step()); T(0xFF == _A);
+    T(10==step()); T(0x021F == _PC);
+    T(17==step()); T(0x022F == _PC);
+    T(5 ==step()); T(0x0230 == _PC);
+    T(11==step()); T(0x0222 == _PC);
+    T(10==step()); T(0x0225 == _PC);
+    T(17==step()); T(0x0231 == _PC);
+    T(5 ==step()); T(0x0232 == _PC);
+    T(11==step()); T(0x0228 == _PC);
+}
+
 int main() {
     SET_GET();
     LD_A_RI();
@@ -2632,6 +2692,7 @@ int main() {
     JR_cc_e();
     DJNZ();
     CALL_RET();
+    CALL_RET_cc();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
