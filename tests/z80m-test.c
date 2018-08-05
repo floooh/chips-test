@@ -2516,6 +2516,29 @@ void JR_cc_e() {
     T(12==step()); T(0x0218 == _PC); T(0x0218 == _WZ);
 }
 
+/* DJNZ */
+void DJNZ() {
+    puts(">>> DJNZ");
+    uint8_t prog[] = {
+        0x06, 0x03,         //      LD B,0x03
+        0x97,               //      SUB A
+        0x3C,               // l0:  INC A
+        0x10, 0xFD,         //      DJNZ l0
+        0x00,               //      NOP
+    };
+    copy(0x0204, prog, sizeof(prog));
+    init();
+    z80m_set_pc(&cpu, 0x0204);
+    T(7 ==step()); T(0x03 == _B);
+    T(4 ==step()); T(0x00 == _A);
+    T(4 ==step()); T(0x01 == _A);
+    T(13==step()); T(0x02 == _B); T(0x0207 == _PC); T(0x0207 == _WZ);
+    T(4 ==step()); T(0x02 == _A);
+    T(13==step()); T(0x01 == _B); T(0x0207 == _PC); T(0x0207 == _WZ);
+    T(4 ==step()); T(0x03 == _A);
+    T(8 ==step()); T(0x00 == _B); T(0x020A == _PC); T(0x0207 == _WZ);
+}
+
 int main() {
     SET_GET();
     LD_A_RI();
@@ -2583,6 +2606,7 @@ int main() {
     JP_cc_nn();
     JP_JR();
     JR_cc_e();
+    DJNZ();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
