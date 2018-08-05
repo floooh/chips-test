@@ -2213,6 +2213,170 @@ void LDDR() {
     T(7 == step()); T(0x33 == _A);
 }
 
+/* CPI */
+void CPI() {
+    puts(">>> CPI");
+    uint8_t data[] = {
+        0x01, 0x02, 0x03, 0x04
+    };
+    uint8_t prog[] = {
+        0x21, 0x00, 0x10,       // ld hl,0x1000
+        0x01, 0x04, 0x00,       // ld bc,0x0004
+        0x3e, 0x03,             // ld a,0x03
+        0xed, 0xa1,             // cpi
+        0xed, 0xa1,             // cpi
+        0xed, 0xa1,             // cpi
+        0xed, 0xa1,             // cpi
+    };
+    copy(0x1000, data, sizeof(data));
+    copy(0x0000, prog, sizeof(prog));
+    init();
+
+    // skip loads
+    for (int i = 0; i < 3; i++) {
+        step();
+    }
+    T(16 == step());
+    T(0x1001 == _HL);
+    T(0x0003 == _BC);
+    T(flags(Z80M_PF|Z80M_NF));
+    z80m_set_f(&cpu, z80m_f(&cpu) | Z80M_CF);
+    T(16 == step());
+    T(0x1002 == _HL);
+    T(0x0002 == _BC);
+    T(flags(Z80M_PF|Z80M_NF|Z80M_CF));
+    T(16 == step());
+    T(0x1003 == _HL);
+    T(0x0001 == _BC);
+    T(flags(Z80M_ZF|Z80M_PF|Z80M_NF|Z80M_CF));
+    T(16 == step());
+    T(0x1004 == _HL);
+    T(0x0000 == _BC);
+    T(flags(Z80M_SF|Z80M_HF|Z80M_NF|Z80M_CF));
+}
+
+/* CPIR */
+void CPIR() {
+    puts(">>> CPIR");
+    uint8_t data[] = {
+        0x01, 0x02, 0x03, 0x04
+    };
+    uint8_t prog[] = {
+        0x21, 0x00, 0x10,       // ld hl,0x1000
+        0x01, 0x04, 0x00,       // ld bc,0x0004
+        0x3e, 0x03,             // ld a,0x03
+        0xed, 0xb1,             // cpir
+        0xed, 0xb1,             // cpir
+    };
+    copy(0x1000, data, sizeof(data));
+    copy(0x0000, prog, sizeof(prog));
+    init();
+
+    // skip loads
+    for (int i = 0; i < 3; i++) {
+        step();
+    }
+    T(21 == step());
+    T(0x1001 == _HL);
+    T(0x0003 == _BC);
+    T(flags(Z80M_PF|Z80M_NF));
+    z80m_set_f(&cpu, z80m_f(&cpu) | Z80M_CF);
+    T(21 == step());
+    T(0x1002 == _HL);
+    T(0x0002 == _BC);
+    T(flags(Z80M_PF|Z80M_NF|Z80M_CF));
+    T(16 == step());
+    T(0x1003 == _HL);
+    T(0x0001 == _BC);
+    T(flags(Z80M_ZF|Z80M_PF|Z80M_NF|Z80M_CF));
+    T(16 == step());
+    T(0x1004 == _HL);
+    T(0x0000 == _BC);
+    T(flags(Z80M_SF|Z80M_HF|Z80M_NF|Z80M_CF));
+}
+
+/* CPD */
+void CPD() {
+    puts(">>> CPD");
+    uint8_t data[] = {
+        0x01, 0x02, 0x03, 0x04
+    };
+    uint8_t prog[] = {
+        0x21, 0x03, 0x10,       // ld hl,0x1004
+        0x01, 0x04, 0x00,       // ld bc,0x0004
+        0x3e, 0x02,             // ld a,0x03
+        0xed, 0xa9,             // cpi
+        0xed, 0xa9,             // cpi
+        0xed, 0xa9,             // cpi
+        0xed, 0xa9,             // cpi
+    };
+    copy(0x1000, data, sizeof(data));
+    copy(0x0000, prog, sizeof(prog));
+    init();
+
+    // skip loads
+    for (int i = 0; i < 3; i++) {
+        step();
+    }
+    T(16 == step());
+    T(0x1002 == _HL);
+    T(0x0003 == _BC);
+    T(flags(Z80M_SF|Z80M_HF|Z80M_PF|Z80M_NF));
+    z80m_set_f(&cpu, z80m_f(&cpu) | Z80M_CF);
+    T(16 == step());
+    T(0x1001 == _HL);
+    T(0x0002 == _BC);
+    T(flags(Z80M_SF|Z80M_HF|Z80M_PF|Z80M_NF|Z80M_CF));
+    T(16 == step());
+    T(0x1000 == _HL);
+    T(0x0001 == _BC);
+    T(flags(Z80M_ZF|Z80M_PF|Z80M_NF|Z80M_CF));
+    T(16 == step());
+    T(0x0FFF == _HL);
+    T(0x0000 == _BC);
+    T(flags(Z80M_NF|Z80M_CF));
+}
+
+/* CPDR */
+void CPDR() {
+    puts(">>> CPDR");
+    uint8_t data[] = {
+        0x01, 0x02, 0x03, 0x04
+    };
+    uint8_t prog[] = {
+        0x21, 0x03, 0x10,       // ld hl,0x1004
+        0x01, 0x04, 0x00,       // ld bc,0x0004
+        0x3e, 0x02,             // ld a,0x03
+        0xed, 0xb9,             // cpdr
+        0xed, 0xb9,             // cpdr
+    };
+    copy(0x1000, data, sizeof(data));
+    copy(0x0000, prog, sizeof(prog));
+    init();
+
+    // skip loads
+    for (int i = 0; i < 3; i++) {
+        step();
+    }
+    T(21 == step());
+    T(0x1002 == _HL);
+    T(0x0003 == _BC);
+    T(flags(Z80M_SF|Z80M_HF|Z80M_PF|Z80M_NF));
+    z80m_set_f(&cpu, z80m_f(&cpu) | Z80M_CF);
+    T(21 == step());
+    T(0x1001 == _HL);
+    T(0x0002 == _BC);
+    T(flags(Z80M_SF|Z80M_HF|Z80M_PF|Z80M_NF|Z80M_CF));
+    T(16 == step());
+    T(0x1000 == _HL);
+    T(0x0001 == _BC);
+    T(flags(Z80M_ZF|Z80M_PF|Z80M_NF|Z80M_CF));
+    T(16 == step());
+    T(0x0FFF == _HL);
+    T(0x0000 == _BC);
+    T(flags(Z80M_NF|Z80M_CF));
+}
+
 int main() {
     SET_GET();
     LD_A_RI();
@@ -2272,6 +2436,10 @@ int main() {
     LDIR();
     LDD();
     LDDR();
+    CPI();
+    CPIR();
+    CPD();
+    CPDR();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
