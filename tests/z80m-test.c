@@ -2377,6 +2377,35 @@ void CPDR() {
     T(flags(Z80M_NF|Z80M_CF));
 }
 
+/* DI/EI/IM */
+void DI_EI_IM() {
+    puts(">>> DI; EI; IM");
+    uint8_t prog[] = {
+        0xF3,           // DI
+        0xFB,           // EI
+        0x00,           // NOP
+        0xF3,           // DI
+        0xFB,           // EI
+        0x00,           // NOP
+        0xED, 0x46,     // IM 0
+        0xED, 0x56,     // IM 1
+        0xED, 0x5E,     // IM 2
+        0xED, 0x46,     // IM 0
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(4==step()); T(!z80m_iff1(&cpu)); T(!z80m_iff2(&cpu));
+    T(4==step()); T(!z80m_iff1(&cpu)); T(!z80m_iff2(&cpu));
+    T(4==step()); T(z80m_iff1(&cpu));  T(z80m_iff2(&cpu));
+    T(4==step()); T(!z80m_iff1(&cpu)); T(!z80m_iff2(&cpu));
+    T(4==step()); T(!z80m_iff1(&cpu)); T(!z80m_iff2(&cpu));
+    T(4==step()); T(z80m_iff1(&cpu));  T(z80m_iff2(&cpu));
+    T(8==step()); T(0 == z80m_im(&cpu));
+    T(8==step()); T(1 == z80m_im(&cpu));
+    T(8==step()); T(2 == z80m_im(&cpu));
+    T(8==step()); T(0 == z80m_im(&cpu));
+}
+
 int main() {
     SET_GET();
     LD_A_RI();
@@ -2440,6 +2469,7 @@ int main() {
     CPIR();
     CPD();
     CPDR();
+    DI_EI_IM();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
