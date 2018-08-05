@@ -2450,6 +2450,40 @@ void JP_cc_nn() {
     T(10==step()); T(0x022D == _PC);
 }
 
+/* JP; JR */
+void JP_JR() {
+    puts(">>> JP; JR");
+    uint8_t prog[] = {
+        0x21, 0x16, 0x02,           //      LD HL,l3
+        0xDD, 0x21, 0x19, 0x02,     //      LD IX,l4
+        0xFD, 0x21, 0x21, 0x02,     //      LD IY,l5
+        0xC3, 0x14, 0x02,           //      JP l0
+        0x18, 0x04,                 // l1:  JR l2
+        0x18, 0xFC,                 // l0:  JR l1
+        0xDD, 0xE9,                 // l3:  JP (IX)
+        0xE9,                       // l2:  JP (HL)
+        0xFD, 0xE9,                 // l4:  JP (IY)
+        0x18, 0x06,                 // l6:  JR l7
+        0x00, 0x00, 0x00, 0x00,     //      4x NOP
+        0x18, 0xF8,                 // l5:  JR l6
+        0x00                        // l7:  NOP
+    };
+    copy(0x0204, prog, sizeof(prog));
+    init();
+    z80m_set_pc(&cpu, 0x0204);
+    T(10==step()); T(0x0216 == _HL);
+    T(14==step()); T(0x0219 == _IX);
+    T(14==step()); T(0x0221 == _IY);
+    T(10==step()); T(0x0214 == _PC); T(0x0214 == _WZ);
+    T(12==step()); T(0x0212 == _PC); T(0x0212 == _WZ);
+    T(12==step()); T(0x0218 == _PC); T(0x0218 == _WZ);
+    T(4 ==step()); T(0x0216 == _PC); T(0x0218 == _WZ);
+    T(8 ==step()); T(0x0219 == _PC); T(0x0218 == _WZ);
+    T(8 ==step()); T(0x0221 == _PC); T(0x0218 == _WZ);
+    T(12==step()); T(0x021B == _PC); T(0x021B == _WZ);
+    T(12==step()); T(0x0223 == _PC); T(0x0223 == _WZ);
+}
+
 int main() {
     SET_GET();
     LD_A_RI();
@@ -2515,6 +2549,7 @@ int main() {
     CPDR();
     DI_EI_IM();
     JP_cc_nn();
+    JP_JR();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
