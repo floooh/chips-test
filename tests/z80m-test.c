@@ -2406,6 +2406,50 @@ void DI_EI_IM() {
     T(8==step()); T(0 == z80m_im(&cpu));
 }
 
+/* JP cc,nn */
+void JP_cc_nn() {
+    puts(">>> JP cc,nn");
+    uint8_t prog[] = {
+        0x97,               //          SUB A
+        0xC2, 0x0C, 0x02,   //          JP NZ,label0
+        0xCA, 0x0C, 0x02,   //          JP Z,label0
+        0x00,               //          NOP
+        0xC6, 0x01,         // label0:  ADD A,0x01
+        0xCA, 0x15, 0x02,   //          JP Z,label1
+        0xC2, 0x15, 0x02,   //          JP NZ,label1
+        0x00,               //          NOP
+        0x07,               // label1:  RLCA
+        0xEA, 0x1D, 0x02,   //          JP PE,label2
+        0xE2, 0x1D, 0x02,   //          JP PO,label2
+        0x00,               //          NOP
+        0xC6, 0xFD,         // label2:  ADD A,0xFD
+        0xF2, 0x26, 0x02,   //          JP P,label3
+        0xFA, 0x26, 0x02,   //          JP M,label3
+        0x00,               //          NOP
+        0xD2, 0x2D, 0x02,   // label3:  JP NC,label4
+        0xDA, 0x2D, 0x02,   //          JP C,label4
+        0x00,               //          NOP
+        0x00,               //          NOP
+    };
+    copy(0x0204, prog, sizeof(prog));
+    init();
+    z80m_set_pc(&cpu, 0x0204);
+    
+    T(4 ==step()); T(0x00 == _A); T(flags(Z80M_ZF|Z80M_NF));
+    T(10==step()); T(0x0208 == _PC); T(0x020C == _WZ);
+    T(10==step()); T(0x020C == _PC); T(0x020C == _WZ);
+    T(7 ==step()); T(0x01 == _A); T(flags(0));
+    T(10==step()); T(0x0211 == _PC);
+    T(10==step()); T(0x0215 == _PC);
+    T(4 ==step()); T(0x02 == _A); T(flags(0));
+    T(10==step()); T(0x0219 == _PC);
+    T(10==step()); T(0x021D == _PC);
+    T(7 ==step()); T(0xFF == _A); T(flags(Z80M_SF));
+    T(10==step()); T(0x0222 == _PC);
+    T(10==step()); T(0x0226 == _PC);
+    T(10==step()); T(0x022D == _PC);
+}
+
 int main() {
     SET_GET();
     LD_A_RI();
@@ -2470,6 +2514,7 @@ int main() {
     CPD();
     CPDR();
     DI_EI_IM();
+    JP_cc_nn();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
