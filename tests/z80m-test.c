@@ -2039,6 +2039,180 @@ void NEG() {
     T(8==step()); T(0x40 == _A); T(flags(Z80M_NF|Z80M_CF));
 }
 
+/* LDI */
+void LDI() {
+    puts(">>> LDI");
+    uint8_t data[] = {
+        0x01, 0x02, 0x03,
+    };
+    uint8_t prog[] = {
+        0x21, 0x00, 0x10,       // LD HL,0x1000
+        0x11, 0x00, 0x20,       // LD DE,0x2000
+        0x01, 0x03, 0x00,       // LD BC,0x0003
+        0xED, 0xA0,             // LDI
+        0xED, 0xA0,             // LDI
+        0xED, 0xA0,             // LDI
+    };
+    copy(0x1000, data, sizeof(data));
+    copy(0x0000, prog, sizeof(prog));
+    init();
+
+    // skip loads
+    for (int i = 0; i < 3; i++) {
+        step();
+    }
+    T(16==step());
+    T(0x1001 == _HL);
+    T(0x2001 == _DE);
+    T(0x0002 == _BC);
+    T(0x01 == mem[0x2000]);
+    T(flags(Z80M_PF));
+    T(16==step());
+    T(0x1002 == _HL);
+    T(0x2002 == _DE);
+    T(0x0001 == _BC);
+    T(0x02 == mem[0x2001]);
+    T(flags(Z80M_PF));
+    T(16==step());
+    T(0x1003 == _HL);
+    T(0x2003 == _DE);
+    T(0x0000 == _BC);
+    T(0x03 == mem[0x2002]);
+    T(flags(0));
+}
+
+/* LDIR */
+void LDIR() {
+    puts(">>> LDIR");
+    uint8_t data[] = {
+        0x01, 0x02, 0x03,
+    };
+    uint8_t prog[] = {
+        0x21, 0x00, 0x10,       // LD HL,0x1000
+        0x11, 0x00, 0x20,       // LD DE,0x2000
+        0x01, 0x03, 0x00,       // LD BC,0x0003
+        0xED, 0xB0,             // LDIR
+        0x3E, 0x33,             // LD A,0x33
+    };
+    copy(0x1000, data, sizeof(data));
+    copy(0x0000, prog, sizeof(prog));
+    init();
+
+    // skip loads
+    for (int i = 0; i < 3; i++) {
+        step();
+    }
+    T(21==step());
+    T(0x1001 == _HL);
+    T(0x2001 == _DE);
+    T(0x0002 == _BC);
+    T(0x000A == _WZ);
+    T(0x01 == mem[0x2000]);
+    T(flags(Z80M_PF));
+    T(21==step());
+    T(0x1002 == _HL);
+    T(0x2002 == _DE);
+    T(0x0001 == _BC);
+    T(0x000A == _WZ);
+    T(0x02 == mem[0x2001]);
+    T(flags(Z80M_PF));
+    T(16==step());
+    T(0x1003 == _HL);
+    T(0x2003 == _DE);
+    T(0x0000 == _BC);
+    T(0x02 == mem[0x2001]);
+    T(0x03 == mem[0x2002]);
+    T(flags(0));
+    T(7==step()); T(0x33 == _A);
+}
+
+/* LDD */
+void LDD() {
+    puts(">>> LDD");
+    uint8_t data[] = {
+        0x01, 0x02, 0x03,
+    };
+    uint8_t prog[] = {
+        0x21, 0x02, 0x10,       // LD HL,0x1002
+        0x11, 0x02, 0x20,       // LD DE,0x2002
+        0x01, 0x03, 0x00,       // LD BC,0x0003
+        0xED, 0xA8,             // LDD
+        0xED, 0xA8,             // LDD
+        0xED, 0xA8,             // LDD
+    };
+    copy(0x1000, data, sizeof(data));
+    copy(0x0000, prog, sizeof(prog));
+    init();
+
+    // skip loads
+    for (int i = 0; i < 3; i++) {
+        step();
+    }
+    T(16==step());
+    T(0x1001 == _HL);
+    T(0x2001 == _DE);
+    T(0x0002 == _BC);
+    T(0x03 == mem[0x2002]);
+    T(flags(Z80M_PF));
+    T(16==step());
+    T(0x1000 == _HL);
+    T(0x2000 == _DE);
+    T(0x0001 == _BC);
+    T(0x02 == mem[0x2001]);
+    T(flags(Z80M_PF));
+    T(step());
+    T(0x0FFF == _HL);
+    T(0x1FFF == _DE);
+    T(0x0000 == _BC);
+    T(0x01 == mem[0x2000]);
+    T(flags(0));
+}
+
+/* LDDR */
+void LDDR() {
+    puts(">>> LDDR");
+    uint8_t data[] = {
+        0x01, 0x02, 0x03,
+    };
+    uint8_t prog[] = {
+        0x21, 0x02, 0x10,       // LD HL,0x1002
+        0x11, 0x02, 0x20,       // LD DE,0x2002
+        0x01, 0x03, 0x00,       // LD BC,0x0003
+        0xED, 0xB8,             // LDDR
+        0x3E, 0x33,             // LD A,0x33
+    };
+    copy(0x1000, data, sizeof(data));
+    copy(0x0000, prog, sizeof(prog));
+    init();
+
+    // skip loads
+    for (int i = 0; i < 3; i++) {
+        step();
+    }
+    T(21==step());
+    T(0x1001 == _HL);
+    T(0x2001 == _DE);
+    T(0x0002 == _BC);
+    T(0x000A == _WZ);
+    T(0x03 == mem[0x2002]);
+    T(flags(Z80M_PF));
+    T(21==step());
+    T(0x1000 == _HL);
+    T(0x2000 == _DE);
+    T(0x0001 == _BC);
+    T(0x000A == _WZ);
+    T(0x02 == mem[0x2001]);
+    T(flags(Z80M_PF));
+    T(16==step());
+    T(0x0FFF == _HL);
+    T(0x1FFF == _DE);
+    T(0x0000 == _BC);
+    T(0x000A == _WZ);
+    T(0x01 == mem[0x2000]);
+    T(flags(0));
+    T(7 == step()); T(0x33 == _A);
+}
+
 int main() {
     SET_GET();
     LD_A_RI();
@@ -2094,6 +2268,10 @@ int main() {
     CPL();
     CCF_SCF();
     NEG();
+    LDI();
+    LDIR();
+    LDD();
+    LDDR();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
