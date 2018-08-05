@@ -2623,6 +2623,55 @@ void CALL_RET_cc() {
     T(11==step()); T(0x0228 == _PC);
 }
 
+/* ADD HL,rr; ADC HL,rr; SBC HL,rr; ADD IX,rr; ADD IY,rr */
+void ADD_ADC_SBC_16() {
+    puts(">>> ADD HL,rr; ADC HL,rr; SBC HL,rr; ADD IX,rr; ADD IY,rr");
+    uint8_t prog[] = {
+        0x21, 0xFC, 0x00,       // LD HL,0x00FC
+        0x01, 0x08, 0x00,       // LD BC,0x0008
+        0x11, 0xFF, 0xFF,       // LD DE,0xFFFF
+        0x09,                   // ADD HL,BC
+        0x19,                   // ADD HL,DE
+        0xED, 0x4A,             // ADC HL,BC
+        0x29,                   // ADD HL,HL
+        0x19,                   // ADD HL,DE
+        0xED, 0x42,             // SBC HL,BC
+        0xDD, 0x21, 0xFC, 0x00, // LD IX,0x00FC
+        0x31, 0x00, 0x10,       // LD SP,0x1000
+        0xDD, 0x09,             // ADD IX, BC
+        0xDD, 0x19,             // ADD IX, DE
+        0xDD, 0x29,             // ADD IX, IX
+        0xDD, 0x39,             // ADD IX, SP
+        0xFD, 0x21, 0xFF, 0xFF, // LD IY,0xFFFF
+        0xFD, 0x09,             // ADD IY,BC
+        0xFD, 0x19,             // ADD IY,DE
+        0xFD, 0x29,             // ADD IY,IY
+        0xFD, 0x39,             // ADD IY,SP
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(10==step()); T(0x00FC == _HL);
+    T(10==step()); T(0x0008 == _BC);
+    T(10==step()); T(0xFFFF == _DE);
+    T(11==step()); T(0x0104 == _HL); T(flags(0)); T(0x00FD == _WZ);
+    T(11==step()); T(0x0103 == _HL); T(flags(Z80M_HF|Z80M_CF)); T(0x0105 == _WZ);
+    T(15==step()); T(0x010C == _HL); T(flags(0)); T(0x0104 == _WZ);
+    T(11==step()); T(0x0218 == _HL); T(flags(0)); T(0x010D == _WZ);
+    T(11==step()); T(0x0217 == _HL); T(flags(Z80M_HF|Z80M_CF)); T(0x0219 == _WZ);
+    T(15==step()); T(0x020E == _HL); T(flags(Z80M_NF)); T(0x0218 == _WZ);
+    T(14==step()); T(0x00FC == _IX);
+    T(10==step()); T(0x1000 == _SP);
+    T(15==step()); T(0x0104 == _IX); T(flags(0)); T(0x00FD == _WZ);
+    T(15==step()); T(0x0103 == _IX); T(flags(Z80M_HF|Z80M_CF)); T(0x0105 == _WZ);
+    T(15==step()); T(0x0206 == _IX); T(flags(0)); T(0x0104 == _WZ);
+    T(15==step()); T(0x1206 == _IX); T(flags(0)); T(0x0207 == _WZ);
+    T(14==step()); T(0xFFFF == _IY); 
+    T(15==step()); T(0x0007 == _IY); T(flags(Z80M_HF|Z80M_CF)); T(0x0000 == _WZ);
+    T(15==step()); T(0x0006 == _IY); T(flags(Z80M_HF|Z80M_CF)); T(0x0008 == _WZ);
+    T(15==step()); T(0x000C == _IY); T(flags(0)); T(0x0007 == _WZ);
+    T(15==step()); T(0x100C == _IY); T(flags(0)); T(0x000D == _WZ);
+}
+
 int main() {
     SET_GET();
     LD_A_RI();
@@ -2693,6 +2742,7 @@ int main() {
     DJNZ();
     CALL_RET();
     CALL_RET_cc();
+    ADD_ADC_SBC_16();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
