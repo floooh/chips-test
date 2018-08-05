@@ -2087,12 +2087,9 @@ int main() {
     SRL_iHLIXIYi();
     RLD_RRD();
     HALT();
-    /* FIXME: undocumented DD/FD+CB bit instructions */
-    /*
     BIT();
     SET();
     RES();
-    */
     DAA();
     CPL();
     CCF_SCF();
