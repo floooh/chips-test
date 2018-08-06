@@ -15,6 +15,13 @@ fips_begin_app(z80-zex cmdline)
     fips_generate(FROM zex-dump.yml TYPE dump SOURCE zex-dump.c HEADER zex-dump.h)
 fips_end_app()
 
+fips_begin_app(z80m-zex cmdline)
+    fips_vs_warning_level(3)
+    fips_files(z80m-zex.c)
+    fips_dir(roms)
+    fips_generate(FROM zex-dump.yml TYPE dump SOURCE zexm-dump.c HEADER zexm-dump.h)
+fips_end_app()
+
 fips_begin_app(z80pio-test cmdline)
     fips_vs_warning_level(3)
     fips_files(z80pio-test.c)
