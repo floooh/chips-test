@@ -2672,6 +2672,179 @@ void ADD_ADC_SBC_16() {
     T(15==step()); T(0x100C == _IY); T(flags(0)); T(0x000D == _WZ);
 }
 
+/* IN */
+void IN() {
+    puts(">>> IN");
+    uint8_t prog[] = {
+        0x3E, 0x01,         // LD A,0x01
+        0xDB, 0x03,         // IN A,(0x03)
+        0xDB, 0x04,         // IN A,(0x04)
+        0x01, 0x02, 0x02,   // LD BC,0x0202
+        0xED, 0x78,         // IN A,(C)
+        0x01, 0xFF, 0x05,   // LD BC,0x05FF
+        0xED, 0x50,         // IN D,(C)
+        0x01, 0x05, 0x05,   // LD BC,0x0505
+        0xED, 0x58,         // IN E,(C)
+        0x01, 0x06, 0x01,   // LD BC,0x0106
+        0xED, 0x60,         // IN H,(C)
+        0x01, 0x00, 0x10,   // LD BC,0x0000
+        0xED, 0x68,         // IN L,(C)
+        0xED, 0x40,         // IN B,(C)
+        0xED, 0x48,         // IN C,(c)
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    z80m_set_f(&cpu, Z80M_HF|Z80M_CF);
+    T(7 ==step()); T(0x01 == _A); T(flags(Z80M_HF|Z80M_CF));
+    T(11==step()); T(0x06 == _A); T(flags(Z80M_HF|Z80M_CF)); T(0x0104 == _WZ);
+    T(11==step()); T(0x08 == _A); T(flags(Z80M_HF|Z80M_CF)); T(0x0605 == _WZ);
+    T(10==step()); T(0x0202 == _BC);
+    T(12==step()); T(0x04 == _A); T(flags(Z80M_CF)); T(0x0203 == _WZ);
+    T(10==step()); T(0x05FF == _BC);
+    T(12==step()); T(0xFE == _D); T(flags(Z80M_SF|Z80M_CF)); T(0x0600 == _WZ);
+    T(10==step()); T(0x0505 == _BC);
+    T(12==step()); T(0x0A == _E); T(flags(Z80M_PF|Z80M_CF)); T(0x0506 == _WZ);
+    T(10==step()); T(0x0106 == _BC);
+    T(12==step()); T(0x0C == _H); T(flags(Z80M_PF|Z80M_CF)); T(0x0107 == _WZ);
+    T(10==step()); T(0x1000 == _BC);
+    T(12==step()); T(0x00 == _L); T(flags(Z80M_ZF|Z80M_PF|Z80M_CF)); T(0x1001 == _WZ);
+    T(12==step()); T(0x00 == _B); T(flags(Z80M_ZF|Z80M_PF|Z80M_CF)); T(0x1001 == _WZ);
+    T(12==step()); T(0x00 == _C); T(flags(Z80M_ZF|Z80M_PF|Z80M_CF)); T(0x0001 == _WZ);
+}
+
+/* OUT */
+void OUT() {
+    puts(">>> OUT");
+    uint8_t prog[] = {
+        0x3E, 0x01,         // LD A,0x01
+        0xD3, 0x01,         // OUT (0x01),A
+        0xD3, 0xFF,         // OUT (0xFF),A
+        0x01, 0x34, 0x12,   // LD BC,0x1234
+        0x11, 0x78, 0x56,   // LD DE,0x5678
+        0x21, 0xCD, 0xAB,   // LD HL,0xABCD
+        0xED, 0x79,         // OUT (C),A
+        0xED, 0x41,         // OUT (C),B
+        0xED, 0x49,         // OUT (C),C
+        0xED, 0x51,         // OUT (C),D
+        0xED, 0x59,         // OUT (C),E
+        0xED, 0x61,         // OUT (C),H
+        0xED, 0x69,         // OUT (C),L
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(7 ==step()); T(0x01 == _A);
+    T(11==step()); T(0x0101 == out_port); T(0x01 == out_byte); T(0x0102 == _WZ);
+    T(11==step()); T(0x01FF == out_port); T(0x01 == out_byte); T(0x0100 == _WZ);
+    T(10==step()); T(0x1234 == _BC);
+    T(10==step()); T(0x5678 == _DE);
+    T(10==step()); T(0xABCD == _HL);
+    T(12==step()); T(0x1234 == out_port); T(0x01 == out_byte); T(0x1235 == _WZ);
+    T(12==step()); T(0x1234 == out_port); T(0x12 == out_byte); T(0x1235 == _WZ);
+    T(12==step()); T(0x1234 == out_port); T(0x34 == out_byte); T(0x1235 == _WZ);
+    T(12==step()); T(0x1234 == out_port); T(0x56 == out_byte); T(0x1235 == _WZ);
+    T(12==step()); T(0x1234 == out_port); T(0x78 == out_byte); T(0x1235 == _WZ);
+    T(12==step()); T(0x1234 == out_port); T(0xAB == out_byte); T(0x1235 == _WZ);
+    T(12==step()); T(0x1234 == out_port); T(0xCD == out_byte); T(0x1235 == _WZ);
+}
+
+/* INIR; INDR */
+void INIR_INDR() {
+    puts(">>> INIR; INDR");
+    uint8_t prog[] = {
+        0x21, 0x00, 0x10,       // LD HL,0x1000
+        0x01, 0x02, 0x03,       // LD BC,0x0302
+        0xED, 0xB2,             // INIR
+        0x01, 0x03, 0x03,       // LD BC,0x0303
+        0xED, 0xBA              // INDR
+    };
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(10 == step()); T(0x1000 == _HL);
+    T(10 == step()); T(0x0302 == _BC);
+    T(21 == step());
+    T(0x1001 == _HL);
+    T(0x0202 == _BC);
+    T(0x04 == mem[0x1000]);
+    T(!(z80m_f(&cpu) & Z80M_ZF));
+    T(21 == step());
+    T(0x1002 == _HL);
+    T(0x0102 == _BC);
+    T(0x04 == mem[0x1001]);
+    T(!(z80m_f(&cpu) & Z80M_ZF));
+    T(16 == step());
+    T(0x1003 == _HL);
+    T(0x0002 == _BC);
+    T(0x04 == mem[0x1002]);
+    T(z80m_f(&cpu) & Z80M_ZF);
+    T(10 == step()); T(0x0303 == _BC);
+    T(21 == step());
+    T(0x1002 == _HL);
+    T(0x0203 == _BC);
+    T(0x06 == mem[0x1003]);
+    T(!(z80m_f(&cpu) & Z80M_ZF));
+    T(21 == step());
+    T(0x1001 == _HL);
+    T(0x0103 == _BC);
+    T(0x06 == mem[0x1002]);
+    T(!(z80m_f(&cpu) & Z80M_ZF));
+    T(16 == step());
+    T(0x1000 == _HL);
+    T(0x0003 == _BC);
+    T(0x06 == mem[0x1001]);
+    T(z80m_f(&cpu) & Z80M_ZF);
+}
+
+/* OTIR; OTDR */
+void OTIR_OTDR() {
+    puts(">>> OTIR; OTDR");
+    uint8_t data[] = {
+        0x01, 0x02, 0x03, 0x04
+    };
+    uint8_t prog[] = {
+        0x21, 0x00, 0x10,       // LD HL,0x1000
+        0x01, 0x02, 0x03,       // LD BC,0x0302
+        0xED, 0xB3,             // OTIR
+        0x01, 0x03, 0x03,       // LD BC,0x0303
+        0xED, 0xBB,             // OTDR
+    };
+    copy(0x1000, data, sizeof(data));
+    copy(0x0000, prog, sizeof(prog));
+    init();
+    T(10 == step()); T(0x1000 == _HL);
+    T(10 == step()); T(0x0302 == _BC);
+    T(21 == step());
+    T(0x1001 == _HL);
+    T(0x0202 == _BC);
+    T(0x0202 == out_port); T(0x01 == out_byte);
+    T(!(z80m_f(&cpu) & Z80M_ZF));
+    T(21 == step());
+    T(0x1002 == _HL);
+    T(0x0102 == _BC);
+    T(0x0102 == out_port); T(0x02 == out_byte);
+    T(!(z80m_f(&cpu) & Z80M_ZF));
+    T(16 == step());
+    T(0x1003 == _HL);
+    T(0x0002 == _BC);
+    T(0x0002 == out_port); T(0x03 == out_byte);
+    T(z80m_f(&cpu) & Z80M_ZF);
+    T(10 == step()); T(0x0303 == _BC);
+    T(21 == step());
+    T(0x1002 == _HL);
+    T(0x0203 == _BC);
+    T(0x0203 == out_port); T(0x04 == out_byte);
+    T(!(z80m_f(&cpu) & Z80M_ZF));
+    T(21 == step());
+    T(0x1001 == _HL);
+    T(0x0103 == _BC);
+    T(0x0103 == out_port); T(0x03 == out_byte);
+    T(!(z80m_f(&cpu) & Z80M_ZF));
+    T(16 == step());
+    T(0x1000 == _HL);
+    T(0x0003 == _BC);
+    T(0x0003 == out_port); T(0x02 == out_byte);
+    T(z80m_f(&cpu) & Z80M_ZF);
+}
+
 int main() {
     SET_GET();
     LD_A_RI();
@@ -2743,6 +2916,10 @@ int main() {
     CALL_RET();
     CALL_RET_cc();
     ADD_ADC_SBC_16();
+    IN();
+    OUT();
+    INIR_INDR();
+    OTIR_OTDR();
     printf("%d tests run ok.\n", num_tests);
     return 0;
 }
