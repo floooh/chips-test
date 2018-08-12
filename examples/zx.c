@@ -294,7 +294,7 @@ void zx_init(zx_t* zx, zx_type_t type) {
             .magnitude = 0.5
         });
     }
-    zx->cpu.state.PC = 0x0000;
+    z80_set_pc(&zx->cpu, 0x0000);
 
     /* initial memory map */
     if (zx->type == ZX_TYPE_128K) {
@@ -772,29 +772,29 @@ bool zx_load_z80(zx_t* zx, const uint8_t* ptr, uint32_t num_bytes) {
     }
 
     /* start loaded image */
-    zx->cpu.state.A = hdr->A; zx->cpu.state.F = hdr->F;
-    zx->cpu.state.B = hdr->B; zx->cpu.state.C = hdr->C;
-    zx->cpu.state.D = hdr->D; zx->cpu.state.E = hdr->E;
-    zx->cpu.state.H = hdr->H; zx->cpu.state.L = hdr->L;
-    zx->cpu.state.IXH = hdr->IX_h; zx->cpu.state.IXL = hdr->IX_l;
-    zx->cpu.state.IYH = hdr->IY_h; zx->cpu.state.IYL = hdr->IY_l;
-    zx->cpu.state.AF_ = (hdr->A_<<8 | hdr->F_) & 0xFFFF;
-    zx->cpu.state.BC_ = (hdr->B_<<8 | hdr->C_) & 0xFFFF;
-    zx->cpu.state.DE_ = (hdr->D_<<8 | hdr->E_) & 0xFFFF;
-    zx->cpu.state.HL_ = (hdr->H_<<8 | hdr->L_) & 0xFFFF;
-    zx->cpu.state.SP = (hdr->SP_h<<8 | hdr->SP_l) & 0xFFFF;
-    zx->cpu.state.I = hdr->I;
-    zx->cpu.state.R = (hdr->R & 0x7F) | ((hdr->flags0 & 1)<<7);
-    zx->cpu.state.IFF2 = hdr->IFF2 != 0;
-    zx->cpu.state.ei_pending = hdr->EI != 0;
+    z80_set_a(&zx->cpu, hdr->A); z80_set_f(&zx->cpu, hdr->F);
+    z80_set_b(&zx->cpu, hdr->B); z80_set_c(&zx->cpu, hdr->C);
+    z80_set_d(&zx->cpu, hdr->D); z80_set_e(&zx->cpu, hdr->E);
+    z80_set_h(&zx->cpu, hdr->H); z80_set_l(&zx->cpu, hdr->L);
+    z80_set_ix(&zx->cpu, hdr->IX_h<<8|hdr->IX_l);
+    z80_set_iy(&zx->cpu, hdr->IY_h<<8|hdr->IY_l);
+    z80_set_fa_(&zx->cpu, hdr->F_<<8|hdr->A_);
+    z80_set_bc_(&zx->cpu, hdr->B_<<8|hdr->C_);
+    z80_set_de_(&zx->cpu, hdr->D_<<8|hdr->E_);
+    z80_set_hl_(&zx->cpu, hdr->H_<<8|hdr->L_);
+    z80_set_sp(&zx->cpu, hdr->SP_h<<8|hdr->SP_l);
+    z80_set_i(&zx->cpu, hdr->I);
+    z80_set_r(&zx->cpu, (hdr->R & 0x7F) | ((hdr->flags0 & 1)<<7));
+    z80_set_iff2(&zx->cpu, hdr->IFF2 != 0);
+    z80_set_ei_pending(&zx->cpu, hdr->EI != 0);
     if (hdr->flags1 != 0xFF) {
-        zx->cpu.state.IM = (hdr->flags1 & 3);
+        z80_set_im(&zx->cpu, hdr->flags1 & 3);
     }
     else {
-        zx->cpu.state.IM = 1;
+        z80_set_im(&zx->cpu, 1);
     }
     if (ext_hdr) {
-        zx->cpu.state.PC = (ext_hdr->PC_h<<8 | ext_hdr->PC_l) & 0xFFFF;
+        z80_set_pc(&zx->cpu, ext_hdr->PC_h<<8|ext_hdr->PC_l);
         if (zx->type == ZX_TYPE_128K) {
             for (int i = 0; i < 16; i++) {
                 /* latch AY-3-8912 register address */
@@ -813,7 +813,7 @@ bool zx_load_z80(zx_t* zx, const uint8_t* ptr, uint32_t num_bytes) {
         zx_cpu_tick(4, pins, zx);
     }
     else {
-        zx->cpu.state.PC = (hdr->PC_h<<8 | hdr->PC_l) & 0xFFFF;
+        z80_set_pc(&zx->cpu, hdr->PC_h<<8|hdr->PC_l);
     }
     zx->border_color = zx_palette[(hdr->flags0>>1) & 7] & 0xFFD7D7D7;
     return true;

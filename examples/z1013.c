@@ -207,7 +207,7 @@ void z1013_init(z1013_t* z1013) {
     memcpy(&z1013->mem[0x0100], dump_kc_basic+0x20, sizeof(dump_kc_basic)-0x20);
 
     /* execution starts at 0xF000 */
-    z1013->cpu.state.PC = 0xF000;
+    z80_set_pc(&z1013->cpu, 0xF000);
 }
 
 /* the CPU tick function needs to perform memory and I/O reads/writes */
@@ -359,13 +359,13 @@ bool z1013_load_z80(z1013_t* z1013, const uint8_t* ptr, uint32_t num_bytes) {
     exec_addr = (hdr->exec_addr_h<<8 | hdr->exec_addr_l) & 0xFFFF;
     memcpy(&z1013->mem[addr], ptr, end_addr - addr);
 
-    z1013->cpu.state.A = 0x00;
-    z1013->cpu.state.F = 0x10;
-    z1013->cpu.state.BC = z1013->cpu.state.BC_ = 0x0000;
-    z1013->cpu.state.DE = z1013->cpu.state.DE_ = 0x0000;
-    z1013->cpu.state.HL = z1013->cpu.state.HL_ = 0x0000;
-    z1013->cpu.state.AF_ = 0x0000;
-    z1013->cpu.state.PC = exec_addr;
+    z80_set_a(&z1013->cpu, 0x00);
+    z80_set_f(&z1013->cpu, 0x10);
+    z80_set_bc(&z1013->cpu, 0x0000); z80_set_bc_(&z1013->cpu, 0x0000);
+    z80_set_de(&z1013->cpu, 0x0000); z80_set_de_(&z1013->cpu, 0x0000);
+    z80_set_hl(&z1013->cpu, 0x0000); z80_set_hl_(&z1013->cpu, 0x0000);
+    z80_set_fa_(&z1013->cpu, 0x0000);
+    z80_set_pc(&z1013->cpu, exec_addr);
 
     return true;
 }

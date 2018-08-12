@@ -8,7 +8,7 @@
 #include "chips/z80.h"
 #define SOKOL_IMPL
 #include "sokol_time.h"
-#include "roms/zex-dump.h"
+#include "roms/zexm-dump.h"
 #include <stdio.h>
 #include <inttypes.h>
 
@@ -45,26 +45,30 @@ static uint64_t tick(int num, uint64_t pins, void* user_data) {
 /* emulate character and string output CP/M system calls */
 static bool cpm_bdos(z80_t* cpu) {
     bool retval = true;
-    if (2 == cpu->state.C) {
+    if (2 == z80_c(cpu)) {
         // output character in register E
-        put_char(cpu->state.E);
+        put_char(z80_e(cpu));
     }
-    else if (9 == cpu->state.C) {
+    else if (9 == z80_c(cpu)) {
         // output $-terminated string pointed to by register DE */
         uint8_t c;
-        uint16_t addr = cpu->state.DE;
+        uint16_t addr = z80_de(cpu);
         while ((c = mem[addr++ & mem_mask]) != '$') {
             put_char(c);
         }
     }
     else {
-        printf("Unhandled CP/M system call: %d\n", cpu->state.C);
+        printf("Unhandled CP/M system call: %d\n", z80_c(cpu));
         retval = false;
     }
     // emulate a RET
-    uint8_t z = mem[cpu->state.SP++];
-    uint8_t w = mem[cpu->state.SP++];
-    cpu->state.PC = cpu->state.WZ = (w<<8)|z;
+    uint16_t sp = z80_sp(cpu);
+    uint8_t z = mem[sp++];
+    uint8_t w = mem[sp++];
+    z80_set_sp(cpu, sp);
+    uint16_t wz = (w<<8)|z;
+    z80_set_pc(cpu, wz);
+    z80_set_wz(cpu, wz);
     return retval;
 }
 
@@ -77,12 +81,13 @@ static bool run_test(z80_t* cpu, const char* name) {
         /* run for a lot of ticks or until HALT is encountered */
         ticks += z80_exec(cpu, (1<<30));
         /* check for BDOS call */
-        if (5 == cpu->state.PC) {
+        const uint16_t pc = z80_pc(cpu);
+        if (5 == pc) {
             if (!cpm_bdos(cpu)) {
                 running = false;
             }
         }
-        else if (0 == cpu->state.PC) {
+        else if (0 == pc) {
             running = false;
         }
         cpu->pins &= ~Z80_HALT;
@@ -110,8 +115,8 @@ static bool zexdoc() {
     memcpy(&mem[0x0100], dump_zexdoc, sizeof(dump_zexdoc));
     z80_t cpu;
     z80_init(&cpu, &(z80_desc_t){ .tick_cb=tick });
-    cpu.state.SP = 0xF000;
-    cpu.state.PC = 0x0100;
+    z80_set_sp(&cpu, 0xF000);
+    z80_set_pc(&cpu, 0x0100);
     /* trap when reaching address 0x0000 or 0x0005 */
     z80_set_trap(&cpu, 0, 0x0000);
     z80_set_trap(&cpu, 1, 0x0005);
@@ -125,8 +130,8 @@ static bool zexall() {
     memcpy(&mem[0x0100], dump_zexall, sizeof(dump_zexall));
     z80_t cpu;
     z80_init(&cpu, &(z80_desc_t){ .tick_cb=tick });
-    cpu.state.SP = 0xF000;
-    cpu.state.PC = 0x0100;
+    z80_set_sp(&cpu, 0xF000);
+    z80_set_pc(&cpu, 0x0100);
     /* trap when reaching address 0x0000 or 0x0005 */
     z80_set_trap(&cpu, 0, 0x0000);
     z80_set_trap(&cpu, 1, 0x0005);
@@ -143,3 +148,4 @@ int main() {
     }
     return 0;
 }
+

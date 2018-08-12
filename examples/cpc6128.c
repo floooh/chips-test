@@ -280,7 +280,7 @@ void cpc_init(cpc_t* cpc) {
     });
 
     /* CPU start address */
-    cpc->cpu.state.PC = 0x0000;
+    z80_set_pc(&cpc->cpu, 0x0000);
 }
 
 void cpc_init_keymap(cpc_t* cpc) {
@@ -968,22 +968,22 @@ bool cpc_load_sna(cpc_t* cpc, const uint8_t* ptr, uint32_t num_bytes) {
     }
     memcpy(cpc->ram, ptr, dump_num_bytes);
 
-    cpc->cpu.state.F = hdr->F; cpc->cpu.state.A = hdr->A;
-    cpc->cpu.state.C = hdr->C; cpc->cpu.state.B = hdr->B;
-    cpc->cpu.state.E = hdr->E; cpc->cpu.state.D = hdr->D;
-    cpc->cpu.state.L = hdr->L; cpc->cpu.state.H = hdr->H;
-    cpc->cpu.state.R = hdr->R; cpc->cpu.state.I = hdr->I;
-    cpc->cpu.state.IFF1 = (hdr->IFF1 & 1) != 0;
-    cpc->cpu.state.IFF2 = (hdr->IFF2 & 1) != 0;
-    cpc->cpu.state.IX = hdr->IX_h<<8 | hdr->IX_l;
-    cpc->cpu.state.IY = hdr->IY_h<<8 | hdr->IY_l;
-    cpc->cpu.state.SP = hdr->SP_h<<8 | hdr->SP_l;
-    cpc->cpu.state.PC = hdr->PC_h<<8 | hdr->PC_l;
-    cpc->cpu.state.IM = hdr->IM;
-    cpc->cpu.state.AF_ = hdr->A_<<8 | hdr->F_;
-    cpc->cpu.state.BC_ = hdr->B_<<8 | hdr->C_;
-    cpc->cpu.state.DE_ = hdr->D_<<8 | hdr->E_;
-    cpc->cpu.state.HL_ = hdr->H_<<8 | hdr->L_;
+    z80_set_f(&cpc->cpu, hdr->F); z80_set_a(&cpc->cpu,hdr->A);
+    z80_set_c(&cpc->cpu, hdr->C); z80_set_b(&cpc->cpu, hdr->B);
+    z80_set_e(&cpc->cpu, hdr->E); z80_set_d(&cpc->cpu, hdr->D);
+    z80_set_l(&cpc->cpu, hdr->L); z80_set_h(&cpc->cpu, hdr->H);
+    z80_set_r(&cpc->cpu, hdr->R); z80_set_i(&cpc->cpu, hdr->I);
+    z80_set_iff1(&cpc->cpu, (hdr->IFF1 & 1) != 0);
+    z80_set_iff2(&cpc->cpu, (hdr->IFF2 & 1) != 0);
+    z80_set_ix(&cpc->cpu, hdr->IX_h<<8 | hdr->IX_l);
+    z80_set_iy(&cpc->cpu, hdr->IY_h<<8 | hdr->IY_l);
+    z80_set_sp(&cpc->cpu, hdr->SP_h<<8 | hdr->SP_l);
+    z80_set_pc(&cpc->cpu, hdr->PC_h<<8 | hdr->PC_l);
+    z80_set_im(&cpc->cpu, hdr->IM);
+    z80_set_fa_(&cpc->cpu, hdr->F_<<8 | hdr->A_);
+    z80_set_bc_(&cpc->cpu, hdr->B_<<8 | hdr->C_);
+    z80_set_de_(&cpc->cpu, hdr->D_<<8 | hdr->E_);
+    z80_set_hl_(&cpc->cpu, hdr->H_<<8 | hdr->L_);
 
     for (int i = 0; i < 16; i++) {
         cpc->ga_palette[i] = cpc_colors[hdr->pens[i] & 0x1F];

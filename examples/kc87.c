@@ -244,7 +244,7 @@ void kc87_init(kc87_t* kc87) {
     memcpy(&kc87->mem[0xF000], dump_kc87_os_2+0x1000, 0x1000);
 
     /* execution starts at 0xF000 */
-    kc87->cpu.state.PC = 0xF000;
+    z80_set_pc(&kc87->cpu, 0xF000);
 }
 
 /* the CPU tick callback performs memory and I/O reads/writes */
