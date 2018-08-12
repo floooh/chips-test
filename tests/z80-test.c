@@ -1370,6 +1370,13 @@ void INC_DEC_r() {
     for (int i = 0; i < 7; i++) {
         step();
     }
+    T(0x00 == _A);
+    T(0xFF == _B);
+    T(0x0F == _C);
+    T(0x0E == _D);
+    T(0x7F == _E);
+    T(0x3E == _H);
+    T(0x23 == _L);
     T(4==step()); T(0x01 == _A); T(flags(0));
     T(4==step()); T(0x00 == _A); T(flags(Z80_ZF|Z80_NF));
     T(4==step()); T(0x00 == _B); T(flags(Z80_ZF|Z80_HF));
