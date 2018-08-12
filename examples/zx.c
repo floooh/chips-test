@@ -772,6 +772,7 @@ bool zx_load_z80(zx_t* zx, const uint8_t* ptr, uint32_t num_bytes) {
     }
 
     /* start loaded image */
+    z80_reset(&zx->cpu);
     z80_set_a(&zx->cpu, hdr->A); z80_set_f(&zx->cpu, hdr->F);
     z80_set_b(&zx->cpu, hdr->B); z80_set_c(&zx->cpu, hdr->C);
     z80_set_d(&zx->cpu, hdr->D); z80_set_e(&zx->cpu, hdr->E);

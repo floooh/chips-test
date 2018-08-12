@@ -968,6 +968,7 @@ bool cpc_load_sna(cpc_t* cpc, const uint8_t* ptr, uint32_t num_bytes) {
     }
     memcpy(cpc->ram, ptr, dump_num_bytes);
 
+    z80_reset(&cpc->cpu);
     z80_set_f(&cpc->cpu, hdr->F); z80_set_a(&cpc->cpu,hdr->A);
     z80_set_c(&cpc->cpu, hdr->C); z80_set_b(&cpc->cpu, hdr->B);
     z80_set_e(&cpc->cpu, hdr->E); z80_set_d(&cpc->cpu, hdr->D);

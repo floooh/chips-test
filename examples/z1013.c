@@ -359,6 +359,7 @@ bool z1013_load_z80(z1013_t* z1013, const uint8_t* ptr, uint32_t num_bytes) {
     exec_addr = (hdr->exec_addr_h<<8 | hdr->exec_addr_l) & 0xFFFF;
     memcpy(&z1013->mem[addr], ptr, end_addr - addr);
 
+    z80_reset(&z1013->cpu);
     z80_set_a(&z1013->cpu, 0x00);
     z80_set_f(&z1013->cpu, 0x10);
     z80_set_bc(&z1013->cpu, 0x0000); z80_set_bc_(&z1013->cpu, 0x0000);
