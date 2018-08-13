@@ -100,7 +100,10 @@ uint64_t cpu_tick(int num, uint64_t pins, void* user_data) {
         }
     }
     else if (pins & Z80_IORQ) {
-        // FIXME
+        if (pins & Z80_RD) {
+            uint16_t port = Z80_GET_ADDR(pins);
+            Z80_SET_DATA(pins, port>>8);
+        }
     }
     return pins;
 }
