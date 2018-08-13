@@ -1,0 +1,6 @@
+---
+files:
+  - file: tests.in
+    name: fuse_input
+  - file: tests.expected
+    name: fuse_expected

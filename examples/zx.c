@@ -779,7 +779,7 @@ bool zx_load_z80(zx_t* zx, const uint8_t* ptr, uint32_t num_bytes) {
     z80_set_h(&zx->cpu, hdr->H); z80_set_l(&zx->cpu, hdr->L);
     z80_set_ix(&zx->cpu, hdr->IX_h<<8|hdr->IX_l);
     z80_set_iy(&zx->cpu, hdr->IY_h<<8|hdr->IY_l);
-    z80_set_fa_(&zx->cpu, hdr->F_<<8|hdr->A_);
+    z80_set_af_(&zx->cpu, hdr->A_<<8|hdr->F_);
     z80_set_bc_(&zx->cpu, hdr->B_<<8|hdr->C_);
     z80_set_de_(&zx->cpu, hdr->D_<<8|hdr->E_);
     z80_set_hl_(&zx->cpu, hdr->H_<<8|hdr->L_);

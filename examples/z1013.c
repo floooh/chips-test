@@ -365,7 +365,7 @@ bool z1013_load_z80(z1013_t* z1013, const uint8_t* ptr, uint32_t num_bytes) {
     z80_set_bc(&z1013->cpu, 0x0000); z80_set_bc_(&z1013->cpu, 0x0000);
     z80_set_de(&z1013->cpu, 0x0000); z80_set_de_(&z1013->cpu, 0x0000);
     z80_set_hl(&z1013->cpu, 0x0000); z80_set_hl_(&z1013->cpu, 0x0000);
-    z80_set_fa_(&z1013->cpu, 0x0000);
+    z80_set_af_(&z1013->cpu, 0x0000);
     z80_set_pc(&z1013->cpu, exec_addr);
 
     return true;

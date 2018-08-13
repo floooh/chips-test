@@ -981,7 +981,7 @@ bool cpc_load_sna(cpc_t* cpc, const uint8_t* ptr, uint32_t num_bytes) {
     z80_set_sp(&cpc->cpu, hdr->SP_h<<8 | hdr->SP_l);
     z80_set_pc(&cpc->cpu, hdr->PC_h<<8 | hdr->PC_l);
     z80_set_im(&cpc->cpu, hdr->IM);
-    z80_set_fa_(&cpc->cpu, hdr->F_<<8 | hdr->A_);
+    z80_set_af_(&cpc->cpu, hdr->A_<<8 | hdr->F_);
     z80_set_bc_(&cpc->cpu, hdr->B_<<8 | hdr->C_);
     z80_set_de_(&cpc->cpu, hdr->D_<<8 | hdr->E_);
     z80_set_hl_(&cpc->cpu, hdr->H_<<8 | hdr->L_);

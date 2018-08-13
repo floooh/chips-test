@@ -1,0 +1,73 @@
+File formats
+============
+
+tests.in
+--------
+
+Each test has the format:
+
+<arbitrary test description>
+AF BC DE HL AF' BC' DE' HL' IX IY SP PC
+I R IFF1 IFF2 IM <halted> <tstates>
+
+<halted> specifies whether the Z80 is halted.
+<tstates> specifies the number of tstates to run the test for, in
+  decimal; the number actually executed may be higher, as the final
+  instruction is allowed to complete.
+
+Then followed by lines specifying the initial memory setup. Each has
+the format:
+
+<start address> <byte1> <byte2> ... -1
+
+eg
+
+1234 56 78 9a -1
+
+says to put 0x56 at 0x1234, 0x78 at 0x1235 and 0x9a at 0x1236.
+
+Finally, -1 to end the test. Blank lines may follow before the next test.
+
+tests.expected
+--------------
+
+Each test output starts with the test description, followed by a list
+of 'events': each has the format
+
+<time> <type> <address> <data>
+
+<time> is simply the time at which the event occurs.
+<type> is one of MR (memory read), MW (memory write), MC (memory
+       contend), PR (port read), PW (port write) or PC (port contend).
+<address> is the address (or IO port) affected.
+<data> is the byte written or read. Missing for contentions.
+
+After that, lines specifying AF, BC etc as for .in files. <tstates>
+now specifies the final time.
+
+After that, lines specifying which bits of memory have changed since
+the initial setup. Same format as for .in files.
+
+Why some specific tests are here
+================================
+
+37_{1,2,3}: check the behaviour of SCF with respect to bits 3 and 5
+	    (bug fixed on 20040225).
+
+cb{4,5,6,7}{7,f}_1: designed to check that bits 3 and 5 are copied to
+		    F only for BIT 3,<arg> and BIT 5,<arg> respectively
+		    (bug fixed on 20040225).
+
+		    However, later research has revealed the bits 3
+		    and 5 are copied on all BIT instructions, so these
+		    tests are now essentially redundant.
+
+d{3,b}_{1,2,3}: check for correct port contention on IO in the four
+	        relevant states (port high byte in 0x40 to 0x7f or not,
+		port low bit set or reset).
+
+dd00.in, ddfd00.in: test timings of "extended NOP" opcodes DD 00 and
+		    DD FD 00; the extra 00 at the end is to check the
+		    next opcode executes at the right time (bug fixed
+		    on 20060722).
+
