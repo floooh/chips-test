@@ -79,6 +79,7 @@ bool run_test(fuse_test_t* inp, fuse_test_t* exp) {
     assert(inp->state.halted == 0);
 
     /* prepare CPU and memory with test input data */
+    memset(mem, 0, sizeof(mem));
     z80_t cpu;
     z80_init(&cpu, &(z80_desc_t){ .tick_cb=cpu_tick });
     z80_set_af(&cpu, inp->state.af);
@@ -189,6 +190,21 @@ bool run_test(fuse_test_t* inp, fuse_test_t* exp) {
     if ((0 != exp->state.halted) != (0 != (cpu.pins & Z80_HALT))) {
         printf("\n  %s: HALT: %s (expected %s)", inp->desc, (cpu.pins&Z80_HALT)?"true":"false", exp->state.halted?"true":"false");
         ok = false;
+    }
+    /* check memory content */
+    for (int i = 0; i < exp->num_chunks; i++) {
+        fuse_mem_t* chunk = &(exp->chunks[i]);
+        uint16_t addr = chunk->addr;
+        for (int bi = 0; bi < chunk->num_bytes; bi++) {
+            if (chunk->bytes[bi] != mem[(addr+bi) & 0xFFFF]) {
+                printf("\n  %s: BYTE AT 0x%04X IS 0x%02X (expected 0x%02X)", inp->desc,
+                    (addr+bi) & 0xFFFF,
+                    mem[(addr+bi) & 0xFFFF],
+                    chunk->bytes[bi]);
+                ok = false;
+            }
+        }
+
     }
     if (!ok) {
         printf("\n%s FAILED!!!\n", inp->desc);
