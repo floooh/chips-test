@@ -120,12 +120,12 @@ int main() {
     copy(0x0200, int_prog, sizeof(int_prog));
 
     T(10 == z80_exec(&cpu,0)); T(_SP == 0x0300);   /* LD SP, 0x0300) */
-    T(4 == z80_exec(&cpu,0)); T(!_IFF1);                       /* EI */
+    T(4 == z80_exec(&cpu,0)); T(_IFF1);                       /* EI */
     T(8 == z80_exec(&cpu,0)); T(_IFF2); T(_IM == 2);        /* IM 2 */
     T(4 == z80_exec(&cpu,0)); T(_A == 0);                              /* XOR A */
     T(9 == z80_exec(&cpu,0)); T(_I == 0);                              /* LD I,A */
     T(29 == z80_exec(&cpu,0)); T(_PC == 0x0200); T(_IFF2 == false); T(_SP == 0x02FE);    /* OUT (0x01),A */
-    T(4 == z80_exec(&cpu,0)); T(_IFF2 == false);                       /* EI */
+    T(4 == z80_exec(&cpu,0)); T(_IFF2);                       /* EI */
     T(10 == z80_exec(&cpu,0)); T(_HL == 0x1111); T(_IFF2 == true);  /* LD HL,0x1111 */
     T(14 == z80_exec(&cpu,0)); T(_PC == 0x010B); T(reti_executed);     /* RETI */
     z80_exec(&cpu,0); T(_HL == 0x3333); /* LD HL,0x3333 */

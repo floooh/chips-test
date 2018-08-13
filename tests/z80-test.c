@@ -2402,10 +2402,10 @@ void DI_EI_IM() {
     copy(0x0000, prog, sizeof(prog));
     init();
     T(4==step()); T(!z80_iff1(&cpu)); T(!z80_iff2(&cpu));
-    T(4==step()); T(!z80_iff1(&cpu)); T(!z80_iff2(&cpu));
+    T(4==step()); T(z80_iff1(&cpu));  T(z80_iff2(&cpu));
     T(4==step()); T(z80_iff1(&cpu));  T(z80_iff2(&cpu));
     T(4==step()); T(!z80_iff1(&cpu)); T(!z80_iff2(&cpu));
-    T(4==step()); T(!z80_iff1(&cpu)); T(!z80_iff2(&cpu));
+    T(4==step()); T(z80_iff1(&cpu));  T(z80_iff2(&cpu));
     T(4==step()); T(z80_iff1(&cpu));  T(z80_iff2(&cpu));
     T(8==step()); T(0 == z80_im(&cpu));
     T(8==step()); T(1 == z80_im(&cpu));
