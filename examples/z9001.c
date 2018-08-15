@@ -1,30 +1,30 @@
-/*
-    z1013.c
-
-    The Robotron Z1013, see chips/systems/z1013.h for details!
-
-    I have added a pre-loaded KC-BASIC interpreter:
-
-    Start the BASIC interpreter with 'J 300', return to OS with 'BYE'.
-
-    Enter BASIC editing mode with 'AUTO', leave by pressing Esc.
-*/
+//------------------------------------------------------------------------------
+//  z9001.c
+//
+//  Wiring diagram: http://www.sax.de/~zander/kc/kcsch_1.pdf
+//  Detailed Manual: http://www.sax.de/~zander/z9001/doku/z9_fub.pdf
+//
+//  not emulated: beeper sound, border color, 40x20 video mode
+//------------------------------------------------------------------------------
 #include "sokol_app.h"
+#include "sokol_audio.h"
 #define CHIPS_IMPL
 #include "chips/z80.h"
 #include "chips/z80pio.h"
+#include "chips/z80ctc.h"
 #include "chips/kbd.h"
-#include "chips/mem.h"
 #include "chips/clk.h"
-#include "systems/z1013.h"
+#include "chips/mem.h"
+#include "chips/beeper.h"
+#include "systems/z9001.h"
 #include "common/gfx.h"
 #include "common/fs.h"
 #include "common/args.h"
 #include "common/clock.h"
-#include "roms/z1013-roms.h"
+#include "roms/z9001-roms.h"
 #include <ctype.h> /* isupper, islower, toupper, tolower */
 
-static z1013_t z1013;
+z9001_t z9001;
 
 /* sokol-app entry, configure application callbacks and window */
 void app_init(void);
@@ -43,51 +43,53 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .frame_cb = app_frame,
         .event_cb = app_input,
         .cleanup_cb = app_cleanup,
-        .width = 2 * Z1013_DISPLAY_WIDTH,
-        .height = 2 * Z1013_DISPLAY_HEIGHT,
-        .window_title = "Robotron Z1013",
+        .width = 2 * Z9001_DISPLAY_WIDTH,
+        .height = 2 * Z9001_DISPLAY_HEIGHT,
+        .window_title = "Robotron Z9001/KC87",
         .ios_keyboard_resizes_canvas = true
     };
 }
 
 /* one-time application init */
-void app_init(void) {
-    gfx_init(Z1013_DISPLAY_WIDTH, Z1013_DISPLAY_HEIGHT, 1, 1);
+void app_init() {
+    gfx_init(Z9001_DISPLAY_WIDTH, Z9001_DISPLAY_HEIGHT, 1, 1);
     clock_init();
-    z1013_type_t type = Z1013_TYPE_64;
+    saudio_setup(&(saudio_desc){0});
+    z9001_type_t type = Z9001_TYPE_Z9001;
     if (args_has("type")) {
-        if (args_string_compare("type", "z1013_01")) {
-            type = Z1013_TYPE_01;
-        }
-        else if (args_string_compare("type", "z1013_16")) {
-            type = Z1013_TYPE_16;
+        if (args_string_compare("type", "kc87")) {
+            type = Z9001_TYPE_KC87;
         }
     }
-    z1013_init(&z1013, &(z1013_desc_t) {
+    z9001_init(&z9001, &(z9001_desc_t){
         .type = type,
+        .audio_cb = saudio_push,
+        .audio_sample_rate = saudio_sample_rate(),
         .pixel_buffer = rgba8_buffer,
         .pixel_buffer_size = sizeof(rgba8_buffer),
-        .rom_mon_a2 = dump_z1013_mon_a2,
-        .rom_mon_a2_size = sizeof(dump_z1013_mon_a2),
-        .rom_mon202 = dump_z1013_mon202,
-        .rom_mon202_size = sizeof(dump_z1013_mon202),
-        .rom_font = dump_z1013_font,
-        .rom_font_size = sizeof(dump_z1013_font)
+        .rom_z9001_os_1 = dump_z9001_os12_1,
+        .rom_z9001_os_1_size = sizeof(dump_z9001_os12_1),
+        .rom_z9001_os_2 = dump_z9001_os12_2,
+        .rom_z9001_os_2_size = sizeof(dump_z9001_os12_2),
+        .rom_z9001_basic = dump_z9001_basic_507_511,
+        .rom_z9001_basic_size = sizeof(dump_z9001_basic_507_511),
+        .rom_z9001_font = dump_z9001_font,
+        .rom_z9001_font_size = sizeof(dump_z9001_font),
+        .rom_kc87_os = dump_kc87_os_2,
+        .rom_kc87_os_size = sizeof(dump_kc87_os_2),
+        .rom_kc87_basic = dump_z9001_basic,
+        .rom_kc87_basic_size = sizeof(dump_z9001_basic),
+        .rom_kc87_font = dump_kc87_font_2,
+        .rom_kc87_font_size = sizeof(dump_kc87_font_2)
     });
-    /* copy BASIC interpreter into RAM, so the user has something to play around 
-        with (started with "J 300 [Enter]"), skip first 0x20 bytes .z80 file format header
-    */
-    if (Z1013_TYPE_64 == z1013.type) {
-        mem_write_range(&z1013.mem, 0x0100, dump_kc_basic+0x20, sizeof(dump_kc_basic)-0x20);
-    }
 }
 
-/* per frame stuff: tick the emulator, render the framebuffer, delay-load game files */
-void app_frame(void) {
-    z1013_exec(&z1013, clock_frame_time());
+/* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
+void app_frame() {
+    z9001_exec(&z9001, clock_frame_time());
     gfx_draw();
     if (fs_ptr() && clock_frame_count() > 20) {
-        z1013_quickload(&z1013, fs_ptr(), fs_size());
+        z9001_quickload(&z9001, fs_ptr(), fs_size());
         fs_free();
     }
 }
@@ -106,8 +108,8 @@ void app_input(const sapp_event* event) {
                 else if (islower(c)) {
                     c = toupper(c);
                 }
-                z1013_key_down(&z1013, c);
-                z1013_key_up(&z1013, c);
+                z9001_key_down(&z9001, c);
+                z9001_key_up(&z9001, c);
             }
             break;
         case SAPP_EVENTTYPE_KEY_DOWN:
@@ -118,15 +120,17 @@ void app_input(const sapp_event* event) {
                 case SAPP_KEYCODE_LEFT:     c = 0x08; break;
                 case SAPP_KEYCODE_DOWN:     c = 0x0A; break;
                 case SAPP_KEYCODE_UP:       c = 0x0B; break;
-                case SAPP_KEYCODE_ESCAPE:   c = 0x03; break;
+                case SAPP_KEYCODE_ESCAPE:   c = (event->modifiers & SAPP_MODIFIER_SHIFT)? 0x1B: 0x03; break;
+                case SAPP_KEYCODE_INSERT:   c = 0x1A; break;
+                case SAPP_KEYCODE_HOME:     c = 0x19; break;
                 default:                    c = 0; break;
             }
             if (c) {
                 if (event->type == SAPP_EVENTTYPE_KEY_DOWN) {
-                    z1013_key_down(&z1013, c);
+                    z9001_key_down(&z9001, c);
                 }
                 else {
-                    z1013_key_up(&z1013, c);
+                    z9001_key_up(&z9001, c);
                 }
             }
             break;
@@ -139,7 +143,8 @@ void app_input(const sapp_event* event) {
 }
 
 /* application cleanup callback */
-void app_cleanup(void) {
-    z1013_discard(&z1013);
+void app_cleanup() {
+    z9001_discard(&z9001);
+    saudio_shutdown();
     gfx_shutdown();
 }
