@@ -140,5 +140,6 @@ void app_input(const sapp_event* event) {
 
 /* application cleanup callback */
 void app_cleanup(void) {
+    z1013_discard(&z1013);
     gfx_shutdown();
 }
