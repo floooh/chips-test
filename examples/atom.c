@@ -8,51 +8,28 @@
     Note: Ctrl+L (clear screen) is mapped to F1.
 
     NOT EMULATED:
-        - the audio beeper
-        - the optional VIA 6522
         - REPT key (and some other special keys)
 */
 #include "sokol_app.h"
+#include "sokol_audio.h"
 #define CHIPS_IMPL
 #include "chips/m6502.h"
 #include "chips/mc6847.h"
 #include "chips/i8255.h"
+#include "chips/m6522.h"
+#include "chips/beeper.h"
+#include "chips/clk.h"
 #include "chips/kbd.h"
 #include "chips/mem.h"
-#include "roms/atom-roms.h"
+#include "systems/atom.h"
 #include "common/gfx.h"
+#include "common/fs.h"
+#include "common/args.h"
 #include "common/clock.h"
+#include "roms/atom-roms.h"
 #include <ctype.h> /* isupper, islower, toupper, tolower */
 
-/* Atom emulator state and callbacks */
-#define ATOM_FREQ (1000000)
-typedef struct {
-    m6502_t cpu;
-    mc6847_t vdg;
-    i8255_t ppi;
-    kbd_t kbd;
-    mem_t mem;
-    int counter_2_4khz;
-    int period_2_4khz;
-    bool state_2_4khz;
-    uint8_t ram[1<<16];     /* only 40 KByte used */
-} atom_t;
-atom_t _atom;
-
-void atom_init(atom_t* atom);
-uint64_t atom_cpu_tick(uint64_t pins, void* user_data);
-uint64_t atom_vdg_fetch(uint64_t pins, void* user_data);
-uint8_t atom_ppi_in(int port_id, void* user_data);
-uint64_t atom_ppi_out(int port_id, uint64_t pins, uint8_t data, void* user_data);
-
-/* xorshift randomness for memory initialization */
-uint32_t xorshift_state = 0x6D98302B;
-uint32_t xorshift32() {
-    uint32_t x = xorshift_state;
-    x ^= x<<13; x ^= x>>17; x ^= x<<5;
-    xorshift_state = x;
-    return x;
-}
+atom_t atom;
 
 /* sokol-app entry, configure application callbacks and window */
 void app_init(void);
@@ -65,8 +42,8 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .frame_cb = app_frame,
         .event_cb = app_input,
         .cleanup_cb = app_cleanup,
-        .width = 2 * MC6847_DISPLAY_WIDTH,
-        .height = 2 * MC6847_DISPLAY_HEIGHT,
+        .width = 2 * ATOM_DISPLAY_WIDTH,
+        .height = 2 * ATOM_DISPLAY_HEIGHT,
         .window_title = "Acorn Atom",
         .ios_keyboard_resizes_canvas = true
     };
@@ -74,23 +51,47 @@ sapp_desc sokol_main(int argc, char* argv[]) {
 
 /* one-time application init */
 void app_init(void) {
-    atom_t* atom = &_atom;
-    gfx_init(MC6847_DISPLAY_WIDTH, MC6847_DISPLAY_HEIGHT, 1, 1);
-    clock_init(ATOM_FREQ);
-    atom_init(atom);
+    gfx_init(ATOM_DISPLAY_WIDTH, ATOM_DISPLAY_HEIGHT, 1, 1);
+    clock_init();
+    saudio_setup(&(saudio_desc){0});
+    atom_joystick_t joy_type = ATOM_JOYSTICK_NONE;
+    if (args_has("joystick")) {
+        if (args_string_compare("joystick", "mmc") ||
+            args_string_compare("joystick", "yes"))
+        {
+            joy_type = ATOM_JOYSTICK_MMC;
+        }
+    }
+    atom_init(&atom, &(atom_desc_t){
+        .joystick_type = joy_type,
+        .audio_cb = saudio_push,
+        .audio_sample_rate = saudio_sample_rate(),
+        .pixel_buffer = rgba8_buffer,
+        .pixel_buffer_size = sizeof(rgba8_buffer),
+        .rom_abasic = dump_abasic,
+        .rom_abasic_size = sizeof(dump_abasic),
+        .rom_afloat = dump_afloat,
+        .rom_afloat_size = sizeof(dump_afloat),
+        .rom_dosrom = dump_dosrom,
+        .rom_dosrom_size = sizeof(dump_dosrom)
+    });
 }
 
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
-void app_frame(void) {
-    atom_t* atom = &_atom;
-    clock_ticks_executed(m6502_exec(&atom->cpu, clock_ticks_to_run()));
-    kbd_update(&atom->kbd);
+void app_frame() {
+    atom_exec(&atom, clock_frame_time());
     gfx_draw();
+    /*
+    FIXME!
+    if (fs_ptr() && clock_frame_count() > 120) {
+        atom_quickload(&atom, fs_ptr(), fs_size());
+        fs_free();
+    }
+    */
 }
 
 /* keyboard input handling */
 void app_input(const sapp_event* event) {
-    atom_t* atom = &_atom;
     int c = 0;
     switch (event->type) {
         case SAPP_EVENTTYPE_CHAR:
@@ -103,8 +104,8 @@ void app_input(const sapp_event* event) {
                 else if (islower(c)) {
                     c = toupper(c);
                 }
-                kbd_key_down(&atom->kbd, c);
-                kbd_key_up(&atom->kbd, c);
+                kbd_key_down(&atom.kbd, c);
+                kbd_key_up(&atom.kbd, c);
             }
             break;
         case SAPP_EVENTTYPE_KEY_UP:
@@ -124,10 +125,10 @@ void app_input(const sapp_event* event) {
             }
             if (c) {
                 if (event->type == SAPP_EVENTTYPE_KEY_DOWN) {
-                    kbd_key_down(&atom->kbd, c);
+                    kbd_key_down(&atom.kbd, c);
                 }
                 else {
-                    kbd_key_up(&atom->kbd, c);
+                    kbd_key_up(&atom.kbd, c);
                 }
             }
             break;
@@ -141,102 +142,38 @@ void app_input(const sapp_event* event) {
 
 /* application cleanup callback */
 void app_cleanup(void) {
+    atom_discard(&atom);
+    saudio_shutdown();
     gfx_shutdown();
 }
 
-/* Atom emulator initialization */
-void atom_init(atom_t* atom) {
-    /* setup memory map, first fill memory with random values */
-    for (int i = 0; i < (int)sizeof(atom->ram);) {
-        uint32_t r = xorshift32();
-        atom->ram[i++]=r>>24; atom->ram[i++]=r>>16; atom->ram[i++]=r>>8; atom->ram[i++]=r;
-    }
-    mem_init(&atom->mem);
-    /* 32 KByte RAM + 8 KByte vidmem */
-    mem_map_ram(&atom->mem, 0, 0x0000, 0xA000, atom->ram);
-    /* hole in 0xA000 to 0xAFFF for utility roms */
-    /* 0xB000 to 0xBFFF is memory-mapped IO area (not mapped to host memory) */
-    /* 0xC000 to 0xFFFF are operating system roms */
-    mem_map_rom(&atom->mem, 0, 0xC000, 0x1000, dump_abasic);
-    mem_map_rom(&atom->mem, 0, 0xD000, 0x1000, dump_afloat);
-    mem_map_rom(&atom->mem, 0, 0xE000, 0x1000, dump_dosrom);
-    mem_map_rom(&atom->mem, 0, 0xF000, 0x1000, dump_abasic+0x1000);
-
-    /*  setup the keyboard matrix
-        the Atom has a 10x8 keyboard matrix, where the
-        entire line 6 is for the Ctrl key, and the entire
-        line 7 is the Shift key
-    */
-    kbd_init(&atom->kbd, 1);
-    /* shift key is entire line 7 */
-    const int shift = (1<<0); kbd_register_modifier_line(&atom->kbd, 0, 7);
-    /* ctrl key is entire line 6 */
-    const int ctrl = (1<<1); kbd_register_modifier_line(&atom->kbd, 1, 6);
-    /* alpha-numeric keys */
-    const char* keymap = 
-        /* no shift */
-        "     ^]\\[ "/**/"3210      "/* */"-,;:987654"/**/"GFEDCBA@/."/**/"QPONMLKJIH"/**/" ZYXWVUTSR"
-        /* shift */
-        "          "/* */"#\"!       "/**/"=<+*)('&%$"/**/"gfedcba ?>"/**/"qponmlkjih"/**/" zyxwvutsr";
-    for (int layer = 0; layer < 2; layer++) {
-        for (int col = 0; col < 10; col++) {
-            for (int line = 0; line < 6; line++) {
-                int c = keymap[layer*60 + line*10 + col];
-                if (c != 0x20) {
-                    kbd_register_key(&atom->kbd, c, col, line, layer?shift:0);
-                }
-            }
-        }
-    }
-    /* special keys */
-    kbd_register_key(&atom->kbd, 0x20, 9, 0, 0);      /* space */
-    kbd_register_key(&atom->kbd, 0x01, 4, 1, 0);      /* backspace */
-    kbd_register_key(&atom->kbd, 0x08, 3, 0, shift);  /* left */
-    kbd_register_key(&atom->kbd, 0x09, 3, 0, 0);      /* right */
-    kbd_register_key(&atom->kbd, 0x0A, 2, 0, shift);  /* down */
-    kbd_register_key(&atom->kbd, 0x0B, 2, 0, 0);      /* up */
-    kbd_register_key(&atom->kbd, 0x0D, 6, 1, 0);      /* return/enter */
-    kbd_register_key(&atom->kbd, 0x1B, 0, 5, 0);      /* escape */
-    kbd_register_key(&atom->kbd, 0x0C, 5, 4, ctrl);   /* Ctrl+L, clear screen, mapped to F1 */
-
-    /* initialize chips */
-    m6502_init(&atom->cpu, &(m6502_desc_t){
-        .tick_cb = atom_cpu_tick,
-        .user_data = atom
-    });
-    mc6847_init(&atom->vdg, &(mc6847_desc_t){
-        .tick_hz = ATOM_FREQ,
-        .rgba8_buffer = rgba8_buffer,
-        .rgba8_buffer_size = sizeof(rgba8_buffer),
-        .fetch_cb = atom_vdg_fetch,
-        .user_data = atom
-    });
-    i8255_init(&atom->ppi, &(i8255_desc_t){
-        .in_cb = atom_ppi_in,
-        .out_cb = atom_ppi_out,
-        .user_data = atom
-    });
-    /* initialize 2.4 khz counter */
-    atom->period_2_4khz = ATOM_FREQ / 2400;
-    atom->counter_2_4khz = 0;
-    atom->state_2_4khz = false;
-
-    /* reset the CPU to go into 'start state' */
-    m6502_reset(&atom->cpu);
-}
-
 /* CPU tick callback */
-uint64_t atom_cpu_tick(uint64_t pins, void* user_data) {
-    atom_t* atom = (atom_t*) user_data;
+uint64_t _atom_tick(uint64_t pins, void* user_data) {
+    atom_t* sys = (atom_t*) user_data;
 
     /* tick the video chip */
-    mc6847_tick(&atom->vdg);
+    mc6847_tick(&sys->vdg);
+
+    /* tick the 6522 VIA */
+    m6522_tick(&sys->via);
 
     /* tick the 2.4khz counter */
-    atom->counter_2_4khz++;
-    if (atom->counter_2_4khz >= atom->period_2_4khz) {
-        atom->state_2_4khz = !atom->state_2_4khz;
-        atom->counter_2_4khz -= atom->period_2_4khz;
+    sys->counter_2_4khz++;
+    if (sys->counter_2_4khz >= sys->period_2_4khz) {
+        sys->state_2_4khz = !sys->state_2_4khz;
+        sys->counter_2_4khz -= sys->period_2_4khz;
+    }
+
+    /* update beeper */
+    if (beeper_tick(&sys->beeper)) {
+        /* new audio sample ready */
+        sys->sample_buffer[sys->sample_pos++] = sys->beeper.sample;
+        if (sys->sample_pos == sys->num_samples) {
+            if (sys->audio_cb) {
+                sys->audio_cb(sys->sample_buffer, sys->num_samples);
+            }
+            sys->sample_pos = 0;
+        }
     }
 
     /* decode address for memory-mapped IO and memory read/write */
@@ -250,7 +187,39 @@ uint64_t atom_cpu_tick(uint64_t pins, void* user_data) {
             else { ppi_pins |= I8255_WR; }                  /* PPI write access */
             if (pins & M6502_A0) { ppi_pins |= I8255_A0; }  /* PPI has 4 addresses (port A,B,C or control word */
             if (pins & M6502_A1) { ppi_pins |= I8255_A1; }
-            pins = i8255_iorq(&atom->ppi, ppi_pins) & M6502_PIN_MASK;
+            pins = i8255_iorq(&sys->ppi, ppi_pins) & M6502_PIN_MASK;
+        }       
+        else if ((addr >= 0xB400) && (addr < 0xB800)) {
+            /* extensions (only rudimentary)
+                FIXME: implement a proper AtoMMC emulation, for now just
+                a quick'n'dirty hack for joystick input
+            */
+            if (pins & M6502_RW) {
+                /* read from MMC extension */
+                if (addr == 0xB400) {
+                    /* reading from 0xB400 returns a status/error code, the important
+                        ones are STATUS_OK=0x3F, and STATUS_BUSY=0x80, STATUS_COMPLETE
+                        together with an error code is used to communicate errors
+                    */
+                    M6502_SET_DATA(pins, 0x3F);
+                }
+                else if ((addr == 0xB401) && (sys->mmc_cmd == 0xA2)) {
+                    /* read MMC joystick */
+                    M6502_SET_DATA(pins, ~sys->mmc_joymask);
+                }
+            }
+            else {
+                /* write to MMC extension */
+                if (addr == 0xB400) {
+                    sys->mmc_cmd = M6502_GET_DATA(pins);
+                }
+            }
+        } 
+        else if ((addr >= 0xB800) && (addr < 0xBC00)) {
+            /* 6522 VIA: http://www.acornatom.nl/sites/fpga/www.howell1964.freeserve.co.uk/acorn/atom/amb/amb_6522.htm */
+            uint64_t via_pins = (pins & M6502_PIN_MASK)|M6522_CS1;
+            /* NOTE: M6522_RW pin is identical with M6502_RW) */
+            pins = m6522_iorq(&sys->via, via_pins) & M6502_PIN_MASK;
         }
         else {
             /* remaining IO space is for expansion devices */
@@ -260,21 +229,21 @@ uint64_t atom_cpu_tick(uint64_t pins, void* user_data) {
         }
     }
     else {
-        /* memory access */
+        /* regular memory access */
         if (pins & M6502_RW) {
             /* memory read */
-            M6502_SET_DATA(pins, mem_rd(&atom->mem, addr));
+            M6502_SET_DATA(pins, mem_rd(&sys->mem, addr));
         }
         else {
             /* memory access */
-            mem_wr(&atom->mem, addr, M6502_GET_DATA(pins));
+            mem_wr(&sys->mem, addr, M6502_GET_DATA(pins));
         }
     }
     return pins;
 }
 
 /* video memory fetch callback */
-uint64_t atom_vdg_fetch(uint64_t pins, void* user_data) {
+uint64_t _atom_vdg_fetch(uint64_t pins, void* user_data) {
     atom_t* atom = (atom_t*) user_data;
     const uint16_t addr = MC6847_GET_ADDR(pins);
     uint8_t data = atom->ram[(addr + 0x8000) & 0xFFFF];
@@ -294,7 +263,7 @@ uint64_t atom_vdg_fetch(uint64_t pins, void* user_data) {
 }
 
 /* i8255 PPI output */
-uint64_t atom_ppi_out(int port_id, uint64_t pins, uint8_t data, void* user_data) {
+uint64_t _atom_ppi_out(int port_id, uint64_t pins, uint8_t data, void* user_data) {
     atom_t* atom = (atom_t*) user_data;
     /*
         FROM Atom Theory and Praxis (and MAME)
@@ -360,7 +329,7 @@ uint64_t atom_ppi_out(int port_id, uint64_t pins, uint8_t data, void* user_data)
 }
 
 /* i8255 PPI input callback */
-uint8_t atom_ppi_in(int port_id, void* user_data) {
+uint8_t _atom_ppi_in(int port_id, void* user_data) {
     atom_t* atom = (atom_t*) user_data;
     uint8_t data = 0;
     if (I8255_PORT_B == port_id) {
