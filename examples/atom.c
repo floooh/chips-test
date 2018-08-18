@@ -34,6 +34,11 @@ void app_frame(void);
 void app_input(const sapp_event*);
 void app_cleanup(void);
 sapp_desc sokol_main(int argc, char* argv[]) {
+    args_init(argc, argv);
+    fs_init();
+    if (args_has("file")) {
+        fs_load_file(args_string("file"));
+    }
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,
@@ -83,13 +88,12 @@ void app_frame() {
         atom_key_down(&atom, key_code);
         atom_key_up(&atom, key_code);
     }
-    /*
-    FIXME!
     if (fs_ptr() && clock_frame_count() > 120) {
-        atom_quickload(&atom, fs_ptr(), fs_size());
+        if (atom_insert_tape(&atom, fs_ptr(), fs_size())) {
+            keybuf_put(0, 10, "*LOAD\n\n");
+        }
         fs_free();
     }
-    */
 }
 
 /* keyboard input handling */
