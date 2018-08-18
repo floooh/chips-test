@@ -14,11 +14,7 @@
 #include "chips/kbd.h"
 #include "chips/mem.h"
 #include "roms/cpc-roms.h"
-#include "common/gfx.h"
-#include "common/fs.h"
-#include "common/sound.h"
-#include "common/clock.h"
-#include "common/args.h"
+#include "common/common.h"
 
 /* CPC 6128 emulator state and callbacks */
 #define CPC_FREQ (4000000)

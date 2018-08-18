@@ -1,3 +1,5 @@
+#include <stdint.h>
+#include "clock.h"
 #include "sokol_time.h"
 
 static uint32_t frame_count;

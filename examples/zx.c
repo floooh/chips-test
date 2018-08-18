@@ -15,10 +15,7 @@
 #include "chips/clk.h"
 #include "chips/mem.h"
 #include "systems/zx.h"
-#include "common/gfx.h"
-#include "common/clock.h"
-#include "common/fs.h"
-#include "common/args.h"
+#include "common/common.h"
 #include "roms/zx-roms.h"
 
 zx_t zx;

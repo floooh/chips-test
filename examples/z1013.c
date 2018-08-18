@@ -17,10 +17,7 @@
 #include "chips/mem.h"
 #include "chips/clk.h"
 #include "systems/z1013.h"
-#include "common/gfx.h"
-#include "common/fs.h"
-#include "common/args.h"
-#include "common/clock.h"
+#include "common/common.h"
 #include "roms/z1013-roms.h"
 #include <ctype.h> /* isupper, islower, toupper, tolower */
 

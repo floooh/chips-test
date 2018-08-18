@@ -12,8 +12,7 @@
 #include "chips/kbd.h"
 #include "chips/mem.h"
 #include "roms/c64-roms.h"
-#include "common/gfx.h"
-#include "common/clock.h"
+#include "common/common.h"
 #include <ctype.h> /* isupper, islower, toupper, tolower */
 
 /* C64 (PAL) emulator state and callbacks */
