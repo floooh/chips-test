@@ -88,7 +88,7 @@ void app_frame() {
         atom_key_down(&atom, key_code);
         atom_key_up(&atom, key_code);
     }
-    if (fs_ptr() && clock_frame_count() > 120) {
+    if (fs_ptr() && clock_frame_count() > 48) {
         if (atom_insert_tape(&atom, fs_ptr(), fs_size())) {
             keybuf_put(0, 10, "*LOAD\n\n");
         }
