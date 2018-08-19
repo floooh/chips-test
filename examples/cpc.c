@@ -1,116 +1,24 @@
 /*
     cpc.c
 
-    Amstrad CPC 6128. No tape or disc emulation, audio is emulated but
-    not output.
+    Amstrad CPC 464/6128 and KC Comptact. No disc emulation.
 */
 #include "sokol_app.h"
+#include "sokol_audio.h"
 #define CHIPS_IMPL
 #include "chips/z80.h"
 #include "chips/ay38910.h"
 #include "chips/i8255.h"
 #include "chips/mc6845.h"
 #include "chips/crt.h"
+#include "chips/clk.h"
 #include "chips/kbd.h"
 #include "chips/mem.h"
-#include "roms/cpc-roms.h"
+#include "systems/cpc.h"
 #include "common/common.h"
+#include "roms/cpc-roms.h"
 
-/* CPC 6128 emulator state and callbacks */
-#define CPC_FREQ (4000000)
-#define CPC_DISP_WIDTH (768)
-#define CPC_DISP_HEIGHT (272)
-typedef struct {
-    z80_t cpu;
-    ay38910_t psg;
-    mc6845_t vdg;
-    i8255_t ppi;
-
-    bool joy_enabled;
-    uint8_t joy_mask;
-    uint32_t tick_count;
-    uint8_t upper_rom_select;
-
-    uint8_t ga_config;              // out to port 0x7Fxx func 0x80
-    uint8_t ga_next_video_mode;
-    uint8_t ga_video_mode;
-    uint8_t ga_ram_config;          // out to port 0x7Fxx func 0xC0
-    uint8_t ga_pen;                 // currently selected pen (or border)
-    uint32_t ga_palette[16];        // the current pen colors
-    uint32_t ga_border_color;       // the current border color
-    int ga_hsync_irq_counter;       // incremented each scanline, reset at 52
-    int ga_hsync_after_vsync_counter;   // for 2-hsync-delay after vsync
-    int ga_hsync_delay_counter;     // hsync to monitor is delayed 2 ticks
-    int ga_hsync_counter;           // countdown until hsync to monitor is deactivated
-    bool ga_sync;                   // gate-array generated video sync (modified HSYNC)
-    bool ga_int;                    // GA interrupt pin active
-    uint64_t ga_crtc_pins;          // store CRTC pins to detect rising/falling bits
-
-    crt_t crt;
-    kbd_t kbd;
-    mem_t mem;
-    uint8_t ram[8][0x4000];
-} cpc_t;
-cpc_t _cpc;
-
-/*
-    the fixed hardware color palette
-
-    http://www.cpcwiki.eu/index.php/CPC_Palette
-    http://www.grimware.org/doku.php/documentations/devices/gatearray
-
-    index into this palette is the 'hardware color number' & 0x1F
-    order is ABGR
-*/
-const uint32_t cpc_colors[32] = {
-    0xff6B7D6E,         // #40 white
-    0xff6D7D6E,         // #41 white
-    0xff6BF300,         // #42 sea green
-    0xff6DF3F3,         // #43 pastel yellow
-    0xff6B0200,         // #44 blue
-    0xff6802F0,         // #45 purple
-    0xff687800,         // #46 cyan
-    0xff6B7DF3,         // #47 pink
-    0xff6802F3,         // #48 purple
-    0xff6BF3F3,         // #49 pastel yellow
-    0xff0DF3F3,         // #4A bright yellow
-    0xffF9F3FF,         // #4B bright white
-    0xff0605F3,         // #4C bright red
-    0xffF402F3,         // #4D bright magenta
-    0xff0D7DF3,         // #4E orange
-    0xffF980FA,         // #4F pastel magenta
-    0xff680200,         // #50 blue
-    0xff6BF302,         // #51 sea green
-    0xff01F002,         // #52 bright green
-    0xffF2F30F,         // #53 bright cyan
-    0xff010200,         // #54 black
-    0xffF4020C,         // #55 bright blue
-    0xff017802,         // #56 green
-    0xffF47B0C,         // #57 sky blue
-    0xff680269,         // #58 magenta
-    0xff6BF371,         // #59 pastel green
-    0xff04F571,         // #5A lime
-    0xffF4F371,         // #5B pastel cyan
-    0xff01026C,         // #5C red
-    0xffF2026C,         // #5D mauve
-    0xff017B6E,         // #5E yellow
-    0xffF67B6E,         // #5F pastel blue
-};
-
-void cpc_init(cpc_t* cpc);
-void cpc_init_keymap(cpc_t* cpc);
-void cpc_update_memory_mapping(cpc_t* cpc);
-uint64_t cpc_cpu_tick(int num_ticks, uint64_t pins, void* user_data);
-uint64_t cpc_cpu_iorq(cpc_t* cpc, uint64_t pins);
-uint64_t cpc_ppi_out(int port_id, uint64_t pins, uint8_t data, void* user_data);
-uint8_t cpc_ppi_in(int port_id, void* user_data);
-void cpc_psg_out(int port_id, uint8_t data, void* user_data);
-uint8_t cpc_psg_in(int port_id, void* user_data);
-uint64_t cpc_ga_tick(cpc_t* cpc, uint64_t pins);
-void cpc_ga_int_ack(cpc_t* cpc);
-void cpc_ga_decode_video(cpc_t* cpc, uint64_t crtc_pins);
-void cpc_ga_decode_pixels(cpc_t* cpc, uint32_t* dst, uint64_t crtc_pins);
-bool cpc_load_sna(cpc_t* cpc, const uint8_t* ptr, uint32_t num_bytes);
+cpc_t cpc;
 
 /* sokol-app entry, configure application callbacks and window */
 void app_init(void);
@@ -124,13 +32,16 @@ sapp_desc sokol_main(int argc, char* argv[]) {
     if (args_has("file")) {
         fs_load_file(args_string("file"));
     }
+    if (args_has("tape")) {
+        /* FIXME: TAPE LOADING */
+    }
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,
         .event_cb = app_input,
         .cleanup_cb = app_cleanup,
-        .width = CPC_DISP_WIDTH,
-        .height = 2 * CPC_DISP_HEIGHT,
+        .width = CPC_DISPLAY_WIDTH,
+        .height = 2 * CPC_DISPLAY_HEIGHT,
         .window_title = "CPC 6128",
         .ios_keyboard_resizes_canvas = true
     };
@@ -138,50 +49,79 @@ sapp_desc sokol_main(int argc, char* argv[]) {
 
 /* one-time application init */
 void app_init(void) {
-    cpc_t* cpc = &_cpc;
-    gfx_init(CPC_DISP_WIDTH, CPC_DISP_HEIGHT, 1, 2);
-    sound_init();
-    clock_init(CPC_FREQ);
-    cpc_init(cpc);
-    if (args_has("joystick")) {
-        cpc->joy_enabled = args_bool("joystick");
+    gfx_init(CPC_DISPLAY_WIDTH, CPC_DISPLAY_HEIGHT, 1, 2);
+    clock_init();
+    saudio_setup(&(saudio_desc){0});
+    cpc_type_t type = CPC_TYPE_6128;
+    if (args_has("type")) {
+        if (args_string_compare("type", "cpc464")) {
+            type = CPC_TYPE_464;
+        }
+        else if (args_string_compare("type", "kccompact")) {
+            type = CPC_TYPE_KCCOMPACT;
+        }
     }
+    cpc_joystick_t joy_type = CPC_JOYSTICK_NONE;
+    if (args_has("joystick")) {
+        joy_type = CPC_JOYSTICK_DIGITAL;
+    }
+    cpc_init(&cpc, &(cpc_desc_t){
+        .type = type,
+        .joystick_type = joy_type,
+        .pixel_buffer = rgba8_buffer,
+        .pixel_buffer_size = sizeof(rgba8_buffer),
+        .audio_cb = saudio_push,
+        .audio_sample_rate = saudio_sample_rate(),
+        .rom_464_os = dump_cpc464_os,
+        .rom_464_os_size = sizeof(dump_cpc464_os),
+        .rom_464_basic = dump_cpc464_basic,
+        .rom_464_basic_size = sizeof(dump_cpc464_basic),
+        .rom_6128_os = dump_cpc6128_os,
+        .rom_6128_os_size = sizeof(dump_cpc6128_os),
+        .rom_6128_basic = dump_cpc6128_basic,
+        .rom_6128_basic_size = sizeof(dump_cpc6128_basic),
+        .rom_6128_amsdos = dump_cpc6128_amsdos,
+        .rom_6128_amsdos_size = sizeof(dump_cpc6128_amsdos),
+        .rom_kcc_os = dump_kcc_os,
+        .rom_kcc_os_size = sizeof(dump_kcc_os),
+        .rom_kcc_basic = dump_kcc_bas,
+        .rom_kcc_basic_size = sizeof(dump_kcc_bas)
+    });
 }
 
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
 void app_frame(void) {
-    cpc_t* cpc = &_cpc;
-    clock_ticks_executed(z80_exec(&cpc->cpu, clock_ticks_to_run()));
-    kbd_update(&cpc->kbd);
+    cpc_exec(&cpc, clock_frame_time());
     gfx_draw();
-    /* load SNA file? */
+    /* FIXME
     if (fs_ptr() && clock_frame_count() > 20) {
         cpc_load_sna(cpc, fs_ptr(), fs_size());
         fs_free();
     }
+    */
 }
 
 /* keyboard input handling */
 void app_input(const sapp_event* event) {
-    cpc_t* cpc = &_cpc;
+    cpc_t* sys = &cpc;
     const bool shift = event->modifiers & SAPP_MODIFIER_SHIFT;
     switch (event->type) {
         int c;
         case SAPP_EVENTTYPE_CHAR:
             c = (int) event->char_code;
             if (c < KBD_MAX_KEYS) {
-                kbd_key_down(&cpc->kbd, c);
-                kbd_key_up(&cpc->kbd, c);
+                kbd_key_down(&sys->kbd, c);
+                kbd_key_up(&sys->kbd, c);
             }
             break;
         case SAPP_EVENTTYPE_KEY_DOWN:
         case SAPP_EVENTTYPE_KEY_UP:
             switch (event->key_code) {
-                case SAPP_KEYCODE_SPACE:        c = cpc->joy_enabled ? 0 : 0x20; break;
-                case SAPP_KEYCODE_LEFT:         c = cpc->joy_enabled ? 0 : 0x08; break;
-                case SAPP_KEYCODE_RIGHT:        c = cpc->joy_enabled ? 0 : 0x09; break;
-                case SAPP_KEYCODE_DOWN:         c = cpc->joy_enabled ? 0 : 0x0A; break;
-                case SAPP_KEYCODE_UP:           c = cpc->joy_enabled ? 0 : 0x0B; break;
+                case SAPP_KEYCODE_SPACE:        c = sys->joystick_type ? 0 : 0x20; break;
+                case SAPP_KEYCODE_LEFT:         c = sys->joystick_type ? 0 : 0x08; break;
+                case SAPP_KEYCODE_RIGHT:        c = sys->joystick_type ? 0 : 0x09; break;
+                case SAPP_KEYCODE_DOWN:         c = sys->joystick_type ? 0 : 0x0A; break;
+                case SAPP_KEYCODE_UP:           c = sys->joystick_type ? 0 : 0x0B; break;
                 case SAPP_KEYCODE_ENTER:        c = 0x0D; break;
                 case SAPP_KEYCODE_LEFT_SHIFT:   c = 0x02; break;
                 case SAPP_KEYCODE_BACKSPACE:    c = shift ? 0x0C : 0x01; break; // 0x0C: clear screen
@@ -202,30 +142,30 @@ void app_input(const sapp_event* event) {
             }
             if (c) {
                 if (event->type == SAPP_EVENTTYPE_KEY_DOWN) {
-                    kbd_key_down(&cpc->kbd, c);
+                    kbd_key_down(&sys->kbd, c);
                 }
                 else {
-                    kbd_key_up(&cpc->kbd, c);
+                    kbd_key_up(&sys->kbd, c);
                 }
             }
-            else if (cpc->joy_enabled) {
+            else if (sys->joystick_type) {
                 if (event->type == SAPP_EVENTTYPE_KEY_DOWN) {
                     switch (event->key_code) {
-                        case SAPP_KEYCODE_SPACE:        cpc->joy_mask |= 1<<4; break;
-                        case SAPP_KEYCODE_LEFT:         cpc->joy_mask |= 1<<2; break;
-                        case SAPP_KEYCODE_RIGHT:        cpc->joy_mask |= 1<<3; break;
-                        case SAPP_KEYCODE_DOWN:         cpc->joy_mask |= 1<<1; break;
-                        case SAPP_KEYCODE_UP:           cpc->joy_mask |= 1<<0; break;
+                        case SAPP_KEYCODE_SPACE:        sys->joy_mask |= 1<<4; break;
+                        case SAPP_KEYCODE_LEFT:         sys->joy_mask |= 1<<2; break;
+                        case SAPP_KEYCODE_RIGHT:        sys->joy_mask |= 1<<3; break;
+                        case SAPP_KEYCODE_DOWN:         sys->joy_mask |= 1<<1; break;
+                        case SAPP_KEYCODE_UP:           sys->joy_mask |= 1<<0; break;
                         default: break;
                     }
                 }
                 else {
                     switch (event->key_code) {
-                        case SAPP_KEYCODE_SPACE:        cpc->joy_mask &= ~(1<<4); break;
-                        case SAPP_KEYCODE_LEFT:         cpc->joy_mask &= ~(1<<2); break;
-                        case SAPP_KEYCODE_RIGHT:        cpc->joy_mask &= ~(1<<3); break;
-                        case SAPP_KEYCODE_DOWN:         cpc->joy_mask &= ~(1<<1); break;
-                        case SAPP_KEYCODE_UP:           cpc->joy_mask &= ~(1<<0); break;
+                        case SAPP_KEYCODE_SPACE:        sys->joy_mask &= ~(1<<4); break;
+                        case SAPP_KEYCODE_LEFT:         sys->joy_mask &= ~(1<<2); break;
+                        case SAPP_KEYCODE_RIGHT:        sys->joy_mask &= ~(1<<3); break;
+                        case SAPP_KEYCODE_DOWN:         sys->joy_mask &= ~(1<<1); break;
+                        case SAPP_KEYCODE_UP:           sys->joy_mask &= ~(1<<0); break;
                         default: break;
                     }
                 }
@@ -241,158 +181,17 @@ void app_input(const sapp_event* event) {
 
 /* application cleanup callback */
 void app_cleanup(void) {
-    sound_shutdown();
+    cpc_discard(&cpc);
+    saudio_shutdown();
     gfx_shutdown();
 }
 
-/* CPC 6128 emulator init */
-void cpc_init(cpc_t* cpc) {
-    cpc->upper_rom_select = 0;
-    cpc->tick_count = 0;
-    cpc->ga_next_video_mode = 1;
-    cpc->ga_video_mode = 1;
-    cpc->ga_hsync_delay_counter = 2;
-    cpc_init_keymap(cpc);
-    cpc_update_memory_mapping(cpc);
-    z80_init(&cpc->cpu, &(z80_desc_t) {
-        .tick_cb = cpc_cpu_tick,
-        .user_data = cpc
-    });
-    i8255_init(&cpc->ppi, &(i8255_desc_t){
-        .in_cb = cpc_ppi_in,
-        .out_cb = cpc_ppi_out,
-        .user_data = cpc
-    });
-    mc6845_init(&cpc->vdg, MC6845_TYPE_UM6845R);
-    crt_init(&cpc->crt, CRT_PAL, 6, 32, CPC_DISP_WIDTH/16, CPC_DISP_HEIGHT);
-    ay38910_init(&cpc->psg, &(ay38910_desc_t){
-        .type = AY38910_TYPE_8912,
-        .in_cb = cpc_psg_in,
-        .out_cb = cpc_psg_out,
-        .tick_hz = 1000000,
-        .sound_hz = sound_sample_rate(),
-        .magnitude = 0.7f,
-        .user_data = cpc
-    });
-
-    /* CPU start address */
-    z80_set_pc(&cpc->cpu, 0x0000);
-}
-
-void cpc_init_keymap(cpc_t* cpc) {
-    /*
-        http://cpctech.cpc-live.com/docs/keyboard.html
-    
-        CPC has a 10 columns by 8 lines keyboard matrix. The 10 columns
-        are lit up by bits 0..3 of PPI port C connected to a 74LS145
-        BCD decoder, and the lines are read through port A of the
-        AY-3-8910 chip.
-    */
-    kbd_init(&cpc->kbd, 1);
-    const char* keymap =
-        /* no shift */
-        "   ^08641 "
-        "  [-97532 "
-        "   @oure  "
-        "  ]piytwq "
-        "   ;lhgs  "
-        "   :kjfda "
-        "  \\/mnbc  "
-        "   ., vxz "
-
-        /* shift */
-        "    _(&$! "
-        "  {=)'%#\" "
-        "   |OURE  "
-        "  }PIYTWQ "
-        "   +LHGS  "
-        "   *KJFDA "
-        "  `?MNBC  "
-        "   >< VXZ ";
-    /* shift key is on column 2, line 5 */
-    kbd_register_modifier(&cpc->kbd, 0, 2, 5);
-    /* ctrl key is on column 2, line 7 */
-    kbd_register_modifier(&cpc->kbd, 1, 2, 7);
-
-    for (int shift = 0; shift < 2; shift++) {
-        for (int col = 0; col < 10; col++) {
-            for (int line = 0; line < 8; line++) {
-                int c = keymap[shift*80 + line*10 + col];
-                if (c != 0x20) {
-                    kbd_register_key(&cpc->kbd, c, col, line, shift?(1<<0):0);
-                }
-            }
-        }
-    }
-
-    /* special keys */
-    kbd_register_key(&cpc->kbd, 0x20, 5, 7, 0);    // space
-    kbd_register_key(&cpc->kbd, 0x08, 1, 0, 0);    // cursor left
-    kbd_register_key(&cpc->kbd, 0x09, 0, 1, 0);    // cursor right
-    kbd_register_key(&cpc->kbd, 0x0A, 0, 2, 0);    // cursor down
-    kbd_register_key(&cpc->kbd, 0x0B, 0, 0, 0);    // cursor up
-    kbd_register_key(&cpc->kbd, 0x01, 9, 7, 0);    // delete
-    kbd_register_key(&cpc->kbd, 0x0C, 2, 0, 0);    // clr
-    kbd_register_key(&cpc->kbd, 0x0D, 2, 2, 0);    // return
-    kbd_register_key(&cpc->kbd, 0x03, 8, 2, 0);    // escape
-}
-
-static const int cpc_ram_config_table[8][4] = {
-    { 0, 1, 2, 3 },
-    { 0, 1, 2, 7 },
-    { 4, 5, 6, 7 },
-    { 0, 3, 2, 7 },
-    { 0, 4, 2, 3 },
-    { 0, 5, 2, 3 },
-    { 0, 6, 2, 3 },
-    { 0, 7, 2, 3 },
-};
-
-void cpc_update_memory_mapping(cpc_t* cpc) {
-    /* index into RAM config array */
-    int ram_table_index = cpc->ga_ram_config & 0x07;
-    const uint8_t* rom0_ptr = dump_cpc6128_os;
-    const uint8_t* rom1_ptr;
-    if (cpc->upper_rom_select == 7) {
-        rom1_ptr = dump_cpc6128_amsdos;
-    }
-    else {
-        rom1_ptr = dump_cpc6128_basic;
-    }
-    const int i0 = cpc_ram_config_table[ram_table_index][0];
-    const int i1 = cpc_ram_config_table[ram_table_index][1];
-    const int i2 = cpc_ram_config_table[ram_table_index][2];
-    const int i3 = cpc_ram_config_table[ram_table_index][3];
-    /* 0x0000..0x3FFF */
-    if (cpc->ga_config & (1<<2)) {
-        /* read/write from and to RAM bank */
-        mem_map_ram(&cpc->mem, 0, 0x0000, 0x4000, cpc->ram[i0]);
-    }
-    else {
-        /* read from ROM, write to RAM */
-        mem_map_rw(&cpc->mem, 0, 0x0000, 0x4000, rom0_ptr, cpc->ram[i0]);
-    }
-    /* 0x4000..0x7FFF */
-    mem_map_ram(&cpc->mem, 0, 0x4000, 0x4000, cpc->ram[i1]);
-    /* 0x8000..0xBFFF */
-    mem_map_ram(&cpc->mem, 0, 0x8000, 0x4000, cpc->ram[i2]);
-    /* 0xC000..0xFFFF */
-    if (cpc->ga_config & (1<<3)) {
-        /* read/write from and to RAM bank */
-        mem_map_ram(&cpc->mem, 0, 0xC000, 0x4000, cpc->ram[i3]);
-    }
-    else {
-        /* read from ROM, write to RAM */
-        mem_map_rw(&cpc->mem, 0, 0xC000, 0x4000, rom1_ptr, cpc->ram[i3]);
-    }
-}
-
-uint64_t cpc_cpu_tick(int num_ticks, uint64_t pins, void* user_data) {
-    cpc_t* cpc = (cpc_t*) user_data;
+uint64_t _cpc_tick(int num_ticks, uint64_t pins, void* user_data) {
+    cpc_t* sys = (cpc_t*) user_data;
 
     /* interrupt acknowledge? */
     if ((pins & (Z80_M1|Z80_IORQ)) == (Z80_M1|Z80_IORQ)) {
-        cpc_ga_int_ack(cpc);
+        _cpc_ga_int_ack(sys);
     }
 
     /* memory and IO requests */
@@ -400,15 +199,15 @@ uint64_t cpc_cpu_tick(int num_ticks, uint64_t pins, void* user_data) {
         /* CPU MEMORY REQUEST */
         const uint16_t addr = Z80_GET_ADDR(pins);
         if (pins & Z80_RD) {
-            Z80_SET_DATA(pins, mem_rd(&cpc->mem, addr));
+            Z80_SET_DATA(pins, mem_rd(&sys->mem, addr));
         }
         else if (pins & Z80_WR) {
-            mem_wr(&cpc->mem, addr, Z80_GET_DATA(pins));
+            mem_wr(&sys->mem, addr, Z80_GET_DATA(pins));
         }
     }
     else if ((pins & Z80_IORQ) && (pins & (Z80_RD|Z80_WR))) {
         /* CPU IO REQUEST */
-        pins = cpc_cpu_iorq(cpc, pins);
+        pins = _cpc_cpu_iorq(sys, pins);
     }
     
     /*
@@ -446,17 +245,19 @@ uint64_t cpc_cpu_tick(int num_ticks, uint64_t pins, void* user_data) {
     for (int i = 0; i<num_ticks; i++) {
         do {
             /* CPC gate array sets the wait pin for 3 out of 4 clock ticks */
-            bool wait_pin = (cpc->tick_count++ & 3) != 0;
+            bool wait_pin = (sys->tick_count++ & 3) != 0;
             wait = (wait_pin && (wait || (i == wait_scan_tick)));
             if (wait) {
                 wait_cycles++;
             }
             /* on every 4th clock cycle, tick the system */
             if (!wait_pin) {
-                if (ay38910_tick(&cpc->psg)) {
-                    sound_push(cpc->psg.sample);
+                if (ay38910_tick(&sys->psg)) {
+                    /* FIXME
+                    sound_push(sys->psg.sample);
+                    */
                 }
-                pins = cpc_ga_tick(cpc, pins);
+                pins = _cpc_ga_tick(sys, pins);
             }
         }
         while (wait);
@@ -465,7 +266,7 @@ uint64_t cpc_cpu_tick(int num_ticks, uint64_t pins, void* user_data) {
     return pins;
 }
 
-uint64_t cpc_cpu_iorq(cpc_t* cpc, uint64_t pins) {
+uint64_t _cpc_cpu_iorq(cpc_t* sys, uint64_t pins) {
     /*
         CPU IO REQUEST
 
@@ -487,7 +288,7 @@ uint64_t cpc_cpu_iorq(cpc_t* cpc, uint64_t pins) {
         if (pins & Z80_A8) { ppi_pins |= I8255_A0; }
         if (pins & Z80_RD) { ppi_pins |= I8255_RD; }
         if (pins & Z80_WR) { ppi_pins |= I8255_WR; }
-        pins = i8255_iorq(&cpc->ppi, ppi_pins) & Z80_PIN_MASK;
+        pins = i8255_iorq(&sys->ppi, ppi_pins) & Z80_PIN_MASK;
     }
     /*
         Z80 to MC6845 pin connections:
@@ -502,7 +303,7 @@ uint64_t cpc_cpu_iorq(cpc_t* cpc, uint64_t pins) {
         uint64_t vdg_pins = (pins & Z80_PIN_MASK)|MC6845_CS;
         if (pins & Z80_A9) { vdg_pins |= MC6845_RW; }
         if (pins & Z80_A8) { vdg_pins |= MC6845_RS; }
-        pins = mc6845_iorq(&cpc->vdg, vdg_pins) & Z80_PIN_MASK;
+        pins = mc6845_iorq(&sys->vdg, vdg_pins) & Z80_PIN_MASK;
     }
     /*
         Gate Array Function (only writing to the gate array
@@ -522,16 +323,16 @@ uint64_t cpc_cpu_iorq(cpc_t* cpc, uint64_t pins) {
                     bit 4 set means 'select border', otherwise
                     bits 0..3 contain the pen number
                 */
-                cpc->ga_pen = data & 0x1F;
+                sys->ga.pen = data & 0x1F;
                 break;
             case (1<<6):
                 /* select color for border or selected pen: */
-                if (cpc->ga_pen & (1<<4)) {
+                if (sys->ga.pen & (1<<4)) {
                     /* border color */
-                    cpc->ga_border_color = cpc_colors[data & 0x1F];
+                    sys->ga.border_color = sys->ga.colors[data & 0x1F];
                 }
                 else {
-                    cpc->ga_palette[cpc->ga_pen & 0x0F] = cpc_colors[data & 0x1F];
+                    sys->ga.palette[sys->ga.pen & 0x0F] = sys->ga.colors[data & 0x1F];
                 }
                 break;
             case (1<<7):
@@ -547,18 +348,20 @@ uint64_t cpc_cpu_iorq(cpc_t* cpc, uint64_t pins) {
                   
                     - bit 4: interrupt generation control
                 */
-                cpc->ga_config = data;
-                cpc->ga_next_video_mode = data & 3;
+                sys->ga.config = data;
+                sys->ga.next_video_mode = data & 3;
                 if (data & (1<<4)) {
-                    cpc->ga_hsync_irq_counter = 0;
-                    cpc->ga_int = false;
+                    sys->ga.hsync_irq_counter = 0;
+                    sys->ga.intr = false;
                 }
-                cpc_update_memory_mapping(cpc);
+                _cpc_update_memory_mapping(sys);
                 break;
             case (1<<7)|(1<<6):
                 /* RAM memory management (only CPC6128) */
-                cpc->ga_ram_config = data;
-                cpc_update_memory_mapping(cpc);
+                if (CPC_TYPE_6128 == sys->type) {
+                    sys->ga.ram_config = data;
+                    _cpc_update_memory_mapping(sys);
+                }
                 break;
         }
     }
@@ -570,8 +373,8 @@ uint64_t cpc_cpu_iorq(cpc_t* cpc, uint64_t pins) {
         this is just the BASIC and AMSDOS ROM.
     */
     if ((pins & Z80_A13) == 0) {
-        cpc->upper_rom_select = Z80_GET_DATA(pins);
-        cpc_update_memory_mapping(cpc);
+        sys->upper_rom_select = Z80_GET_DATA(pins);
+        _cpc_update_memory_mapping(sys);
     }
     /*
         Floppy Disk Interface
@@ -588,8 +391,8 @@ uint64_t cpc_cpu_iorq(cpc_t* cpc, uint64_t pins) {
     return pins;
 }
 
-uint64_t cpc_ppi_out(int port_id, uint64_t pins, uint8_t data, void* user_data) {
-    cpc_t* cpc = (cpc_t*) user_data;
+uint64_t _cpc_ppi_out(int port_id, uint64_t pins, uint8_t data, void* user_data) {
+    cpc_t* sys = (cpc_t*) user_data;
     /*
         i8255 PPI to AY-3-8912 PSG pin connections:
             PA0..PA7    -> D0..D7
@@ -597,19 +400,19 @@ uint64_t cpc_ppi_out(int port_id, uint64_t pins, uint8_t data, void* user_data) 
                  PC6    -> BC1
     */
     if ((I8255_PORT_A == port_id) || (I8255_PORT_C == port_id)) {
-        const uint8_t ay_ctrl = cpc->ppi.output[I8255_PORT_C] & ((1<<7)|(1<<6));
+        const uint8_t ay_ctrl = sys->ppi.output[I8255_PORT_C] & ((1<<7)|(1<<6));
         if (ay_ctrl) {
             uint64_t ay_pins = 0;
             if (ay_ctrl & (1<<7)) { ay_pins |= AY38910_BDIR; }
             if (ay_ctrl & (1<<6)) { ay_pins |= AY38910_BC1; }
-            const uint8_t ay_data = cpc->ppi.output[I8255_PORT_A];
+            const uint8_t ay_data = sys->ppi.output[I8255_PORT_A];
             AY38910_SET_DATA(ay_pins, ay_data);
-            ay38910_iorq(&cpc->psg, ay_pins);
+            ay38910_iorq(&sys->psg, ay_pins);
         }
     }
     if (I8255_PORT_C == port_id) {
         // bits 0..3: select keyboard matrix line
-        kbd_set_active_columns(&cpc->kbd, 1<<(data & 0x0F));
+        kbd_set_active_columns(&sys->kbd, 1<<(data & 0x0F));
 
         /* FIXME: cassette write data */
         /* FIXME: cassette deck motor control */
@@ -623,19 +426,19 @@ uint64_t cpc_ppi_out(int port_id, uint64_t pins, uint8_t data, void* user_data) 
     return pins;
 }
 
-uint8_t cpc_ppi_in(int port_id, void* user_data) {
-    cpc_t* cpc = (cpc_t*) user_data;
+uint8_t _cpc_ppi_in(int port_id, void* user_data) {
+    cpc_t* sys = (cpc_t*) user_data;
     if (I8255_PORT_A == port_id) {
         /* AY-3-8912 PSG function (indirectly this may also trigger
             a read of the keyboard matrix via the AY's IO port
         */
         uint64_t ay_pins = 0;
-        uint8_t ay_ctrl = cpc->ppi.output[I8255_PORT_C];
+        uint8_t ay_ctrl = sys->ppi.output[I8255_PORT_C];
         if (ay_ctrl & (1<<7)) ay_pins |= AY38910_BDIR;
         if (ay_ctrl & (1<<6)) ay_pins |= AY38910_BC1;
-        uint8_t ay_data = cpc->ppi.output[I8255_PORT_A];
+        uint8_t ay_data = sys->ppi.output[I8255_PORT_A];
         AY38910_SET_DATA(ay_pins, ay_data);
-        ay_pins = ay38910_iorq(&cpc->psg, ay_pins);
+        ay_pins = ay38910_iorq(&sys->psg, ay_pins);
         return AY38910_GET_DATA(ay_pins);
     }
     else if (I8255_PORT_B == port_id) {
@@ -657,7 +460,7 @@ uint8_t cpc_ppi_in(int port_id, void* user_data) {
         */
         uint8_t val = (1<<4) | (7<<1);    // 50Hz refresh rate, Amstrad
         /* PPI Port B Bit 0 is directly wired to the 6845 VSYNC pin (see schematics) */
-        if (cpc->vdg.vs) {
+        if (sys->vdg.vs) {
             val |= (1<<0);
         }
         return val;
@@ -668,16 +471,16 @@ uint8_t cpc_ppi_in(int port_id, void* user_data) {
     }
 }
 
-void cpc_psg_out(int port_id, uint8_t data, void* user_data) {
+void _cpc_psg_out(int port_id, uint8_t data, void* user_data) {
     /* this shouldn't be called */
 }
 
-uint8_t cpc_psg_in(int port_id, void* user_data) {
-    cpc_t* cpc = (cpc_t*) user_data;
+uint8_t _cpc_psg_in(int port_id, void* user_data) {
+    cpc_t* sys = (cpc_t*) user_data;
     /* read the keyboard matrix and joystick port */
     if (port_id == AY38910_PORT_A) {
-        uint8_t data = (uint8_t) kbd_scan_lines(&cpc->kbd);
-        if (cpc->kbd.active_columns & (1<<9)) {
+        uint8_t data = (uint8_t) kbd_scan_lines(&sys->kbd);
+        if (sys->kbd.active_columns & (1<<9)) {
             /* FIXME: joystick input not implemented
 
                 joystick input is implemented like this:
@@ -691,7 +494,7 @@ uint8_t cpc_psg_in(int port_id, void* user_data) {
                   joystick input will be provided on the keyboard
                   matrix lines
             */
-            data |= cpc->joy_mask;
+            data |= sys->joy_mask;
         }
         return ~data;
     }
@@ -701,13 +504,13 @@ uint8_t cpc_psg_in(int port_id, void* user_data) {
     }
 }
 
-void cpc_ga_int_ack(cpc_t* cpc) {
+void _cpc_ga_int_ack(cpc_t* sys) {
     /* on interrupt acknowledge from the CPU, clear the top bit from the
         hsync counter, so the next interrupt can't occur closer then 
         32 HSYNC, and clear the gate array interrupt pin state
     */
-    cpc->ga_hsync_irq_counter &= 0x1F;
-    cpc->ga_int = false;
+    sys->ga.hsync_irq_counter &= 0x1F;
+    sys->ga.intr = false;
 }
 
 static bool falling_edge(uint64_t new_pins, uint64_t old_pins, uint64_t mask) {
@@ -718,13 +521,13 @@ static bool rising_edge(uint64_t new_pins, uint64_t old_pins, uint64_t mask) {
     return 0 != (mask & (new_pins & (new_pins ^ old_pins)));
 }
 
-uint64_t cpc_ga_tick(cpc_t* cpc, uint64_t cpu_pins) {
+uint64_t _cpc_ga_tick(cpc_t* sys, uint64_t cpu_pins) {
     /*
         http://cpctech.cpc-live.com/docs/ints.html
         http://www.cpcwiki.eu/forum/programming/frame-flyback-and-interrupts/msg25106/#msg25106
         https://web.archive.org/web/20170612081209/http://www.grimware.org/doku.php/documentations/devices/gatearray
     */
-    uint64_t crtc_pins = mc6845_tick(&cpc->vdg);
+    uint64_t crtc_pins = mc6845_tick(&sys->vdg);
 
     /*
         INTERRUPT GENERATION:
@@ -760,27 +563,27 @@ uint64_t cpc_ga_tick(cpc_t* cpc, uint64_t cpu_pins) {
               cycle in cpu_tick()
             - the video mode will take effect *after the next HSYNC*
     */
-    if (rising_edge(crtc_pins, cpc->ga_crtc_pins, MC6845_VS)) {
-        cpc->ga_hsync_after_vsync_counter = 2;
+    if (rising_edge(crtc_pins, sys->ga.crtc_pins, MC6845_VS)) {
+        sys->ga.hsync_after_vsync_counter = 2;
     }
-    if (falling_edge(crtc_pins, cpc->ga_crtc_pins, MC6845_HS)) {
-        cpc->ga_video_mode = cpc->ga_next_video_mode;
-        cpc->ga_hsync_irq_counter = (cpc->ga_hsync_irq_counter + 1) & 0x3F;
+    if (falling_edge(crtc_pins, sys->ga.crtc_pins, MC6845_HS)) {
+        sys->ga.video_mode = sys->ga.next_video_mode;
+        sys->ga.hsync_irq_counter = (sys->ga.hsync_irq_counter + 1) & 0x3F;
 
         /* 2 HSync delay? */
-        if (cpc->ga_hsync_after_vsync_counter > 0) {
-            cpc->ga_hsync_after_vsync_counter--;
-            if (cpc->ga_hsync_after_vsync_counter == 0) {
-                if (cpc->ga_hsync_irq_counter >= 32) {
-                    cpc->ga_int = true;
+        if (sys->ga.hsync_after_vsync_counter > 0) {
+            sys->ga.hsync_after_vsync_counter--;
+            if (sys->ga.hsync_after_vsync_counter == 0) {
+                if (sys->ga.hsync_irq_counter >= 32) {
+                    sys->ga.intr = true;
                 }
-                cpc->ga_hsync_irq_counter = 0;
+                sys->ga.hsync_irq_counter = 0;
             }
         }
         /* normal behaviour, request interrupt each 52 scanlines */
-        if (cpc->ga_hsync_irq_counter == 52) {
-            cpc->ga_hsync_irq_counter = 0;
-            cpc->ga_int = true;
+        if (sys->ga.hsync_irq_counter == 52) {
+            sys->ga.hsync_irq_counter = 0;
+            sys->ga.intr = true;
         }
     }
 
@@ -788,43 +591,43 @@ uint64_t cpc_ga_tick(cpc_t* cpc, uint64_t cpu_pins) {
         - starts 2 ticks after HSYNC rising edge from CRTC
         - stays active for 4 ticks or less if CRTC HSYNC goes inactive earlier
     */
-    if (rising_edge(crtc_pins, cpc->ga_crtc_pins, MC6845_HS)) {
-        cpc->ga_hsync_delay_counter = 3;
+    if (rising_edge(crtc_pins, sys->ga.crtc_pins, MC6845_HS)) {
+        sys->ga.hsync_delay_counter = 3;
     }
-    if (falling_edge(crtc_pins, cpc->ga_crtc_pins, MC6845_HS)) {
-        cpc->ga_hsync_delay_counter = 0;
-        cpc->ga_hsync_counter = 0;
-        cpc->ga_sync = false;
+    if (falling_edge(crtc_pins, sys->ga.crtc_pins, MC6845_HS)) {
+        sys->ga.hsync_delay_counter = 0;
+        sys->ga.hsync_counter = 0;
+        sys->ga.sync = false;
     }
-    if (cpc->ga_hsync_delay_counter > 0) {
-        cpc->ga_hsync_delay_counter--;
-        if (cpc->ga_hsync_delay_counter == 0) {
-            cpc->ga_sync = true;
-            cpc->ga_hsync_counter = 5;
+    if (sys->ga.hsync_delay_counter > 0) {
+        sys->ga.hsync_delay_counter--;
+        if (sys->ga.hsync_delay_counter == 0) {
+            sys->ga.sync = true;
+            sys->ga.hsync_counter = 5;
         }
     }
-    if (cpc->ga_hsync_counter > 0) {
-        cpc->ga_hsync_counter--;
-        if (cpc->ga_hsync_counter == 0) {
-            cpc->ga_sync = false;
+    if (sys->ga.hsync_counter > 0) {
+        sys->ga.hsync_counter--;
+        if (sys->ga.hsync_counter == 0) {
+            sys->ga.sync = false;
         }
     }
 
     // FIXME delayed VSYNC to monitor
 
     const bool vsync = 0 != (crtc_pins & MC6845_VS);
-    crt_tick(&cpc->crt, cpc->ga_sync, vsync);
-    cpc_ga_decode_video(cpc, crtc_pins);
+    crt_tick(&sys->crt, sys->ga.sync, vsync);
+    _cpc_ga_decode_video(sys, crtc_pins);
 
-    cpc->ga_crtc_pins = crtc_pins;
+    sys->ga.crtc_pins = crtc_pins;
 
-    if (cpc->ga_int) {
+    if (sys->ga.intr) {
         cpu_pins |= Z80_INT;
     }
     return cpu_pins;
 }
 
-void cpc_ga_decode_pixels(cpc_t* cpc, uint32_t* dst, uint64_t crtc_pins) {
+void _cpc_ga_decode_pixels(cpc_t* sys, uint32_t* dst, uint64_t crtc_pins) {
     /*
         compute the source address from current CRTC ma (memory address)
         and ra (raster address) like this:
@@ -838,10 +641,10 @@ void cpc_ga_decode_pixels(cpc_t* cpc, uint32_t* dst, uint64_t crtc_pins) {
     const uint8_t ra = MC6845_GET_RA(crtc_pins);
     const uint32_t page_index  = (ma>>12) & 3;
     const uint32_t page_offset = ((ma & 0x03FF)<<1) | ((ra & 7)<<11);
-    const uint8_t* src = &(cpc->ram[page_index][page_offset]);
+    const uint8_t* src = &(sys->ram[page_index][page_offset]);
     uint8_t c;
     uint32_t p;
-    if (0 == cpc->ga_video_mode) {
+    if (0 == sys->ga.video_mode) {
         /* 160x200 @ 16 colors
            pixel    bit mask
            0:       |3|7|
@@ -851,13 +654,13 @@ void cpc_ga_decode_pixels(cpc_t* cpc, uint32_t* dst, uint64_t crtc_pins) {
         */
         for (int i = 0; i < 2; i++) {
             c = *src++;
-            p = cpc->ga_palette[((c>>7)&0x1)|((c>>2)&0x2)|((c>>3)&0x4)|((c<<2)&0x8)];
+            p = sys->ga.palette[((c>>7)&0x1)|((c>>2)&0x2)|((c>>3)&0x4)|((c<<2)&0x8)];
             *dst++ = p; *dst++ = p; *dst++ = p; *dst++ = p;
-            p = cpc->ga_palette[((c>>6)&0x1)|((c>>1)&0x2)|((c>>2)&0x4)|((c<<3)&0x8)];
+            p = sys->ga.palette[((c>>6)&0x1)|((c>>1)&0x2)|((c>>2)&0x4)|((c<<3)&0x8)];
             *dst++ = p; *dst++ = p; *dst++ = p; *dst++ = p;
         }
     }
-    else if (1 == cpc->ga_video_mode) {
+    else if (1 == sys->ga.video_mode) {
         /* 320x200 @ 4 colors
            pixel    bit mask
            0:       |3|7|
@@ -867,35 +670,35 @@ void cpc_ga_decode_pixels(cpc_t* cpc, uint32_t* dst, uint64_t crtc_pins) {
         */
         for (int i = 0; i < 2; i++) {
             c = *src++;
-            p = cpc->ga_palette[((c>>2)&2)|((c>>7)&1)];
+            p = sys->ga.palette[((c>>2)&2)|((c>>7)&1)];
             *dst++ = p; *dst++ = p;
-            p = cpc->ga_palette[((c>>1)&2)|((c>>6)&1)];
+            p = sys->ga.palette[((c>>1)&2)|((c>>6)&1)];
             *dst++ = p; *dst++ = p;
-            p = cpc->ga_palette[((c>>0)&2)|((c>>5)&1)];
+            p = sys->ga.palette[((c>>0)&2)|((c>>5)&1)];
             *dst++ = p; *dst++ = p;
-            p = cpc->ga_palette[((c<<1)&2)|((c>>4)&1)];
+            p = sys->ga.palette[((c<<1)&2)|((c>>4)&1)];
             *dst++ = p; *dst++ = p;
         }
     }
-    else if (2 == cpc->ga_video_mode) {
+    else if (2 == sys->ga.video_mode) {
         /* 640x200 @ 2 colors */
         for (int i = 0; i < 2; i++) {
             c = *src++;
             for (int j = 7; j >= 0; j--) {
-                *dst++ = cpc->ga_palette[(c>>j)&1];
+                *dst++ = sys->ga.palette[(c>>j)&1];
             }
         }
     }
 }
 
-void cpc_ga_decode_video(cpc_t* cpc, uint64_t crtc_pins) {
-    if (cpc->crt.visible) {
-        int dst_x = cpc->crt.pos_x * 16;
-        int dst_y = cpc->crt.pos_y;
-        uint32_t* dst = &(rgba8_buffer[dst_x + dst_y * CPC_DISP_WIDTH]);
+void _cpc_ga_decode_video(cpc_t* sys, uint64_t crtc_pins) {
+    if (sys->crt.visible) {
+        int dst_x = sys->crt.pos_x * 16;
+        int dst_y = sys->crt.pos_y;
+        uint32_t* dst = &(rgba8_buffer[dst_x + dst_y * CPC_DISPLAY_WIDTH]);
         if (crtc_pins & MC6845_DE) {
             /* decode visible pixels */
-            cpc_ga_decode_pixels(cpc, dst, crtc_pins);
+            _cpc_ga_decode_pixels(sys, dst, crtc_pins);
         }
         else if (crtc_pins & (MC6845_HS|MC6845_VS)) {
             /* during horizontal/vertical sync: blacker than black */
@@ -906,7 +709,7 @@ void cpc_ga_decode_video(cpc_t* cpc, uint64_t crtc_pins) {
         else {
             /* border color */
             for (int i = 0; i < 16; i++) {
-                dst[i] = cpc->ga_border_color;
+                dst[i] = sys->ga.border_color;
             }
         }
     }
@@ -943,7 +746,7 @@ typedef struct {
     uint8_t pad1[0x93];
 } sna_header;
 
-bool cpc_load_sna(cpc_t* cpc, const uint8_t* ptr, uint32_t num_bytes) {
+bool cpc_load_sna(cpc_t* sys, const uint8_t* ptr, uint32_t num_bytes) {
     if (num_bytes < sizeof(sna_header)) {
         return false;
     }
@@ -959,54 +762,54 @@ bool cpc_load_sna(cpc_t* cpc, const uint8_t* ptr, uint32_t num_bytes) {
     if (num_bytes > (sizeof(sna_header) + dump_num_bytes)) {
         return false;
     }
-    if (dump_num_bytes > sizeof(cpc->ram)) {
+    if (dump_num_bytes > sizeof(sys->ram)) {
         return false;
     }
-    memcpy(cpc->ram, ptr, dump_num_bytes);
+    memcpy(sys->ram, ptr, dump_num_bytes);
 
-    z80_reset(&cpc->cpu);
-    z80_set_f(&cpc->cpu, hdr->F); z80_set_a(&cpc->cpu,hdr->A);
-    z80_set_c(&cpc->cpu, hdr->C); z80_set_b(&cpc->cpu, hdr->B);
-    z80_set_e(&cpc->cpu, hdr->E); z80_set_d(&cpc->cpu, hdr->D);
-    z80_set_l(&cpc->cpu, hdr->L); z80_set_h(&cpc->cpu, hdr->H);
-    z80_set_r(&cpc->cpu, hdr->R); z80_set_i(&cpc->cpu, hdr->I);
-    z80_set_iff1(&cpc->cpu, (hdr->IFF1 & 1) != 0);
-    z80_set_iff2(&cpc->cpu, (hdr->IFF2 & 1) != 0);
-    z80_set_ix(&cpc->cpu, hdr->IX_h<<8 | hdr->IX_l);
-    z80_set_iy(&cpc->cpu, hdr->IY_h<<8 | hdr->IY_l);
-    z80_set_sp(&cpc->cpu, hdr->SP_h<<8 | hdr->SP_l);
-    z80_set_pc(&cpc->cpu, hdr->PC_h<<8 | hdr->PC_l);
-    z80_set_im(&cpc->cpu, hdr->IM);
-    z80_set_af_(&cpc->cpu, hdr->A_<<8 | hdr->F_);
-    z80_set_bc_(&cpc->cpu, hdr->B_<<8 | hdr->C_);
-    z80_set_de_(&cpc->cpu, hdr->D_<<8 | hdr->E_);
-    z80_set_hl_(&cpc->cpu, hdr->H_<<8 | hdr->L_);
+    z80_reset(&sys->cpu);
+    z80_set_f(&sys->cpu, hdr->F); z80_set_a(&sys->cpu,hdr->A);
+    z80_set_c(&sys->cpu, hdr->C); z80_set_b(&sys->cpu, hdr->B);
+    z80_set_e(&sys->cpu, hdr->E); z80_set_d(&sys->cpu, hdr->D);
+    z80_set_l(&sys->cpu, hdr->L); z80_set_h(&sys->cpu, hdr->H);
+    z80_set_r(&sys->cpu, hdr->R); z80_set_i(&sys->cpu, hdr->I);
+    z80_set_iff1(&sys->cpu, (hdr->IFF1 & 1) != 0);
+    z80_set_iff2(&sys->cpu, (hdr->IFF2 & 1) != 0);
+    z80_set_ix(&sys->cpu, hdr->IX_h<<8 | hdr->IX_l);
+    z80_set_iy(&sys->cpu, hdr->IY_h<<8 | hdr->IY_l);
+    z80_set_sp(&sys->cpu, hdr->SP_h<<8 | hdr->SP_l);
+    z80_set_pc(&sys->cpu, hdr->PC_h<<8 | hdr->PC_l);
+    z80_set_im(&sys->cpu, hdr->IM);
+    z80_set_af_(&sys->cpu, hdr->A_<<8 | hdr->F_);
+    z80_set_bc_(&sys->cpu, hdr->B_<<8 | hdr->C_);
+    z80_set_de_(&sys->cpu, hdr->D_<<8 | hdr->E_);
+    z80_set_hl_(&sys->cpu, hdr->H_<<8 | hdr->L_);
 
     for (int i = 0; i < 16; i++) {
-        cpc->ga_palette[i] = cpc_colors[hdr->pens[i] & 0x1F];
+        sys->ga.palette[i] = sys->ga.colors[hdr->pens[i] & 0x1F];
     }
-    cpc->ga_border_color = cpc_colors[hdr->pens[16] & 0x1F];
-    cpc->ga_pen = hdr->selected_pen & 0x1F;
-    cpc->ga_config = hdr->gate_array_config & 0x3F;
-    cpc->ga_next_video_mode = hdr->gate_array_config & 3;
-    cpc->ga_ram_config = hdr->ram_config & 0x3F;
-    cpc->upper_rom_select = hdr->rom_config;
-    cpc_update_memory_mapping(cpc);
+    sys->ga.border_color = sys->ga.colors[hdr->pens[16] & 0x1F];
+    sys->ga.pen = hdr->selected_pen & 0x1F;
+    sys->ga.config = hdr->gate_array_config & 0x3F;
+    sys->ga.next_video_mode = hdr->gate_array_config & 3;
+    sys->ga.ram_config = hdr->ram_config & 0x3F;
+    sys->upper_rom_select = hdr->rom_config;
+    _cpc_update_memory_mapping(sys);
 
     for (int i = 0; i < 18; i++) {
-        cpc->vdg.reg[i] = hdr->crtc_regs[i];
+        sys->vdg.reg[i] = hdr->crtc_regs[i];
     }
-    cpc->vdg.sel = hdr->crtc_selected;
+    sys->vdg.sel = hdr->crtc_selected;
 
-    cpc->ppi.output[I8255_PORT_A] = hdr->ppi_a;
-    cpc->ppi.output[I8255_PORT_B] = hdr->ppi_b;
-    cpc->ppi.output[I8255_PORT_C] = hdr->ppi_c;
-    cpc->ppi.control = hdr->ppi_control;
+    sys->ppi.output[I8255_PORT_A] = hdr->ppi_a;
+    sys->ppi.output[I8255_PORT_B] = hdr->ppi_b;
+    sys->ppi.output[I8255_PORT_C] = hdr->ppi_c;
+    sys->ppi.control = hdr->ppi_control;
 
     for (int i = 0; i < 16; i++) {
-        ay38910_iorq(&cpc->psg, AY38910_BDIR|AY38910_BC1|(i<<16));
-        ay38910_iorq(&cpc->psg, AY38910_BDIR|(hdr->psg_regs[i]<<16));
+        ay38910_iorq(&sys->psg, AY38910_BDIR|AY38910_BC1|(i<<16));
+        ay38910_iorq(&sys->psg, AY38910_BDIR|(hdr->psg_regs[i]<<16));
     }
-    ay38910_iorq(&cpc->psg, AY38910_BDIR|AY38910_BC1|(hdr->psg_selected<<16));
+    ay38910_iorq(&sys->psg, AY38910_BDIR|AY38910_BC1|(hdr->psg_selected<<16));
     return true;
 }
