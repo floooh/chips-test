@@ -93,7 +93,7 @@ void app_init(void) {
 void app_frame(void) {
     cpc_exec(&cpc, clock_frame_time());
     gfx_draw();
-    if (fs_ptr() && clock_frame_count() > 20) {
+    if (fs_ptr() && clock_frame_count() > 120) {
         cpc_quickload(&cpc, fs_ptr(), fs_size());
         fs_free();
     }
