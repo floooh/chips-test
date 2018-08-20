@@ -20,7 +20,7 @@ void keybuf_put(int start_delay, int key_delay_, const char* text) {
     }
     key_delay = key_delay_;
     delay_count = start_delay;
-    int len = strlen(text);
+    int len = (int) strlen(text);
     if ((len+1) < KEYBUF_MAX_KEYS) {
         strcpy((char*)buf, text);
     }
