@@ -47,6 +47,11 @@ sapp_desc sokol_main(int argc, char* argv[]) {
     };
 }
 
+/* audio-streaming callback */
+static void push_audio(const float* samples, int num_samples, void* user_data) {
+    saudio_push(samples, num_samples);
+}
+
 /* one-time application init */
 void app_init() {
     gfx_init(Z9001_DISPLAY_WIDTH, Z9001_DISPLAY_HEIGHT, 1, 1);
@@ -60,7 +65,7 @@ void app_init() {
     }
     z9001_init(&z9001, &(z9001_desc_t){
         .type = type,
-        .audio_cb = saudio_push,
+        .audio_cb = push_audio,
         .audio_sample_rate = saudio_sample_rate(),
         .pixel_buffer = rgba8_buffer,
         .pixel_buffer_size = sizeof(rgba8_buffer),

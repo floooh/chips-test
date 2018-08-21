@@ -47,6 +47,11 @@ sapp_desc sokol_main(int argc, char* argv[]) {
     };
 }
 
+/* audio-streaming callback */
+static void push_audio(const float* samples, int num_samples, void* user_data) {
+    saudio_push(samples, num_samples);
+}
+
 /* one-time application init */
 void app_init(void) {
     gfx_init(CPC_DISPLAY_WIDTH, CPC_DISPLAY_HEIGHT, 1, 2);
@@ -70,7 +75,7 @@ void app_init(void) {
         .joystick_type = joy_type,
         .pixel_buffer = rgba8_buffer,
         .pixel_buffer_size = sizeof(rgba8_buffer),
-        .audio_cb = saudio_push,
+        .audio_cb = push_audio,
         .audio_sample_rate = saudio_sample_rate(),
         .rom_464_os = dump_cpc464_os,
         .rom_464_os_size = sizeof(dump_cpc464_os),
