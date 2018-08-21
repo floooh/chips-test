@@ -33,7 +33,7 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         fs_load_file(args_string("file"));
     }
     if (args_has("tape")) {
-        /* FIXME: TAPE LOADING */
+        fs_load_file(args_string("tape"));
     }
     return (sapp_desc) {
         .init_cb = app_init,
@@ -98,8 +98,24 @@ void app_init(void) {
 void app_frame(void) {
     cpc_exec(&cpc, clock_frame_time());
     gfx_draw();
+    uint8_t key_code;
+    if (0 != (key_code = keybuf_get())) {
+        cpc_key_down(&cpc, key_code);
+        cpc_key_up(&cpc, key_code);
+    }
+    /* load a data file? */
     if (fs_ptr() && clock_frame_count() > 120) {
-        cpc_quickload(&cpc, fs_ptr(), fs_size());
+        if (args_has("file")) {
+            /* load the file data as a quickload-snapshot (SNA or BIN format)*/
+            cpc_quickload(&cpc, fs_ptr(), fs_size());
+        }
+        else {
+            /* load the file data via the tape-emulation (TAP format) */
+            if (cpc_insert_tape(&cpc, fs_ptr(), fs_size())) {
+                /* issue the right commands to start loading from tape */
+                keybuf_put(0, 20, "|tape\nrun\"\n\n");
+            }
+        }
         fs_free();
     }
 }
