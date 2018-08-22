@@ -20,7 +20,15 @@ static int fb_height;
 static int fb_aspect_scale_x;
 static int fb_aspect_scale_y;
 
-uint32_t rgba8_buffer[GFX_MAX_FB_WIDTH * GFX_MAX_FB_HEIGHT];
+static uint32_t rgba8_buffer[GFX_MAX_FB_WIDTH * GFX_MAX_FB_HEIGHT];
+
+uint32_t* gfx_framebuffer(void) {
+    return rgba8_buffer;
+}
+
+int gfx_framebuffer_size(void) {
+    return sizeof(rgba8_buffer);
+}
 
 void gfx_init(int w, int h, int sx, int sy) {
     fb_width = w;

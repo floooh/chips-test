@@ -10,8 +10,7 @@
     NOT EMULATED:
         - REPT key (and some other special keys)
 */
-#include "sokol_app.h"
-#include "sokol_audio.h"
+#include "common/common.h"
 #define CHIPS_IMPL
 #include "chips/m6502.h"
 #include "chips/mc6847.h"
@@ -22,9 +21,7 @@
 #include "chips/kbd.h"
 #include "chips/mem.h"
 #include "systems/atom.h"
-#include "common/common.h"
 #include "roms/atom-roms.h"
-#include <ctype.h> /* isupper, islower, toupper, tolower */
 
 atom_t atom;
 
@@ -73,8 +70,8 @@ void app_init(void) {
         .joystick_type = joy_type,
         .audio_cb = push_audio,
         .audio_sample_rate = saudio_sample_rate(),
-        .pixel_buffer = rgba8_buffer,
-        .pixel_buffer_size = sizeof(rgba8_buffer),
+        .pixel_buffer = gfx_framebuffer(),
+        .pixel_buffer_size = gfx_framebuffer_size(),
         .rom_abasic = dump_abasic,
         .rom_abasic_size = sizeof(dump_abasic),
         .rom_afloat = dump_afloat,

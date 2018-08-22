@@ -3,8 +3,7 @@
 
     Amstrad CPC 464/6128 and KC Comptact. No disc emulation.
 */
-#include "sokol_app.h"
-#include "sokol_audio.h"
+#include "common/common.h"
 #define CHIPS_IMPL
 #include "chips/z80.h"
 #include "chips/ay38910.h"
@@ -15,7 +14,6 @@
 #include "chips/kbd.h"
 #include "chips/mem.h"
 #include "systems/cpc.h"
-#include "common/common.h"
 #include "roms/cpc-roms.h"
 
 cpc_t cpc;
@@ -28,13 +26,6 @@ void app_cleanup(void);
 
 sapp_desc sokol_main(int argc, char* argv[]) {
     args_init(argc, argv);
-    fs_init();
-    if (args_has("file")) {
-        fs_load_file(args_string("file"));
-    }
-    if (args_has("tape")) {
-        fs_load_file(args_string("tape"));
-    }
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,
@@ -57,6 +48,13 @@ void app_init(void) {
     gfx_init(CPC_DISPLAY_WIDTH, CPC_DISPLAY_HEIGHT, 1, 2);
     clock_init();
     saudio_setup(&(saudio_desc){0});
+    fs_init();
+    if (args_has("file")) {
+        fs_load_file(args_string("file"));
+    }
+    if (args_has("tape")) {
+        fs_load_file(args_string("tape"));
+    }
     cpc_type_t type = CPC_TYPE_6128;
     if (args_has("type")) {
         if (args_string_compare("type", "cpc464")) {
@@ -73,8 +71,8 @@ void app_init(void) {
     cpc_init(&cpc, &(cpc_desc_t){
         .type = type,
         .joystick_type = joy_type,
-        .pixel_buffer = rgba8_buffer,
-        .pixel_buffer_size = sizeof(rgba8_buffer),
+        .pixel_buffer = gfx_framebuffer(),
+        .pixel_buffer_size = gfx_framebuffer_size(),
         .audio_cb = push_audio,
         .audio_sample_rate = saudio_sample_rate(),
         .rom_464_os = dump_cpc464_os,
@@ -98,11 +96,6 @@ void app_init(void) {
 void app_frame(void) {
     cpc_exec(&cpc, clock_frame_time());
     gfx_draw();
-    uint8_t key_code;
-    if (0 != (key_code = keybuf_get())) {
-        cpc_key_down(&cpc, key_code);
-        cpc_key_up(&cpc, key_code);
-    }
     /* load a data file? */
     if (fs_ptr() && clock_frame_count() > 120) {
         if (args_has("file")) {
@@ -117,6 +110,11 @@ void app_frame(void) {
             }
         }
         fs_free();
+    }
+    uint8_t key_code;
+    if (0 != (key_code = keybuf_get())) {
+        cpc_key_down(&cpc, key_code);
+        cpc_key_up(&cpc, key_code);
     }
 }
 

@@ -5,8 +5,7 @@
     - video decoding works with scanline accuracy, not cycle accuracy
     - no tape or disc emulation
 */
-#include "sokol_app.h"
-#include "sokol_audio.h"
+#include "common/common.h"
 #define CHIPS_IMPL
 #include "chips/z80.h"
 #include "chips/beeper.h"
@@ -15,7 +14,6 @@
 #include "chips/clk.h"
 #include "chips/mem.h"
 #include "systems/zx.h"
-#include "common/common.h"
 #include "roms/zx-roms.h"
 
 zx_t zx;
@@ -75,8 +73,8 @@ void app_init() {
     zx_init(&zx, &(zx_desc_t) {
         .type = type,
         .joystick_type = joy_type,
-        .pixel_buffer = rgba8_buffer,
-        .pixel_buffer_size = sizeof(rgba8_buffer),
+        .pixel_buffer = gfx_framebuffer(),
+        .pixel_buffer_size = gfx_framebuffer_size(),
         .audio_cb = push_audio,
         .audio_sample_rate = saudio_sample_rate(),
         .rom_zx48k = dump_amstrad_zx48k,

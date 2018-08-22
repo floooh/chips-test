@@ -17,7 +17,7 @@ double clock_frame_time(void) {
         frame_time_sec = 0.016666667;
     }
     else {
-        frame_time_sec = 0.033333334;
+        frame_time_sec = 0.033333333;
     }
     return frame_time_sec;
 }

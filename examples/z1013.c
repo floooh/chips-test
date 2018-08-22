@@ -9,7 +9,7 @@
 
     Enter BASIC editing mode with 'AUTO', leave by pressing Esc.
 */
-#include "sokol_app.h"
+#include "common/common.h"
 #define CHIPS_IMPL
 #include "chips/z80.h"
 #include "chips/z80pio.h"
@@ -17,9 +17,7 @@
 #include "chips/mem.h"
 #include "chips/clk.h"
 #include "systems/z1013.h"
-#include "common/common.h"
 #include "roms/z1013-roms.h"
-#include <ctype.h> /* isupper, islower, toupper, tolower */
 
 static z1013_t z1013;
 
@@ -62,8 +60,8 @@ void app_init(void) {
     }
     z1013_init(&z1013, &(z1013_desc_t) {
         .type = type,
-        .pixel_buffer = rgba8_buffer,
-        .pixel_buffer_size = sizeof(rgba8_buffer),
+        .pixel_buffer = gfx_framebuffer(),
+        .pixel_buffer_size = gfx_framebuffer_size(),
         .rom_mon_a2 = dump_z1013_mon_a2,
         .rom_mon_a2_size = sizeof(dump_z1013_mon_a2),
         .rom_mon202 = dump_z1013_mon202,
