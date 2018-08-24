@@ -7,6 +7,7 @@
 #include "chips/m6526.h"
 #include "chips/m6569.h"
 #include "chips/m6581.h"
+#include "chips/beeper.h"
 #include "chips/kbd.h"
 #include "chips/mem.h"
 #include "chips/clk.h"
@@ -46,6 +47,9 @@ void app_init(void) {
     clock_init();
     saudio_setup(&(saudio_desc){0});
     fs_init();
+    if (args_has("tape")) {
+        fs_load_file(args_string("tape"));
+    }
     c64_joystick_t joy_type = C64_JOYSTICK_NONE;
     if (args_has("joystick")) {
         joy_type = C64_JOYSTICK_DIGITAL;
@@ -56,6 +60,7 @@ void app_init(void) {
         .pixel_buffer_size = gfx_framebuffer_size(),
         .audio_cb = push_audio,
         .audio_sample_rate = saudio_sample_rate(),
+        .audio_tape_sound = args_bool("tape_sound"),
         .rom_char = dump_c64_char,
         .rom_char_size = sizeof(dump_c64_char),
         .rom_basic = dump_c64_basic,
@@ -69,7 +74,22 @@ void app_init(void) {
 void app_frame(void) {
     c64_exec(&c64, clock_frame_time());
     gfx_draw();
-    /* FIXME: file loading */
+    if (fs_ptr() && clock_frame_count() > 180) {
+        if (c64_insert_tape(&c64, fs_ptr(), fs_size())) {
+            /* send load command */
+            keybuf_put(0, 10, "LOAD\n");
+            c64_start_tape(&c64);
+        }
+        fs_free();
+    }
+    uint8_t key_code;
+    if (0 != (key_code = keybuf_get())) {
+        c64_joystick_t joy_type = c64.joystick_type;
+        c64.joystick_type = C64_JOYSTICK_NONE;
+        c64_key_down(&c64, key_code);
+        c64_key_up(&c64, key_code);
+        c64.joystick_type = joy_type;
+    }
 }
 
 /* keyboard input handling */
@@ -79,7 +99,7 @@ void app_input(const sapp_event* event) {
         int c;
         case SAPP_EVENTTYPE_CHAR:
             c = (int) event->char_code;
-            if (c < KBD_MAX_KEYS) {
+            if ((c > 0x20) && (c < KBD_MAX_KEYS)) {
                 /* need to invert case (unshifted is upper caps, shifted is lower caps */
                 if (isupper(c)) {
                     c = tolower(c);

@@ -19,7 +19,7 @@ extern void fs_free(void);
 #include <emscripten/emscripten.h>
 #endif
 
-#define FS_MAX_SIZE (256 * 1024)
+#define FS_MAX_SIZE (512 * 1024)
 typedef struct {
     uint8_t* ptr;
     uint32_t size;
@@ -47,18 +47,19 @@ bool fs_load_file(const char* path) {
     FILE* fp = fopen(path, "rb");
     if (fp) {
         fseek(fp, 0, SEEK_END);
-        fs.size = ftell(fp);
-        fseek(fp, 0, SEEK_SET);
-        if (fs.size > 0) {
-            fs.ptr = fs.buf;
-            fread(fs.ptr, 1, fs.size, fp);
+        int size = ftell(fp);
+        if (size <= FS_MAX_SIZE) {
+            fs.size = size;
+            fseek(fp, 0, SEEK_SET);
+            if (fs.size > 0) {
+                fs.ptr = fs.buf;
+                fread(fs.ptr, 1, fs.size, fp);
+            }
+            fclose(fp);
+            return true;
         }
-        fclose(fp);
-        return true;
     }
-    else {
-        return false;
-    }
+    return false;
 }
 #else
 EMSCRIPTEN_KEEPALIVE void emsc_load_data(const uint8_t* ptr, int size) {
