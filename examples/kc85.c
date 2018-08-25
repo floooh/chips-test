@@ -42,6 +42,26 @@ static void push_audio(const float* samples, int num_samples, void* user_data) {
     saudio_push(samples, num_samples);
 }
 
+/* a callback to patch some known problems in game snapshot files */
+static void patch_snapshots(const char* snapshot_name, void* user_data) {
+    if (strcmp(snapshot_name, "JUNGLE     ") == 0) {
+        /* patch start level 1 into memory */
+        mem_wr(&kc85.mem, 0x36b7, 1);
+        mem_wr(&kc85.mem, 0x3697, 1);
+        for (int i = 0; i < 5; i++) {
+            mem_wr(&kc85.mem, 0x1770 + i, mem_rd(&kc85.mem, 0x36b6 + i));
+        }
+    }
+    else if (strcmp(snapshot_name, "DIGGER  COM\x01") == 0) {
+        mem_wr16(&kc85.mem, 0x09AA, 0x0160);    /* time for delay-loop 0160 instead of 0260 */
+        mem_wr(&kc85.mem, 0x3d3a, 0xB5);        /* OR L instead of OR (HL) */
+    }
+    else if (strcmp(snapshot_name, "DIGGERJ") == 0) {
+        mem_wr16(&kc85.mem, 0x09AA, 0x0260);
+        mem_wr(&kc85.mem, 0x3d3a, 0xB5);       /* OR L instead of OR (HL) */
+    }
+}
+
 void app_init(void) {
     gfx_init(KC85_DISPLAY_WIDTH, KC85_DISPLAY_HEIGHT, 1, 1);
     clock_init();
@@ -65,6 +85,7 @@ void app_init(void) {
         .pixel_buffer_size = gfx_framebuffer_size(),
         .audio_cb = push_audio,
         .audio_sample_rate = saudio_sample_rate(),
+        .patch_cb = patch_snapshots,
         .rom_caos22 = dump_caos22,
         .rom_caos22_size = sizeof(dump_caos22),
         .rom_caos31 = dump_caos31,
@@ -81,7 +102,10 @@ void app_init(void) {
 void app_frame(void) {
     kc85_exec(&kc85, clock_frame_time());
     gfx_draw();
-    /* FIXME: tape loading */
+    if (fs_ptr() && clock_frame_count() > 300) {
+        kc85_quickload(&kc85, fs_ptr(), fs_size());
+        fs_free();
+    }
 }
 
 void app_input(const sapp_event* event) {
