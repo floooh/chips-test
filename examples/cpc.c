@@ -1,7 +1,7 @@
 /*
     cpc.c
 
-    Amstrad CPC 464/6128 and KC Comptact. No disc emulation.
+    Amstrad CPC 464/6128 and KC Compact. No disc emulation.
 */
 #include "common/common.h"
 #define CHIPS_IMPL
