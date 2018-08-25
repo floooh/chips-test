@@ -125,7 +125,7 @@ void app_input(const sapp_event* event) {
         int c;
         case SAPP_EVENTTYPE_CHAR:
             c = (int) event->char_code;
-            if ((c > 0x20) && (c < KBD_MAX_KEYS)) {
+            if ((c > 0x20) && (c < 0x7F)) {
                 cpc_key_down(&cpc, c);
                 cpc_key_up(&cpc, c);
             }

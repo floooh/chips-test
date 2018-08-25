@@ -102,7 +102,7 @@ void app_input(const sapp_event* event) {
         int c;
         case SAPP_EVENTTYPE_CHAR:
             c = (int) event->char_code;
-            if ((c > 0x20) && (c < KBD_MAX_KEYS)) {
+            if ((c > 0x20) && (c < 0x7F)) {
                 zx_key_down(&zx, c);
                 zx_key_up(&zx, c);
             }

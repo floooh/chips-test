@@ -93,7 +93,7 @@ void app_input(const sapp_event* event) {
         int c;
         case SAPP_EVENTTYPE_CHAR:
             c = (int) event->char_code;
-            if (c < KBD_MAX_KEYS) {
+            if ((c >= 0x20) && (c < 0x7F)) {
                 /* need to invert case (unshifted is upper caps, shifted is lower caps */
                 if (isupper(c)) {
                     c = tolower(c);
