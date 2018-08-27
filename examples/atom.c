@@ -56,6 +56,7 @@ static void push_audio(const float* samples, int num_samples, void* user_data) {
 /* one-time application init */
 void app_init(void) {
     gfx_init(ATOM_DISPLAY_WIDTH, ATOM_DISPLAY_HEIGHT, 1, 1);
+    keybuf_init(10);
     clock_init();
     saudio_setup(&(saudio_desc){0});
     atom_joystick_t joy_type = ATOM_JOYSTICK_NONE;
@@ -92,7 +93,7 @@ void app_frame() {
     }
     if (fs_ptr() && clock_frame_count() > 48) {
         if (atom_insert_tape(&atom, fs_ptr(), fs_size())) {
-            keybuf_put(0, 10, "*LOAD\n\n");
+            keybuf_put("*LOAD\n\n");
         }
         fs_free();
     }

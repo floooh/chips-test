@@ -64,11 +64,15 @@ static void patch_snapshots(const char* snapshot_name, void* user_data) {
 
 void app_init(void) {
     gfx_init(KC85_DISPLAY_WIDTH, KC85_DISPLAY_HEIGHT, 1, 1);
+    keybuf_init(6);
     clock_init();
     saudio_setup(&(saudio_desc){0});
     fs_init();
     if (args_has("file")) {
         fs_load_file(args_string("file"));
+    }
+    if (args_has("input")) {
+        keybuf_put(args_string("input"));
     }
     kc85_type_t type = KC85_TYPE_2;
     if (args_has("type")) {
@@ -106,6 +110,12 @@ void app_frame(void) {
         kc85_quickload(&kc85, fs_ptr(), fs_size());
         fs_free();
     }
+    uint8_t key_code;
+    if (0 != (key_code = keybuf_get())) {
+        kc85_key_down(&kc85, key_code);
+        kc85_key_up(&kc85, key_code);
+    }
+
 }
 
 void app_input(const sapp_event* event) {

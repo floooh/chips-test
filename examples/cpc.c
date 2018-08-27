@@ -46,6 +46,7 @@ static void push_audio(const float* samples, int num_samples, void* user_data) {
 /* one-time application init */
 void app_init(void) {
     gfx_init(CPC_DISPLAY_WIDTH, CPC_DISPLAY_HEIGHT, 1, 2);
+    keybuf_init(10);
     clock_init();
     saudio_setup(&(saudio_desc){0});
     fs_init();
@@ -106,7 +107,7 @@ void app_frame(void) {
             /* load the file data via the tape-emulation (TAP format) */
             if (cpc_insert_tape(&cpc, fs_ptr(), fs_size())) {
                 /* issue the right commands to start loading from tape */
-                keybuf_put(0, 20, "|tape\nrun\"\n\n");
+                keybuf_put("|tape\nrun\"\n\n");
             }
         }
         fs_free();

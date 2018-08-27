@@ -19,7 +19,7 @@ extern bool args_bool(const char* key);
 #endif
 
 #define MAX_ARGS (16)
-#define BUF_SIZE (MAX_ARGS*128)
+#define BUF_SIZE (64 * 1024)
 
 typedef struct {
     int num_args;
@@ -31,6 +31,7 @@ typedef struct {
 static args_state args;
 
 /* add a key-value-string of the form "key=value" */
+#if !defined(__EMSCRIPTEN__)
 static void add_kvp(const char* kvp) {
     const char* key_ptr;
     const char* val_ptr;
@@ -58,18 +59,48 @@ static void add_kvp(const char* kvp) {
         }
     }
 }
-
+#else
 /* emscripten helpers to parse browser URL args of the form "key=value" */
-#if defined(__EMSCRIPTEN__)
-EMSCRIPTEN_KEEPALIVE void args_emsc_add(const char* kvp) {
-    add_kvp(kvp);
+static void add_kvp_2(const char* key, const char* val) {
+    const char* key_ptr;
+    const char* val_ptr;
+    char c;
+    const char* src = key;
+    key_ptr = args.buf + args.pos;
+    while (0 != (c = *src++)) {
+        if ((args.pos+2) < BUF_SIZE) {
+            args.buf[args.pos++] = c;
+        }
+    }
+    args.buf[args.pos++] = 0;
+    src = val;
+    val_ptr = args.buf + args.pos;
+    while (0 != (c = *src++)) {
+        if ((args.pos+2) < BUF_SIZE) {
+            args.buf[args.pos++] = c;
+        }
+    }
+    args.buf[args.pos++] = 0;
+    if ((args.pos+2) < BUF_SIZE) {
+        args.buf[args.pos++] = 0;
+        if (args.num_args < MAX_ARGS) {
+            args.keys[args.num_args] = key_ptr;
+            args.vals[args.num_args] = val_ptr;
+            args.num_args++;
+        }
+    }
+}
+
+EMSCRIPTEN_KEEPALIVE void args_emsc_add(const char* key, const char* val) {
+    add_kvp_2(key, val);
 }
 
 EM_JS(void, args_emsc_parse_url, (), {
     var params = new URLSearchParams(window.location.search).entries();
     for (var p = params.next(); !p.done; p = params.next()) {
-        var kvp = p.value[0] + '=' + p.value[1];
-        var res = Module.ccall('args_emsc_add', 'void', ['string'], [kvp]);
+        var key = p.value[0];
+        var val = p.value[1];
+        var res = Module.ccall('args_emsc_add', 'void', ['string','string'], [key,val]);
     }
 });
 #endif

@@ -44,6 +44,7 @@ static void push_audio(const float* samples, int num_samples, void* user_data) {
 /* one-time application init */
 void app_init(void) {
     gfx_init(C64_DISPLAY_WIDTH, C64_DISPLAY_HEIGHT, 1, 1);
+    keybuf_init(10);
     clock_init();
     saudio_setup(&(saudio_desc){0});
     fs_init();
@@ -77,7 +78,7 @@ void app_frame(void) {
     if (fs_ptr() && clock_frame_count() > 180) {
         if (c64_insert_tape(&c64, fs_ptr(), fs_size())) {
             /* send load command */
-            keybuf_put(0, 10, "LOAD\n");
+            keybuf_put("LOAD\n");
             c64_start_tape(&c64);
         }
         fs_free();
