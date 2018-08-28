@@ -17,6 +17,11 @@
 
 kc85_t kc85;
 
+/* if true, wait with sending text input until file is loaded */
+bool delay_input = false;
+/* module to insert after ROM module image has been loaded */
+kc85_module_type_t delay_insert_module = KC85_MODULE_NONE;
+
 /* sokol-app entry, configure application callbacks and window */
 void app_init(void);
 void app_frame(void);
@@ -68,12 +73,7 @@ void app_init(void) {
     clock_init();
     saudio_setup(&(saudio_desc){0});
     fs_init();
-    if (args_has("file")) {
-        fs_load_file(args_string("file"));
-    }
-    if (args_has("input")) {
-        keybuf_put(args_string("input"));
-    }
+    /* specific KC85 model? */
     kc85_type_t type = KC85_TYPE_2;
     if (args_has("type")) {
         if (args_string_compare("type", "kc85_3")) {
@@ -83,6 +83,7 @@ void app_init(void) {
             type = KC85_TYPE_4;
         }
     }
+    /* initialize the KC85 emulator */
     kc85_init(&kc85, &(kc85_desc_t){
         .type = type,
         .pixel_buffer = gfx_framebuffer(),
@@ -101,13 +102,66 @@ void app_init(void) {
         .rom_kcbasic = dump_basic_c0,
         .rom_kcbasic_size = sizeof(dump_basic_c0)
     });
+    /* snapshot file or rom-module image */
+    if (args_has("snapshot")) {
+        fs_load_file(args_string("snapshot"));
+    }
+    else if (args_has("mod_image")) {
+        fs_load_file(args_string("mod_image"));
+    }
+    /* check if any modules should be inserted */
+    if (args_has("mod")) {
+        /* RAM modules can be inserted immediately, ROM modules
+           only after the ROM image has been loaded
+        */
+        if (args_string_compare("mod", "m022")) {
+            kc85_insert_ram_module(&kc85, 0x08, KC85_MODULE_M022_16KBYTE);
+        }
+        else if (args_string_compare("mod", "m011")) {
+            kc85_insert_ram_module(&kc85, 0x08, KC85_MODULE_M011_64KBYE);
+        }
+        else {
+            /* a ROM module */
+            delay_input = true;
+            if (args_string_compare("mod", "m006")) {
+                delay_insert_module = KC85_MODULE_M006_BASIC;
+            }
+            else if (args_string_compare("mod", "m012")) {
+                delay_insert_module = KC85_MODULE_M012_TEXOR;
+            }
+            else if (args_string_compare("mod", "m026")) {
+                delay_insert_module = KC85_MODULE_M026_FORTH;
+            }
+            else if (args_string_compare("mod", "m027")) {
+                delay_insert_module = KC85_MODULE_M027_DEVELOPMENT;
+            }
+        }
+    }
+    /* keyboard input to send to emulator */
+    if (!delay_input) {
+        if (args_has("input")) {
+            keybuf_put(args_string("input"));
+        }
+    }
 }
 
 void app_frame(void) {
     kc85_exec(&kc85, clock_frame_time());
     gfx_draw();
-    if (fs_ptr() && clock_frame_count() > 300) {
-        kc85_quickload(&kc85, fs_ptr(), fs_size());
+    uint32_t delay_frames = kc85.type == KC85_TYPE_4 ? 180 : 480;
+    if (fs_ptr() && clock_frame_count() > delay_frames) {
+        if (args_has("snapshot")) {
+            kc85_quickload(&kc85, fs_ptr(), fs_size());
+        }
+        else if (args_has("mod_image")) {
+            /* insert the rom module */
+            if (delay_insert_module != KC85_MODULE_NONE) {
+                kc85_insert_rom_module(&kc85, 0x08, delay_insert_module, fs_ptr(), fs_size());
+            }
+            if (args_has("input")) {
+                keybuf_put(args_string("input"));
+            }
+        }
         fs_free();
     }
     uint8_t key_code;
