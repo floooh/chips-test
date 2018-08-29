@@ -104,6 +104,7 @@ void app_init(void) {
     });
     /* snapshot file or rom-module image */
     if (args_has("snapshot")) {
+        delay_input=true;
         fs_load_file(args_string("snapshot"));
     }
     else if (args_has("mod_image")) {
@@ -152,6 +153,9 @@ void app_frame(void) {
     if (fs_ptr() && clock_frame_count() > delay_frames) {
         if (args_has("snapshot")) {
             kc85_quickload(&kc85, fs_ptr(), fs_size());
+            if (args_has("input")) {
+                keybuf_put(args_string("input"));
+            }
         }
         else if (args_has("mod_image")) {
             /* insert the rom module */

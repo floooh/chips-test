@@ -23,21 +23,31 @@ items = [
     { 'type':'emu',  'title':'Acorn Atom',      'system':'atom',    'url':'atom.html',    'img':'atom/atom.jpg', 'note':'' },
     { 'type':'emu',  'title':'Robotron Z1013',  'system':'z1013',   'url':'z1013.html',   'img':'z1013/z1013.jpg', 'note':'J 300[Enter] => BASIC' },
     { 'type':'emu',  'title':'Robotron Z9001',  'system':'z9001',   'url':'z9001.html',   'img':'z9001/z9001.jpg', 'note':'(with BASIC and RAM modules)' },
-    { 'type':'emu',  'title':'Robotron KC87',   'system':'z9001',    'url':'z9001.html?type=kc87', 'img':'z9001/kc87.jpg',     'note':'BASIC[Enter]' },
-    { 'type':'demo', 'title':'DTC',                 'system':'cpc',     'url':'cpc.html?file=cpc/dtc.sna', 'img':'cpc/dtc.jpg', 'note':'by Overlanders (CPC)' },
+    { 'type':'emu',  'title':'Robotron KC87',   'system':'z9001',   'url':'z9001.html?type=kc87', 'img':'z9001/kc87.jpg',     'note':'BASIC[Enter]' },
+    { 'type':'demo',  'title':'FORTH (KC85/4)',  'system':'kc85',   'url':'kc85.html?type=kc85_4&mod=m026&mod_image=kc85/forth.853&input=SWITCH%208%20C1%0AFORTH%0A', 'img':'kc85/forth.jpg', 'note':'' },
+    { 'type':'demo', 'title':'DTC (CPC)',        'system':'cpc',     'url':'cpc.html?file=cpc/dtc.sna', 'img':'cpc/dtc.jpg', 'note':'by Overlanders' },
     { 'type':'demo', 'title':'Ecole Buissonniere',  'system':'cpc',     'url':'cpc.html?file=cpc/ecole_buissonniere.sna', 'img':'cpc/ecole_buissonniere.jpg', 'note':'by MadRam/OVL (CPC)'},
+    { 'type':'demo', 'title':'Serious (KC85/4)',    'system':'kc85',    'url':'kc85.html?type=kc85_4&snapshot=kc85/serious.kcc', 'img':'kc85/serious.jpg', 'note':'by Moods Plateau'},
     { 'type':'demo', 'title':'Jungle (KC85/3)',     'system':'kc85',    'url':'kc85.html?type=kc85_3&mod=m022&snapshot=kc85/jungle.kcc', 'img':'kc85/jungle.jpg', 'note':'' },
+    { 'type':'demo', 'title':'Pengo (KC85/3)',      'system':'kc85',    'url':'kc85.html?type=kc85_3&snapshot=kc85/pengo.kcc', 'img':'kc85/pengo.jpg', 'note':'' },
+    { 'type':'demo', 'title':'House (KC85/3)',      'system':'kc85',    'url':'kc85.html?type=kc85_3&snapshot=kc85/house.kcc', 'img':'kc85/house.jpg', 'note':'' },
+    { 'type':'demo', 'title':'Cave (KC85/3)',       'system':'kc85',    'url':'kc85.html?type=kc85_3&snapshot=kc85/cave.kcc', 'img':'kc85/cave.jpg', 'note':'' },
+    { 'type':'demo', 'title':'Labyrinth (KC85/3)',  'system':'kc85',    'url':'kc85.html?type=kc85_3&snapshot=kc85/labyrinth.kcc', 'img':'kc85/labyrinth.jpg', 'note':'' },
+    { 'type':'game', 'title':'Tetris (KC85/4)',     'system':'kc85',    'url':'kc85.html?type=kc85_4&snapshot=kc85/tetris.kcc', 'img':'kc85/tetris.jpg', 'note':'' },
     { 'type':'game', 'title':'Digger (KC85/3)',     'system':'kc85',    'url':'kc85.html?type=kc85_3&mod=m022&snapshot=kc85/digger3.tap', 'img':'kc85/digger_3.jpg', 'note':'' },
-    { 'type':'game', 'title':'Boulderdash (C64)',   'system':'c64',     'url':'c64.html?tape=c64/boulderdash_c64.tap&joystick=yes', 'img':'c64/boulderdash_c64.jpg', 'note':'press F1 on start screen'},
+    { 'type':'game', 'title':'Boulderdash (C64)',   'system':'c64',     'url':'c64.html?tape=c64/boulderdash_c64.tap&joystick=yes&tape_sound=yes', 'img':'c64/boulderdash_c64.jpg', 'note':'press F1 on start screen'},
     { 'type':'game', 'title':'Boulderdash (CPC)',   'system':'cpc',     'url':'cpc.html?file=cpc/boulder_dash.sna&joystick=true', 'img':'cpc/boulderdash_cpc.jpg', 'note':''},
     { 'type':'game', 'title':'Boulderdash (ZX48k)',    'system':'zx',   'url':'zx.html?file=zx/boulderdash_zx.z80&joystick=kempston&type=zx48k', 'img':'zx/boulderdash_zx.jpg', 'note':'select Kempston joystick!'},
     { 'type':'game', 'title':'Boulderdash (KC85/3)',   'system':'kc85', 'url':'kc85.html?type=kc85_3&mod=m022&snapshot=kc85/boulder3.tap', 'img':'kc85/boulderdash_3.jpg', 'note':''},
     { 'type':'game', 'title':'Boulderdash (Z1013)',    'system':'z1013',    'url':'z1013.html?file=z1013/boulderdash_1_0.z80', 'img':'z1013/boulderdash_z1013.jpg', 'note':''},
     { 'type':'game', 'title':'Bomb Jack (CPC)',     'system':'cpc',     'url':'cpc.html?file=cpc/bomb_jack.sna&joystick=true', 'img':'cpc/bombjack_cpc.jpg', 'note':''},
-    { 'type':'game', 'title':'Bomb Jack (ZX48k)',      'system':'zx',       'url':'zx.html?file=zx/bombjack_zx.z80&joystick=kempston&type=zx48k', 'img':'zx/bombjack_zx.jpg', 'note':'select Kempston joystick!' },
+    { 'type':'game', 'title':'Bomb Jack (ZX48k)',   'system':'zx',      'url':'zx.html?file=zx/bombjack_zx.z80&joystick=kempston&type=zx48k', 'img':'zx/bombjack_zx.jpg', 'note':'select Kempston joystick!' },
+    { 'type':'game', 'title':'Zaxxon (C64)',        'system':'c64',     'url':'c64.html?tape=c64/zaxxon_c64.tap&joystick=yes&tape_sound=yes', 'img':'c64/zaxxon_c64.jpg', 'note':''},
+    { 'type':'game', 'title':'Dig Dug (C64)',       'system':'c64',     'url':'c64.html?tape=c64/digdug_c64.tap&joystick=yes&tape_sound=yes', 'img':'c64/digdug_c64.jpg', 'note':''},
     { 'type':'game', 'title':'Cybernoid (CPC)',     'system':'cpc',     'url':'cpc.html?file=cpc/cybernoid.sna&joystick=true', 'img':'cpc/cybernoid_cpc.jpg', 'note':''},
     { 'type':'game', 'title':'Arkanoid (CPC)',      'system':'cpc',     'url':'cpc.html?file=cpc/arkanoid.sna&joystick=true', 'img':'cpc/arkanoid_cpc.jpg', 'note':''},
     { 'type':'game', 'title':'Arkanoid RoD (ZX128)',   'system':'zx',      'url':'zx.html?file=zx/arkanoid_zx128k.z80&joystick=sinclair1', 'img':'zx/arkanoid_zx128k.jpg', 'note':''},
+    { 'type':'demo', 'title':'Breakout (KC85/3)',      'system':'kc85',    'url':'kc85.html?type=kc85_3&snapshot=kc85/breakout.kcc&input=BREAKOUT%0A', 'img':'kc85/breakout.jpg', 'note':'' },
     { 'type':'game', 'title':'Silkworm (ZX128)',       'system':'zx',      'url':'zx.html?file=zx/silkworm_zx128k.z80&joystick=kempston', 'img':'zx/silkworm_zx128k.jpg', 'note':'select Kempston joystick!'},
     { 'type':'game', 'title':'Chase HQ (CPC)',      'system':'cpc',     'url':'cpc.html?file=cpc/chase_hq.sna&joystick=true', 'img':'cpc/chasehq_cpc.jpg', 'note':''},
     { 'type':'game', 'title':"Ghosts'n'Goblins (CPC)", 'system':'cpc',  'url':'cpc.html?file=cpc/ghosts_n_goblins.sna&joystick=true', 'img':'cpc/ghostsngoblins_cpc.jpg', 'note':''},
@@ -92,7 +102,7 @@ def deploy_webpage(fips_dir, proj_dir, webpage_dir) :
         f.write(css)
 
     # copy other required files
-    for name in ['emsc.js', 'favicon.png'] :
+    for name in ['emsc.js', 'favicon.png', 'help.html'] :
         log.info('> copy file: {}'.format(name))
         shutil.copy(proj_dir + '/webpage/' + name, webpage_dir + '/' + name)
 

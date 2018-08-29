@@ -3,6 +3,10 @@ body {
     background-color: rgb(2, 43, 2);
 }
 
+p {
+    padding-left: 20px;
+}
+
 /** sample header styling **/
 .title {    
     text-decoration: none;
@@ -25,6 +29,16 @@ body {
     color: limegreen;
 }
 
+.help {
+    margin-left: 40px;
+    margin-right: auto;
+    display: block;
+    height: auto;
+    color: limegreen;
+    text-align: left;
+    font-size: 16px;
+    font-family: Arial, Helvetica, sans-serif;
+}
 /** thumbnail gallery **/
 .gallery {
     margin-left: 40px;
