@@ -20252,7 +20252,7 @@ fuse_test_t fuse_expected[] = {
     .state = {
       .af=0x0200, .bc=0xcf98, .de=0x90d8, .hl=0xa169,
       .af_=0x0000, .bc_=0x0000, .de_=0x0000, .hl_=0x0000,
-      .ix=0x0000, .iy=0x0000, .sp=0x0000, .pc=0x0001,
+      .ix=0x0000, .iy=0x0000, .sp=0x0000, .pc=0x0000,
       .i=0x00, .r=0x01, .iff1=0, .iff2=0, .im=0, .halted=1, .ticks=4
     },
     .num_chunks = 0,
