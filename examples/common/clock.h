@@ -3,7 +3,7 @@
     Emulator frame timing helper functions.
 */
 extern void clock_init(void);
-extern double clock_frame_time(void);
+extern uint32_t clock_frame_time(void);
 extern uint32_t clock_frame_count(void);
 
 /*== IMPLEMENTATION ==========================================================*/
@@ -22,16 +22,16 @@ void clock_init(void) {
     clck.last_time_stamp = stm_now();
 }
 
-double clock_frame_time(void) {
+uint32_t clock_frame_time(void) {
     clck.frame_count++;
-    double frame_time_sec = stm_sec(stm_laptime(&clck.last_time_stamp));
-    if (frame_time_sec < 0.024) {
-        frame_time_sec = 0.016666667;
+    uint32_t frame_time_us = (uint32_t) stm_us(stm_laptime(&clck.last_time_stamp));
+    if (frame_time_us < 24000) {   /* 24 ms */
+        frame_time_us = 16667;
     }
     else {
-        frame_time_sec = 0.033333333;
+        frame_time_us = 33333;
     }
-    return frame_time_sec;
+    return frame_time_us;
 }
 
 uint32_t clock_frame_count(void) {
