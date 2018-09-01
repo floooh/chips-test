@@ -58,16 +58,16 @@ void app_init() {
             type = ZX_TYPE_48K;
         }
     }
-    zx_joystick_t joy_type = ZX_JOYSTICK_NONE;
+    zx_joystick_type_t joy_type = ZX_JOYSTICKTYPE_NONE;
     if (args_has("joystick")) {
         if (args_string_compare("joystick", "kempston")) {
-            joy_type = ZX_JOYSTICK_KEMPSTON;
+            joy_type = ZX_JOYSTICKTYPE_KEMPSTON;
         }
         else if (args_string_compare("joystick", "sinclair1")) {
-            joy_type = ZX_JOYSTICK_SINCLAIR_1;
+            joy_type = ZX_JOYSTICKTYPE_SINCLAIR_1;
         }
         else if (args_string_compare("joystick", "sinclair2")) {
-            joy_type = ZX_JOYSTICK_SINCLAIR_2;
+            joy_type = ZX_JOYSTICKTYPE_SINCLAIR_2;
         }
     }
     zx_init(&zx, &(zx_desc_t) {
