@@ -51,9 +51,9 @@ void app_init(void) {
     if (args_has("tape")) {
         fs_load_file(args_string("tape"));
     }
-    c64_joystick_t joy_type = C64_JOYSTICK_NONE;
+    c64_joystick_type_t joy_type = C64_JOYSTICKTYPE_NONE;
     if (args_has("joystick")) {
-        joy_type = C64_JOYSTICK_DIGITAL;
+        joy_type = C64_JOYSTICKTYPE_DIGITAL;
     }
     c64_init(&c64, &(c64_desc_t){
         .joystick_type = joy_type,
@@ -85,8 +85,9 @@ void app_frame(void) {
     }
     uint8_t key_code;
     if (0 != (key_code = keybuf_get())) {
-        c64_joystick_t joy_type = c64.joystick_type;
-        c64.joystick_type = C64_JOYSTICK_NONE;
+        /* FIXME: this is ugly */
+        c64_joystick_type_t joy_type = c64.joystick_type;
+        c64.joystick_type = C64_JOYSTICKTYPE_NONE;
         c64_key_down(&c64, key_code);
         c64_key_up(&c64, key_code);
         c64.joystick_type = joy_type;

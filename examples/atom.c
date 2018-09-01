@@ -59,12 +59,12 @@ void app_init(void) {
     keybuf_init(10);
     clock_init();
     saudio_setup(&(saudio_desc){0});
-    atom_joystick_t joy_type = ATOM_JOYSTICK_NONE;
+    atom_joystick_type_t joy_type = ATOM_JOYSTICKTYPE_NONE;
     if (args_has("joystick")) {
         if (args_string_compare("joystick", "mmc") ||
             args_string_compare("joystick", "yes"))
         {
-            joy_type = ATOM_JOYSTICK_MMC;
+            joy_type = ATOM_JOYSTICKTYPE_MMC;
         }
     }
     atom_init(&atom, &(atom_desc_t){
