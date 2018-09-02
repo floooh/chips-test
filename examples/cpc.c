@@ -65,7 +65,7 @@ void app_init(void) {
             type = CPC_TYPE_KCCOMPACT;
         }
     }
-    cpc_joystick_t joy_type = CPC_JOYSTICK_NONE;
+    cpc_joystick_type_t joy_type = CPC_JOYSTICK_NONE;
     if (args_has("joystick")) {
         joy_type = CPC_JOYSTICK_DIGITAL;
     }
