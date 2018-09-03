@@ -25,6 +25,7 @@ items = [
     { 'type':'emu',  'title':'Robotron Z9001',  'system':'z9001',   'url':'z9001.html',   'img':'z9001/z9001.jpg', 'note':'(with BASIC and RAM modules)' },
     { 'type':'emu',  'title':'Robotron KC87',   'system':'z9001',   'url':'z9001.html?type=kc87', 'img':'z9001/kc87.jpg',     'note':'BASIC[Enter]' },
     { 'type':'demo', 'title':'FORTH (KC85/4)',  'system':'kc85',    'url':'kc85.html?type=kc85_4&mod=m026&mod_image=kc85/forth.853&input=SWITCH%208%20C1%0AFORTH%0A', 'img':'kc85/forth.jpg', 'note':'' },
+    { 'type':'demo', 'title':'FORTH (Z1013)',   'system':'z1013',   'url':'z1013.html?type=z1013_64&file=z1013/z1013_forth.z80', 'img':'z1013/z1013_forth.jpg', 'note':''},
     { 'type':'demo', 'title':'ASMDEV (KC85/4)', 'system':'kc85',    'url':'kc85.html?type=kc85_4&mod=m027&mod_image=kc85/develop.853&input=SWITCH%208%20C1%0AMENU%0A', 'img':'kc85/development.jpg', 'note':''},
     { 'type':'demo', 'title':'DTC (CPC)',        'system':'cpc',     'url':'cpc.html?file=cpc/dtc.sna', 'img':'cpc/dtc.jpg', 'note':'by Overlanders' },
     { 'type':'demo', 'title':'Ecole Buissonniere',  'system':'cpc',     'url':'cpc.html?file=cpc/ecole_buissonniere.sna', 'img':'cpc/ecole_buissonniere.jpg', 'note':'by MadRam/OVL (CPC)'},
