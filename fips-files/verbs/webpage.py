@@ -66,6 +66,8 @@ items = [
     { 'type':'game', 'title':"Rick Dangerous (CPC)",  'system':'cpc',   'url':'cpc.html?file=cpc/rick_dangerous.sna&joystick=true', 'img':'cpc/rickdangerous_cpc.jpg', 'note':''},
     { 'type':'game', 'title':"Cyclone (ZX48k)",    'system':'zx', 'url':'zx.html?file=zx/cyclone.z80&joystick=kempston&type=zx48k', 'img':'zx/cyclone.jpg', 'note':'select Kempston joystick!' },
     { 'type':'game', 'title':"Exolon (ZX48k)",     'system':'zx', 'url':'zx.html?file=zx/exolon.z80&joystick=kempston&type=zx48k', 'img':'zx/exolon.jpg', 'note':'select Kempston joystick!' },
+    { 'type':'game', 'title':"Chucky Egg (Atom)",  'system':'atom', 'url':'atom.html?tape=atom/cchuck.tap&joystick=mmc', 'img':'atom/cchuck.jpg', 'note':'press SPACE to start!' },
+    { 'type':'game', 'title':"Jet Set Willy (Atom)", 'system':'atom', 'url':'atom.html?tape=atom/jsw.tap&joystick=mmc', 'img':'atom/jsw.jpg', 'note':'select JOYMMC!'},
     { 'type':'game', 'title':"Mazogs (Z1013)",     'system':'z1013', 'url':'z1013.html?file=z1013/mazog_deutsch.z80', 'img':'z1013/mazogs_z1013.jpg', 'note':'' },
     { 'type':'game', 'title':"Galactica (Z1013)",  'system':'z1013', 'url':'z1013.html?file=z1013/galactica.z80', 'img':'z1013/galactica_z1013.jpg', 'note':'' },
     { 'type':'game', 'title':"Demolation (Z1013)", 'system':'z1013', 'url':'z1013.html?file=z1013/demolation.z80', 'img':'z1013/demolation_z1013.jpg', 'note':'' },
