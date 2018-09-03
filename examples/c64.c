@@ -53,7 +53,12 @@ void app_init(void) {
     }
     c64_joystick_type_t joy_type = C64_JOYSTICKTYPE_NONE;
     if (args_has("joystick")) {
-        joy_type = C64_JOYSTICKTYPE_DIGITAL;
+        if (args_string_compare("joystick", "digital_1")) {
+            joy_type = C64_JOYSTICKTYPE_DIGITAL_1;
+        }
+        else if (args_string_compare("joystick", "digital_2")) {
+            joy_type = C64_JOYSTICKTYPE_DIGITAL_2;
+        }
     }
     c64_init(&c64, &(c64_desc_t){
         .joystick_type = joy_type,
