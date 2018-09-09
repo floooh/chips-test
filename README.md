@@ -1,4 +1,10 @@
 # chips-test
+
+| Platform | Build Status |
+|-----|-----|
+|Linux+OSX: |[![Build Status](https://travis-ci.org/floooh/chips-test.svg?branch=master)](https://travis-ci.org/floooh/chips-test)|
+|Windows|(FIXME)
+
 Tests and sample emulators for https://github.com/floooh/chips
 
 Live demos of the example emulators: https://floooh.github.com/tiny8bit
