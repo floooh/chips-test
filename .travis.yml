@@ -26,6 +26,7 @@ script:
   - echo $TRAVIS_OS_NAME
   - cmake --version
   - gcc --version
+  - python --version
   - python fips clean
 # build
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then python fips build osx-make-debug; fi
@@ -33,7 +34,7 @@ script:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then python fips build linux-make-debug; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then python fips build linux-make-release; fi
 # run tests
-  - if [[ "$TRAVIS_IS_NAME" == "osx" ]]; then python fips set config osx-make-debug
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then python fips set config osx-make-debug
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then python fips set config linux-make-debug; fi
   - python fips run z80-test
 
