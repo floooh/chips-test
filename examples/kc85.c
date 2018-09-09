@@ -60,7 +60,7 @@ int main() {
     keypad(stdscr, TRUE);
 
     /* setup color pairs, KC85 has 16 foreground and 8 background colors, 
-       ncurses has only 8 colos
+       ncurses has only 8 color slots
     */
     start_color();
     init_color(COLOR_BLACK, 0, 0, 0);
@@ -115,7 +115,7 @@ int main() {
         int cur_color_byte = -1;
         for (int y = 0; y < 32; y++) {
             for (int x = 0; x < 40; x++) {
-                /* get color code from color buffer, not the color buffer is 90 degree rotated! */
+                /* get color code from color buffer, note the color buffer is 90 degree rotated! */
                 int color_byte = kc85.ram[5][x*256 + y*8] & 0x7f;
                 if (color_byte != cur_color_byte) {
                     attron(COLOR_PAIR(color_byte));
