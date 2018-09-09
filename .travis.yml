@@ -1,0 +1,39 @@
+git:
+  depth: 3
+language: cpp
+compiler: gcc
+os: 
+  - osx
+  - linux
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - gcc-6
+      - g++-6
+      - cmake
+      - cmake-data
+      - mesa-common-dev
+      - xorg-dev
+      - libasound-dev
+before_install:
+  - if [ "$TRAVIS_OS_NAME" = "linux"  ]; then sudo apt-get -qq update;    fi
+before_script:
+  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6 50; fi
+  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-6 50; fi
+script:
+  - echo $TRAVIS_OS_NAME
+  - cmake --version
+  - gcc --version
+  - python fips clean
+# build
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then python fips build osx-make-debug; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then python fips build osx-make-release; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then python fips build linux-make-debug; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then python fips build linux-make-release; fi
+# run tests
+  - if [[ "$TRAVIS_IS_NAME" == "osx" ]]; then python fips set config osx-make-debug
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then python fips set config linux-make-debug; fi
+  - python fips run z80-test
+
