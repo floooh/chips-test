@@ -10,6 +10,7 @@
 //------------------------------------------------------------------------------
 #define CHIPS_IMPL
 #include "chips/z80.h"
+#include "test.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -267,33 +268,16 @@ bool run_test(int test_index, fuse_test_t* inp, fuse_test_t* exp) {
         }
 
     }
-    if (!ok) {
-        printf("\n#%d (%s) FAILED!!!\n", test_index, inp->desc);
-    }
     return ok;
 }
 
 int main() {
     assert(fuse_expected_num == fuse_input_num);
-    printf("FUSE EMULATOR Z80 TESTS\n"
-           "=======================\n\n");
-
-    int num_succeeded = 0;
-    int num_failed = 0;
+    test_begin("FUSE Z80 test");
+    test_no_verbose();
     for (int i = 0; i < fuse_input_num; i++) {
-        if (run_test(i, &fuse_input[i], &fuse_expected[i])) {
-            num_succeeded++;
-        }
-        else {
-            num_failed++;
-        }
+        test(fuse_input[i].desc);
+        T(run_test(i, &fuse_input[i], &fuse_expected[i]));
     }
-    if (num_failed == 0) {
-        printf("\n\nFUSE SUCCESS! (%d out of %d failed)\n", num_failed, fuse_input_num);
-        return 0;
-    }
-    else {
-        printf("\n\nFUSE FAILED! (%d out of %d failed)\n", num_failed, fuse_input_num);
-        return 10;
-    }
+    return test_end();
 }

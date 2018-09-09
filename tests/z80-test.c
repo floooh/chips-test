@@ -102,8 +102,7 @@ void SET_GET() {
     z80_set_h(&cpu, 0x45); z80_set_l(&cpu, 0x67);
     z80_set_d(&cpu, 0x89); z80_set_e(&cpu, 0xAB);
     z80_set_b(&cpu, 0xCD); z80_set_c(&cpu, 0xEF);
-//    T(0x01 == _F); T(0x23 == _A); T(0x0123 == _FA);
-T(0xFF == _F);
+    T(0x01 == _F); T(0x23 == _A); T(0x0123 == _FA);
     T(0x45 == _H); T(0x67 == _L); T(0x4567 == _HL);
     T(0x89 == _D); T(0xAB == _E); T(0x89AB == _DE);
     T(0xCD == _B); T(0xEF == _C); T(0xCDEF == _BC);

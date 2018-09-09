@@ -1,16 +1,11 @@
 //------------------------------------------------------------------------------
 //  m6502-test.c
 //------------------------------------------------------------------------------
-// force assert() enabled
-#ifdef NDEBUG
-#undef NDEBUG
-#endif
 #define CHIPS_IMPL
 #include "chips/m6502.h"
 #include <stdio.h>
+#include "test.h"
 
-uint32_t num_tests = 0;
-#define T(x) { assert(x); num_tests++; }
 #define R(r) cpu.state.r
 
 m6502_t cpu;
@@ -69,7 +64,7 @@ bool tf(uint8_t expected) {
 }
 
 void INIT() {
-    puts(">>> INIT");
+    test("INIT");
     init();
     T(0 == R(A));
     T(0 == R(X));
@@ -80,7 +75,7 @@ void INIT() {
 }
 
 void RESET() {
-    puts(">>> RESET");
+    test("RESET");
     init();
     w16(0xFFFC, 0x1234);
     m6502_reset(&cpu);
@@ -90,7 +85,7 @@ void RESET() {
 }
 
 void LDA() {
-    puts(">>> LDA");
+    test("LDA");
     init();
     uint8_t prog[] = {
         // immediate
@@ -187,7 +182,7 @@ void LDA() {
 }
 
 void LDX() {
-    puts(">>> LDX");
+    test("LDX");
     init();
     uint8_t prog[] = {
         // immediate
@@ -255,7 +250,7 @@ void LDX() {
 }
 
 void LDY() {
-    puts(">>> LDY");
+    test("LDY");
     init();
     uint8_t prog[] = {
         // immediate
@@ -323,7 +318,7 @@ void LDY() {
 }
 
 void STA() {
-    puts(">>> STA");
+    test("STA");
     init();
     uint8_t prog[] = {
         0xA9, 0x23,             // LDA #$23
@@ -353,7 +348,7 @@ void STA() {
 }
 
 void STX() {
-    puts(">>> STX");
+    test("STX");
     init();
     uint8_t prog[] = {
         0xA2, 0x23,             // LDX #$23
@@ -373,7 +368,7 @@ void STX() {
 }
 
 void STY() {
-    puts(">>> STY");
+    test("STY");
     init();
     uint8_t prog[] = {
         0xA0, 0x23,             // LDY #$23
@@ -393,7 +388,7 @@ void STY() {
 }
 
 void TAX_TXA() {
-    puts(">>> TAX,TXA");
+    test("TAX,TXA");
     init();
     uint8_t prog[] = {
         0xA9, 0x00,     // LDA #$00
@@ -422,7 +417,7 @@ void TAX_TXA() {
 }
 
 void TAY_TYA() {
-    puts(">>> TAY,TYA");
+    test("TAY,TYA");
     init();
     uint8_t prog[] = {
         0xA9, 0x00,     // LDA #$00
@@ -451,7 +446,7 @@ void TAY_TYA() {
 }
 
 void DEX_INX_DEY_INY() {
-    puts(">>> DEX,INX,DEY,INY");
+    test("DEX,INX,DEY,INY");
     init();
     uint8_t prog[] = {
         0xA2, 0x01,     // LDX #$01
@@ -480,7 +475,7 @@ void DEX_INX_DEY_INY() {
 }
 
 void TXS_TSX() {
-    puts(">>> TXS,TSX");
+    test("TXS,TSX");
     init();
     uint8_t prog[] = {
         0xA2, 0xAA,     // LDX #$AA
@@ -499,7 +494,7 @@ void TXS_TSX() {
 }
 
 void ORA() {
-    puts(">>> ORA");
+    test("ORA");
     init();
     uint8_t prog[] = {
         0xA9, 0x00,         // LDA #$00
@@ -539,7 +534,7 @@ void ORA() {
 }
 
 void AND() {
-    puts(">>> AND");
+    test("AND");
     init();
     uint8_t prog[] = {
         0xA9, 0xFF,         // LDA #$FF
@@ -579,7 +574,7 @@ void AND() {
 }
 
 void EOR() {
-    puts(">>> EOR");
+    test("EOR");
     init();
     uint8_t prog[] = {
         0xA9, 0xFF,         // LDA #$FF
@@ -619,7 +614,7 @@ void EOR() {
 }
 
 void NOP() {
-    puts(">>> NOP");
+    test("NOP");
     init();
     uint8_t prog[] = {
         0xEA,       // NOP
@@ -629,7 +624,7 @@ void NOP() {
 }
 
 void PHA_PLA_PHP_PLP() {
-    puts(">>> PHA,PLA,PHP,PLP");
+    test("PHA,PLA,PHP,PLP");
     init();
     uint8_t prog[] = {
         0xA9, 0x23,     // LDA #$23
@@ -652,7 +647,7 @@ void PHA_PLA_PHP_PLP() {
 }
 
 void CLC_SEC_CLI_SEI_CLV_CLD_SED() {
-    puts(">>> CLC,SEC,CLI,SEI,CLV,CLD,SED");
+    test("CLC,SEC,CLI,SEI,CLV,CLD,SED");
     init();
     uint8_t prog[] = {
         0xB8,       // CLV
@@ -676,7 +671,7 @@ void CLC_SEC_CLI_SEI_CLV_CLD_SED() {
 }
 
 void INC_DEC() {
-    puts(">>> INC,DEC");
+    test("INC,DEC");
     init();
     uint8_t prog[] = {
         0xA2, 0x10,         // LDX #$10
@@ -703,7 +698,7 @@ void INC_DEC() {
 }
 
 void ADC_SBC() {
-    puts(">>> ADC,SBC");
+    test("ADC,SBC");
     init();
     uint8_t prog[] = {
         0xA9, 0x01,         // LDA #$01
@@ -753,7 +748,7 @@ void ADC_SBC() {
 }
 
 void CMP_CPX_CPY() {
-    puts(">>> CMP,CPX,CPY");
+    test("CMP,CPX,CPY");
     init();
     // FIXME: non-immediate addressing modes
     uint8_t prog[] = {
@@ -784,7 +779,7 @@ void CMP_CPX_CPY() {
 }
 
 void ASL() {
-    puts(">>> ASL");
+    test("ASL");
     init();
     // FIXME: more addressing modes
     uint8_t prog[] = {
@@ -808,7 +803,7 @@ void ASL() {
 }
 
 void LSR() {
-    puts(">>> LSR");
+    test("LSR");
     init();
     // FIXME: more addressing modes
     uint8_t prog[] = {
@@ -832,7 +827,7 @@ void LSR() {
 }
 
 void ROR_ROL() {
-    puts(">>> ROR,ROL");
+    test("ROR,ROL");
     init();
     // FIXME: more adressing modes
     uint8_t prog[] = {
@@ -864,7 +859,7 @@ void ROR_ROL() {
 }
 
 void BIT() {
-    puts(">>> BIT");
+    test("BIT");
     init();
     uint8_t prog[] = {
         0xA9, 0x00,         // LDA #$00
@@ -891,7 +886,7 @@ void BIT() {
 }
 
 void BNE_BEQ() {
-    puts(">>> BNE,BEQ");
+    test("BNE,BEQ");
     init();
     uint8_t prog[] = {
         0xA9, 0x10,         // LDA #$10
@@ -924,7 +919,7 @@ void BNE_BEQ() {
 }
 
 void JMP() {
-    puts(">>> JMP");
+    test("JMP");
     init();
     uint8_t prog[] = {
         0x4C, 0x00, 0x10,   // JMP $1000
@@ -934,7 +929,7 @@ void JMP() {
 }
 
 void JMP_indirect_samepage() {
-    puts(">>> JMP indirect, same page");
+    test("JMP indirect, same page");
     init();
     uint8_t prog[] = {
         0xA9, 0x33,         // LDA #$33
@@ -952,7 +947,7 @@ void JMP_indirect_samepage() {
 }
 
 void JMP_indirect_wrap() {
-    puts(">>> JMP indirect, cross page");
+    test("JMP indirect, cross page");
     init();
     uint8_t prog[] = {
         0xA9, 0x33,         // LDA #$33
@@ -971,7 +966,7 @@ void JMP_indirect_wrap() {
 }
 
 void JSR_RTS() {
-    puts(">>> JSR,RTS");
+    test("JSR,RTS");
     init();
     uint8_t prog[] = {
         0x20, 0x05, 0x03,   // JSR fun
@@ -989,7 +984,7 @@ void JSR_RTS() {
 }
 
 void RTI() {
-    puts(">>> RTI");
+    test("RTI");
     init();
     uint8_t prog[] = {
         0xA9, 0x11,     // LDA #$11
@@ -1014,6 +1009,7 @@ void RTI() {
 }
 
 int main() {
+    test_begin("m6502-test");
     INIT();
     RESET();
     LDA();
@@ -1045,6 +1041,5 @@ int main() {
     JMP_indirect_wrap();
     JSR_RTS();
     RTI();
-    printf("%d tests run ok.\n", num_tests);
-    return 0;
+    return test_end();
 }

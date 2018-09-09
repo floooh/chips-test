@@ -1,16 +1,13 @@
 //------------------------------------------------------------------------------
 //  m6502-nestest.c
 //------------------------------------------------------------------------------
-// force assert() enabled
-#ifdef NDEBUG
-#undef NDEBUG
-#endif
 #define CHIPS_IMPL
 #include "chips/m6502.h"
 #include "chips/mem.h"
 #include <stdio.h>
 #include "nestest/dump.h"
 #include "nestest/nestestlog.h"
+#include "test.h"
 
 m6502_t cpu;
 mem_t mem;
@@ -36,7 +33,8 @@ uint64_t tick(uint64_t pins, void* user_data) {
 }
 
 int main() {
-    puts(">>> RUNNING NESTEST...");
+    test_begin("NES TEST (m6502)");
+    test_no_verbose();
 
     /* need to implement a minimal NES emulation */
     memset(ram, 0, sizeof(ram));
@@ -70,23 +68,17 @@ int main() {
     int i = 0;
     while (cpu.state.PC != 0xC66E) {
         cpu_state* state = &state_table[i++];
-        if ((cpu.state.PC != state->PC) ||
-            (cpu.state.A  != state->A) ||
-            (cpu.state.X  != state->X) ||
-            (cpu.state.Y  != state->Y) ||
-            (cpu.state.P  != state->P) ||
-            (cpu.state.S  != state->S))
-        {
-            printf("### NESTEST failed at pos %d, PC=0x%04X: %s", i, cpu.state.PC, state->desc);
-            assert(cpu.state.A == state->A);
-            assert(cpu.state.X == state->X);
-            assert(cpu.state.Y == state->Y);
-            assert(cpu.state.P == state->P);
-            assert(cpu.state.S == state->S);
-            return 10;
+        test(state->desc);
+        T(cpu.state.PC == state->PC);
+        T(cpu.state.A  == state->A);
+        T(cpu.state.X  == state->X);
+        T(cpu.state.Y  == state->Y);
+        T(cpu.state.P  == state->P);
+        T(cpu.state.S  == state->S);
+        if (test_failed()) {
+            printf("### NESTEST failed at pos %d, PC=0x%04X: %s\n", i, cpu.state.PC, state->desc);
         }
         m6502_exec(&cpu, 0);
     }
-    puts(">>> NESTEST FINISHED SUCCESSFULLY");
-    return 0;
+    return test_end();
 }

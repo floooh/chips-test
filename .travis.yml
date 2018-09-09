@@ -37,4 +37,7 @@ script:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then python fips set config osx-make-release; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then python fips set config linux-make-release; fi
   - python fips run z80-test
+  - python fips run z80-fuse
+  - python fips run m6502-test
+  - python fips run m6502-nestest
 
