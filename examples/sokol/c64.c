@@ -1,7 +1,7 @@
 /*
     c64.c
 */
-#include "common/common.h"
+#include "common.h"
 #define CHIPS_IMPL
 #include "chips/m6502.h"
 #include "chips/m6526.h"
@@ -12,7 +12,7 @@
 #include "chips/mem.h"
 #include "chips/clk.h"
 #include "systems/c64.h"
-#include "roms/c64-roms.h"
+#include "c64-roms.h"
 
 c64_t c64;
 

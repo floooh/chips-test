@@ -3,7 +3,7 @@
 
     KC85/2, /3 and /4.
 */
-#include "common/common.h"
+#include "common.h"
 #define CHIPS_IMPL
 #include "chips/z80.h"
 #include "chips/z80ctc.h"
@@ -13,7 +13,7 @@
 #include "chips/kbd.h"
 #include "chips/mem.h"
 #include "systems/kc85.h"
-#include "roms/kc85-roms.h"
+#include "kc85-roms.h"
 
 kc85_t kc85;
 

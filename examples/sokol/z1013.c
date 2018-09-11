@@ -9,7 +9,7 @@
 
     Enter BASIC editing mode with 'AUTO', leave by pressing Esc.
 */
-#include "common/common.h"
+#include "common.h"
 #define CHIPS_IMPL
 #include "chips/z80.h"
 #include "chips/z80pio.h"
@@ -17,7 +17,7 @@
 #include "chips/mem.h"
 #include "chips/clk.h"
 #include "systems/z1013.h"
-#include "roms/z1013-roms.h"
+#include "z1013-roms.h"
 
 static z1013_t z1013;
 

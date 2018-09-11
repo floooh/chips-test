@@ -5,7 +5,7 @@
     - video decoding works with scanline accuracy, not cycle accuracy
     - no tape or disc emulation
 */
-#include "common/common.h"
+#include "common.h"
 #define CHIPS_IMPL
 #include "chips/z80.h"
 #include "chips/beeper.h"
@@ -14,7 +14,7 @@
 #include "chips/clk.h"
 #include "chips/mem.h"
 #include "systems/zx.h"
-#include "roms/zx-roms.h"
+#include "zx-roms.h"
 
 zx_t zx;
 

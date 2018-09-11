@@ -3,7 +3,7 @@
 
     Amstrad CPC 464/6128 and KC Compact. No disc emulation.
 */
-#include "common/common.h"
+#include "common.h"
 #define CHIPS_IMPL
 #include "chips/z80.h"
 #include "chips/ay38910.h"
@@ -14,7 +14,7 @@
 #include "chips/kbd.h"
 #include "chips/mem.h"
 #include "systems/cpc.h"
-#include "roms/cpc-roms.h"
+#include "cpc-roms.h"
 
 cpc_t cpc;
 

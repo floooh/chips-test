@@ -10,7 +10,7 @@
     NOT EMULATED:
         - REPT key (and some other special keys)
 */
-#include "common/common.h"
+#include "common.h"
 #define CHIPS_IMPL
 #include "chips/m6502.h"
 #include "chips/mc6847.h"
@@ -21,7 +21,7 @@
 #include "chips/kbd.h"
 #include "chips/mem.h"
 #include "systems/atom.h"
-#include "roms/atom-roms.h"
+#include "atom-roms.h"
 
 atom_t atom;
 

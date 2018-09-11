@@ -6,7 +6,7 @@
 //
 //  not emulated: beeper sound, border color, 40x20 video mode
 //------------------------------------------------------------------------------
-#include "common/common.h"
+#include "common.h"
 #define CHIPS_IMPL
 #include "chips/z80.h"
 #include "chips/z80pio.h"
@@ -16,7 +16,7 @@
 #include "chips/clk.h"
 #include "chips/mem.h"
 #include "systems/z9001.h"
-#include "roms/z9001-roms.h"
+#include "z9001-roms.h"
 
 z9001_t z9001;
 
