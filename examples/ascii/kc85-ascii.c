@@ -1,11 +1,9 @@
 /*
     kc85.c
 
-    Stripped down KC85/2../4 emulator for the terminal, rendering 
-    the ASCII buffer of the KC85 through curses. Requires a UNIX
+    Stripped down KC85/2../4 emulator running in a (xterm-256color) terminal,
+    rendering the ASCII buffer of the KC85 through curses. Requires a UNIX
     environment to build and run (tested on OSX and Linux).
-
-    Expects to run of xterm-256color (for proper colors)
 
     Select the KC85 model with cmdline args:
 
@@ -46,7 +44,6 @@
 #include "fs.h"
 #include "keybuf.h"
 #define CHIPS_IMPL
-#include "args.h"
 #include "chips/z80.h"
 #include "chips/z80ctc.h"
 #include "chips/z80pio.h"
