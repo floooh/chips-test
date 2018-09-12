@@ -13,10 +13,10 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-missing-field-initializers")
 endif()
 if (NOT FIPS_EMSCRIPTEN)
     fips_ide_group(tests)
-    fips_add_subdirectory(tests)
+    add_subdirectory(tests)
 endif()
 fips_ide_group(examples)
-fips_add_subdirectory(examples)
+add_subdirectory(examples)
 fips_finish()
 
 

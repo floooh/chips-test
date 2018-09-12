@@ -1,0 +1,7 @@
+find_package(Curses)
+if (CURSES_FOUND)
+    fips_begin_app(kc85-ascii cmdline)
+        fips_files(kc85-ascii.c)
+        fips_deps(kc85-roms curses)
+    fips_end_app()
+endif()

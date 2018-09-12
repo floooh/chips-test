@@ -1,4 +1,5 @@
 include_directories(common roms)
-fips_add_subdirectory(roms)
-fips_add_subdirectory(common)
-fips_add_subdirectory(sokol)
+add_subdirectory(roms)
+add_subdirectory(common)
+add_subdirectory(sokol)
+add_subdirectory(ascii)

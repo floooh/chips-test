@@ -173,7 +173,6 @@ void app_frame(void) {
         kc85_key_down(&kc85, key_code);
         kc85_key_up(&kc85, key_code);
     }
-
 }
 
 void app_input(const sapp_event* event) {
