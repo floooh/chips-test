@@ -296,6 +296,7 @@ int main(int argc, char* argv[]) {
                 int color_pair = ((int)(color_byte & 0x7F))+1;
                 if (color_pair != cur_color_pair) {
                     attron(COLOR_PAIR(color_pair));
+                    cur_color_pair = color_pair;
                 }
 
                 // get ASCII code from character buffer at 0xB200

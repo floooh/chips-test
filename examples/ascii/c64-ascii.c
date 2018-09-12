@@ -35,6 +35,36 @@ static void catch_sigint(int signo) {
 // conversion table from C64 font index to ASCII (the 'x' is actually the pound sign)
 static char font_map[65] = "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[x]   !\"#$%&`()*+,-./0123456789:;<=>?";
 
+// map C64 color numbers to xterm-256color colors
+static int colors[16] = {
+    16,     // black
+    231,    // white
+    88,     // red
+    73,     // cyan
+    54,     // purple
+    71,     // green
+    18,     // blue
+    185,    // yellow
+    136,    // orange
+    58,     // brown
+    131,    // light-red
+    59,     // dark-grey
+    102,    // grey
+    150,    // light green
+    62,     // light blue
+    145,    // light grey
+};
+
+static void init_c64_colors(void) {
+    start_color();
+    for (int fg = 0; fg < 16; fg++) {
+        for (int bg = 0; bg < 16; bg++) {
+            int cp = (fg*16 + bg) + 1;
+            init_pair(cp, colors[fg], colors[bg]);
+        }
+    }
+}
+
 int main(int argc, char* argv[]) {
     c64_init(&c64, &(c64_desc_t){
         .rom_char = dump_c64_char,
@@ -50,6 +80,7 @@ int main(int argc, char* argv[]) {
 
     // setup curses
     initscr();
+    init_c64_colors();
     noecho();
     curs_set(FALSE);
     cbreak();
@@ -88,17 +119,34 @@ int main(int argc, char* argv[]) {
             }
         }
         // render the PETSCII buffer
+        int cur_color_pair = -1;
         for (uint32_t y = 0; y < 25; y++) {
             for (uint32_t x = 0; x < 40; x++) {
-                // get PETSCII code 
-                // FIXME: compute proper SCREEN RAM address
+                // get color byte (only lower 4 bits wired)
+                int fg = c64.color_ram[y*40+x] & 15;
+                int bg = c64.vic.gunit.bg_index[0];
+                int color_pair = (fg*16+bg)+1;
+                if (color_pair != cur_color_pair) {
+                    attron(COLOR_PAIR(color_pair));
+                    cur_color_pair = color_pair;
+                }
+
+                // get character index
                 uint16_t addr = 0x0400 + y*40 + x;
                 uint8_t font_code = mem_rd(&c64.mem_vic, addr);
                 char chr = font_map[font_code & 63];
+                // invert upper half of character set
+                if (font_code > 127) {
+                    attron(A_REVERSE);
+                }
                 // padding to get proper aspect ratio
                 mvaddch(y, x*2, ' ');
                 // character 
                 mvaddch(y, x*2+1, chr);
+                // invert upper half of character set
+                if (font_code > 127) {
+                    attroff(A_REVERSE);
+                }
             }
         }
         refresh();
