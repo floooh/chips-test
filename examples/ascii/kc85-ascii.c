@@ -75,9 +75,10 @@ static void catch_sigint(int signo) {
     quit_requested = 1;
 }
 
-// xterm-color256 color codes mapped to KC85 colors
+// xterm-color256 color codes mapped to KC85 colors, don't use the colors
+// below 16 as those a most likely mapped by color themes
 static int background_colors[8] = {
-    0,      // black
+    16,     // black
     19,     // dark-blue
     124,    // dark-red
     127,    // dark-magenta
@@ -88,7 +89,7 @@ static int background_colors[8] = {
 };
 
 static int foreground_colors[16] = {
-    0,      // black
+    16,      // black
     21,     // blue
     196,    // red
     201,    // magenta
@@ -96,7 +97,7 @@ static int foreground_colors[16] = {
     51,     // cyan
     226,    // yellow
     231,    // white
-    0,      // black #2
+    16,      // black #2
     199,    // violet
     214,    // orange
     129,    // purple
