@@ -25,6 +25,9 @@ static c64_t c64;
 
 // run the emulator and render-loop at 30fps
 #define FRAME_USEC (33333)
+// border size
+#define BORDER_HORI (5)
+#define BORDER_VERT (3)
 
 // a signal handler for Ctrl-C, for proper cleanup 
 static int quit_requested = 0;
@@ -120,32 +123,51 @@ int main(int argc, char* argv[]) {
         }
         // render the PETSCII buffer
         int cur_color_pair = -1;
-        for (uint32_t y = 0; y < 25; y++) {
-            for (uint32_t x = 0; x < 40; x++) {
-                // get color byte (only lower 4 bits wired)
-                int fg = c64.color_ram[y*40+x] & 15;
-                int bg = c64.vic.gunit.bg_index[0];
-                int color_pair = (fg*16+bg)+1;
-                if (color_pair != cur_color_pair) {
-                    attron(COLOR_PAIR(color_pair));
-                    cur_color_pair = color_pair;
+        int bg = c64.vic.gunit.bg_index[0];
+        int bc = c64.vic.brd.bc_index;
+        for (uint32_t yy = 0; yy < 25+2*BORDER_VERT; yy++) {
+            for (uint32_t xx = 0; xx < 40+2*BORDER_HORI; xx++) {
+                if ((xx < BORDER_HORI) || (xx >= 40+BORDER_HORI) ||
+                    (yy < BORDER_VERT) || (yy >= 25+BORDER_VERT))
+                {
+                    // border area
+                    int color_pair = bc+1;
+                    if (color_pair != cur_color_pair) {
+                        attron(COLOR_PAIR(color_pair));
+                        cur_color_pair = color_pair;
+                    }
+                    mvaddch(yy, xx*2, ' ');
+                    mvaddch(yy, xx*2+1, ' ');
                 }
+                else {
+                    // bitmap area (not border)
+                    int x = xx - BORDER_HORI;
+                    int y = yy - BORDER_VERT;
 
-                // get character index
-                uint16_t addr = 0x0400 + y*40 + x;
-                uint8_t font_code = mem_rd(&c64.mem_vic, addr);
-                char chr = font_map[font_code & 63];
-                // invert upper half of character set
-                if (font_code > 127) {
-                    attron(A_REVERSE);
-                }
-                // padding to get proper aspect ratio
-                mvaddch(y, x*2, ' ');
-                // character 
-                mvaddch(y, x*2+1, chr);
-                // invert upper half of character set
-                if (font_code > 127) {
-                    attroff(A_REVERSE);
+                    // get color byte (only lower 4 bits wired)
+                    int fg = c64.color_ram[y*40+x] & 15;
+                    int color_pair = (fg*16+bg)+1;
+                    if (color_pair != cur_color_pair) {
+                        attron(COLOR_PAIR(color_pair));
+                        cur_color_pair = color_pair;
+                    }
+
+                    // get character index
+                    uint16_t addr = 0x0400 + y*40 + x;
+                    uint8_t font_code = mem_rd(&c64.mem_vic, addr);
+                    char chr = font_map[font_code & 63];
+                    // invert upper half of character set
+                    if (font_code > 127) {
+                        attron(A_REVERSE);
+                    }
+                    // padding to get proper aspect ratio
+                    mvaddch(yy, xx*2, ' ');
+                    // character 
+                    mvaddch(yy, xx*2+1, chr);
+                    // invert upper half of character set
+                    if (font_code > 127) {
+                        attroff(A_REVERSE);
+                    }
                 }
             }
         }
