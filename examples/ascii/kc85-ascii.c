@@ -5,6 +5,8 @@
     the ASCII buffer of the KC85 through curses. Requires a UNIX
     environment to build and run (tested on OSX and Linux).
 
+    Expects to run of xterm-256color (for proper colors)
+
     Select the KC85 model with cmdline args:
 
         kc85-ascii type=kc85_2
@@ -73,42 +75,45 @@ static void catch_sigint(int signo) {
     quit_requested = 1;
 }
 
+// xterm-color256 color codes mapped to KC85 colors
+static int background_colors[8] = {
+    0,      // black
+    19,     // dark-blue
+    124,    // dark-red
+    127,    // dark-magenta
+    34,     // dark-green
+    37,     // dark-cyan
+    142,    // dark-yellow
+    145,    // dark-grey
+};
+
+static int foreground_colors[16] = {
+    0,      // black
+    21,     // blue
+    196,    // red
+    201,    // magenta
+    46,     // green
+    51,     // cyan
+    226,    // yellow
+    231,    // white
+    0,      // black #2
+    199,    // violet
+    214,    // orange
+    129,    // purple
+    49,     // blue-green
+    39,     // green-blue
+    154,    // yellow-green
+    231,     // white #2
+};
+
 static void init_kc_colors(void) {
     start_color();
-
-    // KC85/4 background colors (darker than foreground)
-    init_color(0, 0, 0, 0);            // black
-    init_color(1, 0, 0, 640);          // dark-blue
-    init_color(2, 640, 0, 0);          // dark-red
-    init_color(3, 640, 0, 640);        // dark-magenta
-    init_color(4, 0, 640, 0);          // dark-green
-    init_color(5, 0, 640, 640);        // dark-cyan
-    init_color(6, 640, 640, 0);        // dark-yellow
-    init_color(7, 640, 640, 640);      // grey
-
-    // KC85/4 foreground colors
-    init_color(8, 0, 0, 0);             // black
-    init_color(9, 0, 0, 1000);          // blue
-    init_color(10, 1000, 0, 0);         // red
-    init_color(11, 1000, 0, 1000);      // magenta
-    init_color(12, 0, 1000, 0);         // green
-    init_color(13, 0, 1000, 1000);      // cyan
-    init_color(14, 1000, 1000, 0);      // yellow
-    init_color(15, 1000, 1000, 1000);   // white
-    init_color(16, 0, 0, 0);            // black #2
-    init_color(17, 1000, 0, 640);       // violet
-    init_color(18, 1000, 640, 0);       // orange
-    init_color(19, 1000, 0, 640);       // purple
-    init_color(20, 0, 1000, 640);       // blueish-green
-    init_color(21, 0, 640, 1000);       // greenish-blue
-    init_color(22, 640, 1000, 0);       // yellow-green
-    init_color(23, 1000, 1000, 1000);   // white
-
-    // setup 128 color pairs with all color combinations
+    // setup 128 color pairs with all color combinations, using
+    // the standard xterm-256color palette
     for (int fg = 0; fg < 16; fg++) {
         for (int bg = 0; bg < 8; bg++) {
             int cp = (fg*8 + bg) + 1;
-            init_pair(cp, fg+8, bg);
+            init_pair(cp, foreground_colors[fg], background_colors[bg]);
         }
     }
 }
