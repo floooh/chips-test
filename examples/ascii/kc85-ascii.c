@@ -89,7 +89,7 @@ static int background_colors[8] = {
 };
 
 static int foreground_colors[16] = {
-    16,      // black
+    16,     // black
     21,     // blue
     196,    // red
     201,    // magenta
@@ -97,7 +97,7 @@ static int foreground_colors[16] = {
     51,     // cyan
     226,    // yellow
     231,    // white
-    16,      // black #2
+    16,     // black #2
     199,    // violet
     214,    // orange
     129,    // purple
