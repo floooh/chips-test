@@ -1,5 +1,5 @@
 #pragma once
-// #version:8#
+// #version:10#
 // machine generated, do not edit!
 unsigned char dump_c64_basic[8192] = {
 0x94, 0xe3, 0x7b, 0xe3, 0x43, 0x42, 0x4d, 0x42, 0x41, 0x53, 0x49, 0x43, 0x30, 0xa8, 0x41, 0xa7, 
@@ -1293,7 +1293,7 @@ unsigned char dump_c64_kernalv3[8192] = {
 typedef struct { const char* name; const uint8_t* ptr; int size; } dump_item;
 #define DUMP_NUM_ITEMS (3)
 dump_item dump_items[DUMP_NUM_ITEMS] = {
-{ "c64_char", dump_c64_char, 4096 },
 { "c64_basic", dump_c64_basic, 8192 },
+{ "c64_char", dump_c64_char, 4096 },
 { "c64_kernalv3", dump_c64_kernalv3, 8192 },
 };
