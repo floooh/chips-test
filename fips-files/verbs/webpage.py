@@ -82,7 +82,7 @@ items = [
     { 'type':'game', 'title':"Rick Dangerous (CPC)",  'system':'cpc',   'url':'cpc.html?file=cpc/rick_dangerous.sna&joystick=true', 'img':'cpc/rickdangerous_cpc.jpg', 'note':''},
     { 'type':'game', 'title':"Blagger (CPC)",         'system':'cpc',   'url':'cpc.html?type=cpc464&tape=cpc/blagger.tap&joystick=true', 'img':'cpc/blagger.jpg', 'note':''},
     { 'type':'game', 'title':"Alien (CPC)",           'system':'cpc',   'url':'cpc.html?type=cpc464&tape=cpc/alien.tap&joystick=true', 'img':'cpc/alien.jpg', 'note':''},
-    { 'type':'game', 'title':"Live and Let Die (CPC)",'system':'cpc',   'url':'cpc.html?file=cpc464&tape=cpc/live_and_let_die.sna&joystick=true', 'img':'cpc/live_and_let_die.jpg', 'note':''},
+    { 'type':'game', 'title':"Live and Let Die (CPC)",'system':'cpc',   'url':'cpc.html?type=cpc464&file=cpc/live_and_let_die.sna&joystick=true', 'img':'cpc/live_and_let_die.jpg', 'note':''},
     { 'type':'game', 'title':"Cyclone (ZX48k)",    'system':'zx', 'url':'zx.html?file=zx/cyclone.z80&joystick=kempston&type=zx48k', 'img':'zx/cyclone.jpg', 'note':'select Kempston joystick!' },
     { 'type':'game', 'title':"Exolon (ZX48k)",     'system':'zx', 'url':'zx.html?file=zx/exolon.z80&joystick=kempston&type=zx48k', 'img':'zx/exolon.jpg', 'note':'select Kempston joystick!' },
     { 'type':'game', 'title':"Quazatron (ZX128)",  'system':'zx', 'url':'zx.html?file=zx/quazatron.z80&joystick=kempston', 'img':'zx/quazatron.jpg', 'note':'select Kempston joystick!' },
