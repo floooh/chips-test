@@ -97,18 +97,20 @@ void app_init(void) {
 void app_frame(void) {
     cpc_exec(&cpc, clock_frame_time());
     gfx_draw();
-    /* load a data file? */
+    /* load a data file? FIXME: this needs proper file type detection in case
+       a file has been dragged'n'dropped
+    */
     if (fs_ptr() && clock_frame_count() > 120) {
-        if (args_has("file")) {
-            /* load the file data as a quickload-snapshot (SNA or BIN format)*/
-            cpc_quickload(&cpc, fs_ptr(), fs_size());
-        }
-        else {
+        if (args_has("tape")) {
             /* load the file data via the tape-emulation (TAP format) */
             if (cpc_insert_tape(&cpc, fs_ptr(), fs_size())) {
                 /* issue the right commands to start loading from tape */
                 keybuf_put("|tape\nrun\"\n\n");
             }
+        }
+        else {
+            /* load the file data as a quickload-snapshot (SNA or BIN format)*/
+            cpc_quickload(&cpc, fs_ptr(), fs_size());
         }
         fs_free();
     }
