@@ -1,5 +1,5 @@
 #pragma once
-// #version:10#
+// #version:12#
 // machine generated, do not edit!
 unsigned char dump_cpc464_os[16384] = {
 0x1, 0x89, 0x7f, 0xed, 0x49, 0xc3, 0x80, 0x5, 0xc3, 0x82, 0xb9, 0xc3, 0x7c, 0xb9, 0xc5, 0xc9, 
@@ -7193,11 +7193,11 @@ unsigned char dump_kcc_bas[16384] = {
 typedef struct { const char* name; const uint8_t* ptr; int size; } dump_item;
 #define DUMP_NUM_ITEMS (7)
 dump_item dump_items[DUMP_NUM_ITEMS] = {
-{ "cpc464_os", dump_cpc464_os, 16384 },
-{ "cpc464_basic", dump_cpc464_basic, 16384 },
-{ "cpc6128_basic", dump_cpc6128_basic, 16384 },
-{ "cpc6128_os", dump_cpc6128_os, 16384 },
 { "cpc6128_amsdos", dump_cpc6128_amsdos, 16384 },
-{ "kcc_os", dump_kcc_os, 16384 },
+{ "cpc464_os", dump_cpc464_os, 16384 },
+{ "cpc6128_basic", dump_cpc6128_basic, 16384 },
+{ "cpc464_basic", dump_cpc464_basic, 16384 },
+{ "cpc6128_os", dump_cpc6128_os, 16384 },
 { "kcc_bas", dump_kcc_bas, 16384 },
+{ "kcc_os", dump_kcc_os, 16384 },
 };

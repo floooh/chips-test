@@ -1,5 +1,5 @@
 #pragma once
-// #version:10#
+// #version:12#
 // machine generated, do not edit!
 unsigned char dump_kc87_os_2[8192] = {
 0xff, 0xff, 0xff, 0xc3, 0xd2, 0xe0, 0xc3, 0xf3, 0xe0, 0xc3, 0x57, 0xe1, 0x11, 0xe0, 0xc3, 0x0, 
@@ -2201,11 +2201,11 @@ unsigned char dump_z9001_basic_507_511[10240] = {
 typedef struct { const char* name; const uint8_t* ptr; int size; } dump_item;
 #define DUMP_NUM_ITEMS (7)
 dump_item dump_items[DUMP_NUM_ITEMS] = {
-{ "kc87_os_2", dump_kc87_os_2, 8192 },
 { "kc87_font_2", dump_kc87_font_2, 2048 },
+{ "z9001_basic_507_511", dump_z9001_basic_507_511, 10240 },
 { "z9001_basic", dump_z9001_basic, 8192 },
 { "z9001_os12_1", dump_z9001_os12_1, 2048 },
 { "z9001_os12_2", dump_z9001_os12_2, 2048 },
 { "z9001_font", dump_z9001_font, 2048 },
-{ "z9001_basic_507_511", dump_z9001_basic_507_511, 10240 },
+{ "kc87_os_2", dump_kc87_os_2, 8192 },
 };

@@ -1,5 +1,5 @@
 #pragma once
-// #version:10#
+// #version:12#
 // machine generated, do not edit!
 unsigned char dump_abasic[8192] = {
 0x3c, 0x3d, 0x3e, 0xfe, 0x2d, 0x2b, 0xc8, 0x23, 0x28, 0x21, 0x3f, 0x52, 0x54, 0x4c, 0x43, 0x41, 
@@ -1037,7 +1037,7 @@ unsigned char dump_dosrom[4096] = {
 typedef struct { const char* name; const uint8_t* ptr; int size; } dump_item;
 #define DUMP_NUM_ITEMS (3)
 dump_item dump_items[DUMP_NUM_ITEMS] = {
-{ "abasic", dump_abasic, 8192 },
 { "afloat", dump_afloat, 4096 },
 { "dosrom", dump_dosrom, 4096 },
+{ "abasic", dump_abasic, 8192 },
 };

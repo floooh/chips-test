@@ -1,5 +1,5 @@
 #pragma once
-// #version:10#
+// #version:12#
 // machine generated, do not edit!
 unsigned char dump_zexall[8585] = {
 0xc3, 0x13, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
@@ -1082,6 +1082,6 @@ unsigned char dump_zexdoc[8585] = {
 typedef struct { const char* name; const uint8_t* ptr; int size; } dump_item;
 #define DUMP_NUM_ITEMS (2)
 dump_item dump_items[DUMP_NUM_ITEMS] = {
-{ "zexall", dump_zexall, 8585 },
 { "zexdoc", dump_zexdoc, 8585 },
+{ "zexall", dump_zexall, 8585 },
 };
