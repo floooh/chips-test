@@ -43,7 +43,10 @@ static void push_audio(const float* samples, int num_samples, void* user_data) {
 
 /* one-time application init */
 void app_init(void) {
-    gfx_init(C64_DISPLAY_WIDTH, C64_DISPLAY_HEIGHT, 1, 1);
+    gfx_init(&(gfx_desc_t){
+        .fb_width = C64_DISPLAY_WIDTH,
+        .fb_height = C64_DISPLAY_HEIGHT
+    });
     keybuf_init(10);
     clock_init();
     saudio_setup(&(saudio_desc){0});

@@ -68,7 +68,10 @@ static void patch_snapshots(const char* snapshot_name, void* user_data) {
 }
 
 void app_init(void) {
-    gfx_init(KC85_DISPLAY_WIDTH, KC85_DISPLAY_HEIGHT, 1, 1);
+    gfx_init(&(gfx_desc_t) {
+        .fb_width = KC85_DISPLAY_WIDTH,
+        .fb_height = KC85_DISPLAY_HEIGHT
+    });
     keybuf_init(6);
     clock_init();
     saudio_setup(&(saudio_desc){0});

@@ -47,7 +47,10 @@ sapp_desc sokol_main(int argc, char* argv[]) {
 
 /* one-time application init */
 void app_init(void) {
-    gfx_init(Z1013_DISPLAY_WIDTH, Z1013_DISPLAY_HEIGHT, 1, 1);
+    gfx_init(&(gfx_desc_t){
+        .fb_width = Z1013_DISPLAY_WIDTH,
+        .fb_height = Z1013_DISPLAY_HEIGHT
+    });
     clock_init();
     z1013_type_t type = Z1013_TYPE_64;
     if (args_has("type")) {

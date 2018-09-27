@@ -33,16 +33,20 @@ static void bombjack_decode_video(void);
 #define DISPLAY_WIDTH (32*8)
 #define DISPLAY_HEIGHT (32*8)
 
+#define VSYNC_PERIOD (4000000 / 60)
+
 /* the Bomb Jack arcade machine is actually 2 computers, the main board and sound board */
 typedef struct {
     z80_t cpu;
     clk_t clk;
-    uint8_t p1;         /* joystick 1 state */
+    uint8_t p1;             /* joystick 1 state */
     uint8_t nmi_mask;
-    uint8_t p2;         /* joystick 2 state */
-    uint8_t sys;        /* coins and start buttons */
-    uint8_t dsw1;       /* dip-switches 1 */
-    uint8_t dsw2;       /* dip-switches 2 */
+    uint8_t p2;             /* joystick 2 state */
+    uint8_t sys;            /* coins and start buttons */
+    uint8_t dsw1;           /* dip-switches 1 */
+    uint8_t dsw2;           /* dip-switches 2 */
+    uint32_t vsync_count;
+    uint32_t palette[128];
     mem_t mem;
     uint8_t ram[0x2000];
 } mainboard_t;
@@ -58,12 +62,18 @@ typedef struct {
 typedef struct {
     mainboard_t main;
     soundboard_t sound;
-    mem_t mem_chars;
-    mem_t mem_tiles;
-    mem_t mem_sprites;
-    mem_t mem_maps;
+    uint8_t rom_chars[0x3000];
+    uint8_t rom_tiles[0x6000];
+    uint8_t rom_sprites[0x6000];
+    uint8_t rom_maps[0x1000];
 } bombjack_t;
 bombjack_t bj;
+
+/* safe access to special ROMs */
+#define ROM_CHARS(i) (bj.rom_chars[(i)&0x2FFF])
+#define ROM_TILES(i) (bj.rom_tiles[(i)&0x5FFF])
+#define ROM_SPRITES(i) (bj.rom_sprites[(i)&0x5FFF])
+#define ROM_MAPS(i) (bj.rom_maps[(i)&0x0FFF])
 
 sapp_desc sokol_main(int argc, char* argv[]) {
     args_init(argc, argv);
@@ -80,7 +90,13 @@ sapp_desc sokol_main(int argc, char* argv[]) {
 
 /* one time app init */
 void app_init(void) {
-    gfx_init(DISPLAY_WIDTH, DISPLAY_HEIGHT, 3, 4);
+    gfx_init(&(gfx_desc_t) {
+        .fb_width = DISPLAY_WIDTH,
+        .fb_height = DISPLAY_HEIGHT,
+        .aspect_x = 1,
+        .aspect_y = 1,
+        .rot90 = true
+    });
     clock_init();
     saudio_setup(&(saudio_desc){0});
     bombjack_init();
@@ -107,6 +123,11 @@ void app_cleanup(void) {
 void bombjack_init(void) {
     memset(&bj, 0, sizeof(bj));
 
+    /* set palette to black */
+    for (int i = 0; i < 128; i++) {
+        bj.main.palette[i] = 0xFF000000;
+    }
+
     /* setup the main board (4 MHz Z80) */
     clk_init(&bj.main.clk, 4000000);
     z80_init(&bj.main.cpu, &(z80_desc_t){
@@ -129,7 +150,7 @@ void bombjack_init(void) {
         });
     }
 
-    /* dip switches */
+    /* dip switches (FIXME: should be configurable by cmdline args) */
     bj.main.dsw1 = (1<<6)|(1<<7); /* UPRIGHT|DEMO SOUND */
     bj.main.dsw2 = 0;
     
@@ -149,6 +170,8 @@ void bombjack_init(void) {
         B005:       read: dip-switches 2
         B800:       sound latch
         C000..DFFF: ROM
+
+      palette RAM is 128 entries with 16-bit per entry (xxxxBBBBGGGGRRRR).
     */
     mem_init(&bj.main.mem);
     mem_map_rom(&bj.main.mem, 0, 0x0000, 0x2000, dump_09_j01b);
@@ -163,24 +186,26 @@ void bombjack_init(void) {
     mem_map_rom(&bj.sound.mem, 0, 0x0000, 0x2000, dump_01_h03t);
     mem_map_ram(&bj.sound.mem, 0, 0x4000, 0x0400, bj.sound.ram);
 
-    /* various ROMs */
-    mem_init(&bj.mem_chars); /* 512 char * 3 bitplanes * 8 bytes = 12 KB */
-    mem_map_rom(&bj.mem_chars, 0, 0x0000, 0x1000, dump_03_e08t);
-    mem_map_rom(&bj.mem_chars, 0, 0x1000, 0x1000, dump_04_h08t);
-    mem_map_rom(&bj.mem_chars, 0, 0x2000, 0x1000, dump_05_k08t);
+    /* copy ROM data that's not accessible by CPU, no need to put a
+       memory mapper inbetween there
+    */
+    assert(sizeof(bj.rom_chars) == sizeof(dump_03_e08t)+sizeof(dump_04_h08t)+sizeof(dump_05_k08t));
+    memcpy(&bj.rom_chars[0x0000], dump_03_e08t, 0x1000);
+    memcpy(&bj.rom_chars[0x1000], dump_04_h08t, 0x1000);
+    memcpy(&bj.rom_chars[0x2000], dump_05_k08t, 0x1000);
 
-    mem_init(&bj.mem_tiles);
-    mem_map_rom(&bj.mem_tiles, 0, 0x0000, 0x2000, dump_06_l08t);
-    mem_map_rom(&bj.mem_tiles, 0, 0x2000, 0x2000, dump_07_n08t);
-    mem_map_rom(&bj.mem_tiles, 0, 0x4000, 0x2000, dump_08_r08t);
+    assert(sizeof(bj.rom_tiles) == sizeof(dump_06_l08t)+sizeof(dump_07_n08t)+sizeof(dump_08_r08t));
+    memcpy(&bj.rom_tiles[0x0000], dump_06_l08t, 0x2000);
+    memcpy(&bj.rom_tiles[0x2000], dump_07_n08t, 0x2000);
+    memcpy(&bj.rom_tiles[0x4000], dump_08_r08t, 0x2000);
 
-    mem_init(&bj.mem_sprites);
-    mem_map_rom(&bj.mem_sprites, 0, 0x0000, 0x2000, dump_16_m07b);
-    mem_map_rom(&bj.mem_sprites, 0, 0x2000, 0x2000, dump_15_l07b);
-    mem_map_rom(&bj.mem_sprites, 0, 0x4000, 0x2000, dump_14_j07b);
+    assert(sizeof(bj.rom_sprites) == sizeof(dump_16_m07b)+sizeof(dump_15_l07b)+sizeof(dump_14_j07b));
+    memcpy(&bj.rom_sprites[0x0000], dump_16_m07b, 0x2000);
+    memcpy(&bj.rom_sprites[0x2000], dump_15_l07b, 0x2000);
+    memcpy(&bj.rom_sprites[0x4000], dump_14_j07b, 0x2000);
 
-    mem_init(&bj.mem_maps);
-    mem_map_rom(&bj.mem_maps, 0, 0x0000, 0x1000, dump_02_p04t);
+    assert(sizeof(bj.rom_maps) == sizeof(dump_02_p04t));
+    memcpy(&bj.rom_maps[0x0000], dump_02_p04t, 0x1000);
 }
 
 /* run the emulation for one frame */
@@ -198,18 +223,58 @@ void bombjack_exec(uint32_t micro_seconds) {
 /* main board tick callback */
 uint64_t bombjack_tick_main(int num, uint64_t pins, void* user_data) {
 
+    /* vsync and main board NMI */
+    bj.main.vsync_count += num;
+    if (bj.main.vsync_count >= VSYNC_PERIOD) {
+        bj.main.vsync_count -= VSYNC_PERIOD;
+        if (bj.main.nmi_mask != 0) {
+            pins |= Z80_NMI;
+        }
+    }
+    if (0 == bj.main.nmi_mask) {
+        pins &= ~Z80_NMI;
+    }
+
     const uint16_t addr = Z80_GET_ADDR(pins);
     if (pins & Z80_MREQ) {
         /* memory request */
-        switch (addr) {
-            case 0xB000:
+        if ((addr >= 0x9C00) && (addr < 0x9D00)) {
+            /* palette read/write */
+            if (pins & Z80_RD) {
+                Z80_SET_DATA(pins, mem_rd(&bj.main.mem, addr));
+            }
+            else if (pins & Z80_WR) {
+                const uint8_t data = Z80_GET_DATA(pins);
+                mem_wr(&bj.main.mem, addr, data);
+                /* stretch palette colors to 32 bit (original layout is
+                   xxxxBBBBGGGGRRRR)
+                */
+                uint16_t pal_index = (addr - 0x9C00) / 2;
+                uint32_t c = bj.main.palette[pal_index];
+                if (addr & 1) {
+                    /* uneven addresses are the xxxxBBBB part */
+                    uint8_t b = (data & 0x0F) | ((data<<4)&0xF0);
+                    c = (c & 0xFF00FFFF) | (b<<16);
+                }
+                else {
+                    /* even addresses are the GGGGRRRR part */
+                    uint8_t g = (data & 0xF0) | ((data>>4)&0x0F);
+                    uint8_t r = (data & 0x0F) | ((data<<4)&0xF0);
+                    c = (c & 0xFFFF0000) | (g<<8) | r;
+                }
+                bj.main.palette[pal_index] = c;
+            }
+        }
+        else if ((addr >= 0xB000) && (addr <= 0xB005)) {
+            /* IO ports */
+            if (addr == 0xB000) {
                 /* read: joystick port 1:
                     0:  right
                     1:  left
                     2:  up
                     3:  down
                     5:  btn
-                  write: IRQ mask
+                write: IRQ mask
                 */
                 if (pins & Z80_RD) {
                     Z80_SET_DATA(pins, bj.main.p1);
@@ -217,8 +282,8 @@ uint64_t bombjack_tick_main(int num, uint64_t pins, void* user_data) {
                 else if (pins & Z80_WR) {
                     bj.main.nmi_mask = Z80_GET_DATA(pins);
                 }
-                break;
-            case 0xB001:
+            }
+            else if (addr == 0xB001) {
                 /* joystick port 2 */
                 if (pins & Z80_RD) {
                     Z80_SET_DATA(pins, bj.main.p2);
@@ -226,8 +291,8 @@ uint64_t bombjack_tick_main(int num, uint64_t pins, void* user_data) {
                 else if (pins & Z80_WR) {
                     printf("Trying to write joy2\n");
                 }
-                break;
-            case 0xB002:
+            }
+            else if (addr == 0xB002) {
                 /* system:
                     0:  coin1
                     1:  coin2
@@ -240,8 +305,8 @@ uint64_t bombjack_tick_main(int num, uint64_t pins, void* user_data) {
                 else if (pins & Z80_WR) {
                     printf("Trying to write sys\n");
                 }
-                break;
-            case 0xB003:
+            }
+            else if (addr == 0xB003) {
                 /* ??? */
                 /*
                 if (pins & Z80_RD) {
@@ -251,10 +316,10 @@ uint64_t bombjack_tick_main(int num, uint64_t pins, void* user_data) {
                     printf("write to 0xB003\n");
                 }
                 */
-                break;
-            case 0xB004:
+            }
+            else if (addr == 0xB004) {
                 /* read: dip-switches 1
-                   write: flip screen
+                write: flip screen
                 */
                 if (pins & Z80_RD) {
                     Z80_SET_DATA(pins, bj.main.dsw1);
@@ -262,8 +327,8 @@ uint64_t bombjack_tick_main(int num, uint64_t pins, void* user_data) {
                 else if (pins & Z80_WR) {
                     printf("flip screen\n");
                 }
-                break;
-            case 0xB005:
+            }
+            else if (addr == 0xB005) {
                 /* read: dip-switches 2 */
                 if (pins & Z80_RD) {
                     Z80_SET_DATA(pins, bj.main.dsw2);
@@ -271,23 +336,24 @@ uint64_t bombjack_tick_main(int num, uint64_t pins, void* user_data) {
                 else if (pins & Z80_WR) {
                     printf("write to 0xB005\n");
                 }
-                break;
-            case 0xB800:
-                /* sound latch */
-                if (pins & Z80_RD) {
-                    printf("read sound latch\n");
-                }
-                else {
-                    printf("write sound latch\n");
-                }
-                break;
-            default:
-                if (pins & Z80_RD) {
-                    Z80_SET_DATA(pins, mem_rd(&bj.main.mem, addr));
-                }
-                else if (pins & Z80_WR) {
-                    mem_wr(&bj.main.mem, addr, Z80_GET_DATA(pins));
-                }
+            }
+        }
+        else if (addr == 0xB800) {
+            /* sound latch */
+            if (pins & Z80_RD) {
+                printf("read sound latch\n");
+            }
+            else {
+                printf("write sound latch\n");
+            }
+        }
+        else {
+            if (pins & Z80_RD) {
+                Z80_SET_DATA(pins, mem_rd(&bj.main.mem, addr));
+            }
+            else if (pins & Z80_WR) {
+                mem_wr(&bj.main.mem, addr, Z80_GET_DATA(pins));
+            }
         }
     }
     else if (pins & Z80_IORQ) {
@@ -320,13 +386,13 @@ void bombjack_decode_background(void) {
     for (uint16_t y = 0; y < 16; y++) {
         for (uint16_t x = 0; x < 16; x++) {
             uint16_t addr = ((bg_image & 0x07)*0x200) + (y * 16 + x);
-            uint8_t code = (bg_image & 0x10) ? mem_rd(&bj.mem_maps, addr) : 0;
-            uint8_t attr = mem_rd(&bj.mem_maps, addr + 0x0100);
+            uint8_t code = (bg_image & 0x10) ? ROM_MAPS(addr) : 0;
+            uint8_t attr = ROM_MAPS(addr + 0x0100);
             uint8_t color = attr & 0x0F;
             uint8_t flip_y = attr & 0x80;
             for (int yy = 0; yy < 16; yy++) {
                 for (int xx = 0; xx < 16; xx++) {
-                    *dst++ = 0xFF000000 | (color * 16);
+                    *dst++ = 0xFF222222; //0xFF000000 | (color * 16);
                 }
                 dst += 240;
             }
@@ -348,17 +414,19 @@ void bombjack_decode_foreground(void) {
             uint8_t col = mem_rd(&bj.main.mem, 0x9400 + offset);
             /* 512 foreground tiles */
             uint16_t tile = chr | ((col & 0x10)<<4);
-            uint8_t color = col & 0x0F;
+            uint8_t color = (col & 0x0F);
             uint16_t tile_addr = tile * 8;
             for (int yy = 0; yy < 8; yy++) {
                 /* 3 bit planes, 8 bytes per char */
-                uint8_t bm0 = mem_rd(&bj.mem_chars, tile_addr);
-                uint8_t bm1 = mem_rd(&bj.mem_chars, tile_addr + 512*8);
-                uint8_t bm2 = mem_rd(&bj.mem_chars, tile_addr + 2*512*8);
-                uint8_t bm = bm0 | bm1 | bm2;
+                uint8_t bm0 = ROM_CHARS(tile_addr);
+                uint8_t bm1 = ROM_CHARS(tile_addr + 512*8);
+                uint8_t bm2 = ROM_CHARS(tile_addr + 2*512*8);
                 for (int xx = 7; xx >= 0; xx--) {
-                    /* FIXME: lookup color */
-                    *dst++ = (bm & (1<<xx)) ? 0xFFFFFFFF : 0xFF000000;
+                    uint8_t pen = ((bm2>>xx)&1)|(((bm1>>xx)&1)<<1)|(((bm0>>xx)&1)<<2);
+                    if (pen != 0) {
+                        *dst = bj.main.palette[color<<3 | pen];
+                    }
+                    dst++;
                 }
                 tile_addr++;
                 dst += 248;

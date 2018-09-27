@@ -51,7 +51,10 @@ static void push_audio(const float* samples, int num_samples, void* user_data) {
 
 /* one-time application init */
 void app_init() {
-    gfx_init(Z9001_DISPLAY_WIDTH, Z9001_DISPLAY_HEIGHT, 1, 1);
+    gfx_init(&(gfx_desc_t){
+        .fb_width = Z9001_DISPLAY_WIDTH,
+        .fb_height = Z9001_DISPLAY_HEIGHT
+    });
     clock_init();
     saudio_setup(&(saudio_desc){0});
     z9001_type_t type = Z9001_TYPE_Z9001;

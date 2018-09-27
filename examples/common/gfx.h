@@ -4,7 +4,16 @@
 */
 #define GFX_MAX_FB_WIDTH (1024)
 #define GFX_MAX_FB_HEIGHT (1024)
-extern void gfx_init(int fb_width, int fb_height, int aspect_scale_x, int aspect_scale_y);
+
+typedef struct {
+    int fb_width;
+    int fb_height;
+    int aspect_x;
+    int aspect_y;
+    bool rot90;
+} gfx_desc_t;
+
+extern void gfx_init(const gfx_desc_t* desc);
 extern uint32_t* gfx_framebuffer(void);
 extern int gfx_framebuffer_size(void);
 extern void gfx_draw(void);
@@ -16,6 +25,8 @@ extern void gfx_shutdown(void);
 #include "sokol_gfx.h"
 #include "sokol_app.h"
 #include "sokol_time.h"
+
+#define _GFX_DEF(v,def) (v?v:def)
 
 static const char* gfx_vs_src; 
 static const char* gfx_fs_src;
@@ -31,8 +42,9 @@ typedef struct {
     sg_draw_state draw_state;
     int fb_width;
     int fb_height;
-    int fb_aspect_scale_x;
-    int fb_aspect_scale_y;
+    int fb_aspect_x;
+    int fb_aspect_y;
+    bool rot90;
     uint32_t rgba8_buffer[GFX_MAX_FB_WIDTH * GFX_MAX_FB_HEIGHT];
 } gfx_state;
 static gfx_state gfx;
@@ -45,11 +57,12 @@ int gfx_framebuffer_size(void) {
     return sizeof(gfx.rgba8_buffer);
 }
 
-void gfx_init(int w, int h, int sx, int sy) {
-    gfx.fb_width = w;
-    gfx.fb_height = h;
-    gfx.fb_aspect_scale_x = sx;
-    gfx.fb_aspect_scale_y = sy;
+void gfx_init(const gfx_desc_t* desc) {
+    gfx.fb_width = _GFX_DEF(desc->fb_width, 640);
+    gfx.fb_height = _GFX_DEF(desc->fb_height, 512);
+    gfx.fb_aspect_x = _GFX_DEF(desc->aspect_x, 1);
+    gfx.fb_aspect_y = _GFX_DEF(desc->aspect_y, 1);
+    gfx.rot90 = desc->rot90;
     sg_setup(&(sg_desc){
         .mtl_device = sapp_metal_get_device(),
         .mtl_renderpass_descriptor_cb = sapp_metal_get_renderpass_descriptor,
@@ -61,17 +74,29 @@ void gfx_init(int w, int h, int sx, int sy) {
     });
 
     /* quad vertex buffers with and without flipped UVs */
-    float verts[] = {
+    static float verts[] = {
         0.0f, 0.0f, 0.0f, 0.0f,
         1.0f, 0.0f, 1.0f, 0.0f,
         0.0f, 1.0f, 0.0f, 1.0f,
-        1.0f, 1.0f,  1.0f, 1.0f
+        1.0f, 1.0f, 1.0f, 1.0f
     };
-    float verts_flipped[] = {
+    static float verts_rot[] = {
+        0.0f, 0.0f, 1.0f, 0.0f,
+        1.0f, 0.0f, 1.0f, 1.0f,
+        0.0f, 1.0f, 0.0f, 0.0f,
+        1.0f, 1.0f, 0.0f, 1.0f
+    };
+    static float verts_flipped[] = {
         0.0f, 0.0f, 0.0f, 1.0f,
         1.0f, 0.0f, 1.0f, 1.0f,
         0.0f, 1.0f, 0.0f, 0.0f,
-        1.0f, 1.0f,  1.0f, 0.0f
+        1.0f, 1.0f, 1.0f, 0.0f
+    };
+    static float verts_flipped_rot[] = {
+        0.0f, 0.0f, 1.0f, 0.0f,
+        1.0f, 0.0f, 1.0f, 1.0f,
+        0.0f, 1.0f, 0.0f, 0.0f,
+        1.0f, 1.0f, 0.0f, 1.0f
     };
     gfx.upscale_draw_state.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
         .size = sizeof(verts),
@@ -79,7 +104,9 @@ void gfx_init(int w, int h, int sx, int sy) {
     });
     gfx.draw_state.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
         .size = sizeof(verts),
-        .content = sg_query_feature(SG_FEATURE_ORIGIN_TOP_LEFT) ? verts : verts_flipped
+        .content = sg_query_feature(SG_FEATURE_ORIGIN_TOP_LEFT) ? 
+                        (gfx.rot90 ? verts_rot : verts) :
+                        (gfx.rot90 ? verts_flipped_rot : verts_flipped)
     });
 
     /* a shader to render a textured quad */
@@ -141,7 +168,7 @@ static void apply_viewport(void) {
     const int canvas_width = sapp_width();
     const int canvas_height = sapp_height();
     const float canvas_aspect = (float)canvas_width / (float)canvas_height;
-    const float fb_aspect = (float)(gfx.fb_width*gfx.fb_aspect_scale_x) / (float)(gfx.fb_height*gfx.fb_aspect_scale_y);
+    const float fb_aspect = (float)(gfx.fb_width*gfx.fb_aspect_x) / (float)(gfx.fb_height*gfx.fb_aspect_y);
     const int frame_x = 5;
     const int frame_y = 5;
     int vp_x, vp_y, vp_w, vp_h;
