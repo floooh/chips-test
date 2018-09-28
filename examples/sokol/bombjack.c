@@ -478,7 +478,7 @@ void bombjack_decode_background(void) {
     at address 0x9000 (1 KB char codes) and 0x9400 (1 KB color codes).
 
     There are actually 512 char-codes, bit 4 of the color byte
-    is used as the missing bit 9 of the char-code.
+    is used as the missing bit 8 of the char-code.
 
     The color decoding is the same as the background tiles, the lower
     3 bits are provided by the 3 tile bitmaps, and the remaining
