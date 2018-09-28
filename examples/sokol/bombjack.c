@@ -69,11 +69,6 @@ typedef struct {
 } bombjack_t;
 bombjack_t bj;
 
-#define ROM_CHARS(i) (bj.rom_chars[(i)])
-#define ROM_TILES(i) (bj.rom_tiles[(i)])
-#define ROM_SPRITES(i) (bj.rom_sprites[(i)])
-#define ROM_MAPS(i) (bj.rom_maps[(i)])
-
 sapp_desc sokol_main(int argc, char* argv[]) {
     args_init(argc, argv);
     return (sapp_desc) {
@@ -378,31 +373,116 @@ uint8_t bombjack_ay_in(int port_id, void* user_data) {
     return 0xFF;
 }
 
+/* render background tiles
+
+    Background tiles are 16x16 pixels, and the screen is made of
+    16x16 tiles. A background images consists of 16x16=256 tile
+    'char codes', followed by 256 color code bytes. So each background
+    image occupies 512 (0x200) bytes in the 'map rom'.
+
+    The map-rom is 4 KByte, room for 8 background images (although I'm
+    not sure yet whether all 8 are actually used). The background
+    image number is written to address 0x9E00 (only the 3 LSB bits are
+    considered). If bit 4 is cleared, no background image is shown
+    (all tile codes are 0).
+
+    A tile's image is created from 3 bitmaps, each bitmap stored in
+    32 bytes with the following layout (the numbers are the byte index,
+    each byte contains the bitmap pattern for 8 pixels):
+
+    0: +--------+   8: +--------+
+    1: +--------+   9: +--------+
+    2: +--------+   10:+--------+
+    3: +--------+   11:+--------+
+    4: +--------+   12:+--------+
+    5: +--------+   13:+--------+
+    6: +--------+   14:+--------+
+    7: +--------+   15:+--------+
+
+    16:+--------+   24:+--------+
+    17:+--------+   25:+--------+
+    18:+--------+   26:+--------+
+    19:+--------+   27:+--------+
+    20:+--------+   28:+--------+
+    21:+--------+   29:+--------+
+    22:+--------+   30:+--------+
+    23:+--------+   31:+--------+
+
+    The 3 bitmaps are combined to get the lower 3 bits of the
+    color palette index. The remaining 4 bits of the palette
+    index are provided by the color attribute byte (for 7 bits
+    = 128 color palette entries).
+
+    This is how a color palette entry is constructed from the 4
+    attribute bits, and 3 tile bitmap bits:
+
+    |x|attr3|attr2|attr1|attr0|bm2|bm1|bm0|
+
+    This basically means that each 16x16 background tile
+    can select one of 16 color blocks from the palette, and
+    each pixel of the tile can select one of 8 colors in the
+    tile's color block.
+
+    FIXME: what about the "FLIP-Y" bit?
+*/
 void bombjack_decode_background(void) {
-    /* 16x16 background tiles, each tile 16x16 */
     const uint8_t bg_image = mem_rd(&bj.main.mem, 0x9E00);
     uint32_t* dst = gfx_framebuffer();
     for (uint16_t y = 0; y < 16; y++) {
         for (uint16_t x = 0; x < 16; x++) {
             uint16_t addr = ((bg_image & 0x07)*0x200) + (y * 16 + x);
-            uint8_t code = (bg_image & 0x10) ? ROM_MAPS(addr) : 0;
-            uint8_t attr = ROM_MAPS(addr + 0x0100);
-            uint8_t color = attr & 0x0F;
-            uint8_t flip_y = attr & 0x80;
+            /* 256 tiles */
+            uint8_t tile = (bg_image & 0x10) ? bj.rom_maps[addr] : 0;
+            uint8_t attr = bj.rom_maps[addr + 0x0100];
+            uint8_t color_block = (attr & 0x0F)<<3;
+            //uint8_t flip_y = attr & 0x80;
+            /* every tile is 32 bytes */
+            uint16_t tile_addr = tile * 32;
             for (int yy = 0; yy < 16; yy++) {
-                for (int xx = 0; xx < 16; xx++) {
-                    *dst++ = 0xFF222222; //0xFF000000 | (color * 16);
+                uint8_t bm0_h = bj.rom_tiles[0x0000 + tile_addr];
+                uint8_t bm0_l = bj.rom_tiles[0x0000 + tile_addr + 8];
+                uint8_t bm1_h = bj.rom_tiles[0x2000 + tile_addr];
+                uint8_t bm1_l = bj.rom_tiles[0x2000 + tile_addr + 8];
+                uint8_t bm2_h = bj.rom_tiles[0x4000 + tile_addr];
+                uint8_t bm2_l = bj.rom_tiles[0x4000 + tile_addr + 8];
+                uint16_t bm0 = (bm0_h<<8)|bm0_l;
+                uint16_t bm1 = (bm1_h<<8)|bm1_l;
+                uint16_t bm2 = (bm2_h<<8)|bm2_l;
+                for (int xx = 15; xx >= 0; xx--) {
+                    uint8_t pen = ((bm2>>xx)&1) | (((bm1>>xx)&1)<<1) | (((bm0>>xx)&1)<<2);
+                    *dst++ = bj.main.palette[color_block | pen];
+                }
+                tile_addr += 1;
+                if (yy == 7) {
+                    tile_addr += 8;
                 }
                 dst += 240;
             }
-            dst -= (16 * 256);
-            dst += 16;
+            dst -= (16 * 256) - 16;
         }
         dst += (15 * 256);
     }
     assert(dst == (gfx_framebuffer() + 256*256));
 }
 
+/* render foreground tiles
+
+    Similar to the background tiles, but each tile is 8x8 pixels,
+    for 32x32 tiles on the screen.
+
+    Tile char- and color-bytes are not stored in ROM, but in RAM
+    at address 0x9000 (1 KB char codes) and 0x9400 (1 KB color codes).
+
+    There are actually 512 char-codes, bit 4 of the color byte
+    is used as the missing bit 9 of the char-code.
+
+    The color decoding is the same as the background tiles, the lower
+    3 bits are provided by the 3 tile bitmaps, and the remaining
+    4 upper bits by the color byte.
+
+    Only 7 foreground colors are possible, since 0 defines a transparent
+    pixel.
+*/
 void bombjack_decode_foreground(void) {
     /* 32x32 tiles, each 8x8 */
     uint32_t* dst = gfx_framebuffer();
@@ -416,14 +496,14 @@ void bombjack_decode_foreground(void) {
             /* 16 color blocks a 8 colors */
             uint8_t color_block = (clr & 0x0F)<<3;
             /* 8 bytes per char bit plane */
-            uint16_t tile_addr = tile<<3;
+            uint16_t tile_addr = tile * 8;
             for (int yy = 0; yy < 8; yy++) {
                 /* 3 bit planes per char (8 colors per pixel within
                    the palette color block of the char
                 */
-                uint8_t bm0 = ROM_CHARS(0x0000 + tile_addr);
-                uint8_t bm1 = ROM_CHARS(0x1000 + tile_addr);
-                uint8_t bm2 = ROM_CHARS(0x2000 + tile_addr);
+                uint8_t bm0 = bj.rom_chars[0x0000 + tile_addr];
+                uint8_t bm1 = bj.rom_chars[0x1000 + tile_addr];
+                uint8_t bm2 = bj.rom_chars[0x2000 + tile_addr];
                 for (int xx = 7; xx >= 0; xx--) {
                     uint8_t pen = ((bm2>>xx)&1) | (((bm1>>xx)&1)<<1) | (((bm0>>xx)&1)<<2);
                     if (pen != 0) {
