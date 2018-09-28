@@ -69,11 +69,10 @@ typedef struct {
 } bombjack_t;
 bombjack_t bj;
 
-/* safe access to special ROMs */
-#define ROM_CHARS(i) (bj.rom_chars[(i)&0x2FFF])
-#define ROM_TILES(i) (bj.rom_tiles[(i)&0x5FFF])
-#define ROM_SPRITES(i) (bj.rom_sprites[(i)&0x5FFF])
-#define ROM_MAPS(i) (bj.rom_maps[(i)&0x0FFF])
+#define ROM_CHARS(i) (bj.rom_chars[(i)])
+#define ROM_TILES(i) (bj.rom_tiles[(i)])
+#define ROM_SPRITES(i) (bj.rom_sprites[(i)])
+#define ROM_MAPS(i) (bj.rom_maps[(i)])
 
 sapp_desc sokol_main(int argc, char* argv[]) {
     args_init(argc, argv);
@@ -411,28 +410,31 @@ void bombjack_decode_foreground(void) {
         for (uint32_t x = 0; x < 32; x++) {
             uint16_t offset = y * 32 + x;
             uint8_t chr = mem_rd(&bj.main.mem, 0x9000 + offset);
-            uint8_t col = mem_rd(&bj.main.mem, 0x9400 + offset);
+            uint8_t clr = mem_rd(&bj.main.mem, 0x9400 + offset);
             /* 512 foreground tiles */
-            uint16_t tile = chr | ((col & 0x10)<<4);
-            uint8_t color = (col & 0x0F);
-            uint16_t tile_addr = tile * 8;
+            uint16_t tile = chr | ((clr & 0x10)<<4);
+            /* 16 color blocks a 8 colors */
+            uint8_t color_block = (clr & 0x0F)<<3;
+            /* 8 bytes per char bit plane */
+            uint16_t tile_addr = tile<<3;
             for (int yy = 0; yy < 8; yy++) {
-                /* 3 bit planes, 8 bytes per char */
-                uint8_t bm0 = ROM_CHARS(tile_addr);
-                uint8_t bm1 = ROM_CHARS(tile_addr + 512*8);
-                uint8_t bm2 = ROM_CHARS(tile_addr + 2*512*8);
+                /* 3 bit planes per char (8 colors per pixel within
+                   the palette color block of the char
+                */
+                uint8_t bm0 = ROM_CHARS(0x0000 + tile_addr);
+                uint8_t bm1 = ROM_CHARS(0x1000 + tile_addr);
+                uint8_t bm2 = ROM_CHARS(0x2000 + tile_addr);
                 for (int xx = 7; xx >= 0; xx--) {
-                    uint8_t pen = ((bm2>>xx)&1)|(((bm1>>xx)&1)<<1)|(((bm0>>xx)&1)<<2);
+                    uint8_t pen = ((bm2>>xx)&1) | (((bm1>>xx)&1)<<1) | (((bm0>>xx)&1)<<2);
                     if (pen != 0) {
-                        *dst = bj.main.palette[color<<3 | pen];
+                        *dst = bj.main.palette[color_block | pen];
                     }
                     dst++;
                 }
                 tile_addr++;
                 dst += 248;
             }
-            dst -= (8 * 256);
-            dst += 8;
+            dst -= (8 * 256) - 8;
         }
         dst += (7 * 256);
     }
