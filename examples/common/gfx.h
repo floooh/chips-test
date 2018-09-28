@@ -93,10 +93,10 @@ void gfx_init(const gfx_desc_t* desc) {
         1.0f, 1.0f, 1.0f, 0.0f
     };
     static float verts_flipped_rot[] = {
-        0.0f, 0.0f, 1.0f, 0.0f,
-        1.0f, 0.0f, 1.0f, 1.0f,
-        0.0f, 1.0f, 0.0f, 0.0f,
-        1.0f, 1.0f, 0.0f, 1.0f
+        0.0f, 0.0f, 1.0f, 1.0f,
+        1.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 1.0f, 0.0f, 1.0f,
+        1.0f, 1.0f, 0.0f, 0.0f
     };
     gfx.upscale_draw_state.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
         .size = sizeof(verts),
