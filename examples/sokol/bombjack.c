@@ -420,7 +420,7 @@ uint8_t bombjack_ay_in(int port_id, void* user_data) {
     This is how a color palette entry is constructed from the 4
     attribute bits, and 3 tile bitmap bits:
 
-    |x|attr3|attr2|attr1|attr0|bm2|bm1|bm0|
+    |x|attr3|attr2|attr1|attr0|bm0|bm1|bm2|
 
     This basically means that each 16x16 background tile
     can select one of 16 color blocks from the palette, and
