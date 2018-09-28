@@ -408,6 +408,10 @@ uint8_t bombjack_ay_in(int port_id, void* user_data) {
     22:+--------+   30:+--------+
     23:+--------+   31:+--------+
 
+    The 3 bitmaps for each tile are 8 KBytes apart (basically each
+    of the 3 background-tile ROM chips contains one set of bitmaps
+    for all 512 tiles).
+
     The 3 bitmaps are combined to get the lower 3 bits of the
     color palette index. The remaining 4 bits of the palette
     index are provided by the color attribute byte (for 7 bits
