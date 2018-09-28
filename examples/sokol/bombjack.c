@@ -1,7 +1,7 @@
 /*
     bombjack.c
 
-    Bomb Jack arcade machine emulation.
+    Bomb Jack arcade machine emulation (MAME used as reference).
 */
 #include "common.h"
 #define CHIPS_IMPL
@@ -429,9 +429,8 @@ uint8_t bombjack_ay_in(int port_id, void* user_data) {
 
     FIXME: what about the "FLIP-Y" bit?
 */
-void bombjack_decode_background(void) {
+void bombjack_decode_background(uint32_t* dst) {
     const uint8_t bg_image = mem_rd(&bj.main.mem, 0x9E00);
-    uint32_t* dst = gfx_framebuffer();
     for (uint16_t y = 0; y < 16; y++) {
         for (uint16_t x = 0; x < 16; x++) {
             uint16_t addr = ((bg_image & 0x07)*0x200) + (y * 16 + x);
@@ -487,9 +486,8 @@ void bombjack_decode_background(void) {
     Only 7 foreground colors are possible, since 0 defines a transparent
     pixel.
 */
-void bombjack_decode_foreground(void) {
+void bombjack_decode_foreground(uint32_t* dst) {
     /* 32x32 tiles, each 8x8 */
-    uint32_t* dst = gfx_framebuffer();
     for (uint32_t y = 0; y < 32; y++) {
         for (uint32_t x = 0; x < 32; x++) {
             uint16_t offset = y * 32 + x;
@@ -525,7 +523,59 @@ void bombjack_decode_foreground(void) {
     assert(dst == (gfx_framebuffer() + 256*256));
 }
 
+/*  render sprites
+
+    Each sprite is described by 4 bytes in the 'sprite RAM'
+    (0x9820..0x987F => 96 bytes => 24 sprites):
+
+    ABBBBBBB CDEFGGGG XXXXXXXX YYYYYYYY
+
+    A:  sprite size (16x16 or 32x32)
+    B:  sprite index
+    C:  X flip
+    D:  Y flip
+    E:  ?
+    F:  ?
+    G:  color
+    X:  x pos
+    Y:  y pos
+*/
+void bombjack_decode_sprites(uint32_t* dst) {
+    for (int sprite_index = 23; sprite_index >= 0; sprite_index--) {
+        const uint16_t addr = 0x9820 + sprite_index*4;
+        uint8_t b0 = mem_rd(&bj.main.mem, addr);
+        uint8_t b1 = mem_rd(&bj.main.mem, addr+1);
+        uint8_t b2 = mem_rd(&bj.main.mem, addr+2);
+        uint8_t b3 = mem_rd(&bj.main.mem, addr+3);
+
+        /* screen is 90 degree rotated, so x and y are switched */
+        int px = b3;
+        int py = (b0 & 0x80) ? 225-b2 : 241-b2;
+
+        /* FIXME: flipx/flipy */
+        uint32_t* ptr = dst + py*256 + px;
+        if (b0 & 0x80) {
+            for (int y=0; y<32; y++) {
+                for (int x=0; x<32; x++) {
+                    *ptr++ = 0xFFFF0000;
+                }
+                ptr += 224;
+            }
+        }
+        else {
+            for (int y=0; y<16; y++) {
+                for (int x=0; x<16; x++) {
+                    *ptr++ = 0xFF0000FF;
+                }
+                ptr += 240;
+            }
+        }
+    }
+}
+
 void bombjack_decode_video() {
-    bombjack_decode_background();
-    bombjack_decode_foreground();
+    uint32_t* dst = gfx_framebuffer();
+    bombjack_decode_background(dst);
+    bombjack_decode_foreground(dst);
+    bombjack_decode_sprites(dst);
 }
