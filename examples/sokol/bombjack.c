@@ -546,25 +546,76 @@ void bombjack_decode_sprites(uint32_t* dst) {
         uint8_t b1 = mem_rd(&bj.main.mem, addr+1);
         uint8_t b2 = mem_rd(&bj.main.mem, addr+2);
         uint8_t b3 = mem_rd(&bj.main.mem, addr+3);
+        uint8_t color_block = (b1 & 0x0F)<<3;
 
         /* screen is 90 degree rotated, so x and y are switched */
         int px = b3;
         int py = (b0 & 0x80) ? 225-b2 : 241-b2;
 
-        /* FIXME: flipx/flipy */
+        int sprite_index = b0 & 0x7F;
         uint32_t* ptr = dst + py*256 + px;
         if (b0 & 0x80) {
+            uint16_t sprite_addr = sprite_index * 128;
             for (int y=0; y<32; y++) {
-                for (int x=0; x<32; x++) {
-                    *ptr++ = 0xFFFF0000;
+                uint8_t bm0_hh = bj.rom_sprites[0x0000 + sprite_addr];
+                uint8_t bm0_hl = bj.rom_sprites[0x0000 + sprite_addr + 8];
+                uint8_t bm0_lh = bj.rom_sprites[0x0000 + sprite_addr + 32];
+                uint8_t bm0_ll = bj.rom_sprites[0x0000 + sprite_addr + 40];
+
+                uint8_t bm1_hh = bj.rom_sprites[0x2000 + sprite_addr];
+                uint8_t bm1_hl = bj.rom_sprites[0x2000 + sprite_addr + 8];
+                uint8_t bm1_lh = bj.rom_sprites[0x2000 + sprite_addr + 32];
+                uint8_t bm1_ll = bj.rom_sprites[0x2000 + sprite_addr + 40];
+
+                uint8_t bm2_hh = bj.rom_sprites[0x4000 + sprite_addr];
+                uint8_t bm2_hl = bj.rom_sprites[0x4000 + sprite_addr + 8];
+                uint8_t bm2_lh = bj.rom_sprites[0x4000 + sprite_addr + 32];
+                uint8_t bm2_ll = bj.rom_sprites[0x4000 + sprite_addr + 40];
+
+                uint32_t bm0 = (bm0_hh<<24)|(bm0_hl<<16)|(bm0_lh<<8)|bm0_ll;
+                uint32_t bm1 = (bm1_hh<<24)|(bm1_hl<<16)|(bm1_lh<<8)|bm1_ll;
+                uint32_t bm2 = (bm2_hh<<24)|(bm2_hl<<16)|(bm2_lh<<8)|bm2_ll;
+
+                for (int x = 31; x >= 0; x--) {
+                    uint8_t pen = ((bm2>>x)&1) | (((bm1>>x)&1)<<1) | (((bm0>>x)&1)<<2);
+                    if (0 != pen) {
+                        *ptr = bj.main.palette[color_block | pen];
+                    }
+                    ptr++;
+                }
+                sprite_addr += 1;
+                if ((y == 7) || (y==23)) {
+                    sprite_addr += 8;
+                }
+                else if (y == 15) {
+                    sprite_addr += 40;
                 }
                 ptr += 224;
             }
         }
         else {
+            /* 16*16 sprites are decoded like 16x16 background tiles */
+            uint16_t sprite_addr = sprite_index * 32;
             for (int y=0; y<16; y++) {
-                for (int x=0; x<16; x++) {
-                    *ptr++ = 0xFF0000FF;
+                uint8_t bm0_h = bj.rom_sprites[0x0000 + sprite_addr];
+                uint8_t bm0_l = bj.rom_sprites[0x0000 + sprite_addr + 8];
+                uint8_t bm1_h = bj.rom_sprites[0x2000 + sprite_addr];
+                uint8_t bm1_l = bj.rom_sprites[0x2000 + sprite_addr + 8];
+                uint8_t bm2_h = bj.rom_sprites[0x4000 + sprite_addr];
+                uint8_t bm2_l = bj.rom_sprites[0x4000 + sprite_addr + 8];
+                uint16_t bm0 = (bm0_h<<8)|bm0_l;
+                uint16_t bm1 = (bm1_h<<8)|bm1_l;
+                uint16_t bm2 = (bm2_h<<8)|bm2_l;
+                for (int x=15; x>=0; x--) {
+                    uint8_t pen = ((bm2>>x)&1) | (((bm1>>x)&1)<<1) | (((bm0>>x)&1)<<2);
+                    if (0 != pen) {
+                        *ptr = bj.main.palette[color_block | pen];
+                    }
+                    ptr++;
+                }
+                sprite_addr += 1;
+                if (y == 7) {
+                    sprite_addr += 8;
                 }
                 ptr += 240;
             }
