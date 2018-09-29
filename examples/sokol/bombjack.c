@@ -7,7 +7,6 @@
 #define CHIPS_IMPL
 #include "chips/z80.h"
 #include "chips/ay38910.h"
-#include "chips/crt.h"
 #include "chips/clk.h"
 #include "chips/mem.h"
 #include "bombjack-roms.h"
