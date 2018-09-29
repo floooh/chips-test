@@ -452,46 +452,44 @@ uint8_t bombjack_ay_in(int port_id, void* user_data) {
     Bit 7 in the attribute byte defines whether the tile should
     be flipped around the Y axis.
 */
+#define BOMBJACK_GATHER16(rom,base,off) \
+    ((uint16_t)bj.rom[base+0+off]<<8)|((uint16_t)bj.rom[base+8+off])
+
 void bombjack_decode_background(uint32_t* dst) {
-    const uint8_t bg_image = mem_rd(&bj.main.mem, 0x9E00);
-    for (uint16_t y = 0; y < 16; y++) {
-        for (uint16_t x = 0; x < 16; x++) {
-            uint16_t addr = ((bg_image & 0x07)*0x200) + (y * 16 + x);
+    /* background image code is stored at address 0x9E00 */
+    uint8_t bg_image = bj.main.ram[0x9E00 - 0x8000];
+    for (int y = 0; y < 16; y++) {
+        for (int x = 0; x < 16; x++) {
+            int addr = ((bg_image & 7) * 0x200) + (y * 16 + x);
             /* 256 tiles */
-            uint8_t tile = (bg_image & 0x10) ? bj.rom_maps[addr] : 0;
+            uint8_t tile_code = (bg_image & 0x10) ? bj.rom_maps[addr] : 0;
             uint8_t attr = bj.rom_maps[addr + 0x0100];
             uint8_t color_block = (attr & 0x0F)<<3;
-            /* every tile is 32 bytes */
-            uint16_t tile_addr = tile * 32;
-            if (attr & 0x80) {
-                /* flip-y */
+            bool flip_y = (attr & 0x80) != 0;
+            if (flip_y) {
                 dst += 15*256;
             }
+            /* every tile is 32 bytes */
+            int off = tile_code * 32;
             for (int yy = 0; yy < 16; yy++) {
-                uint8_t bm0_h = bj.rom_tiles[0x0000 + tile_addr];
-                uint8_t bm0_l = bj.rom_tiles[0x0000 + tile_addr + 8];
-                uint8_t bm1_h = bj.rom_tiles[0x2000 + tile_addr];
-                uint8_t bm1_l = bj.rom_tiles[0x2000 + tile_addr + 8];
-                uint8_t bm2_h = bj.rom_tiles[0x4000 + tile_addr];
-                uint8_t bm2_l = bj.rom_tiles[0x4000 + tile_addr + 8];
-                uint16_t bm0 = (bm0_h<<8)|bm0_l;
-                uint16_t bm1 = (bm1_h<<8)|bm1_l;
-                uint16_t bm2 = (bm2_h<<8)|bm2_l;
+                uint16_t bm0 = BOMBJACK_GATHER16(rom_tiles, 0x0000, off);
+                uint16_t bm1 = BOMBJACK_GATHER16(rom_tiles, 0x2000, off);
+                uint16_t bm2 = BOMBJACK_GATHER16(rom_tiles, 0x4000, off);
+                off++;
+                if (yy == 7) {
+                    off += 8;
+                }
                 for (int xx = 15; xx >= 0; xx--) {
                     uint8_t pen = ((bm2>>xx)&1) | (((bm1>>xx)&1)<<1) | (((bm0>>xx)&1)<<2);
                     *dst++ = bj.main.palette[color_block | pen];
                 }
-                tile_addr += 1;
-                if (yy == 7) {
-                    tile_addr += 8;
-                }
-                dst += (attr & 0x80) ? -272 : 240;
+                dst += flip_y ? -272 : 240;
             }
-            if (0 == (attr & 0x80)) {
-                dst -= (16 * 256) - 16;
+            if (flip_y) {
+                dst += 256 + 16;
             }
             else {
-                dst += 256 + 16;
+                dst -= (16 * 256) - 16;
             }
         }
         dst += (15 * 256);
@@ -519,24 +517,26 @@ void bombjack_decode_background(uint32_t* dst) {
 */
 void bombjack_decode_foreground(uint32_t* dst) {
     /* 32x32 tiles, each 8x8 */
-    for (uint32_t y = 0; y < 32; y++) {
-        for (uint32_t x = 0; x < 32; x++) {
-            uint16_t offset = y * 32 + x;
-            uint8_t chr = mem_rd(&bj.main.mem, 0x9000 + offset);
-            uint8_t clr = mem_rd(&bj.main.mem, 0x9400 + offset);
-            /* 512 foreground tiles */
-            uint16_t tile = chr | ((clr & 0x10)<<4);
+    for (int y = 0; y < 32; y++) {
+        for (int x = 0; x < 32; x++) {
+            int addr = y * 32 + x;
+            /* char codes are at 0x9000, color codes at 0x9400, RAM starts at 0x8000 */
+            uint8_t chr = bj.main.ram[(0x9000-0x8000) + addr];
+            uint8_t clr = bj.main.ram[(0x9400-0x8000) + addr];
+            /* 512 foreground tiles, take 9th bit from color code */
+            int tile_code = chr | ((clr & 0x10)<<4);
             /* 16 color blocks a 8 colors */
-            uint8_t color_block = (clr & 0x0F)<<3;
-            /* 8 bytes per char bit plane */
-            uint16_t tile_addr = tile * 8;
+            int color_block = (clr & 0x0F)<<3;
+            /* 8 bytes per char bitmap */
+            int off = tile_code * 8;
             for (int yy = 0; yy < 8; yy++) {
                 /* 3 bit planes per char (8 colors per pixel within
                    the palette color block of the char
                 */
-                uint8_t bm0 = bj.rom_chars[0x0000 + tile_addr];
-                uint8_t bm1 = bj.rom_chars[0x1000 + tile_addr];
-                uint8_t bm2 = bj.rom_chars[0x2000 + tile_addr];
+                uint8_t bm0 = bj.rom_chars[0x0000 + off];
+                uint8_t bm1 = bj.rom_chars[0x1000 + off];
+                uint8_t bm2 = bj.rom_chars[0x2000 + off];
+                off++;
                 for (int xx = 7; xx >= 0; xx--) {
                     uint8_t pen = ((bm2>>xx)&1) | (((bm1>>xx)&1)<<1) | (((bm0>>xx)&1)<<2);
                     if (pen != 0) {
@@ -544,7 +544,6 @@ void bombjack_decode_foreground(uint32_t* dst) {
                     }
                     dst++;
                 }
-                tile_addr++;
                 dst += 248;
             }
             dst -= (8 * 256) - 8;
@@ -571,56 +570,49 @@ void bombjack_decode_foreground(uint32_t* dst) {
     X:  x pos
     Y:  y pos
 */
+#define BOMBJACK_GATHER32(rom,base,off) \
+    ((uint32_t)bj.rom[base+0+off]<<24)|\
+    ((uint32_t)bj.rom[base+8+off]<<16)|\
+    ((uint32_t)bj.rom[base+32+off]<<8)|\
+    ((uint32_t)bj.rom[base+40+off])
+
 void bombjack_decode_sprites(uint32_t* dst) {
-    for (int sprite_index = 23; sprite_index >= 0; sprite_index--) {
-        const uint16_t addr = 0x9820 + sprite_index*4;
-        uint8_t b0 = mem_rd(&bj.main.mem, addr);
-        uint8_t b1 = mem_rd(&bj.main.mem, addr+1);
-        uint8_t b2 = mem_rd(&bj.main.mem, addr+2);
-        uint8_t b3 = mem_rd(&bj.main.mem, addr+3);
+    /* 24 hardware sprites, sprite 0 has highest priority */
+    for (int sprite_nr = 23; sprite_nr >= 0; sprite_nr--) {
+        /* sprite RAM starts at 0x9820, RAM starts at 0x8000 */
+        int addr = (0x9820 - 0x8000) + sprite_nr*4;
+        uint8_t b0 = bj.main.ram[addr + 0];
+        uint8_t b1 = bj.main.ram[addr + 1];
+        uint8_t b2 = bj.main.ram[addr + 2];
+        uint8_t b3 = bj.main.ram[addr + 3];
         uint8_t color_block = (b1 & 0x0F)<<3;
 
         /* screen is 90 degree rotated, so x and y are switched */
         int px = b3;
-
-        int sprite_index = b0 & 0x7F;
+        int sprite_code = b0 & 0x7F;
         if (b0 & 0x80) {
+            /* 32x32 'large' sprites (no flip-x/y needed) */
             int py = 225 - b2;
             uint32_t* ptr = dst + py*256 + px;
-            uint16_t sprite_addr = sprite_index * 128;
-            for (int y=0; y<32; y++) {
-                uint8_t bm0_hh = bj.rom_sprites[0x0000 + sprite_addr];
-                uint8_t bm0_hl = bj.rom_sprites[0x0000 + sprite_addr + 8];
-                uint8_t bm0_lh = bj.rom_sprites[0x0000 + sprite_addr + 32];
-                uint8_t bm0_ll = bj.rom_sprites[0x0000 + sprite_addr + 40];
-
-                uint8_t bm1_hh = bj.rom_sprites[0x2000 + sprite_addr];
-                uint8_t bm1_hl = bj.rom_sprites[0x2000 + sprite_addr + 8];
-                uint8_t bm1_lh = bj.rom_sprites[0x2000 + sprite_addr + 32];
-                uint8_t bm1_ll = bj.rom_sprites[0x2000 + sprite_addr + 40];
-
-                uint8_t bm2_hh = bj.rom_sprites[0x4000 + sprite_addr];
-                uint8_t bm2_hl = bj.rom_sprites[0x4000 + sprite_addr + 8];
-                uint8_t bm2_lh = bj.rom_sprites[0x4000 + sprite_addr + 32];
-                uint8_t bm2_ll = bj.rom_sprites[0x4000 + sprite_addr + 40];
-
-                uint32_t bm0 = (bm0_hh<<24)|(bm0_hl<<16)|(bm0_lh<<8)|bm0_ll;
-                uint32_t bm1 = (bm1_hh<<24)|(bm1_hl<<16)|(bm1_lh<<8)|bm1_ll;
-                uint32_t bm2 = (bm2_hh<<24)|(bm2_hl<<16)|(bm2_lh<<8)|bm2_ll;
-
+            /* offset into sprite ROM to gather sprite bitmap pixels */
+            int off = sprite_code * 128;
+            for (int y = 0; y < 32; y++) {
+                uint32_t bm0 = BOMBJACK_GATHER32(rom_sprites, 0x0000, off);
+                uint32_t bm1 = BOMBJACK_GATHER32(rom_sprites, 0x2000, off);
+                uint32_t bm2 = BOMBJACK_GATHER32(rom_sprites, 0x4000, off);
+                off++;
+                if ((y & 7) == 7) {
+                    off += 8;
+                }
+                if ((y & 15) == 15) {
+                    off += 32;
+                }
                 for (int x = 31; x >= 0; x--) {
                     uint8_t pen = ((bm2>>x)&1) | (((bm1>>x)&1)<<1) | (((bm0>>x)&1)<<2);
                     if (0 != pen) {
                         *ptr = bj.main.palette[color_block | pen];
                     }
                     ptr++;
-                }
-                sprite_addr += 1;
-                if ((y == 7) || (y==23)) {
-                    sprite_addr += 8;
-                }
-                else if (y == 15) {
-                    sprite_addr += 40;
                 }
                 ptr += 224;
             }
@@ -629,24 +621,23 @@ void bombjack_decode_sprites(uint32_t* dst) {
             /* 16*16 sprites are decoded like 16x16 background tiles */
             int py = 241 - b2;
             uint32_t* ptr = dst + py*256 + px;
-            if (b1 & 0x80) {
-                /* flip-x */
+            bool flip_x = (b1 & 0x80) != 0;
+            bool flip_y = (b1 & 0x40) != 0;
+            if (flip_x) {
                 ptr += 16*256;
             }
-            uint16_t sprite_addr = sprite_index * 32;
-            for (int y=0; y<16; y++) {
-                uint8_t bm0_h = bj.rom_sprites[0x0000 + sprite_addr];
-                uint8_t bm0_l = bj.rom_sprites[0x0000 + sprite_addr + 8];
-                uint8_t bm1_h = bj.rom_sprites[0x2000 + sprite_addr];
-                uint8_t bm1_l = bj.rom_sprites[0x2000 + sprite_addr + 8];
-                uint8_t bm2_h = bj.rom_sprites[0x4000 + sprite_addr];
-                uint8_t bm2_l = bj.rom_sprites[0x4000 + sprite_addr + 8];
-                uint16_t bm0 = (bm0_h<<8)|bm0_l;
-                uint16_t bm1 = (bm1_h<<8)|bm1_l;
-                uint16_t bm2 = (bm2_h<<8)|bm2_l;
-                if (b1 & 0x40) {
+            /* offset into sprite ROM to gather sprite bitmap pixels */
+            int off = sprite_code * 32;
+            for (int y = 0; y < 16; y++) {
+                uint16_t bm0 = BOMBJACK_GATHER16(rom_sprites, 0x0000, off);
+                uint16_t bm1 = BOMBJACK_GATHER16(rom_sprites, 0x2000, off);
+                uint16_t bm2 = BOMBJACK_GATHER16(rom_sprites, 0x4000, off);
+                off++;
+                if (y == 7) {
+                    off += 8;
+                }
+                if (flip_y) {
                     for (int x=0; x<=15; x++) {
-                        /* flip-y */
                         uint8_t pen = ((bm2>>x)&1) | (((bm1>>x)&1)<<1) | (((bm0>>x)&1)<<2);
                         if (0 != pen) {
                             *ptr = bj.main.palette[color_block | pen];
@@ -663,11 +654,7 @@ void bombjack_decode_sprites(uint32_t* dst) {
                         ptr++;
                     }
                 }
-                sprite_addr += 1;
-                if (y == 7) {
-                    sprite_addr += 8;
-                }
-                ptr += (b1 & 0x80) ? -272 : 240;
+                ptr += flip_x ? -272 : 240;
             }
         }
     }
