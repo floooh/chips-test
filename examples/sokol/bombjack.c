@@ -15,19 +15,17 @@ static void app_init(void);
 static void app_frame(void);
 static void app_input(const sapp_event*);
 static void app_cleanup(void);
+
 static void bombjack_init(void);
 static void bombjack_exec(uint32_t micro_seconds);
-static void bombjack_ay_out(int port_id, uint8_t data, void* user_data);
-static uint8_t bombjack_ay_in(int port_id, void* user_data);
-
 static uint64_t bombjack_tick_main(int num, uint64_t pins, void* user_data);
 static uint64_t bombjack_tick_sound(int num, uint64_t pins, void* user_data);
 static void bombjack_ay_out(int port_id, uint8_t data, void* user_data);
 static uint8_t bombjack_ay_in(int port_id, void* user_data);
 static void bombjack_decode_video(void);
 
-#define DISPLAY_WIDTH (32*8)
-#define DISPLAY_HEIGHT (32*8)
+#define DISPLAY_WIDTH (256)
+#define DISPLAY_HEIGHT (256)
 
 #define VSYNC_PERIOD (4000000 / 60)
 
@@ -36,11 +34,11 @@ typedef struct {
     z80_t cpu;
     clk_t clk;
     uint8_t p1;             /* joystick 1 state */
-    uint8_t nmi_mask;
     uint8_t p2;             /* joystick 2 state */
     uint8_t sys;            /* coins and start buttons */
     uint8_t dsw1;           /* dip-switches 1 */
     uint8_t dsw2;           /* dip-switches 2 */
+    uint8_t nmi_mask;
     uint32_t vsync_count;
     uint32_t palette[128];
     mem_t mem;
@@ -145,7 +143,7 @@ void app_cleanup(void) {
 void bombjack_init(void) {
     memset(&bj, 0, sizeof(bj));
 
-    /* set palette to black */
+    /* set cached palette entries to black */
     for (int i = 0; i < 128; i++) {
         bj.main.palette[i] = 0xFF000000;
     }
@@ -173,8 +171,8 @@ void bombjack_init(void) {
     }
 
     /* dip switches (FIXME: should be configurable by cmdline args) */
-    bj.main.dsw1 = (1<<6)|(1<<7); /* UPRIGHT|DEMO SOUND */
-    bj.main.dsw2 = 0;
+    bj.main.dsw1 = (1<<5)|(1<<6)|(1<<7);   /* 5LIVES|UPRIGHT|DEMO SOUND */
+    bj.main.dsw2 = (1<<5);          /* easy difficulty (enemy number of speed) */
     
     /* main board memory map:
         0000..7FFF: ROM
@@ -384,7 +382,6 @@ uint64_t bombjack_tick_main(int num, uint64_t pins, void* user_data) {
 
 /* sound board tick callback */
 uint64_t bombjack_tick_sound(int num, uint64_t pins, void* user_data) {
-
     return pins;
 }
 
@@ -452,7 +449,8 @@ uint8_t bombjack_ay_in(int port_id, void* user_data) {
     each pixel of the tile can select one of 8 colors in the
     tile's color block.
 
-    FIXME: what about the "FLIP-Y" bit?
+    Bit 7 in the attribute byte defines whether the tile should
+    be flipped around the Y axis.
 */
 void bombjack_decode_background(uint32_t* dst) {
     const uint8_t bg_image = mem_rd(&bj.main.mem, 0x9E00);
@@ -463,9 +461,12 @@ void bombjack_decode_background(uint32_t* dst) {
             uint8_t tile = (bg_image & 0x10) ? bj.rom_maps[addr] : 0;
             uint8_t attr = bj.rom_maps[addr + 0x0100];
             uint8_t color_block = (attr & 0x0F)<<3;
-            //uint8_t flip_y = attr & 0x80;
             /* every tile is 32 bytes */
             uint16_t tile_addr = tile * 32;
+            if (attr & 0x80) {
+                /* flip-y */
+                dst += 15*256;
+            }
             for (int yy = 0; yy < 16; yy++) {
                 uint8_t bm0_h = bj.rom_tiles[0x0000 + tile_addr];
                 uint8_t bm0_l = bj.rom_tiles[0x0000 + tile_addr + 8];
@@ -484,13 +485,18 @@ void bombjack_decode_background(uint32_t* dst) {
                 if (yy == 7) {
                     tile_addr += 8;
                 }
-                dst += 240;
+                dst += (attr & 0x80) ? -272 : 240;
             }
-            dst -= (16 * 256) - 16;
+            if (0 == (attr & 0x80)) {
+                dst -= (16 * 256) - 16;
+            }
+            else {
+                dst += 256 + 16;
+            }
         }
         dst += (15 * 256);
     }
-    assert(dst == (gfx_framebuffer() + 256*256));
+    assert(dst == gfx_framebuffer()+256*256);
 }
 
 /* render foreground tiles
@@ -545,7 +551,7 @@ void bombjack_decode_foreground(uint32_t* dst) {
         }
         dst += (7 * 256);
     }
-    assert(dst == (gfx_framebuffer() + 256*256));
+    assert(dst == gfx_framebuffer()+256*256);
 }
 
 /*  render sprites
