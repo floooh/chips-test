@@ -11,9 +11,6 @@
 #include "chips/mem.h"
 #include "bombjack-roms.h"
 
-// DBG ONLY!
-#include <stdio.h>
-
 static void app_init(void);
 static void app_frame(void);
 static void app_input(const sapp_event*);
@@ -103,7 +100,39 @@ void app_frame(void) {
 
 /* input handling */
 void app_input(const sapp_event* event) {
-    // FIXME
+    switch (event->type) {
+        case SAPP_EVENTTYPE_KEY_DOWN:
+            switch (event->key_code) {
+                /* player 1 joystick */
+                case SAPP_KEYCODE_RIGHT: bj.main.p1 |= (1<<0); break;
+                case SAPP_KEYCODE_LEFT:  bj.main.p1 |= (1<<1); break;
+                case SAPP_KEYCODE_UP:    bj.main.p1 |= (1<<2); break;
+                case SAPP_KEYCODE_DOWN:  bj.main.p1 |= (1<<3); break;
+                case SAPP_KEYCODE_SPACE: bj.main.p1 |= (1<<4); break;
+                /* player 1 coin */
+                case SAPP_KEYCODE_1:     bj.main.sys |= (1<<0); break;
+                /* player 1 start (any other key */
+                default:                 bj.main.sys |= (1<<2); break;
+            }
+            break;
+
+        case SAPP_EVENTTYPE_KEY_UP:
+            switch (event->key_code) {
+                /* player 1 joystick */
+                case SAPP_KEYCODE_RIGHT: bj.main.p1 &= ~(1<<0); break;
+                case SAPP_KEYCODE_LEFT:  bj.main.p1 &= ~(1<<1); break;
+                case SAPP_KEYCODE_UP:    bj.main.p1 &= ~(1<<2); break;
+                case SAPP_KEYCODE_DOWN:  bj.main.p1 &= ~(1<<3); break;
+                case SAPP_KEYCODE_SPACE: bj.main.p1 &= ~(1<<4); break;
+                /* player 1 coin */
+                case SAPP_KEYCODE_1:     bj.main.sys &= ~(1<<0); break;
+                /* player 1 start (any other key */
+                default:                 bj.main.sys &= ~(1<<2); break;
+            }
+            break;
+        default:
+            break;
+    }
 }
 
 /* app shutdown */
@@ -282,7 +311,7 @@ uint64_t bombjack_tick_main(int num, uint64_t pins, void* user_data) {
                     Z80_SET_DATA(pins, bj.main.p2);
                 }
                 else if (pins & Z80_WR) {
-                    printf("Trying to write joy2\n");
+                    //printf("Trying to write joy2\n");
                 }
             }
             else if (addr == 0xB002) {
@@ -296,7 +325,7 @@ uint64_t bombjack_tick_main(int num, uint64_t pins, void* user_data) {
                     Z80_SET_DATA(pins, bj.main.sys);
                 }
                 else if (pins & Z80_WR) {
-                    printf("Trying to write sys\n");
+                    //printf("Trying to write sys\n");
                 }
             }
             else if (addr == 0xB003) {
@@ -318,7 +347,7 @@ uint64_t bombjack_tick_main(int num, uint64_t pins, void* user_data) {
                     Z80_SET_DATA(pins, bj.main.dsw1);
                 }
                 else if (pins & Z80_WR) {
-                    printf("flip screen\n");
+                    //printf("flip screen\n");
                 }
             }
             else if (addr == 0xB005) {
@@ -327,17 +356,17 @@ uint64_t bombjack_tick_main(int num, uint64_t pins, void* user_data) {
                     Z80_SET_DATA(pins, bj.main.dsw2);
                 }
                 else if (pins & Z80_WR) {
-                    printf("write to 0xB005\n");
+                    //printf("write to 0xB005\n");
                 }
             }
         }
         else if (addr == 0xB800) {
             /* sound latch */
             if (pins & Z80_RD) {
-                printf("read sound latch\n");
+                //printf("read sound latch\n");
             }
             else {
-                printf("write sound latch\n");
+                //printf("write sound latch\n");
             }
         }
         else {
@@ -349,10 +378,7 @@ uint64_t bombjack_tick_main(int num, uint64_t pins, void* user_data) {
             }
         }
     }
-    else if (pins & Z80_IORQ) {
-        /* IO request */
-        printf("IO: 0x%04x\n", addr);
-    }
+    /* the Z80 IORQ pin isn't connected, so no IO instructions need to be handled */
     return pins & Z80_PIN_MASK;
 }
 
