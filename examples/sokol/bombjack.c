@@ -612,12 +612,24 @@ void bombjack_decode_sprites(uint32_t* dst) {
                 uint16_t bm0 = (bm0_h<<8)|bm0_l;
                 uint16_t bm1 = (bm1_h<<8)|bm1_l;
                 uint16_t bm2 = (bm2_h<<8)|bm2_l;
-                for (int x=15; x>=0; x--) {
-                    uint8_t pen = ((bm2>>x)&1) | (((bm1>>x)&1)<<1) | (((bm0>>x)&1)<<2);
-                    if (0 != pen) {
-                        *ptr = bj.main.palette[color_block | pen];
+                if (b1 & 0x40) {
+                    for (int x=0; x<=15; x++) {
+                        /* flip-y */
+                        uint8_t pen = ((bm2>>x)&1) | (((bm1>>x)&1)<<1) | (((bm0>>x)&1)<<2);
+                        if (0 != pen) {
+                            *ptr = bj.main.palette[color_block | pen];
+                        }
+                        ptr++;
                     }
-                    ptr++;
+                }
+                else {
+                    for (int x=15; x>=0; x--) {
+                        uint8_t pen = ((bm2>>x)&1) | (((bm1>>x)&1)<<1) | (((bm0>>x)&1)<<2);
+                        if (0 != pen) {
+                            *ptr = bj.main.palette[color_block | pen];
+                        }
+                        ptr++;
+                    }
                 }
                 sprite_addr += 1;
                 if (y == 7) {
