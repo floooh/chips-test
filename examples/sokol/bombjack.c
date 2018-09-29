@@ -550,11 +550,11 @@ void bombjack_decode_sprites(uint32_t* dst) {
 
         /* screen is 90 degree rotated, so x and y are switched */
         int px = b3;
-        int py = (b0 & 0x80) ? 225-b2 : 241-b2;
 
         int sprite_index = b0 & 0x7F;
-        uint32_t* ptr = dst + py*256 + px;
         if (b0 & 0x80) {
+            int py = 225 - b2;
+            uint32_t* ptr = dst + py*256 + px;
             uint16_t sprite_addr = sprite_index * 128;
             for (int y=0; y<32; y++) {
                 uint8_t bm0_hh = bj.rom_sprites[0x0000 + sprite_addr];
@@ -595,6 +595,12 @@ void bombjack_decode_sprites(uint32_t* dst) {
         }
         else {
             /* 16*16 sprites are decoded like 16x16 background tiles */
+            int py = 241 - b2;
+            uint32_t* ptr = dst + py*256 + px;
+            if (b1 & 0x80) {
+                /* flip-x */
+                ptr += 16*256;
+            }
             uint16_t sprite_addr = sprite_index * 32;
             for (int y=0; y<16; y++) {
                 uint8_t bm0_h = bj.rom_sprites[0x0000 + sprite_addr];
@@ -617,7 +623,7 @@ void bombjack_decode_sprites(uint32_t* dst) {
                 if (y == 7) {
                     sprite_addr += 8;
                 }
-                ptr += 240;
+                ptr += (b1 & 0x80) ? -272 : 240;
             }
         }
     }
