@@ -345,7 +345,7 @@ static inline bool bombjack_vsync(vsync_t* vs, int num_ticks, bool nmi_enabled) 
 
     Special memory locations:
 
-    9000..9D00: the hardware color palette (128 entries @ 16-bit)
+    9C00..9D00: the hardware color palette (128 entries @ 16-bit)
                 I'm not sure if this area is normal memory and readable,
                 the CPU doesn't appear to do any read accesses, write accesses
                 are caught and used to update the color palette cache.
