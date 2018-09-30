@@ -20,14 +20,26 @@ static void bombjack_init(void);
 static void bombjack_exec(uint32_t micro_seconds);
 static uint64_t bombjack_tick_main(int num, uint64_t pins, void* user_data);
 static uint64_t bombjack_tick_sound(int num, uint64_t pins, void* user_data);
-static void bombjack_ay_out(int port_id, uint8_t data, void* user_data);
-static uint8_t bombjack_ay_in(int port_id, void* user_data);
 static void bombjack_decode_video(void);
 
 #define DISPLAY_WIDTH (256)
 #define DISPLAY_HEIGHT (256)
 
-#define VSYNC_PERIOD (4000000 / 60)
+#define VSYNC_PERIOD_4MHZ (4000000 / 60)
+#define VBLANK_PERIOD_4MHZ (((4000000 / 60) / 525) * (525 - 483))
+
+#define VSYNC_PERIOD_3MHZ (3000000 / 60)
+#define VBLANK_PERIOD_3MHZ (((3000000 / 60) / 525) * (525 - 483))
+
+#define NMI_HOLD_TICKS (1000)
+
+/* keep track of vsync state */
+typedef struct {
+    int vsync_period;
+    int vsync_count;
+    int vblank_period;
+    int vblank_count;
+} vsync_t;
 
 /* the Bomb Jack arcade machine is actually 2 computers, the main board and sound board */
 typedef struct {
@@ -39,23 +51,32 @@ typedef struct {
     uint8_t dsw1;           /* dip-switches 1 */
     uint8_t dsw2;           /* dip-switches 2 */
     uint8_t nmi_mask;
-    uint32_t vsync_count;
+    vsync_t vsync;
     uint32_t palette[128];
     mem_t mem;
     uint8_t ram[0x2000];
 } mainboard_t;
 
+#define BOMBJACK_NUM_AUDIO_SAMPLES (128)
 typedef struct {
     z80_t cpu;
     clk_t clk;
     ay38910_t ay[3];
+    uint32_t tick_count;
+    int nmi_count;
+    vsync_t vsync;
     mem_t mem;
     uint8_t ram[0x0400];
+    int num_samples;
+    int sample_pos;
+    float sample_buffer[BOMBJACK_NUM_AUDIO_SAMPLES];
 } soundboard_t;
 
 typedef struct {
     mainboard_t main;
     soundboard_t sound;
+    uint8_t sound_latch;            /* shared latch, written by main board, read by sound board */
+    bool sound_latch_written;
     uint8_t rom_chars[0x3000];
     uint8_t rom_tiles[0x6000];
     uint8_t rom_sprites[0x6000];
@@ -143,6 +164,14 @@ void app_cleanup(void) {
 void bombjack_init(void) {
     memset(&bj, 0, sizeof(bj));
 
+    /* setup vsync tracking */
+    bj.main.vsync.vsync_period = VSYNC_PERIOD_4MHZ;
+    bj.main.vsync.vsync_count = VSYNC_PERIOD_4MHZ;
+    bj.main.vsync.vblank_period = VBLANK_PERIOD_4MHZ;
+    bj.sound.vsync.vsync_period = VSYNC_PERIOD_3MHZ;
+    bj.sound.vsync.vsync_count = VSYNC_PERIOD_3MHZ;
+    bj.sound.vsync.vblank_period = VBLANK_PERIOD_3MHZ;
+
     /* set cached palette entries to black */
     for (int i = 0; i < 128; i++) {
         bj.main.palette[i] = 0xFF000000;
@@ -162,8 +191,6 @@ void bombjack_init(void) {
     for (int i = 0; i < 3; i++) {
         ay38910_init(&bj.sound.ay[i], &(ay38910_desc_t) {
             .type = AY38910_TYPE_8910,
-            .in_cb = bombjack_ay_in,
-            .out_cb = bombjack_ay_out,
             .tick_hz = 1500000,
             .sound_hz = saudio_sample_rate(),
             .magnitude = 0.3f,
@@ -171,7 +198,7 @@ void bombjack_init(void) {
     }
 
     /* dip switches (FIXME: should be configurable by cmdline args) */
-    bj.main.dsw1 = (1<<5)|(1<<6)|(1<<7);   /* 5LIVES|UPRIGHT|DEMO SOUND */
+    bj.main.dsw1 = (1<<6)|(1<<7);   /* UPRIGHT|DEMO SOUND (demo sound doesn't work?) */
     bj.main.dsw2 = (1<<5);          /* easy difficulty (enemy number of speed) */
     
     /* main board memory map:
@@ -230,144 +257,191 @@ void bombjack_init(void) {
 
 /* run the emulation for one frame */
 void bombjack_exec(uint32_t micro_seconds) {
-    /* tick the main board */
-    uint32_t ticks_to_run = clk_ticks_to_run(&bj.main.clk, micro_seconds);
-    uint32_t ticks_executed = 0;
-    while (ticks_executed < ticks_to_run) {
-        ticks_executed += z80_exec(&bj.main.cpu, ticks_to_run);
+
+    /* Run the main board and sound board interleaved for half a frame.
+       This simplifies the communication via the sound latch (the main CPU
+       writes a command byte to the sound latch, this triggers an NMI on the
+       sound board, the sound board reads the byte, and resets the latch.
+
+       The main board issues at most one command per 60Hz frame, but since the
+       host machine is also running at roughly 60 Hz it may happen that the
+       main board writes 2 sound commands per host frame. For this reason
+       run the 2 boards interleaved for half a frame, so it is guaranteed
+       that at most one sound command can be written by the main board
+       before the sound board is ticked (that way we don't need to implement
+       a complicated command queue.
+    */
+    const uint32_t slice_us = micro_seconds/2;
+    for (int i = 0; i < 2; i++) {
+        /* tick the main board */
+        {
+            uint32_t ticks_to_run = clk_ticks_to_run(&bj.main.clk, slice_us);
+            uint32_t ticks_executed = 0;
+            while (ticks_executed < ticks_to_run) {
+                ticks_executed += z80_exec(&bj.main.cpu, ticks_to_run);
+            }
+            clk_ticks_executed(&bj.main.clk, ticks_executed);
+        }
+        /* tick the sound board */
+        {
+            uint32_t ticks_to_run = clk_ticks_to_run(&bj.sound.clk, slice_us);
+            uint32_t ticks_executed = 0;
+            while (ticks_executed < ticks_to_run) {
+                ticks_executed += z80_exec(&bj.sound.cpu, ticks_to_run);
+            }
+            clk_ticks_executed(&bj.sound.clk, ticks_executed);
+        }
     }
-    clk_ticks_executed(&bj.main.clk, ticks_executed);
+    /* decode the video image once per host frame */
     bombjack_decode_video();
 }
 
-/* main board tick callback */
-uint64_t bombjack_tick_main(int num, uint64_t pins, void* user_data) {
+/* Maintain a color palette cache with 32-bit colors, this is called for
+    CPU writes to the palette RAM area. The hardware palette is 128
+    entries of 16-bit colors (xxxxBBBBGGGGRRRR), the function keeps
+    a 'palette cache' with 32-bit colors uptodate, so that the
+    32-bit colors don't need to be computed for each pixel in the
+    video decoding code.
+*/
+static inline void bombjack_update_palette_cache(uint16_t addr, uint8_t data) {
+    assert((addr >= 0x9C00) && (addr < 0x9D00));
+    int pal_index = (addr - 0x9C00) / 2;
+    uint32_t c = bj.main.palette[pal_index];
+    if (addr & 1) {
+        /* uneven addresses are the xxxxBBBB part */
+        uint8_t b = (data & 0x0F) | ((data<<4)&0xF0);
+        c = (c & 0xFF00FFFF) | (b<<16);
+    }
+    else {
+        /* even addresses are the GGGGRRRR part */
+        uint8_t g = (data & 0xF0) | ((data>>4)&0x0F);
+        uint8_t r = (data & 0x0F) | ((data<<4)&0xF0);
+        c = (c & 0xFFFF0000) | (g<<8) | r;
+    }
+    bj.main.palette[pal_index] = c;
+}
 
-    /* vsync and main board NMI */
-    bj.main.vsync_count += num;
-    if (bj.main.vsync_count >= VSYNC_PERIOD) {
-        bj.main.vsync_count -= VSYNC_PERIOD;
-        if (bj.main.nmi_mask != 0) {
-            pins |= Z80_NMI;
+/* update the vscync counter, returns state of NMI pin */
+static inline bool bombjack_vsync(vsync_t* vs, int num_ticks, bool nmi_enabled) {
+    vs->vsync_count -= num_ticks;
+    if (vs->vsync_count < 0) {
+        vs->vsync_count += vs->vsync_period;
+        vs->vblank_count = vs->vblank_period;
+    }
+    if (vs->vblank_count != 0) {
+        vs->vblank_count -= num_ticks;
+        if (vs->vblank_count < 0) {
+            vs->vblank_count = 0;
         }
     }
-    if (0 == bj.main.nmi_mask) {
+
+    /* return pin NMI state */
+    return nmi_enabled && (vs->vblank_count > 0);
+}
+
+/* main board tick callback
+
+    Bomb Jack uses memory mapped IO (the Z80's IORQ pin isn't connected).
+
+    Special memory locations:
+
+    9000..9D00: the hardware color palette (128 entries @ 16-bit)
+                I'm not sure if this area is normal memory and readable,
+                the CPU doesn't appear to do any read accesses, write accesses
+                are caught and used to update the color palette cache.
+    B000:       read:  player 1 joystick state
+                        bit 0: right
+                            1: left
+                            2: up
+                            3: down
+                            4: btn
+                write: NMI mask (NMI on VSYNC disabled when 0 written to B000)
+    B001:       read:  player 2 joystick state
+                write: ???
+    B002:       read:  coin detector and start button:
+                        bit 0: player 1 coin
+                            1: player 2 coin
+                            2: player 1 start button
+                            3: player 2 start button
+                write:  ???
+    B003:       ???
+    B004:       read: dip-switches 1
+                        bits [1,0]: 00: 1 COIN 1 PLAY (player 1)
+                                    01: 1 COIN 2 PLAY
+                                    10: 1 COIN 3 PLAY
+                                    11: 1 COIN 5 PLAY
+                             [3,2]: coin/play for player 2
+                             [5,4]: 00: 3 Jacks
+                                    01: 4 Jacks
+                                    10: 5 Jacks
+                                    11: 2 Jacks
+                             6:     0: cocktail
+                                    1: upright
+                             7:     0: no demo sound
+                                    1: demo sound
+                write: flip-screen (not implemented)
+    B005:       read: dip-switches 2
+                        bits [4,3]: difficulty 1 (bird speed)
+                                    00: moderate
+                                    01: difficult
+                                    10: more difficult
+                                    11: top difficult
+                        bits [6,5]: difficulty 2 (enemy number & speed)
+                                    00: moderate
+                                    01: easy
+                                    10: difficult
+                                    11: more difficult
+                        7:          ratio of special coin appearance
+                                    0:  easy
+                                    1:  difficult
+    B800:       sound command latch (causes NMI on sound board CPU when written)
+
+*/
+uint64_t bombjack_tick_main(int num_ticks, uint64_t pins, void* user_data) {
+    /* generate NMI on each vsync */
+    if (bombjack_vsync(&bj.main.vsync, num_ticks, 0 != bj.main.nmi_mask)) {
+        pins |= Z80_NMI;
+    }
+    else {
         pins &= ~Z80_NMI;
     }
 
-    const uint16_t addr = Z80_GET_ADDR(pins);
+    /* handle memory requests */
+    uint16_t addr = Z80_GET_ADDR(pins);
     if (pins & Z80_MREQ) {
-        /* memory request */
         if ((addr >= 0x9C00) && (addr < 0x9D00)) {
-            /* palette read/write */
-            if (pins & Z80_RD) {
-                Z80_SET_DATA(pins, mem_rd(&bj.main.mem, addr));
-            }
-            else if (pins & Z80_WR) {
-                const uint8_t data = Z80_GET_DATA(pins);
-                mem_wr(&bj.main.mem, addr, data);
-                /* stretch palette colors to 32 bit (original layout is
-                   xxxxBBBBGGGGRRRR)
-                */
-                uint16_t pal_index = (addr - 0x9C00) / 2;
-                uint32_t c = bj.main.palette[pal_index];
-                if (addr & 1) {
-                    /* uneven addresses are the xxxxBBBB part */
-                    uint8_t b = (data & 0x0F) | ((data<<4)&0xF0);
-                    c = (c & 0xFF00FFFF) | (b<<16);
-                }
-                else {
-                    /* even addresses are the GGGGRRRR part */
-                    uint8_t g = (data & 0xF0) | ((data>>4)&0x0F);
-                    uint8_t r = (data & 0x0F) | ((data<<4)&0xF0);
-                    c = (c & 0xFFFF0000) | (g<<8) | r;
-                }
-                bj.main.palette[pal_index] = c;
+            /* color palette */
+            if (pins & Z80_WR) {
+                uint8_t data = Z80_GET_DATA(pins);
+                bombjack_update_palette_cache(addr, data);
             }
         }
         else if ((addr >= 0xB000) && (addr <= 0xB005)) {
             /* IO ports */
-            if (addr == 0xB000) {
-                /* read: joystick port 1:
-                    0:  right
-                    1:  left
-                    2:  up
-                    3:  down
-                    5:  btn
-                write: IRQ mask
-                */
-                if (pins & Z80_RD) {
-                    Z80_SET_DATA(pins, bj.main.p1);
-                }
-                else if (pins & Z80_WR) {
-                    bj.main.nmi_mask = Z80_GET_DATA(pins);
+            if (pins & Z80_RD) {
+                switch (addr) {
+                    case 0xB000: Z80_SET_DATA(pins, bj.main.p1); break;
+                    case 0xB001: Z80_SET_DATA(pins, bj.main.p2); break;
+                    case 0xB002: Z80_SET_DATA(pins, bj.main.sys); break;
+                    case 0xB004: Z80_SET_DATA(pins, bj.main.dsw1); break;
+                    case 0xB005: Z80_SET_DATA(pins, bj.main.dsw2); break;
                 }
             }
-            else if (addr == 0xB001) {
-                /* joystick port 2 */
-                if (pins & Z80_RD) {
-                    Z80_SET_DATA(pins, bj.main.p2);
-                }
-                else if (pins & Z80_WR) {
-                    //printf("Trying to write joy2\n");
-                }
-            }
-            else if (addr == 0xB002) {
-                /* system:
-                    0:  coin1
-                    1:  coin2
-                    2:  start1
-                    3:  start2
-                */
-                if (pins & Z80_RD) {
-                    Z80_SET_DATA(pins, bj.main.sys);
-                }
-                else if (pins & Z80_WR) {
-                    //printf("Trying to write sys\n");
-                }
-            }
-            else if (addr == 0xB003) {
-                /* ??? */
-                /*
-                if (pins & Z80_RD) {
-                    printf("read from 0xB003\n");
-                }
-                else if (pins & Z80_WR) {
-                    printf("write to 0xB003\n");
-                }
-                */
-            }
-            else if (addr == 0xB004) {
-                /* read: dip-switches 1
-                write: flip screen
-                */
-                if (pins & Z80_RD) {
-                    Z80_SET_DATA(pins, bj.main.dsw1);
-                }
-                else if (pins & Z80_WR) {
-                    //printf("flip screen\n");
-                }
-            }
-            else if (addr == 0xB005) {
-                /* read: dip-switches 2 */
-                if (pins & Z80_RD) {
-                    Z80_SET_DATA(pins, bj.main.dsw2);
-                }
-                else if (pins & Z80_WR) {
-                    //printf("write to 0xB005\n");
+            else if (pins & Z80_WR) {
+                switch (addr) {
+                    case 0xB000: bj.main.nmi_mask = Z80_GET_DATA(pins); break;
+                    case 0xB004: /*FIXME: flip screen*/ break;
                 }
             }
         }
-        else if (addr == 0xB800) {
-            /* sound latch */
-            if (pins & Z80_RD) {
-                //printf("read sound latch\n");
-            }
-            else {
-                //printf("write sound latch\n");
+        else if ((pins & Z80_WR) && (addr == 0xB800)) {
+            bj.sound_latch = Z80_GET_DATA(pins);
+            if (bj.main.nmi_mask) {
+                bj.sound_latch_written = true;
             }
         }
         else {
+            /* regular memory request */
             if (pins & Z80_RD) {
                 Z80_SET_DATA(pins, mem_rd(&bj.main.mem, addr));
             }
@@ -380,19 +454,118 @@ uint64_t bombjack_tick_main(int num, uint64_t pins, void* user_data) {
     return pins & Z80_PIN_MASK;
 }
 
-/* sound board tick callback */
-uint64_t bombjack_tick_sound(int num, uint64_t pins, void* user_data) {
-    return pins;
-}
+/* sound board tick callback
 
-/* AY port output callback */
-void bombjack_ay_out(int port_id, uint8_t data, void* user_data) {
+    The sound board receives commands from the main board via the shared
+    sound latch (mapped to address 0xB800 on the main board, and
+    address 0x6000 on the sound board).
 
-}
+    A write to the sound latch triggers an NMI on the sound board, this
+    reads the latch, the read also clears the latch and NMI pin.
 
-/* AY port input callback */
-uint8_t bombjack_ay_in(int port_id, void* user_data) {
-    return 0xFF;
+    Communication with the 3 sound chips is done through IO requests
+    (not memory mapped IO like on the main board).
+
+    The memory map of the sound board is as follows:
+
+    0000 .. 1FFF    ROM
+    2000 .. 43FF    RAM
+    6000            shared sound latch
+
+    The IO map:
+
+    00 .. 01:       1st AY-3-8910
+    10 .. 11:       2nd AY-3-8910
+    80 .. 81:       3rd AY-3-8910
+*/
+uint64_t bombjack_tick_sound(int num_ticks, uint64_t pins, void* user_data) {
+
+    /* NMI line is connected to vblank (unmasked), and writes to the sound latch */
+    if (bombjack_vsync(&bj.sound.vsync, num_ticks, true)) {
+        pins |= Z80_NMI;
+    }
+    else {
+        if (bj.sound.nmi_count == 0) {
+            pins &= ~Z80_NMI;
+        }
+        else {
+            bj.sound.nmi_count -= num_ticks;
+            if (bj.sound.nmi_count < 0) {
+                bj.sound.nmi_count = 0;
+                pins &= ~Z80_NMI;
+            }
+        }
+    }
+    if (bj.sound_latch_written) {
+        pins |= Z80_NMI;
+        bj.sound_latch_written = false;
+        bj.sound.nmi_count = NMI_HOLD_TICKS;
+    }
+
+    /* tick the 3 sound chips at half frequency */
+    for (int i = 0; i < num_ticks; i++) {
+        if (bj.sound.tick_count++ & 1) {
+            ay38910_tick(&bj.sound.ay[2]);
+            ay38910_tick(&bj.sound.ay[1]);
+            if (ay38910_tick(&bj.sound.ay[0])) {
+                /* new sample ready */
+                float s = bj.sound.ay[0].sample + bj.sound.ay[1].sample + bj.sound.ay[2].sample;
+                bj.sound.sample_buffer[bj.sound.sample_pos++] = s;
+                if (bj.sound.sample_pos == BOMBJACK_NUM_AUDIO_SAMPLES) {
+                    saudio_push(bj.sound.sample_buffer, BOMBJACK_NUM_AUDIO_SAMPLES);
+                    bj.sound.sample_pos = 0;
+                }
+            }
+        }
+    }
+
+    const uint16_t addr = Z80_GET_ADDR(pins);
+    if (pins & Z80_MREQ) {
+        /* memory requests */
+        if (pins & Z80_RD) {
+            /* special case: read and clear sound latch */
+            if (addr == 0x6000) {
+                Z80_SET_DATA(pins, bj.sound_latch);
+                bj.sound_latch = 0;
+            }
+            else {
+                /* regular memory read */
+                Z80_SET_DATA(pins, mem_rd(&bj.sound.mem, addr));
+            }
+        }
+        else if (pins & Z80_WR) {
+            /* regular memory write */
+            mem_wr(&bj.sound.mem, addr, Z80_GET_DATA(pins));
+        }
+    }
+    else if (pins & Z80_IORQ) {
+        /* IO requests:
+                00:     1st AY latch address
+                01:     1st AY data
+                10:     2nd AY latch address
+                11:     2nd AY data
+                80:     3rd AY latch address
+                81:     3rd AY data
+        */
+        int ay_index = -1;
+        switch (addr & 0xFF) {
+            case 0x00: case 0x01: ay_index = 0; break;
+            case 0x10: case 0x11: ay_index = 1; break;
+            case 0x80: case 0x81: ay_index = 2; break;
+        }
+        if (ay_index >= 0) {
+            uint64_t ay_pins = (pins & Z80_PIN_MASK);
+            if (pins & Z80_WR) {
+                ay_pins |= AY38910_BDIR;
+            }
+            if (0 == (addr & 1)) {
+                ay_pins |= AY38910_BC1;
+            }
+            pins = ay38910_iorq(&bj.sound.ay[ay_index], ay_pins);
+        }
+    }
+
+    return pins & Z80_PIN_MASK;
 }
 
 /* render background tiles
