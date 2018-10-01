@@ -20,7 +20,6 @@
 #define VSYNC_PERIOD_3MHZ (3000000 / 60)
 #define VBLANK_DURATION_3MHZ (((3000000 / 60) / 525) * (525 - 483))
 
-#define NMI_HOLD_TICKS (1000)
 #define NUM_AUDIO_SAMPLES (128)
 
 /* keep track of vsync state */
@@ -38,7 +37,7 @@ static void vsync_init(vsync_t* vs, int vsync_period, int vblank_period) {
     vs->vblank_count = 0;
 }
 
-/* update the vscync counter which triggers the NMI pin, returns state of NMI pin */
+/* update the vscync counter which triggers the main-board's NMI pin, returns state of NMI pin */
 static inline bool vsync_update(vsync_t* vs, int num_ticks, bool nmi_enabled) {
     vs->vsync_count -= num_ticks;
     if (vs->vsync_count < 0) {
@@ -72,10 +71,9 @@ typedef struct {
 typedef struct {
     z80_t cpu;
     clk_t clk;
-    ay38910_t ay[3];
+    ay38910_t psg[3];
     uint32_t tick_count;
-    int nmi_count;
-    vsync_t vsync;
+    int vsync_count;
     mem_t mem;
 } soundboard_t;
 
@@ -83,7 +81,6 @@ typedef struct {
     mainboard_t main;
     soundboard_t sound;
     uint8_t sound_latch;            /* shared latch, written by main board, read by sound board */
-    bool sound_latch_written;
     uint8_t main_ram[0x1C00];
     uint8_t sound_ram[0x0400];
     uint8_t rom_chars[0x3000];
@@ -108,13 +105,13 @@ static void bombjack_init(void) {
     memset(&bj, 0, sizeof(bj));
 
     /* setup vsync tracking, both the mainboard and soundboard are
-        connected to the vblank signal from the mainboard, but since
+        connected to the vblank signal from the mainboard(?), but since
         the board emulations are running independently, we give each its
         own vsync counters, it doesn't actually matter whether they are
         both exactly in sync, since the vsync is only used as timer.
     */
     vsync_init(&bj.main.vsync, VSYNC_PERIOD_4MHZ, VBLANK_DURATION_4MHZ);
-    vsync_init(&bj.sound.vsync, VSYNC_PERIOD_3MHZ, VBLANK_DURATION_3MHZ);
+    bj.sound.vsync_count = VSYNC_PERIOD_3MHZ;
 
     /* setup the main board (4 MHz Z80) */
     clk_init(&bj.main.clk, 4000000);
@@ -128,7 +125,7 @@ static void bombjack_init(void) {
         .tick_cb = bombjack_tick_sound
     });
     for (int i = 0; i < 3; i++) {
-        ay38910_init(&bj.sound.ay[i], &(ay38910_desc_t) {
+        ay38910_init(&bj.sound.psg[i], &(ay38910_desc_t) {
             .type = AY38910_TYPE_8910,
             .tick_hz = 1500000,
             .sound_hz = saudio_sample_rate(),
@@ -357,9 +354,6 @@ static uint64_t bombjack_tick_main(int num_ticks, uint64_t pins, void* user_data
             else if (addr == 0xB800) {
                 /* shared sound latch */
                 bj.sound_latch = Z80_GET_DATA(pins);
-                if (0 != bj.main.nmi_mask) {
-                    bj.sound_latch_written = true;
-                }
             }
         }
         else if (pins & Z80_RD) {
@@ -390,9 +384,6 @@ static uint64_t bombjack_tick_main(int num_ticks, uint64_t pins, void* user_data
     sound latch (mapped to address 0xB800 on the main board, and
     address 0x6000 on the sound board).
 
-    A write to the sound latch triggers an NMI on the sound board, this
-    reads the latch, the read also clears the latch and NMI pin.
-
     Communication with the 3 sound chips is done through IO requests
     (not memory mapped IO like on the main board).
 
@@ -410,36 +401,24 @@ static uint64_t bombjack_tick_main(int num_ticks, uint64_t pins, void* user_data
 */
 static uint64_t bombjack_tick_sound(int num_ticks, uint64_t pins, void* user_data) {
 
-    /* NMI line is connected to vblank (unmasked), and writes to the sound latch */
-    if (vsync_update(&bj.sound.vsync, num_ticks, true)) {
+    /* vsync triggers a flip-flop connected to the CPU's NMI, the flip-flop
+       is reset on a read from address 0x6000 (this read happens in the
+       interrupt service routine
+    */
+    bj.sound.vsync_count -= num_ticks;
+    if (bj.sound.vsync_count < 0) {
+        bj.sound.vsync_count += VSYNC_PERIOD_3MHZ;
         pins |= Z80_NMI;
-    }
-    else {
-        if (bj.sound.nmi_count == 0) {
-            pins &= ~Z80_NMI;
-        }
-        else {
-            bj.sound.nmi_count -= num_ticks;
-            if (bj.sound.nmi_count < 0) {
-                bj.sound.nmi_count = 0;
-                pins &= ~Z80_NMI;
-            }
-        }
-    }
-    if (bj.sound_latch_written) {
-        pins |= Z80_NMI;
-        bj.sound_latch_written = false;
-        bj.sound.nmi_count = NMI_HOLD_TICKS;
     }
 
     /* tick the 3 sound chips at half frequency */
     for (int i = 0; i < num_ticks; i++) {
         if (bj.sound.tick_count++ & 1) {
-            ay38910_tick(&bj.sound.ay[2]);
-            ay38910_tick(&bj.sound.ay[1]);
-            if (ay38910_tick(&bj.sound.ay[0])) {
+            ay38910_tick(&bj.sound.psg[2]);
+            ay38910_tick(&bj.sound.psg[1]);
+            if (ay38910_tick(&bj.sound.psg[0])) {
                 /* new sample ready */
-                float s = bj.sound.ay[0].sample + bj.sound.ay[1].sample + bj.sound.ay[2].sample;
+                float s = bj.sound.psg[0].sample + bj.sound.psg[1].sample + bj.sound.psg[2].sample;
                 bj.sample_buffer[bj.sample_pos++] = s;
                 if (bj.sample_pos == NUM_AUDIO_SAMPLES) {
                     saudio_push(bj.sample_buffer, NUM_AUDIO_SAMPLES);
@@ -453,10 +432,11 @@ static uint64_t bombjack_tick_sound(int num_ticks, uint64_t pins, void* user_dat
     if (pins & Z80_MREQ) {
         /* memory requests */
         if (pins & Z80_RD) {
-            /* special case: read and clear sound latch */
+            /* special case: read and clear sound latch and NMI flip-flop */
             if (addr == 0x6000) {
                 Z80_SET_DATA(pins, bj.sound_latch);
                 bj.sound_latch = 0;
+                pins &= ~Z80_NMI;
             }
             else {
                 /* regular memory read */
@@ -469,29 +449,30 @@ static uint64_t bombjack_tick_sound(int num_ticks, uint64_t pins, void* user_dat
         }
     }
     else if (pins & Z80_IORQ) {
-        /* IO requests:
-                00:     1st AY latch address
-                01:     1st AY data
-                10:     2nd AY latch address
-                11:     2nd AY data
-                80:     3rd AY latch address
-                81:     3rd AY data
+        /* IO requests, schematics page 9 and 10
+
+            PSG1, PSG2 and PSG3 are selected through a
+            LS-138 1-of-4 decoder from address lines 4 and 7:
+
+            A7 A4
+             0  0   -> PSG 1
+             0  1   -> PSG 2
+             1  0   -> PSG 3
+             1  1   -> not connected
+
+            A0 is connected to BC1(!) (I guess that's an error in the
+            schematics since these show BC2).
         */
-        int ay_index = -1;
-        switch (addr & 0xFF) {
-            case 0x00: case 0x01: ay_index = 0; break;
-            case 0x10: case 0x11: ay_index = 1; break;
-            case 0x80: case 0x81: ay_index = 2; break;
-        }
-        if (ay_index >= 0) {
-            uint64_t ay_pins = (pins & Z80_PIN_MASK);
+        int psg_index = ((pins&Z80_A7)>>6) | ((pins&Z80_A4)>>4);
+        if (psg_index < 4) {
+            uint64_t psg_pins = (pins & Z80_PIN_MASK);
             if (pins & Z80_WR) {
-                ay_pins |= AY38910_BDIR;
+                psg_pins |= AY38910_BDIR;
             }
             if (0 == (addr & 1)) {
-                ay_pins |= AY38910_BC1;
+                psg_pins |= AY38910_BC1;
             }
-            pins = ay38910_iorq(&bj.sound.ay[ay_index], ay_pins);
+            pins = ay38910_iorq(&bj.sound.psg[psg_index], psg_pins);
         }
     }
 
