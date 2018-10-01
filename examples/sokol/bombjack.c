@@ -21,6 +21,7 @@
 #define VBLANK_DURATION_3MHZ (((3000000 / 60) / 525) * (525 - 483))
 
 #define NMI_HOLD_TICKS (1000)
+#define NUM_AUDIO_SAMPLES (128)
 
 /* keep track of vsync state */
 typedef struct {
@@ -37,7 +38,7 @@ static void vsync_init(vsync_t* vs, int vsync_period, int vblank_period) {
     vs->vblank_count = 0;
 }
 
-/* update the vscync counter, returns state of NMI pin */
+/* update the vscync counter which triggers the NMI pin, returns state of NMI pin */
 static inline bool vsync_update(vsync_t* vs, int num_ticks, bool nmi_enabled) {
     vs->vsync_count -= num_ticks;
     if (vs->vsync_count < 0) {
@@ -68,7 +69,6 @@ typedef struct {
     mem_t mem;
 } mainboard_t;
 
-#define BOMBJACK_NUM_AUDIO_SAMPLES (128)
 typedef struct {
     z80_t cpu;
     clk_t clk;
@@ -90,9 +90,11 @@ typedef struct {
     uint8_t rom_tiles[0x6000];
     uint8_t rom_sprites[0x6000];
     uint8_t rom_maps[0x1000];
+    /* small intermediate buffer for generated audio samples */
     int num_samples;
     int sample_pos;
-    float sample_buffer[BOMBJACK_NUM_AUDIO_SAMPLES];
+    float sample_buffer[NUM_AUDIO_SAMPLES];
+    /* 32-bit RGBA color palette cache */
     uint32_t palette_cache[128];
 } bombjack_t;
 bombjack_t bj;
@@ -439,8 +441,8 @@ static uint64_t bombjack_tick_sound(int num_ticks, uint64_t pins, void* user_dat
                 /* new sample ready */
                 float s = bj.sound.ay[0].sample + bj.sound.ay[1].sample + bj.sound.ay[2].sample;
                 bj.sample_buffer[bj.sample_pos++] = s;
-                if (bj.sample_pos == BOMBJACK_NUM_AUDIO_SAMPLES) {
-                    saudio_push(bj.sample_buffer, BOMBJACK_NUM_AUDIO_SAMPLES);
+                if (bj.sample_pos == NUM_AUDIO_SAMPLES) {
+                    saudio_push(bj.sample_buffer, NUM_AUDIO_SAMPLES);
                     bj.sample_pos = 0;
                 }
             }
