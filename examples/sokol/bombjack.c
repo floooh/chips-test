@@ -776,8 +776,8 @@ static void app_init(void) {
     gfx_init(&(gfx_desc_t) {
         .fb_width = DISPLAY_WIDTH,
         .fb_height = DISPLAY_HEIGHT,
-        .aspect_x = 1,
-        .aspect_y = 1,
+        .aspect_x = 4,
+        .aspect_y = 5,
         .rot90 = true
     });
     clock_init();
