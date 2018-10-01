@@ -11,25 +11,14 @@
 #include "chips/mem.h"
 #include "bombjack-roms.h"
 
-static void app_init(void);
-static void app_frame(void);
-static void app_input(const sapp_event*);
-static void app_cleanup(void);
-
-static void bombjack_init(void);
-static void bombjack_exec(uint32_t micro_seconds);
-static uint64_t bombjack_tick_main(int num, uint64_t pins, void* user_data);
-static uint64_t bombjack_tick_sound(int num, uint64_t pins, void* user_data);
-static void bombjack_decode_video(void);
-
 #define DISPLAY_WIDTH (256)
 #define DISPLAY_HEIGHT (256)
 
 #define VSYNC_PERIOD_4MHZ (4000000 / 60)
-#define VBLANK_PERIOD_4MHZ (((4000000 / 60) / 525) * (525 - 483))
+#define VBLANK_DURATION_4MHZ (((4000000 / 60) / 525) * (525 - 483))
 
 #define VSYNC_PERIOD_3MHZ (3000000 / 60)
-#define VBLANK_PERIOD_3MHZ (((3000000 / 60) / 525) * (525 - 483))
+#define VBLANK_DURATION_3MHZ (((3000000 / 60) / 525) * (525 - 483))
 
 #define NMI_HOLD_TICKS (1000)
 
@@ -41,7 +30,30 @@ typedef struct {
     int vblank_count;
 } vsync_t;
 
-/* the Bomb Jack arcade machine is actually 2 computers, the main board and sound board */
+static void vsync_init(vsync_t* vs, int vsync_period, int vblank_period) {
+    vs->vsync_period = vsync_period;
+    vs->vsync_count = vsync_period;
+    vs->vblank_period = vblank_period;
+    vs->vblank_count = 0;
+}
+
+/* update the vscync counter, returns state of NMI pin */
+static inline bool vsync_update(vsync_t* vs, int num_ticks, bool nmi_enabled) {
+    vs->vsync_count -= num_ticks;
+    if (vs->vsync_count < 0) {
+        vs->vsync_count += vs->vsync_period;
+        vs->vblank_count = vs->vblank_period;
+    }
+    if (vs->vblank_count != 0) {
+        vs->vblank_count -= num_ticks;
+        if (vs->vblank_count < 0) {
+            vs->vblank_count = 0;
+        }
+    }
+    return nmi_enabled && (vs->vblank_count > 0);
+}
+
+/* the Bomb Jack arcade machine is 2 separate computers, the main board and sound board */
 typedef struct {
     z80_t cpu;
     clk_t clk;
@@ -50,11 +62,10 @@ typedef struct {
     uint8_t sys;            /* coins and start buttons */
     uint8_t dsw1;           /* dip-switches 1 */
     uint8_t dsw2;           /* dip-switches 2 */
-    uint8_t nmi_mask;
+    uint8_t nmi_mask;       /* if 0, no NMIs are generated */
+    uint8_t bg_image;       /* current background image */
     vsync_t vsync;
-    uint32_t palette[128];
     mem_t mem;
-    uint8_t ram[0x2000];
 } mainboard_t;
 
 #define BOMBJACK_NUM_AUDIO_SAMPLES (128)
@@ -66,10 +77,6 @@ typedef struct {
     int nmi_count;
     vsync_t vsync;
     mem_t mem;
-    uint8_t ram[0x0400];
-    int num_samples;
-    int sample_pos;
-    float sample_buffer[BOMBJACK_NUM_AUDIO_SAMPLES];
 } soundboard_t;
 
 typedef struct {
@@ -77,105 +84,35 @@ typedef struct {
     soundboard_t sound;
     uint8_t sound_latch;            /* shared latch, written by main board, read by sound board */
     bool sound_latch_written;
+    uint8_t main_ram[0x1C00];
+    uint8_t sound_ram[0x0400];
     uint8_t rom_chars[0x3000];
     uint8_t rom_tiles[0x6000];
     uint8_t rom_sprites[0x6000];
     uint8_t rom_maps[0x1000];
+    int num_samples;
+    int sample_pos;
+    float sample_buffer[BOMBJACK_NUM_AUDIO_SAMPLES];
+    uint32_t palette_cache[128];
 } bombjack_t;
 bombjack_t bj;
 
-sapp_desc sokol_main(int argc, char* argv[]) {
-    args_init(argc, argv);
-    return (sapp_desc) {
-        .init_cb = app_init,
-        .frame_cb = app_frame,
-        .event_cb = app_input,
-        .cleanup_cb = app_cleanup,
-        .width = DISPLAY_WIDTH * 2,
-        .height = DISPLAY_HEIGHT * 2,
-        .window_title = "Bomb Jack"
-    };
-}
-
-/* one time app init */
-void app_init(void) {
-    gfx_init(&(gfx_desc_t) {
-        .fb_width = DISPLAY_WIDTH,
-        .fb_height = DISPLAY_HEIGHT,
-        .aspect_x = 1,
-        .aspect_y = 1,
-        .rot90 = true
-    });
-    clock_init();
-    saudio_setup(&(saudio_desc){0});
-    bombjack_init();
-}
-
-/* per-frame stuff */
-void app_frame(void) {
-    bombjack_exec(clock_frame_time());
-    gfx_draw();
-}
-
-/* input handling */
-void app_input(const sapp_event* event) {
-    switch (event->type) {
-        case SAPP_EVENTTYPE_KEY_DOWN:
-            switch (event->key_code) {
-                /* player 1 joystick */
-                case SAPP_KEYCODE_RIGHT: bj.main.p1 |= (1<<0); break;
-                case SAPP_KEYCODE_LEFT:  bj.main.p1 |= (1<<1); break;
-                case SAPP_KEYCODE_UP:    bj.main.p1 |= (1<<2); break;
-                case SAPP_KEYCODE_DOWN:  bj.main.p1 |= (1<<3); break;
-                case SAPP_KEYCODE_SPACE: bj.main.p1 |= (1<<4); break;
-                /* player 1 coin */
-                case SAPP_KEYCODE_1:     bj.main.sys |= (1<<0); break;
-                /* player 1 start (any other key */
-                default:                 bj.main.sys |= (1<<2); break;
-            }
-            break;
-
-        case SAPP_EVENTTYPE_KEY_UP:
-            switch (event->key_code) {
-                /* player 1 joystick */
-                case SAPP_KEYCODE_RIGHT: bj.main.p1 &= ~(1<<0); break;
-                case SAPP_KEYCODE_LEFT:  bj.main.p1 &= ~(1<<1); break;
-                case SAPP_KEYCODE_UP:    bj.main.p1 &= ~(1<<2); break;
-                case SAPP_KEYCODE_DOWN:  bj.main.p1 &= ~(1<<3); break;
-                case SAPP_KEYCODE_SPACE: bj.main.p1 &= ~(1<<4); break;
-                /* player 1 coin */
-                case SAPP_KEYCODE_1:     bj.main.sys &= ~(1<<0); break;
-                /* player 1 start (any other key */
-                default:                 bj.main.sys &= ~(1<<2); break;
-            }
-            break;
-        default:
-            break;
-    }
-}
-
-/* app shutdown */
-void app_cleanup(void) {
-    saudio_shutdown();
-    gfx_shutdown();
-}
+static uint64_t bombjack_tick_main(int num, uint64_t pins, void* user_data);
+static uint64_t bombjack_tick_sound(int num, uint64_t pins, void* user_data);
+static void bombjack_decode_video(void);
 
 /* initialize the Bombjack arcade hardware */
-void bombjack_init(void) {
+static void bombjack_init(void) {
     memset(&bj, 0, sizeof(bj));
 
-    /* setup vsync tracking */
-    bj.main.vsync.vsync_period = VSYNC_PERIOD_4MHZ;
-    bj.main.vsync.vsync_count = VSYNC_PERIOD_4MHZ;
-    bj.main.vsync.vblank_period = VBLANK_PERIOD_4MHZ;
-    bj.sound.vsync.vsync_period = VSYNC_PERIOD_3MHZ;
-    bj.sound.vsync.vsync_count = VSYNC_PERIOD_3MHZ;
-    bj.sound.vsync.vblank_period = VBLANK_PERIOD_3MHZ;
-
-    /* set cached palette entries to black */
-    for (int i = 0; i < 128; i++) {
-        bj.main.palette[i] = 0xFF000000;
-    }
+    /* setup vsync tracking, both the mainboard and soundboard are
+        connected to the vblank signal from the mainboard, but since
+        the board emulations are running independently, we give each its
+        own vsync counters, it doesn't actually matter whether they are
+        both exactly in sync, since the vsync is only used as timer.
+    */
+    vsync_init(&bj.main.vsync, VSYNC_PERIOD_4MHZ, VBLANK_DURATION_4MHZ);
+    vsync_init(&bj.sound.vsync, VSYNC_PERIOD_3MHZ, VBLANK_DURATION_3MHZ);
 
     /* setup the main board (4 MHz Z80) */
     clk_init(&bj.main.clk, 4000000);
@@ -183,7 +120,7 @@ void bombjack_init(void) {
         .tick_cb = bombjack_tick_main
     });
 
-    /* setup the sound board (3 MHz Z80, 3x 1.5 MHz AY-38910) */
+    /* setup the sound board (3 MHz Z80 and 3x 1.5 MHz AY-38910) */
     clk_init(&bj.sound.clk, 3000000);
     z80_init(&bj.sound.cpu, &(z80_desc_t){
         .tick_cb = bombjack_tick_sound
@@ -207,8 +144,8 @@ void bombjack_init(void) {
         9000..93FF: video ram
         9400..97FF: color ram
         9820..987F: sprite ram
-        9C00..9CFF: palette
-        9E00:       select background
+        9C00..9CFF: palette ram (write-only?)
+        9E00:       select background (write-only?)
         B000:       read: joystick 1, write: NMI mask
         B001:       read: joystick 2
         B002:       read: coins and start button
@@ -225,13 +162,13 @@ void bombjack_init(void) {
     mem_map_rom(&bj.main.mem, 0, 0x2000, 0x2000, dump_10_l01b);
     mem_map_rom(&bj.main.mem, 0, 0x4000, 0x2000, dump_11_m01b);
     mem_map_rom(&bj.main.mem, 0, 0x6000, 0x2000, dump_12_n01b);
-    mem_map_ram(&bj.main.mem, 0, 0x8000, 0x2000, bj.main.ram);
+    mem_map_ram(&bj.main.mem, 0, 0x8000, 0x1C00, bj.main_ram);
     mem_map_rom(&bj.main.mem, 0, 0xC000, 0x2000, dump_13);
 
     /* sound board memory map */
     mem_init(&bj.sound.mem);
     mem_map_rom(&bj.sound.mem, 0, 0x0000, 0x2000, dump_01_h03t);
-    mem_map_ram(&bj.sound.mem, 0, 0x4000, 0x0400, bj.sound.ram);
+    mem_map_ram(&bj.sound.mem, 0, 0x4000, 0x0400, bj.sound_ram);
 
     /* copy ROM data that's not accessible by CPU, no need to put a
        memory mapper inbetween there
@@ -256,7 +193,7 @@ void bombjack_init(void) {
 }
 
 /* run the emulation for one frame */
-void bombjack_exec(uint32_t micro_seconds) {
+static void bombjack_exec(uint32_t micro_seconds) {
 
     /* Run the main board and sound board interleaved for half a frame.
        This simplifies the communication via the sound latch (the main CPU
@@ -306,37 +243,19 @@ void bombjack_exec(uint32_t micro_seconds) {
 static inline void bombjack_update_palette_cache(uint16_t addr, uint8_t data) {
     assert((addr >= 0x9C00) && (addr < 0x9D00));
     int pal_index = (addr - 0x9C00) / 2;
-    uint32_t c = bj.main.palette[pal_index];
+    uint32_t c = bj.palette_cache[pal_index];
     if (addr & 1) {
         /* uneven addresses are the xxxxBBBB part */
         uint8_t b = (data & 0x0F) | ((data<<4)&0xF0);
-        c = (c & 0xFF00FFFF) | (b<<16);
+        c = 0xFF000000 | (c & 0x0000FFFF) | (b<<16);
     }
     else {
         /* even addresses are the GGGGRRRR part */
         uint8_t g = (data & 0xF0) | ((data>>4)&0x0F);
         uint8_t r = (data & 0x0F) | ((data<<4)&0xF0);
-        c = (c & 0xFFFF0000) | (g<<8) | r;
+        c = 0xFF000000 | (c & 0x00FF0000) | (g<<8) | r;
     }
-    bj.main.palette[pal_index] = c;
-}
-
-/* update the vscync counter, returns state of NMI pin */
-static inline bool bombjack_vsync(vsync_t* vs, int num_ticks, bool nmi_enabled) {
-    vs->vsync_count -= num_ticks;
-    if (vs->vsync_count < 0) {
-        vs->vsync_count += vs->vsync_period;
-        vs->vblank_count = vs->vblank_period;
-    }
-    if (vs->vblank_count != 0) {
-        vs->vblank_count -= num_ticks;
-        if (vs->vblank_count < 0) {
-            vs->vblank_count = 0;
-        }
-    }
-
-    /* return pin NMI state */
-    return nmi_enabled && (vs->vblank_count > 0);
+    bj.palette_cache[pal_index] = c;
 }
 
 /* main board tick callback
@@ -397,9 +316,9 @@ static inline bool bombjack_vsync(vsync_t* vs, int num_ticks, bool nmi_enabled) 
     B800:       sound command latch (causes NMI on sound board CPU when written)
 
 */
-uint64_t bombjack_tick_main(int num_ticks, uint64_t pins, void* user_data) {
+static uint64_t bombjack_tick_main(int num_ticks, uint64_t pins, void* user_data) {
     /* generate NMI on each vsync */
-    if (bombjack_vsync(&bj.main.vsync, num_ticks, 0 != bj.main.nmi_mask)) {
+    if (vsync_update(&bj.main.vsync, num_ticks, 0 != bj.main.nmi_mask)) {
         pins |= Z80_NMI;
     }
     else {
@@ -409,16 +328,42 @@ uint64_t bombjack_tick_main(int num_ticks, uint64_t pins, void* user_data) {
     /* handle memory requests */
     uint16_t addr = Z80_GET_ADDR(pins);
     if (pins & Z80_MREQ) {
-        if ((addr >= 0x9C00) && (addr < 0x9D00)) {
-            /* color palette */
-            if (pins & Z80_WR) {
-                uint8_t data = Z80_GET_DATA(pins);
+        if (pins & Z80_WR) {
+            /* memory write access */
+            uint8_t data = Z80_GET_DATA(pins);
+            if ((addr >= 0x8000) && (addr < 0x9800)) {
+                /* regular RAM + video/color RAM*/
+                mem_wr(&bj.main.mem, addr, data);
+            }
+            else if ((addr >= 0x9800) && (addr < 0x9900)) {
+                /* sprite RAM */
+                mem_wr(&bj.main.mem, addr, data);
+            }
+            else if ((addr >= 0x9C00) && (addr <= 0x9D00)) {
+                /* color palette */
                 bombjack_update_palette_cache(addr, data);
             }
+            else if (addr == 0x9E00) {
+                /* background image selection */
+                bj.main.bg_image = data;
+            }
+            else if (addr == 0xB000) {
+                /* NMI mask */
+                bj.main.nmi_mask = data;
+            }
+            /* FIXME: 0xB004: flip screen */
+            else if (addr == 0xB800) {
+                /* shared sound latch */
+                bj.sound_latch = Z80_GET_DATA(pins);
+                if (0 != bj.main.nmi_mask) {
+                    bj.sound_latch_written = true;
+                }
+            }
         }
-        else if ((addr >= 0xB000) && (addr <= 0xB005)) {
-            /* IO ports */
-            if (pins & Z80_RD) {
+        else if (pins & Z80_RD) {
+            /* memory read access */
+            if ((addr >= 0xB000) && (addr <= 0xB005)) {
+                /* IO ports */
                 switch (addr) {
                     case 0xB000: Z80_SET_DATA(pins, bj.main.p1); break;
                     case 0xB001: Z80_SET_DATA(pins, bj.main.p2); break;
@@ -427,26 +372,9 @@ uint64_t bombjack_tick_main(int num_ticks, uint64_t pins, void* user_data) {
                     case 0xB005: Z80_SET_DATA(pins, bj.main.dsw2); break;
                 }
             }
-            else if (pins & Z80_WR) {
-                switch (addr) {
-                    case 0xB000: bj.main.nmi_mask = Z80_GET_DATA(pins); break;
-                    case 0xB004: /*FIXME: flip screen*/ break;
-                }
-            }
-        }
-        else if ((pins & Z80_WR) && (addr == 0xB800)) {
-            bj.sound_latch = Z80_GET_DATA(pins);
-            if (bj.main.nmi_mask) {
-                bj.sound_latch_written = true;
-            }
-        }
-        else {
-            /* regular memory request */
-            if (pins & Z80_RD) {
+            else {
+                /* regular memory */
                 Z80_SET_DATA(pins, mem_rd(&bj.main.mem, addr));
-            }
-            else if (pins & Z80_WR) {
-                mem_wr(&bj.main.mem, addr, Z80_GET_DATA(pins));
             }
         }
     }
@@ -478,10 +406,10 @@ uint64_t bombjack_tick_main(int num_ticks, uint64_t pins, void* user_data) {
     10 .. 11:       2nd AY-3-8910
     80 .. 81:       3rd AY-3-8910
 */
-uint64_t bombjack_tick_sound(int num_ticks, uint64_t pins, void* user_data) {
+static uint64_t bombjack_tick_sound(int num_ticks, uint64_t pins, void* user_data) {
 
     /* NMI line is connected to vblank (unmasked), and writes to the sound latch */
-    if (bombjack_vsync(&bj.sound.vsync, num_ticks, true)) {
+    if (vsync_update(&bj.sound.vsync, num_ticks, true)) {
         pins |= Z80_NMI;
     }
     else {
@@ -510,10 +438,10 @@ uint64_t bombjack_tick_sound(int num_ticks, uint64_t pins, void* user_data) {
             if (ay38910_tick(&bj.sound.ay[0])) {
                 /* new sample ready */
                 float s = bj.sound.ay[0].sample + bj.sound.ay[1].sample + bj.sound.ay[2].sample;
-                bj.sound.sample_buffer[bj.sound.sample_pos++] = s;
-                if (bj.sound.sample_pos == BOMBJACK_NUM_AUDIO_SAMPLES) {
-                    saudio_push(bj.sound.sample_buffer, BOMBJACK_NUM_AUDIO_SAMPLES);
-                    bj.sound.sample_pos = 0;
+                bj.sample_buffer[bj.sample_pos++] = s;
+                if (bj.sample_pos == BOMBJACK_NUM_AUDIO_SAMPLES) {
+                    saudio_push(bj.sample_buffer, BOMBJACK_NUM_AUDIO_SAMPLES);
+                    bj.sample_pos = 0;
                 }
             }
         }
@@ -628,19 +556,21 @@ uint64_t bombjack_tick_sound(int num_ticks, uint64_t pins, void* user_data) {
 #define BOMBJACK_GATHER16(rom,base,off) \
     ((uint16_t)bj.rom[base+0+off]<<8)|((uint16_t)bj.rom[base+8+off])
 
-void bombjack_decode_background(uint32_t* dst) {
-    /* background image code is stored at address 0x9E00 */
-    uint8_t bg_image = bj.main.ram[0x9E00 - 0x8000];
+static void bombjack_decode_background(uint32_t* dst) {
+    /* only do a new decode when the image has changed */
+    uint32_t* ptr = dst;
+    int img_base_addr = (bj.main.bg_image & 7) * 0x0200;
+    bool img_valid = (bj.main.bg_image & 0x10) != 0;
     for (int y = 0; y < 16; y++) {
         for (int x = 0; x < 16; x++) {
-            int addr = ((bg_image & 7) * 0x200) + (y * 16 + x);
+            int addr = img_base_addr + (y * 16 + x);
             /* 256 tiles */
-            uint8_t tile_code = (bg_image & 0x10) ? bj.rom_maps[addr] : 0;
+            uint8_t tile_code = img_valid ? bj.rom_maps[addr] : 0;
             uint8_t attr = bj.rom_maps[addr + 0x0100];
             uint8_t color_block = (attr & 0x0F)<<3;
             bool flip_y = (attr & 0x80) != 0;
             if (flip_y) {
-                dst += 15*256;
+                ptr += 15*256;
             }
             /* every tile is 32 bytes */
             int off = tile_code * 32;
@@ -654,20 +584,20 @@ void bombjack_decode_background(uint32_t* dst) {
                 }
                 for (int xx = 15; xx >= 0; xx--) {
                     uint8_t pen = ((bm2>>xx)&1) | (((bm1>>xx)&1)<<1) | (((bm0>>xx)&1)<<2);
-                    *dst++ = bj.main.palette[color_block | pen];
+                    *ptr++ = bj.palette_cache[color_block | pen];
                 }
-                dst += flip_y ? -272 : 240;
+                ptr += flip_y ? -272 : 240;
             }
             if (flip_y) {
-                dst += 256 + 16;
+                ptr += 256 + 16;
             }
             else {
-                dst -= (16 * 256) - 16;
+                ptr -= (16 * 256) - 16;
             }
         }
-        dst += (15 * 256);
+        ptr += (15 * 256);
     }
-    assert(dst == gfx_framebuffer()+256*256);
+    assert(ptr == dst+256*256);
 }
 
 /* render foreground tiles
@@ -688,14 +618,15 @@ void bombjack_decode_background(uint32_t* dst) {
     Only 7 foreground colors are possible, since 0 defines a transparent
     pixel.
 */
-void bombjack_decode_foreground(uint32_t* dst) {
+static void bombjack_decode_foreground(uint32_t* dst) {
     /* 32x32 tiles, each 8x8 */
+    uint32_t* ptr = dst;
     for (int y = 0; y < 32; y++) {
         for (int x = 0; x < 32; x++) {
             int addr = y * 32 + x;
             /* char codes are at 0x9000, color codes at 0x9400, RAM starts at 0x8000 */
-            uint8_t chr = bj.main.ram[(0x9000-0x8000) + addr];
-            uint8_t clr = bj.main.ram[(0x9400-0x8000) + addr];
+            uint8_t chr = bj.main_ram[(0x9000-0x8000) + addr];
+            uint8_t clr = bj.main_ram[(0x9400-0x8000) + addr];
             /* 512 foreground tiles, take 9th bit from color code */
             int tile_code = chr | ((clr & 0x10)<<4);
             /* 16 color blocks a 8 colors */
@@ -712,18 +643,18 @@ void bombjack_decode_foreground(uint32_t* dst) {
                 off++;
                 for (int xx = 7; xx >= 0; xx--) {
                     uint8_t pen = ((bm2>>xx)&1) | (((bm1>>xx)&1)<<1) | (((bm0>>xx)&1)<<2);
-                    if (pen != 0) {
-                        *dst = bj.main.palette[color_block | pen];
+                    if (pen) {
+                        *ptr = bj.palette_cache[color_block | pen];
                     }
-                    dst++;
+                    ptr++;
                 }
-                dst += 248;
+                ptr += 248;
             }
-            dst -= (8 * 256) - 8;
+            ptr -= (8 * 256) - 8;
         }
-        dst += (7 * 256);
+        ptr += (7 * 256);
     }
-    assert(dst == gfx_framebuffer()+256*256);
+    assert(ptr == dst+256*256);
 }
 
 /*  render sprites
@@ -749,15 +680,15 @@ void bombjack_decode_foreground(uint32_t* dst) {
     ((uint32_t)bj.rom[base+32+off]<<8)|\
     ((uint32_t)bj.rom[base+40+off])
 
-void bombjack_decode_sprites(uint32_t* dst) {
+static void bombjack_decode_sprites(uint32_t* dst) {
     /* 24 hardware sprites, sprite 0 has highest priority */
     for (int sprite_nr = 23; sprite_nr >= 0; sprite_nr--) {
         /* sprite RAM starts at 0x9820, RAM starts at 0x8000 */
         int addr = (0x9820 - 0x8000) + sprite_nr*4;
-        uint8_t b0 = bj.main.ram[addr + 0];
-        uint8_t b1 = bj.main.ram[addr + 1];
-        uint8_t b2 = bj.main.ram[addr + 2];
-        uint8_t b3 = bj.main.ram[addr + 3];
+        uint8_t b0 = bj.main_ram[addr + 0];
+        uint8_t b1 = bj.main_ram[addr + 1];
+        uint8_t b2 = bj.main_ram[addr + 2];
+        uint8_t b3 = bj.main_ram[addr + 3];
         uint8_t color_block = (b1 & 0x0F)<<3;
 
         /* screen is 90 degree rotated, so x and y are switched */
@@ -783,7 +714,7 @@ void bombjack_decode_sprites(uint32_t* dst) {
                 for (int x = 31; x >= 0; x--) {
                     uint8_t pen = ((bm2>>x)&1) | (((bm1>>x)&1)<<1) | (((bm0>>x)&1)<<2);
                     if (0 != pen) {
-                        *ptr = bj.main.palette[color_block | pen];
+                        *ptr = bj.palette_cache[color_block | pen];
                     }
                     ptr++;
                 }
@@ -813,7 +744,7 @@ void bombjack_decode_sprites(uint32_t* dst) {
                     for (int x=0; x<=15; x++) {
                         uint8_t pen = ((bm2>>x)&1) | (((bm1>>x)&1)<<1) | (((bm0>>x)&1)<<2);
                         if (0 != pen) {
-                            *ptr = bj.main.palette[color_block | pen];
+                            *ptr = bj.palette_cache[color_block | pen];
                         }
                         ptr++;
                     }
@@ -822,7 +753,7 @@ void bombjack_decode_sprites(uint32_t* dst) {
                     for (int x=15; x>=0; x--) {
                         uint8_t pen = ((bm2>>x)&1) | (((bm1>>x)&1)<<1) | (((bm0>>x)&1)<<2);
                         if (0 != pen) {
-                            *ptr = bj.main.palette[color_block | pen];
+                            *ptr = bj.palette_cache[color_block | pen];
                         }
                         ptr++;
                     }
@@ -833,9 +764,87 @@ void bombjack_decode_sprites(uint32_t* dst) {
     }
 }
 
-void bombjack_decode_video() {
+static void bombjack_decode_video() {
     uint32_t* dst = gfx_framebuffer();
     bombjack_decode_background(dst);
     bombjack_decode_foreground(dst);
     bombjack_decode_sprites(dst);
 }
+
+/* one time app init */
+static void app_init(void) {
+    gfx_init(&(gfx_desc_t) {
+        .fb_width = DISPLAY_WIDTH,
+        .fb_height = DISPLAY_HEIGHT,
+        .aspect_x = 1,
+        .aspect_y = 1,
+        .rot90 = true
+    });
+    clock_init();
+    saudio_setup(&(saudio_desc){0});
+    bombjack_init();
+}
+
+/* per-frame stuff */
+static void app_frame(void) {
+    bombjack_exec(clock_frame_time());
+    gfx_draw();
+}
+
+/* input handling */
+static void app_input(const sapp_event* event) {
+    switch (event->type) {
+        case SAPP_EVENTTYPE_KEY_DOWN:
+            switch (event->key_code) {
+                /* player 1 joystick */
+                case SAPP_KEYCODE_RIGHT: bj.main.p1 |= (1<<0); break;
+                case SAPP_KEYCODE_LEFT:  bj.main.p1 |= (1<<1); break;
+                case SAPP_KEYCODE_UP:    bj.main.p1 |= (1<<2); break;
+                case SAPP_KEYCODE_DOWN:  bj.main.p1 |= (1<<3); break;
+                case SAPP_KEYCODE_SPACE: bj.main.p1 |= (1<<4); break;
+                /* player 1 coin */
+                case SAPP_KEYCODE_1:     bj.main.sys |= (1<<0); break;
+                /* player 1 start (any other key */
+                default:                 bj.main.sys |= (1<<2); break;
+            }
+            break;
+
+        case SAPP_EVENTTYPE_KEY_UP:
+            switch (event->key_code) {
+                /* player 1 joystick */
+                case SAPP_KEYCODE_RIGHT: bj.main.p1 &= ~(1<<0); break;
+                case SAPP_KEYCODE_LEFT:  bj.main.p1 &= ~(1<<1); break;
+                case SAPP_KEYCODE_UP:    bj.main.p1 &= ~(1<<2); break;
+                case SAPP_KEYCODE_DOWN:  bj.main.p1 &= ~(1<<3); break;
+                case SAPP_KEYCODE_SPACE: bj.main.p1 &= ~(1<<4); break;
+                /* player 1 coin */
+                case SAPP_KEYCODE_1:     bj.main.sys &= ~(1<<0); break;
+                /* player 1 start (any other key */
+                default:                 bj.main.sys &= ~(1<<2); break;
+            }
+            break;
+        default:
+            break;
+    }
+}
+
+/* app shutdown */
+static void app_cleanup(void) {
+    saudio_shutdown();
+    gfx_shutdown();
+}
+
+/* sokol-app entry */
+sapp_desc sokol_main(int argc, char* argv[]) {
+    args_init(argc, argv);
+    return (sapp_desc) {
+        .init_cb = app_init,
+        .frame_cb = app_frame,
+        .event_cb = app_input,
+        .cleanup_cb = app_cleanup,
+        .width = DISPLAY_WIDTH * 2,
+        .height = DISPLAY_HEIGHT * 2,
+        .window_title = "Bomb Jack"
+    };
+}
+
