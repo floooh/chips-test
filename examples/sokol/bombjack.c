@@ -328,12 +328,8 @@ static uint64_t bombjack_tick_main(int num_ticks, uint64_t pins, void* user_data
         if (pins & Z80_WR) {
             /* memory write access */
             uint8_t data = Z80_GET_DATA(pins);
-            if ((addr >= 0x8000) && (addr < 0x9800)) {
-                /* regular RAM + video/color RAM*/
-                mem_wr(&bj.main.mem, addr, data);
-            }
-            else if ((addr >= 0x9800) && (addr < 0x9900)) {
-                /* sprite RAM */
+            if ((addr >= 0x8000) && (addr < 0x9900)) {
+                /* regular RAM, video/color RAM, sprite RAM */
                 mem_wr(&bj.main.mem, addr, data);
             }
             else if ((addr >= 0x9C00) && (addr <= 0x9D00)) {
