@@ -20,37 +20,6 @@
 
 #define NUM_AUDIO_SAMPLES (128)
 
-/* keep track of vsync state */
-typedef struct {
-    int vsync_period;
-    int vsync_count;
-    int vblank_period;
-    int vblank_count;
-} vsync_t;
-
-static void vsync_init(vsync_t* vs, int vsync_period, int vblank_period) {
-    vs->vsync_period = vsync_period;
-    vs->vsync_count = vsync_period;
-    vs->vblank_period = vblank_period;
-    vs->vblank_count = 0;
-}
-
-/* update the vscync counter which triggers the main-board's NMI pin, returns state of NMI pin */
-static inline bool vsync_update(vsync_t* vs, int num_ticks, bool nmi_enabled) {
-    vs->vsync_count -= num_ticks;
-    if (vs->vsync_count < 0) {
-        vs->vsync_count += vs->vsync_period;
-        vs->vblank_count = vs->vblank_period;
-    }
-    if (vs->vblank_count != 0) {
-        vs->vblank_count -= num_ticks;
-        if (vs->vblank_count < 0) {
-            vs->vblank_count = 0;
-        }
-    }
-    return nmi_enabled && (vs->vblank_count > 0);
-}
-
 /* the Bomb Jack arcade machine is 2 separate computers, the main board and sound board */
 typedef struct {
     z80_t cpu;
@@ -62,7 +31,8 @@ typedef struct {
     uint8_t dsw2;           /* dip-switches 2 */
     uint8_t nmi_mask;       /* if 0, no NMIs are generated */
     uint8_t bg_image;       /* current background image */
-    vsync_t vsync;
+    int vsync_count;
+    int vblank_count;
     mem_t mem;
 } mainboard_t;
 
@@ -102,13 +72,21 @@ static void bombjack_decode_video(void);
 static void bombjack_init(void) {
     memset(&bj, 0, sizeof(bj));
 
-    /* setup vsync tracking, both the mainboard and soundboard are
-        connected to the vblank signal from the mainboard(?), but since
-        the board emulations are running independently, we give each its
-        own vsync counters, it doesn't actually matter whether they are
-        both exactly in sync, since the vsync is only used as timer.
+    /* The VSYNC/VBLANK mainly controls the interrupts (Bombjack generally
+        uses NMIs for simplicity. The mainboard's NMI is connected to the
+        VBLANK signal, and stays active for the VBLANK period, the
+        soundboard's NMI is connected to a flip-flop which is switched
+        active when VSYNC happens, and deactivated when the interrupt
+        service routine reads from the shared sound-command latch
+        (mapped into the mainboard CPU's address space at 0xB800, and
+        the sound board's address space at 0x6000).
+
+        NOTE: it's important that the machine doesn't start right off with a vsync
+        when it is switched on, since this would cause an NMI before
+        the stack pointer is setup!)
     */
-    vsync_init(&bj.main.vsync, VSYNC_PERIOD_4MHZ, VBLANK_DURATION_4MHZ);
+    bj.main.vsync_count = VSYNC_PERIOD_4MHZ;
+    bj.main.vblank_count = 0;
     bj.sound.vsync_count = VSYNC_PERIOD_3MHZ;
 
     /* setup the main board (4 MHz Z80) */
@@ -280,8 +258,13 @@ static inline void bombjack_update_palette_cache(uint16_t addr, uint8_t data) {
                             2: player 1 start button
                             3: player 2 start button
                 write:  ???
-    B003:       ???
-    B004:       read: dip-switches 1
+    B003:       write: connected to a WDCLR (watchdog clear?) line which together
+                       with the VBLANK are connected to the RESET pin, the
+                       game code seems to write to B003 quite often, I guess
+                       if those writes or the VBLANK are not happening for
+                       a little while because of a spurious software or hardware
+                       failure, the machine resets itself
+    B004:       read:  dip-switches 1
                         bits [1,0]: 00: 1 COIN 1 PLAY (player 1)
                                     01: 1 COIN 2 PLAY
                                     10: 1 COIN 3 PLAY
@@ -295,7 +278,7 @@ static inline void bombjack_update_palette_cache(uint16_t addr, uint8_t data) {
                                     1: upright
                              7:     0: no demo sound
                                     1: demo sound
-                write: flip-screen (not implemented)
+                write: flip-screen (not implemented in the emulator)
     B005:       read: dip-switches 2
                         bits [4,3]: difficulty 1 (bird speed)
                                     00: moderate
@@ -310,19 +293,36 @@ static inline void bombjack_update_palette_cache(uint16_t addr, uint8_t data) {
                         7:          ratio of special coin appearance
                                     0:  easy
                                     1:  difficult
-    B800:       sound command latch (causes NMI on sound board CPU when written)
+    B800:       sound command latch,
 
 */
 static uint64_t bombjack_tick_main(int num_ticks, uint64_t pins, void* user_data) {
-    /* generate NMI on each vsync */
-    if (vsync_update(&bj.main.vsync, num_ticks, 0 != bj.main.nmi_mask)) {
+
+    /* activate NMI pin during VBLANK */
+    bj.main.vsync_count -= num_ticks;
+    if (bj.main.vsync_count < 0) {
+        bj.main.vsync_count += VSYNC_PERIOD_4MHZ;
+        bj.main.vblank_count = VBLANK_DURATION_4MHZ;
+    }
+    if (bj.main.vblank_count != 0) {
+        bj.main.vblank_count -= num_ticks;
+        if (bj.main.vblank_count < 0) {
+            bj.main.vblank_count = 0;
+        }
+    }
+    if (bj.main.nmi_mask && (bj.main.vblank_count > 0)) {
         pins |= Z80_NMI;
     }
     else {
         pins &= ~Z80_NMI;
     }
 
-    /* handle memory requests */
+    /* handle memory requests
+
+        In hardware, the address decoding is mostly implemented
+        with cascaded 1-in-4 and 1-in-8 decoder chips. We'll take
+        a little shortcut and just check for the expected address ranges.
+    */
     uint16_t addr = Z80_GET_ADDR(pins);
     if (pins & Z80_MREQ) {
         if (pins & Z80_WR) {
@@ -379,8 +379,18 @@ static uint64_t bombjack_tick_main(int num_ticks, uint64_t pins, void* user_data
 /* sound board tick callback
 
     The sound board receives commands from the main board via the shared
-    sound latch (mapped to address 0xB800 on the main board, and
+    sound command latch (mapped to address 0xB800 on the main board, and
     address 0x6000 on the sound board).
+
+    The sound board reads the command latch at address in the interrupt
+    handler (the NMI pin is activated by the VSYNC signal), and only
+    copies the byte to RAM location 0x4391, and then sets the first bit
+    in location 0x4390. The soundboard's "main loop" loops on the
+    bit in 0x4390 which means a new sound command has been received.
+
+    Reading the 8-bit latch at address 0x6000 automatically clears the
+    latch and also clears the flip-flop connected to the soundboard's
+    CPU NMI pin.
 
     Communication with the 3 sound chips is done through IO requests
     (not memory mapped IO like on the main board).
