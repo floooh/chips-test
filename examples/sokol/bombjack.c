@@ -172,8 +172,8 @@ static void bombjack_exec(uint32_t micro_seconds) {
 
     /* Run the main board and sound board interleaved for half a frame.
        This simplifies the communication via the sound latch (the main CPU
-       writes a command byte to the sound latch, this triggers an NMI on the
-       sound board, the sound board reads the byte, and resets the latch.
+       writes a command byte to the sound latch, the sound board reads
+       the command latch in its interrupt service routine.
 
        The main board issues at most one command per 60Hz frame, but since the
        host machine is also running at roughly 60 Hz it may happen that the
