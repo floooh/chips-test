@@ -124,7 +124,7 @@ static void bombjack_init(void) {
         B000:       read: joystick 1, write: NMI mask
         B001:       read: joystick 2
         B002:       read: coins and start button
-        B003:       ???
+        B003:       read/write: watchdog reset (not emulated)
         B004:       read: dip-switches 1, write: flip screen
         B005:       read: dip-switches 2
         B800:       sound latch
@@ -258,11 +258,11 @@ static inline void bombjack_update_palette_cache(uint16_t addr, uint8_t data) {
                             2: player 1 start button
                             3: player 2 start button
                 write:  ???
-    B003:       write: connected to a WDCLR (watchdog clear?) line which together
+    B003:       read/write: connected to a WDCLR (watchdog clear?) line which together
                        with the VBLANK are connected to the RESET pin, the
-                       game code seems to write to B003 quite often, I guess
-                       if those writes or the VBLANK are not happening for
-                       a little while because of a spurious software or hardware
+                       game code seems to read B003 quite often, I guess
+                       if those read or the VBLANK are not happening for
+                       a little while because of a software or hardware
                        failure, the machine resets itself
     B004:       read:  dip-switches 1
                         bits [1,0]: 00: 1 COIN 1 PLAY (player 1)
@@ -278,7 +278,7 @@ static inline void bombjack_update_palette_cache(uint16_t addr, uint8_t data) {
                                     1: upright
                              7:     0: no demo sound
                                     1: demo sound
-                write: flip-screen (not implemented in the emulator)
+                write: flip-screen (not emulated)
     B005:       read: dip-switches 2
                         bits [4,3]: difficulty 1 (bird speed)
                                     00: moderate
@@ -394,7 +394,7 @@ static uint64_t bombjack_tick_main(int num_ticks, uint64_t pins, void* user_data
     The memory map of the sound board is as follows:
 
     0000 .. 1FFF    ROM
-    2000 .. 43FF    RAM
+    4000 .. 43FF    RAM
     6000            shared sound latch
 
     The IO map:
