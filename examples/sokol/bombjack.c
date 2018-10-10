@@ -544,7 +544,6 @@ static uint64_t bombjack_tick_sound(int num_ticks, uint64_t pins, void* user_dat
     ((uint16_t)bj.rom[base+0+off]<<8)|((uint16_t)bj.rom[base+8+off])
 
 static void bombjack_decode_background(uint32_t* dst) {
-    /* only do a new decode when the image has changed */
     uint32_t* ptr = dst;
     int img_base_addr = (bj.main.bg_image & 7) * 0x0200;
     bool img_valid = (bj.main.bg_image & 0x10) != 0;
