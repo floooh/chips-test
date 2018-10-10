@@ -332,7 +332,7 @@ static uint64_t bombjack_tick_main(int num_ticks, uint64_t pins, void* user_data
                 /* regular RAM, video/color RAM, sprite RAM */
                 mem_wr(&bj.main.mem, addr, data);
             }
-            else if ((addr >= 0x9C00) && (addr <= 0x9D00)) {
+            else if ((addr >= 0x9C00) && (addr < 0x9D00)) {
                 /* color palette */
                 bombjack_update_palette_cache(addr, data);
             }
