@@ -29,7 +29,7 @@ void app_input(const sapp_event*);
 void app_cleanup(void);
 
 sapp_desc sokol_main(int argc, char* argv[]) {
-    args_init(argc, argv);
+    sargs_setup(&(sargs_desc) { .argc = argc, .argv = argv });
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,
@@ -78,11 +78,11 @@ void app_init(void) {
     fs_init();
     /* specific KC85 model? */
     kc85_type_t type = KC85_TYPE_2;
-    if (args_has("type")) {
-        if (args_string_compare("type", "kc85_3")) {
+    if (sargs_exists("type")) {
+        if (sargs_equals("type", "kc85_3")) {
             type = KC85_TYPE_3;
         }
-        else if (args_string_compare("type", "kc85_4")) {
+        else if (sargs_equals("type", "kc85_4")) {
             type = KC85_TYPE_4;
         }
     }
@@ -106,45 +106,45 @@ void app_init(void) {
         .rom_kcbasic_size = sizeof(dump_basic_c0)
     });
     /* snapshot file or rom-module image */
-    if (args_has("snapshot")) {
+    if (sargs_exists("snapshot")) {
         delay_input=true;
-        fs_load_file(args_string("snapshot"));
+        fs_load_file(sargs_value("snapshot"));
     }
-    else if (args_has("mod_image")) {
-        fs_load_file(args_string("mod_image"));
+    else if (sargs_exists("mod_image")) {
+        fs_load_file(sargs_value("mod_image"));
     }
     /* check if any modules should be inserted */
-    if (args_has("mod")) {
+    if (sargs_exists("mod")) {
         /* RAM modules can be inserted immediately, ROM modules
            only after the ROM image has been loaded
         */
-        if (args_string_compare("mod", "m022")) {
+        if (sargs_equals("mod", "m022")) {
             kc85_insert_ram_module(&kc85, 0x08, KC85_MODULE_M022_16KBYTE);
         }
-        else if (args_string_compare("mod", "m011")) {
+        else if (sargs_equals("mod", "m011")) {
             kc85_insert_ram_module(&kc85, 0x08, KC85_MODULE_M011_64KBYE);
         }
         else {
             /* a ROM module */
             delay_input = true;
-            if (args_string_compare("mod", "m006")) {
+            if (sargs_equals("mod", "m006")) {
                 delay_insert_module = KC85_MODULE_M006_BASIC;
             }
-            else if (args_string_compare("mod", "m012")) {
+            else if (sargs_equals("mod", "m012")) {
                 delay_insert_module = KC85_MODULE_M012_TEXOR;
             }
-            else if (args_string_compare("mod", "m026")) {
+            else if (sargs_equals("mod", "m026")) {
                 delay_insert_module = KC85_MODULE_M026_FORTH;
             }
-            else if (args_string_compare("mod", "m027")) {
+            else if (sargs_equals("mod", "m027")) {
                 delay_insert_module = KC85_MODULE_M027_DEVELOPMENT;
             }
         }
     }
     /* keyboard input to send to emulator */
     if (!delay_input) {
-        if (args_has("input")) {
-            keybuf_put(args_string("input"));
+        if (sargs_exists("input")) {
+            keybuf_put(sargs_value("input"));
         }
     }
 }
@@ -154,19 +154,19 @@ void app_frame(void) {
     gfx_draw();
     uint32_t delay_frames = kc85.type == KC85_TYPE_4 ? 180 : 480;
     if (fs_ptr() && clock_frame_count() > delay_frames) {
-        if (args_has("snapshot")) {
+        if (sargs_exists("snapshot")) {
             kc85_quickload(&kc85, fs_ptr(), fs_size());
-            if (args_has("input")) {
-                keybuf_put(args_string("input"));
+            if (sargs_exists("input")) {
+                keybuf_put(sargs_value("input"));
             }
         }
-        else if (args_has("mod_image")) {
+        else if (sargs_exists("mod_image")) {
             /* insert the rom module */
             if (delay_insert_module != KC85_MODULE_NONE) {
                 kc85_insert_rom_module(&kc85, 0x08, delay_insert_module, fs_ptr(), fs_size());
             }
-            if (args_has("input")) {
-                keybuf_put(args_string("input"));
+            if (sargs_exists("input")) {
+                keybuf_put(sargs_value("input"));
             }
         }
         fs_free();
@@ -244,4 +244,5 @@ void app_cleanup(void) {
     kc85_discard(&kc85);
     saudio_shutdown();
     gfx_shutdown();
+    sargs_shutdown();
 }

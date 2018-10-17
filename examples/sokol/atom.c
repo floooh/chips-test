@@ -31,10 +31,10 @@ void app_frame(void);
 void app_input(const sapp_event*);
 void app_cleanup(void);
 sapp_desc sokol_main(int argc, char* argv[]) {
-    args_init(argc, argv);
+    sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
     fs_init();
-    if (args_has("tape")) {
-        fs_load_file(args_string("tape"));
+    if (sargs_exists("tape")) {
+        fs_load_file(sargs_value("tape"));
     }
     return (sapp_desc) {
         .init_cb = app_init,
@@ -63,10 +63,8 @@ void app_init(void) {
     clock_init();
     saudio_setup(&(saudio_desc){0});
     atom_joystick_type_t joy_type = ATOM_JOYSTICKTYPE_NONE;
-    if (args_has("joystick")) {
-        if (args_string_compare("joystick", "mmc") ||
-            args_string_compare("joystick", "yes"))
-        {
+    if (sargs_exists("joystick")) {
+        if (sargs_equals("joystick", "mmc") || sargs_equals("joystick", "yes")) {
             joy_type = ATOM_JOYSTICKTYPE_MMC;
         }
     }

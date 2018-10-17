@@ -23,7 +23,7 @@ void app_input(const sapp_event*);
 void app_cleanup(void);
 
 sapp_desc sokol_main(int argc, char* argv[]) {
-    args_init(argc, argv);
+    sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,
@@ -51,15 +51,15 @@ void app_init(void) {
     clock_init();
     saudio_setup(&(saudio_desc){0});
     fs_init();
-    if (args_has("tape")) {
-        fs_load_file(args_string("tape"));
+    if (sargs_exists("tape")) {
+        fs_load_file(sargs_value("tape"));
     }
     c64_joystick_type_t joy_type = C64_JOYSTICKTYPE_NONE;
-    if (args_has("joystick")) {
-        if (args_string_compare("joystick", "digital_1")) {
+    if (sargs_exists("joystick")) {
+        if (sargs_equals("joystick", "digital_1")) {
             joy_type = C64_JOYSTICKTYPE_DIGITAL_1;
         }
-        else if (args_string_compare("joystick", "digital_2")) {
+        else if (sargs_equals("joystick", "digital_2")) {
             joy_type = C64_JOYSTICKTYPE_DIGITAL_2;
         }
     }
@@ -69,7 +69,7 @@ void app_init(void) {
         .pixel_buffer_size = gfx_framebuffer_size(),
         .audio_cb = push_audio,
         .audio_sample_rate = saudio_sample_rate(),
-        .audio_tape_sound = args_bool("tape_sound"),
+        .audio_tape_sound = sargs_boolean("tape_sound"),
         .rom_char = dump_c64_char,
         .rom_char_size = sizeof(dump_c64_char),
         .rom_basic = dump_c64_basic,

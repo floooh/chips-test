@@ -27,10 +27,10 @@ void app_input(const sapp_event*);
 void app_cleanup(void);
 
 sapp_desc sokol_main(int argc, char* argv[]) {
-    args_init(argc, argv);
+    sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
     fs_init();
-    if (args_has("file")) {
-        fs_load_file(args_string("file"));
+    if (sargs_exists("file")) {
+        fs_load_file(sargs_value("file"));
     }
     return (sapp_desc) {
         .init_cb = app_init,
@@ -58,8 +58,8 @@ void app_init() {
     clock_init();
     saudio_setup(&(saudio_desc){0});
     z9001_type_t type = Z9001_TYPE_Z9001;
-    if (args_has("type")) {
-        if (args_string_compare("type", "kc87")) {
+    if (sargs_exists("type")) {
+        if (sargs_equals("type", "kc87")) {
             type = Z9001_TYPE_KC87;
         }
     }
