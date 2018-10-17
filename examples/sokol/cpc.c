@@ -25,7 +25,7 @@ void app_input(const sapp_event*);
 void app_cleanup(void);
 
 sapp_desc sokol_main(int argc, char* argv[]) {
-    args_init(argc, argv);
+    sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,
@@ -54,23 +54,23 @@ void app_init(void) {
     clock_init();
     saudio_setup(&(saudio_desc){0});
     fs_init();
-    if (args_has("file")) {
-        fs_load_file(args_string("file"));
+    if (sargs_exists("file")) {
+        fs_load_file(sargs_value("file"));
     }
-    if (args_has("tape")) {
-        fs_load_file(args_string("tape"));
+    if (sargs_exists("tape")) {
+        fs_load_file(sargs_value("tape"));
     }
     cpc_type_t type = CPC_TYPE_6128;
-    if (args_has("type")) {
-        if (args_string_compare("type", "cpc464")) {
+    if (sargs_exists("type")) {
+        if (sargs_equals("type", "cpc464")) {
             type = CPC_TYPE_464;
         }
-        else if (args_string_compare("type", "kccompact")) {
+        else if (sargs_equals("type", "kccompact")) {
             type = CPC_TYPE_KCCOMPACT;
         }
     }
     cpc_joystick_type_t joy_type = CPC_JOYSTICK_NONE;
-    if (args_has("joystick")) {
+    if (sargs_exists("joystick")) {
         joy_type = CPC_JOYSTICK_DIGITAL;
     }
     cpc_init(&cpc, &(cpc_desc_t){
@@ -105,7 +105,7 @@ void app_frame(void) {
        a file has been dragged'n'dropped
     */
     if (fs_ptr() && clock_frame_count() > 120) {
-        if (args_has("tape")) {
+        if (sargs_exists("tape")) {
             /* load the file data via the tape-emulation (TAP format) */
             if (cpc_insert_tape(&cpc, fs_ptr(), fs_size())) {
                 /* issue the right commands to start loading from tape */

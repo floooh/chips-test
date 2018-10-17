@@ -25,10 +25,10 @@ void app_input(const sapp_event*);
 void app_cleanup(void);
 
 sapp_desc sokol_main(int argc, char* argv[]) {
-    args_init(argc, argv);
+    sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
     fs_init();
-    if (args_has("file")) {
-        fs_load_file(args_string("file"));
+    if (sargs_exists("file")) {
+        fs_load_file(sargs_value("file"));
     }
     return (sapp_desc) {
         .init_cb = app_init,
@@ -56,20 +56,20 @@ void app_init() {
     clock_init();
     saudio_setup(&(saudio_desc){0});
     zx_type_t type = ZX_TYPE_128;
-    if (args_has("type")) {
-        if (args_string_compare("type", "zx48k")) {
+    if (sargs_exists("type")) {
+        if (sargs_equals("type", "zx48k")) {
             type = ZX_TYPE_48K;
         }
     }
     zx_joystick_type_t joy_type = ZX_JOYSTICKTYPE_NONE;
-    if (args_has("joystick")) {
-        if (args_string_compare("joystick", "kempston")) {
+    if (sargs_exists("joystick")) {
+        if (sargs_equals("joystick", "kempston")) {
             joy_type = ZX_JOYSTICKTYPE_KEMPSTON;
         }
-        else if (args_string_compare("joystick", "sinclair1")) {
+        else if (sargs_equals("joystick", "sinclair1")) {
             joy_type = ZX_JOYSTICKTYPE_SINCLAIR_1;
         }
-        else if (args_string_compare("joystick", "sinclair2")) {
+        else if (sargs_equals("joystick", "sinclair2")) {
             joy_type = ZX_JOYSTICKTYPE_SINCLAIR_2;
         }
     }

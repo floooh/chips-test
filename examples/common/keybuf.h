@@ -110,7 +110,7 @@ uint8_t keybuf_get() {
         c = _keybuf_next();
         if (c != 0) {
             /* check for special ${:} command */
-            if ((c == '$') && (_keybuf_peek() == '{')) {
+            if (((c == '$') || (c == '#')) && (_keybuf_peek() == '{')) {
                 c = _keybuf_parse_cmd();
             }
             /* replace /n with 0x0D */
