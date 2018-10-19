@@ -47,7 +47,7 @@ void app_init(void) {
         .fb_width = C64_DISPLAY_WIDTH,
         .fb_height = C64_DISPLAY_HEIGHT
     });
-    keybuf_init(10);
+    keybuf_init(5);
     clock_init();
     saudio_setup(&(saudio_desc){0});
     fs_init();
@@ -77,6 +77,9 @@ void app_init(void) {
         .rom_kernal = dump_c64_kernalv3,
         .rom_kernal_size = sizeof(dump_c64_kernalv3)
     });
+    if (sargs_exists("input")) {
+        keybuf_put(sargs_value("input"));
+    }
 }
 
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
