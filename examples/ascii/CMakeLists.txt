@@ -1,5 +1,5 @@
 find_package(Curses)
-if (CURSES_FOUND)
+if (CURSES_FOUND AND NOT FIPS_IOS)
     fips_begin_app(kc85-ascii cmdline)
         fips_files(kc85-ascii.c)
         fips_deps(roms curses)
