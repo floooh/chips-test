@@ -111,3 +111,8 @@ fips_begin_app(z80-fuse cmdline)
     fips_dir(fuse)
     fips_generate(FROM fuse.yml TYPE fuse HEADER fuse.h)
 fips_end_app()
+
+fips_begin_app(upd765-test cmdline)
+    fips_vs_warning_level(3)
+    fips_files(upd765-test.c)
+fips_end_app()
