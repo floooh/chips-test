@@ -22,7 +22,7 @@ void test_init(void) {
     });
     T(upd.read_cb == _read_cb);
     T(upd.write_cb == _write_cb);
-    T(upd.phase == _UPD765_PHASE_COMMAND);
+    T(upd.phase == UPD765_PHASE_COMMAND);
 }
 
 int main() {
