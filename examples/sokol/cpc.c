@@ -14,6 +14,7 @@
 #include "chips/clk.h"
 #include "chips/kbd.h"
 #include "chips/mem.h"
+#include "chips/fdd.h"
 #include "systems/cpc.h"
 #include "cpc-roms.h"
 
@@ -60,6 +61,9 @@ void app_init(void) {
     }
     if (sargs_exists("tape")) {
         fs_load_file(sargs_value("tape"));
+    }
+    if (sargs_exists("disc")) {
+        fs_load_file(sargs_value("disc"));
     }
     cpc_type_t type = CPC_TYPE_6128;
     if (sargs_exists("type")) {
@@ -111,6 +115,11 @@ void app_frame(void) {
             if (cpc_insert_tape(&cpc, fs_ptr(), fs_size())) {
                 /* issue the right commands to start loading from tape */
                 keybuf_put("|tape\nrun\"\n\n");
+            }
+        }
+        else if (sargs_exists("disc")) {
+            if (cpc_insert_disc(&cpc, fs_ptr(), fs_size())) {
+                // FIXME
             }
         }
         else {
