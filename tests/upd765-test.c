@@ -26,9 +26,14 @@ uint8_t rd(void) {
     return UPD765_GET_DATA(pins);
 }
 
-bool seek(int drive, int track, void* user_data) {
+bool seek_track(int drive, int track, void* user_data) {
     assert((drive >= 0) && (drive < 4));
     cur_track[drive] = track;
+    return true;
+}
+
+bool seek_sector(int drive, uint8_t c, uint8_t h, uint8_t r, uint8_t n, void* user_data) {
+    // FIXME
     return true;
 }
 
@@ -49,7 +54,8 @@ void tick(void) {
 
 void init() {
     upd765_init(&upd, &(upd765_desc_t){
-        .seek_cb = seek,
+        .seektrack_cb = seek_track,
+        .seeksector_cb = seek_sector,
         .trackinfo_cb = trackinfo
     });
     T(UPD765_PHASE_IDLE == upd.phase);
