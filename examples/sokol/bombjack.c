@@ -347,7 +347,7 @@ static uint64_t bombjack_tick_main(int num_ticks, uint64_t pins, void* user_data
             /* FIXME: 0xB004: flip screen */
             else if (addr == 0xB800) {
                 /* shared sound latch */
-                bj.sound_latch = Z80_GET_DATA(pins);
+                bj.sound_latch = data;
             }
         }
         else if (pins & Z80_RD) {
