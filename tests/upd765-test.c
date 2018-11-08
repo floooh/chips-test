@@ -26,18 +26,23 @@ uint8_t rd(void) {
     return UPD765_GET_DATA(pins);
 }
 
-bool seek_track(int drive, int track, void* user_data) {
+int seek_track(int drive, int track, void* user_data) {
     assert((drive >= 0) && (drive < 4));
     cur_track[drive] = track;
-    return true;
+    return UPD765_RESULT_SUCCESS;
 }
 
-bool seek_sector(int drive, uint8_t c, uint8_t h, uint8_t r, uint8_t n, void* user_data) {
+int seek_sector(int drive, uint8_t c, uint8_t h, uint8_t r, uint8_t n, void* user_data) {
     // FIXME
-    return true;
+    return UPD765_RESULT_SUCCESS;
 }
 
-bool trackinfo(int drive, int side, void* user_data, upd765_trackinfo_t* out_info) {
+int read_data(int drive, uint8_t h, void* user_data, uint8_t* out_data) {
+    *out_data = 0;
+    return UPD765_RESULT_SUCCESS;
+}
+
+int trackinfo(int drive, int side, void* user_data, upd765_trackinfo_t* out_info) {
     out_info->physical_track = cur_track[drive];
     out_info->c = cur_track[drive];
     out_info->h = side;
@@ -45,7 +50,7 @@ bool trackinfo(int drive, int side, void* user_data, upd765_trackinfo_t* out_inf
     out_info->n = 2;
     out_info->st1 = 0;
     out_info->st2 = 0;
-    return true;
+    return UPD765_RESULT_SUCCESS;
 }
 
 void tick(void) {
@@ -56,7 +61,8 @@ void init() {
     upd765_init(&upd, &(upd765_desc_t){
         .seektrack_cb = seek_track,
         .seeksector_cb = seek_sector,
-        .trackinfo_cb = trackinfo
+        .trackinfo_cb = trackinfo,
+        .read_cb = read_data
     });
     T(UPD765_PHASE_IDLE == upd.phase);
     T(0 == upd.fifo_pos);
@@ -125,7 +131,7 @@ void do_sense_interrupt_status(void) {
     wr(0x08);
         T(UPD765_PHASE_RESULT == upd.phase);
         T((UPD765_STATUS_RQM|UPD765_STATUS_CB|UPD765_STATUS_DIO) == status());
-        T(0 == upd.st[0]);
+        T(UPD765_ST0_SE == upd.st[0]);
         T(2 == upd.fifo_num);
         T(UPD765_ST0_SE == upd.fifo[0]);
         T(0 == upd.fifo[1]);
