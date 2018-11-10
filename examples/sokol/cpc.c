@@ -15,6 +15,7 @@
 #include "chips/kbd.h"
 #include "chips/mem.h"
 #include "chips/fdd.h"
+#include "chips/fdd_cpc.h"
 #include "systems/cpc.h"
 #include "cpc-roms.h"
 

@@ -3,6 +3,7 @@
 //------------------------------------------------------------------------------
 #define CHIPS_IMPL
 #include "chips/fdd.h"
+#include "chips/fdd_cpc.h"
 #include "test.h"
 #include "disks/fdd-test.h"
 
@@ -11,7 +12,7 @@ void test_load_cpc_dsk(void) {
     test("load cpc dsk image");
     fdd_t fdd;
     fdd_init(&fdd);
-    bool load_successful = fdd_insert_cpc_dsk(&fdd, dump_boulderdash_cpc, sizeof(dump_boulderdash_cpc));
+    bool load_successful = fdd_cpc_insert_dsk(&fdd, dump_boulderdash_cpc, sizeof(dump_boulderdash_cpc));
     T(load_successful);
     T(fdd.has_disc);
     T(fdd.disc.formatted);
