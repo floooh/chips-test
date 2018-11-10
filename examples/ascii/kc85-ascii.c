@@ -59,8 +59,6 @@ static kc85_t kc85;
 
 /* frame counter for delayed actions */
 static uint32_t frame_count;
-/* if true, wait with sending text input until file is loaded */
-static bool delay_input;
 /* module to insert after ROM module image has been loaded */
 static kc85_module_type_t delay_insert_module = KC85_MODULE_NONE;
 
@@ -148,9 +146,10 @@ int main(int argc, char* argv[]) {
         .rom_kcbasic_size = sizeof(dump_basic_c0)
     });
 
+    bool delay_input = false;
     // snapshot file or rom-module image
     if (sargs_exists("snapshot")) {
-        delay_input=true;
+        delay_input = true;
         fs_load_file(sargs_value("snapshot"));
     }
     else if (sargs_exists("mod_image")) {
