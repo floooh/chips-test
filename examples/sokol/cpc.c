@@ -57,6 +57,7 @@ void app_init(void) {
     clock_init();
     saudio_setup(&(saudio_desc){0});
     fs_init();
+    bool delay_input = false;
     if (sargs_exists("file")) {
         fs_load_file(sargs_value("file"));
     }
@@ -64,6 +65,7 @@ void app_init(void) {
         fs_load_file(sargs_value("tape"));
     }
     if (sargs_exists("disc")) {
+        delay_input = true;
         fs_load_file(sargs_value("disc"));
     }
     cpc_type_t type = CPC_TYPE_6128;
@@ -101,6 +103,12 @@ void app_init(void) {
         .rom_kcc_basic = dump_kcc_bas,
         .rom_kcc_basic_size = sizeof(dump_kcc_bas)
     });
+    /* keyboard input to send to emulator */
+    if (!delay_input) {
+        if (sargs_exists("input")) {
+            keybuf_put(sargs_value("input"));
+        }
+    }
 }
 
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
@@ -120,7 +128,9 @@ void app_frame(void) {
         }
         else if (sargs_exists("disc")) {
             if (cpc_insert_disc(&cpc, fs_ptr(), fs_size())) {
-                // FIXME
+                if (sargs_exists("input")) {
+                    keybuf_put(sargs_value("input"));
+                }
             }
         }
         else {
