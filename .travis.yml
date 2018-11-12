@@ -40,4 +40,5 @@ script:
   - python fips run z80-fuse
   - python fips run m6502-test
   - python fips run m6502-nestest
+  - python fips run z80dasm-test
 

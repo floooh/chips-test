@@ -10,25 +10,25 @@
 #define TOP(str) T(op(str))
 
 typedef struct {
-    const uint8_t* base;
+    const uint8_t* ptr;
+    const uint8_t* end_ptr;
     uint16_t pc;
-    uint16_t end_pc;
     size_t str_pos;
     char str[32];
 } ctx_t;
 ctx_t ctx;
 
-static void init(uint16_t pc, const uint8_t* base, size_t len) {
-    ctx.base = base;
+static void init(uint16_t pc, const uint8_t* ptr, size_t len) {
+    ctx.ptr = ptr;
+    ctx.end_ptr = ptr + len;
     ctx.pc = pc;
-    ctx.end_pc = pc + len;
     ctx.str_pos = 0;
     memset(ctx.str, 0, sizeof(ctx.str));
 }
 
 static uint8_t in_cb(void* user_data) {
-    if (ctx.pc < ctx.end_pc) {
-        return ctx.base[ctx.pc++];
+    if (ctx.ptr < ctx.end_ptr) {
+        return *ctx.ptr++;
     }
     else {
         return 0;
@@ -1387,6 +1387,1005 @@ void RLC_RL_RRC_RR_r(void) {
     TOP("RR L");
 }
 
+/* RRC/RLC/RR/RL (HL)/(IX+d)/(IY+d) */
+void RRC_RLC_RR_RL_iHLIXIYi(void) {
+    test("RLC/RL/RRC/RR (HL)/(IX+d)/(IY+d)");
+    uint8_t prog[] = {
+        0x21, 0x00, 0x10,           // LD HL,0x1000
+        0xDD, 0x21, 0x00, 0x10,     // LD IX,0x1000
+        0xFD, 0x21, 0x03, 0x10,     // LD IY,0x1003
+        0xCB, 0x0E,                 // RRC (HL)
+        0x7E,                       // LD A,(HL)
+        0xCB, 0x06,                 // RLC (HL)
+        0x7E,                       // LD A,(HL)
+        0xDD, 0xCB, 0x01, 0x0E,     // RRC (IX+1)
+        0xDD, 0x7E, 0x01,           // LD A,(IX+1)
+        0xDD, 0xCB, 0x01, 0x06,     // RLC (IX+1)
+        0xDD, 0x7E, 0x01,           // LD A,(IX+1)
+        0xFD, 0xCB, 0xFF, 0x0E,     // RRC (IY-1)
+        0xFD, 0x7E, 0xFF,           // LD A,(IY-1)
+        0xFD, 0xCB, 0xFF, 0x06,     // RLC (IY-1)
+        0xFD, 0x7E, 0xFF,           // LD A,(IY-1)
+        0xCB, 0x1E,                 // RR (HL)
+        0x7E,                       // LD A,(HL)
+        0xCB, 0x16,                 // RL (HL)
+        0x7E,                       // LD A,(HL)
+        0xDD, 0xCB, 0x01, 0x1E,     // RR (IX+1)
+        0xDD, 0x7E, 0x01,           // LD A,(IX+1)
+        0xDD, 0xCB, 0x01, 0x16,     // RL (IX+1)
+        0xDD, 0x7E, 0x01,           // LD A,(IX+1)
+        0xFD, 0xCB, 0xFF, 0x16,     // RL (IY-1)
+        0xFD, 0x7E, 0xFF,           // LD A,(IY-1)
+        0xFD, 0xCB, 0xFF, 0x1E,     // RR (IY-1)
+        0xFD, 0x7E, 0xFF,           // LD A,(IY-1)
+    };
+    init(0, prog, sizeof(prog));
+    TOP("LD HL,1000H");
+    TOP("LD IX,1000H");
+    TOP("LD IY,1003H");
+    TOP("RRC (HL)");
+    TOP("LD A,(HL)");
+    TOP("RLC (HL)");
+    TOP("LD A,(HL)");
+    TOP("RRC (IX+1)");
+    TOP("LD A,(IX+1)");
+    TOP("RLC (IX+1)");
+    TOP("LD A,(IX+1)");
+    TOP("RRC (IY-1)");
+    TOP("LD A,(IY-1)");
+    TOP("RLC (IY-1)");
+    TOP("LD A,(IY-1)");
+    TOP("RR (HL)");
+    TOP("LD A,(HL)");
+    TOP("RL (HL)");
+    TOP("LD A,(HL)");
+    TOP("RR (IX+1)");
+    TOP("LD A,(IX+1)");
+    TOP("RL (IX+1)");
+    TOP("LD A,(IX+1)");
+    TOP("RL (IY-1)");
+    TOP("LD A,(IY-1)");
+    TOP("RR (IY-1)");
+    TOP("LD A,(IY-1)");
+}
+
+/* SLA r */
+void SLA_r(void) {
+    test("SLA r");
+    uint8_t prog[] = {
+        0x3E, 0x01,         // LD A,0x01
+        0x06, 0x80,         // LD B,0x80
+        0x0E, 0xAA,         // LD C,0xAA
+        0x16, 0xFE,         // LD D,0xFE
+        0x1E, 0x7F,         // LD E,0x7F
+        0x26, 0x11,         // LD H,0x11
+        0x2E, 0x00,         // LD L,0x00
+        0xCB, 0x27,         // SLA A
+        0xCB, 0x20,         // SLA B
+        0xCB, 0x21,         // SLA C
+        0xCB, 0x22,         // SLA D
+        0xCB, 0x23,         // SLA E
+        0xCB, 0x24,         // SLA H
+        0xCB, 0x25,         // SLA L
+    };
+    init(0, prog, sizeof(prog));
+    TOP("LD A,01H");
+    TOP("LD B,80H");
+    TOP("LD C,AAH");
+    TOP("LD D,FEH");
+    TOP("LD E,7FH");
+    TOP("LD H,11H");
+    TOP("LD L,00H");
+    TOP("SLA A");
+    TOP("SLA B");
+    TOP("SLA C");
+    TOP("SLA D");
+    TOP("SLA E");
+    TOP("SLA H");
+    TOP("SLA L");
+}
+
+/* SLA (HL)/(IX+d)/(IY+d) */
+void SLA_iHLIXIYi(void) {
+    test("SLA (HL)/(IX+d)/(IY+d)");
+    uint8_t prog[] = {
+        0x21, 0x00, 0x10,           // LD HL,0x1000
+        0xDD, 0x21, 0x00, 0x10,     // LD IX,0x1000
+        0xFD, 0x21, 0x03, 0x10,     // LD IY,0x1003
+        0xCB, 0x26,                 // SLA (HL)
+        0x7E,                       // LD A,(HL)
+        0xDD, 0xCB, 0x01, 0x26,     // SLA (IX+1)
+        0xDD, 0x7E, 0x01,           // LD A,(IX+1)
+        0xFD, 0xCB, 0xFF, 0x26,     // SLA (IY-1)
+        0xFD, 0x7E, 0xFF,           // LD A,(IY-1)
+    };
+    init(0, prog, sizeof(prog));
+    TOP("LD HL,1000H");
+    TOP("LD IX,1000H");
+    TOP("LD IY,1003H");
+    TOP("SLA (HL)");
+    TOP("LD A,(HL)");
+    TOP("SLA (IX+1)");
+    TOP("LD A,(IX+1)");
+    TOP("SLA (IY-1)");
+    TOP("LD A,(IY-1)");
+}
+
+/* SRA r */
+void SRA_r(void) {
+    test("SRA r");
+    uint8_t prog[] = {
+        0x3E, 0x01,         // LD A,0x01
+        0x06, 0x80,         // LD B,0x80
+        0x0E, 0xAA,         // LD C,0xAA
+        0x16, 0xFE,         // LD D,0xFE
+        0x1E, 0x7F,         // LD E,0x7F
+        0x26, 0x11,         // LD H,0x11
+        0x2E, 0x00,         // LD L,0x00
+        0xCB, 0x2F,         // SRA A
+        0xCB, 0x28,         // SRA B
+        0xCB, 0x29,         // SRA C
+        0xCB, 0x2A,         // SRA D
+        0xCB, 0x2B,         // SRA E
+        0xCB, 0x2C,         // SRA H
+        0xCB, 0x2D,         // SRA L
+    };
+    init(0, prog, sizeof(prog));
+    TOP("LD A,01H");
+    TOP("LD B,80H");
+    TOP("LD C,AAH");
+    TOP("LD D,FEH");
+    TOP("LD E,7FH");
+    TOP("LD H,11H");
+    TOP("LD L,00H");
+    TOP("SRA A");
+    TOP("SRA B");
+    TOP("SRA C");
+    TOP("SRA D");
+    TOP("SRA E");
+    TOP("SRA H");
+    TOP("SRA L");
+}
+
+/* SRA (HL)/(IX+d)/(IY+d) */
+void SRA_iHLIXIYi(void) {
+    test("SRA (HL)/(IX+d)/(IY+d)");
+    uint8_t prog[] = {
+        0x21, 0x00, 0x10,           // LD HL,0x1000
+        0xDD, 0x21, 0x00, 0x10,     // LD IX,0x1000
+        0xFD, 0x21, 0x03, 0x10,     // LD IY,0x1003
+        0xCB, 0x2E,                 // SRA (HL)
+        0x7E,                       // LD A,(HL)
+        0xDD, 0xCB, 0x01, 0x2E,     // SRA (IX+1)
+        0xDD, 0x7E, 0x01,           // LD A,(IX+1)
+        0xFD, 0xCB, 0xFF, 0x2E,     // SRA (IY-1)
+        0xFD, 0x7E, 0xFF,           // LD A,(IY-1)
+    };
+    init(0, prog, sizeof(prog));
+    TOP("LD HL,1000H");
+    TOP("LD IX,1000H");
+    TOP("LD IY,1003H");
+    TOP("SRA (HL)");
+    TOP("LD A,(HL)");
+    TOP("SRA (IX+1)");
+    TOP("LD A,(IX+1)");
+    TOP("SRA (IY-1)");
+    TOP("LD A,(IY-1)");
+}
+
+/* SRL r */
+void SRL_r(void) {
+    test("SRL r");
+    uint8_t prog[] = {
+        0x3E, 0x01,         // LD A,0x01
+        0x06, 0x80,         // LD B,0x80
+        0x0E, 0xAA,         // LD C,0xAA
+        0x16, 0xFE,         // LD D,0xFE
+        0x1E, 0x7F,         // LD E,0x7F
+        0x26, 0x11,         // LD H,0x11
+        0x2E, 0x00,         // LD L,0x00
+        0xCB, 0x3F,         // SRL A
+        0xCB, 0x38,         // SRL B
+        0xCB, 0x39,         // SRL C
+        0xCB, 0x3A,         // SRL D
+        0xCB, 0x3B,         // SRL E
+        0xCB, 0x3C,         // SRL H
+        0xCB, 0x3D,         // SRL L
+    };
+    init(0, prog, sizeof(prog));
+    TOP("LD A,01H");
+    TOP("LD B,80H");
+    TOP("LD C,AAH");
+    TOP("LD D,FEH");
+    TOP("LD E,7FH");
+    TOP("LD H,11H");
+    TOP("LD L,00H");
+    TOP("SRL A");
+    TOP("SRL B");
+    TOP("SRL C");
+    TOP("SRL D");
+    TOP("SRL E");
+    TOP("SRL H");
+    TOP("SRL L");
+}
+
+/* SRL (HL)/(IX+d)/(IY+d) */
+void SRL_iHLIXIYi(void) {
+    test("SRL (HL)/(IX+d)/(IY+d)");
+    uint8_t prog[] = {
+        0x21, 0x00, 0x10,           // LD HL,0x1000
+        0xDD, 0x21, 0x00, 0x10,     // LD IX,0x1000
+        0xFD, 0x21, 0x03, 0x10,     // LD IY,0x1003
+        0xCB, 0x3E,                 // SRL (HL)
+        0x7E,                       // LD A,(HL)
+        0xDD, 0xCB, 0x01, 0x3E,     // SRL (IX+1)
+        0xDD, 0x7E, 0x01,           // LD A,(IX+1)
+        0xFD, 0xCB, 0xFF, 0x3E,     // SRL (IY-1)
+        0xFD, 0x7E, 0xFF,           // LD A,(IY-1)
+    };
+    init(0, prog, sizeof(prog));
+    TOP("LD HL,1000H");
+    TOP("LD IX,1000H");
+    TOP("LD IY,1003H");
+    TOP("SRL (HL)");
+    TOP("LD A,(HL)");
+    TOP("SRL (IX+1)");
+    TOP("LD A,(IX+1)");
+    TOP("SRL (IY-1)");
+    TOP("LD A,(IY-1)");
+}
+
+/* RLD; RRD */
+void RLD_RRD(void) {
+    test("RLD; RRD");
+    uint8_t prog[] = {
+        0x3E, 0x12,         // LD A,0x12
+        0x21, 0x00, 0x10,   // LD HL,0x1000
+        0x36, 0x34,         // LD (HL),0x34
+        0xED, 0x67,         // RRD
+        0xED, 0x6F,         // RLD
+        0x7E,               // LD A,(HL)
+        0x3E, 0xFE,         // LD A,0xFE
+        0x36, 0x00,         // LD (HL),0x00
+        0xED, 0x6F,         // RLD
+        0xED, 0x67,         // RRD
+        0x7E,               // LD A,(HL)
+        0x3E, 0x01,         // LD A,0x01
+        0x36, 0x00,         // LD (HL),0x00
+        0xED, 0x6F,         // RLD
+        0xED, 0x67,         // RRD
+        0x7E
+    };
+    init(0, prog, sizeof(prog));
+    TOP("LD A,12H");
+    TOP("LD HL,1000H");
+    TOP("LD (HL),34H");
+    TOP("RRD");
+    TOP("RLD");
+    TOP("LD A,(HL)");
+    TOP("LD A,FEH");
+    TOP("LD (HL),00H");
+    TOP("RLD");
+    TOP("RRD");
+    TOP("LD A,(HL)");
+    TOP("LD A,01H");
+    TOP("LD (HL),00H");
+    TOP("RLD");
+    TOP("RRD");
+    TOP("LD A,(HL)");
+}
+
+/* HALT */
+void HALT(void) {
+    test("HALT");
+    uint8_t prog[] = {
+        0x76,       // HALT
+    };
+    init(0, prog, sizeof(prog));
+    TOP("HALT");
+}
+
+/* BIT b,r; BIT b,(HL); BIT b,(IX+d); BIT b,(IY+d) */
+void BIT(void) {
+    test("BIT b,r; BIT b,(HL); BIT b,(IX+d); BIT b,(IY+d)");
+    /* only test cycle count for now */
+    uint8_t prog[] = {
+        0xCB, 0x47,             // BIT 0,A
+        0xCB, 0x46,             // BIT 0,(HL)
+        0xDD, 0xCB, 0x01, 0x46, // BIT 0,(IX+1)
+        0xFD, 0xCB, 0xFF, 0x46, // BIT 0,(IY-1)
+        0xDD, 0xCB, 0x02, 0x47, // undocumented: BIT 0,(IX+2),A
+    };
+    init(0, prog, sizeof(prog));
+    TOP("BIT 0,A");
+    TOP("BIT 0,(HL)");
+    TOP("BIT 0,(IX+1)");
+    TOP("BIT 0,(IY-1)");
+    TOP("BIT 0,(IX+2),A");
+}
+
+/* SET b,r; SET b,(HL); SET b,(IX+d); SET b,(IY+d) */
+void SET(void) {
+    test(">>> SET b,r; SET b,(HL); SET b,(IX+d); SET b,(IY+d)");
+    /* only test cycle count for now */
+    uint8_t prog[] = {
+        0xCB, 0xC7,             // SET 0,A
+        0xCB, 0xC6,             // SET 0,(HL)
+        0xDD, 0xCB, 0x01, 0xC6, // SET 0,(IX+1)
+        0xFD, 0xCB, 0xFF, 0xC6, // SET 0,(IY-1)
+        0xDD, 0xCB, 0x02, 0xC7, // undocumented: SET 0,(IX+2),A
+    };
+    init(0, prog, sizeof(prog));
+    TOP("SET 0,A");
+    TOP("SET 0,(HL)");
+    TOP("SET 0,(IX+1)");
+    TOP("SET 0,(IY-1)");
+    TOP("SET 0,(IX+2),A");
+}
+
+/* RES b,r; RES b,(HL); RES b,(IX+d); RES b,(IY+d) */
+void RES(void) {
+    test(">>> RES b,r; RES b,(HL); RES b,(IX+d); RES b,(IY+d)");
+    /* only test cycle count for now */
+    uint8_t prog[] = {
+        0xCB, 0x87,             // RES 0,A
+        0xCB, 0x86,             // RES 0,(HL)
+        0xDD, 0xCB, 0x01, 0x86, // RES 0,(IX+1)
+        0xFD, 0xCB, 0xFF, 0x86, // RES 0,(IY-1)
+        0xDD, 0xCB, 0x02, 0x87, // undocumented: RES 0,(IX+2),A
+    };
+    init(0, prog, sizeof(prog));
+    TOP("RES 0,A");
+    TOP("RES 0,(HL)");
+    TOP("RES 0,(IX+1)");
+    TOP("RES 0,(IY-1)");
+    TOP("RES 0,(IX+2),A");
+}
+
+/* DAA */
+void DAA(void) {
+    test("DAA");
+    uint8_t prog[] = {
+        0x3e, 0x15,         // ld a,0x15
+        0x06, 0x27,         // ld b,0x27
+        0x80,               // add a,b
+        0x27,               // daa
+        0x90,               // sub b
+        0x27,               // daa
+        0x3e, 0x90,         // ld a,0x90
+        0x06, 0x15,         // ld b,0x15
+        0x80,               // add a,b
+        0x27,               // daa
+        0x90,               // sub b
+        0x27                // daa
+    };
+    init(0, prog, sizeof(prog));
+    TOP("LD A,15H")
+    TOP("LD B,27H")
+    TOP("ADD A,B")
+    TOP("DAA")
+    TOP("SUB B")
+    TOP("DAA")
+    TOP("LD A,90H")
+    TOP("LD B,15H")
+    TOP("ADD A,B")
+    TOP("DAA")
+    TOP("SUB B")
+    TOP("DAA")
+}
+
+/* CPL */
+void CPL(void) {
+    test("CPL");
+    uint8_t prog[] = {
+        0x97,               // SUB A
+        0x2F,               // CPL
+        0x2F,               // CPL
+        0xC6, 0xAA,         // ADD A,0xAA
+        0x2F,               // CPL
+        0x2F,               // CPL
+    };
+    init(0, prog, sizeof(prog));
+    TOP("SUB A");
+    TOP("CPL");
+    TOP("CPL");
+    TOP("ADD A,AAH");
+    TOP("CPL");
+    TOP("CPL");
+}
+
+/* CCF/SCF */
+void CCF_SCF(void) {
+    test("CCF; SCF");
+    uint8_t prog[] = {
+        0x97,           // SUB A
+        0x37,           // SCF
+        0x3F,           // CCF
+        0xD6, 0xCC,     // SUB 0xCC
+        0x3F,           // CCF
+        0x37,           // SCF
+    };
+    init(0, prog, sizeof(prog));
+    TOP("SUB A")
+    TOP("SCF")
+    TOP("CCF")
+    TOP("SUB CCH")
+    TOP("CCF")
+    TOP("SCF")
+}
+
+void NEG(void) {
+    test("NEG");
+    uint8_t prog[] = {
+        0x3E, 0x01,         // LD A,0x01
+        0xED, 0x44,         // NEG
+        0xC6, 0x01,         // ADD A,0x01
+        0xED, 0x44,         // NEG
+        0xD6, 0x80,         // SUB A,0x80
+        0xED, 0x44,         // NEG
+        0xC6, 0x40,         // ADD A,0x40
+        0xED, 0x44,         // NEG
+    };
+    init(0, prog, sizeof(prog));
+    TOP("LD A,01H");
+    TOP("NEG");
+    TOP("ADD A,01H");
+    TOP("NEG");
+    TOP("SUB 80H");
+    TOP("NEG");
+    TOP("ADD A,40H");
+    TOP("NEG");
+}
+
+/* LDI */
+void LDI(void) {
+    test("LDI");
+    uint8_t prog[] = {
+        0x21, 0x00, 0x10,       // LD HL,0x1000
+        0x11, 0x00, 0x20,       // LD DE,0x2000
+        0x01, 0x03, 0x00,       // LD BC,0x0003
+        0xED, 0xA0,             // LDI
+        0xED, 0xA0,             // LDI
+        0xED, 0xA0,             // LDI
+    };
+    init(0, prog, sizeof(prog));
+    TOP("LD HL,1000H");
+    TOP("LD DE,2000H");
+    TOP("LD BC,0003H");
+    TOP("LDI");
+    TOP("LDI");
+    TOP("LDI");
+}
+
+/* LDIR */
+void LDIR(void) {
+    test("LDIR");
+    uint8_t prog[] = {
+        0x21, 0x00, 0x10,       // LD HL,0x1000
+        0x11, 0x00, 0x20,       // LD DE,0x2000
+        0x01, 0x03, 0x00,       // LD BC,0x0003
+        0xED, 0xB0,             // LDIR
+        0x3E, 0x33,             // LD A,0x33
+    };
+    init(0, prog, sizeof(prog));
+    TOP("LD HL,1000H")
+    TOP("LD DE,2000H")
+    TOP("LD BC,0003H")
+    TOP("LDIR")
+    TOP("LD A,33H")
+}
+
+/* LDD */
+void LDD(void) {
+    test("LDD");
+    uint8_t prog[] = {
+        0x21, 0x02, 0x10,       // LD HL,0x1002
+        0x11, 0x02, 0x20,       // LD DE,0x2002
+        0x01, 0x03, 0x00,       // LD BC,0x0003
+        0xED, 0xA8,             // LDD
+        0xED, 0xA8,             // LDD
+        0xED, 0xA8,             // LDD
+    };
+    init(0, prog, sizeof(prog));
+    TOP("LD HL,1002H");
+    TOP("LD DE,2002H");
+    TOP("LD BC,0003H");
+    TOP("LDD");
+    TOP("LDD");
+    TOP("LDD");
+}
+
+/* LDDR */
+void LDDR(void) {
+    test("LDDR");
+    uint8_t prog[] = {
+        0x21, 0x02, 0x10,       // LD HL,0x1002
+        0x11, 0x02, 0x20,       // LD DE,0x2002
+        0x01, 0x03, 0x00,       // LD BC,0x0003
+        0xED, 0xB8,             // LDDR
+        0x3E, 0x33,             // LD A,0x33
+    };
+    init(0, prog, sizeof(prog));
+    TOP("LD HL,1002H");
+    TOP("LD DE,2002H");
+    TOP("LD BC,0003H");
+    TOP("LDDR");
+    TOP("LD A,33H");
+}
+
+/* CPI */
+void CPI(void) {
+    test("CPI");
+    uint8_t prog[] = {
+        0x21, 0x00, 0x10,       // ld hl,0x1000
+        0x01, 0x04, 0x00,       // ld bc,0x0004
+        0x3e, 0x03,             // ld a,0x03
+        0xed, 0xa1,             // cpi
+        0xed, 0xa1,             // cpi
+        0xed, 0xa1,             // cpi
+        0xed, 0xa1,             // cpi
+    };
+    init(0, prog, sizeof(prog));
+    TOP("LD HL,1000H");
+    TOP("LD BC,0004H");
+    TOP("LD A,03H");
+    TOP("CPI");
+    TOP("CPI");
+    TOP("CPI");
+    TOP("CPI");
+}
+
+/* CPIR */
+void CPIR(void) {
+    test("CPIR");
+    uint8_t prog[] = {
+        0x21, 0x00, 0x10,       // ld hl,0x1000
+        0x01, 0x04, 0x00,       // ld bc,0x0004
+        0x3e, 0x03,             // ld a,0x03
+        0xed, 0xb1,             // cpir
+        0xed, 0xb1,             // cpir
+    };
+    init(0, prog, sizeof(prog));
+    TOP("LD HL,1000H");
+    TOP("LD BC,0004H");
+    TOP("LD A,03H");
+    TOP("CPIR");
+    TOP("CPIR");
+}
+
+/* CPD */
+void CPD(void) {
+    test("CPD");
+    uint8_t prog[] = {
+        0x21, 0x03, 0x10,       // ld hl,0x1003
+        0x01, 0x04, 0x00,       // ld bc,0x0004
+        0x3e, 0x02,             // ld a,0x02
+        0xed, 0xa9,             // cpd
+        0xed, 0xa9,             // cpd
+        0xed, 0xa9,             // cpd
+        0xed, 0xa9,             // cpd
+    };
+    init(0, prog, sizeof(prog));
+    TOP("LD HL,1003H");
+    TOP("LD BC,0004H");
+    TOP("LD A,02H");
+    TOP("CPD");
+    TOP("CPD");
+    TOP("CPD");
+    TOP("CPD");
+}
+
+/* CPDR */
+void CPDR(void) {
+    test("CPDR");
+    uint8_t prog[] = {
+        0x21, 0x03, 0x10,       // ld hl,0x1003
+        0x01, 0x04, 0x00,       // ld bc,0x0004
+        0x3e, 0x02,             // ld a,0x02
+        0xed, 0xb9,             // cpdr
+        0xed, 0xb9,             // cpdr
+    };
+    init(0, prog, sizeof(prog));
+    TOP("LD HL,1003H");
+    TOP("LD BC,0004H");
+    TOP("LD A,02H");
+    TOP("CPDR");
+    TOP("CPDR");
+}
+
+/* DI/EI/IM */
+void DI_EI_IM(void) {
+    test("DI; EI; IM");
+    uint8_t prog[] = {
+        0xF3,           // DI
+        0xFB,           // EI
+        0x00,           // NOP
+        0xF3,           // DI
+        0xFB,           // EI
+        0x00,           // NOP
+        0xED, 0x46,     // IM 0
+        0xED, 0x56,     // IM 1
+        0xED, 0x5E,     // IM 2
+        0xED, 0x46,     // IM 0
+    };
+    init(0, prog, sizeof(prog));
+    TOP("DI");
+    TOP("EI");
+    TOP("NOP");
+    TOP("DI");
+    TOP("EI");
+    TOP("NOP");
+    TOP("IM 0");
+    TOP("IM 1");
+    TOP("IM 2");
+    TOP("IM 0");
+}
+
+/* JP cc,nn */
+void JP_cc_nn(void) {
+    test("JP cc,nn");
+    uint8_t prog[] = {
+        0x97,               //          SUB A
+        0xC2, 0x0C, 0x02,   //          JP NZ,label0
+        0xCA, 0x0C, 0x02,   //          JP Z,label0
+        0x00,               //          NOP
+        0xC6, 0x01,         // label0:  ADD A,0x01
+        0xCA, 0x15, 0x02,   //          JP Z,label1
+        0xC2, 0x15, 0x02,   //          JP NZ,label1
+        0x00,               //          NOP
+        0x07,               // label1:  RLCA
+        0xEA, 0x1D, 0x02,   //          JP PE,label2
+        0xE2, 0x1D, 0x02,   //          JP PO,label2
+        0x00,               //          NOP
+        0xC6, 0xFD,         // label2:  ADD A,0xFD
+        0xF2, 0x26, 0x02,   //          JP P,label3
+        0xFA, 0x26, 0x02,   //          JP M,label3
+        0x00,               //          NOP
+        0xD2, 0x2D, 0x02,   // label3:  JP NC,label4
+        0xDA, 0x2D, 0x02,   //          JP C,label4
+        0x00,               //          NOP
+        0x00,               //          NOP
+    };
+    init(0, prog, sizeof(prog));
+    TOP("SUB A");
+    TOP("JP NZ,020CH");
+    TOP("JP Z,020CH");
+    TOP("NOP");
+    TOP("ADD A,01H");
+    TOP("JP Z,0215H");
+    TOP("JP NZ,0215H");
+    TOP("NOP");
+    TOP("RLCA");
+    TOP("JP PE,021DH");
+    TOP("JP PO,021DH");
+    TOP("NOP");
+    TOP("ADD A,FDH");
+    TOP("JP P,0226H");
+    TOP("JP M,0226H");
+    TOP("NOP");
+    TOP("JP NC,022DH");
+    TOP("JP C,022DH");
+    TOP("NOP");
+    TOP("NOP");
+}
+
+/* JP; JR */
+void JP_JR(void) {
+    test("JP; JR");
+    uint8_t prog[] = {
+        0x21, 0x16, 0x02,           //      LD HL,l3    0x0204
+        0xDD, 0x21, 0x19, 0x02,     //      LD IX,l4    0x0207
+        0xFD, 0x21, 0x21, 0x02,     //      LD IY,l5    0x020B
+        0xC3, 0x14, 0x02,           //      JP l0       0x020F
+        0x18, 0x04,                 // l1:  JR l2       0x0212
+        0x18, 0xFC,                 // l0:  JR l1       0x0214
+        0xDD, 0xE9,                 // l3:  JP (IX)     0x0216
+        0xE9,                       // l2:  JP (HL)     0x0218
+        0xFD, 0xE9,                 // l4:  JP (IY)     0x0219
+        0x18, 0x06,                 // l6:  JR l7       0x021B
+        0x00, 0x00, 0x00, 0x00,     //      4x NOP      0x021D
+        0x18, 0xF8,                 // l5:  JR l6       0x0221
+        0x00                        // l7:  NOP         0x0223
+    };
+    init(0x0204, prog, sizeof(prog));
+    TOP("LD HL,0216H");
+    TOP("LD IX,0219H");
+    TOP("LD IY,0221H");
+    TOP("JP 0214H");
+    TOP("JR 0218H");
+    TOP("JR 0212H");
+    TOP("JP IX");
+    TOP("JP HL");
+    TOP("JP IY");
+    TOP("JR 0223H");
+    TOP("NOP");
+    TOP("NOP");
+    TOP("NOP");
+    TOP("NOP");
+    TOP("JR 021BH");
+    TOP("NOP");
+}
+
+/* JR_cc_e) */
+void JR_cc_e(void) {
+    test("JR cc,e");
+    uint8_t prog[] = {
+        0x97,           //      SUB A       0x0204
+        0x20, 0x03,     //      JR NZ,l0    0x0205
+        0x28, 0x01,     //      JR Z,l0     0x0207
+        0x00,           //      NOP         0x0209
+        0xC6, 0x01,     // l0:  ADD A,0x01  0x020A
+        0x28, 0x03,     //      JR Z,l1     0x020C
+        0x20, 0x01,     //      JR NZ,l1    0x020E
+        0x00,           //      NOP         0x0210
+        0xD6, 0x03,     // l1:  SUB 0x03    0x0211
+        0x30, 0x03,     //      JR NC,l2    0x0213
+        0x38, 0x01,     //      JR C,l2     0x0215
+        0x00,           //      NOP         0x0217
+        0x00,           // l2:  NOP         0x0218
+    };
+    init(0x0204, prog, sizeof(prog));
+    TOP("SUB A");
+    TOP("JR NZ,020AH");
+    TOP("JR Z,020AH");
+    TOP("NOP");
+    TOP("ADD A,01H");
+    TOP("JR Z,0211H");
+    TOP("JR NZ,0211H");
+    TOP("NOP");
+    TOP("SUB 03H");
+    TOP("JR NC,0218H");
+    TOP("JR C,0218H");
+    TOP("NOP");
+    TOP("NOP");
+}
+
+/* DJNZ */
+void DJNZ(void) {
+    test("DJNZ");
+    uint8_t prog[] = {
+        0x06, 0x03,         //      LD B,0x03
+        0x97,               //      SUB A
+        0x3C,               // l0:  INC A
+        0x10, 0xFD,         //      DJNZ l0
+        0x00,               //      NOP
+    };
+    init(0x0204, prog, sizeof(prog));
+    TOP("LD B,03H");
+    TOP("SUB A");
+    TOP("INC A");
+    TOP("DJNZ 0207H");
+    TOP("NOP");
+}
+
+/* CALL; RET */
+void CALL_RET(void) {
+    test("CALL; RET");
+    uint8_t prog[] = {
+        0xCD, 0x0A, 0x02,       //      CALL l0
+        0xCD, 0x0A, 0x02,       //      CALL l0
+        0xC9,                   // l0:  RET
+    };
+    init(0x0204, prog, sizeof(prog));
+    TOP("CALL 020AH");
+    TOP("CALL 020AH");
+    TOP("RET");
+}
+
+/* CALL cc/RET cc */
+void CALL_RET_cc(void) {
+    test("CALL cc; RET cc");
+    uint8_t prog[] = {
+        0x97,               //      SUB A
+        0xC4, 0x29, 0x02,   //      CALL NZ,l0
+        0xCC, 0x29, 0x02,   //      CALL Z,l0
+        0xC6, 0x01,         //      ADD A,0x01
+        0xCC, 0x2B, 0x02,   //      CALL Z,l1
+        0xC4, 0x2B, 0x02,   //      CALL NZ,l1
+        0x07,               //      RLCA
+        0xEC, 0x2D, 0x02,   //      CALL PE,l2
+        0xE4, 0x2D, 0x02,   //      CALL PO,l2
+        0xD6, 0x03,         //      SUB 0x03
+        0xF4, 0x2F, 0x02,   //      CALL P,l3
+        0xFC, 0x2F, 0x02,   //      CALL M,l3
+        0xD4, 0x31, 0x02,   //      CALL NC,l4
+        0xDC, 0x31, 0x02,   //      CALL C,l4
+        0xC9,               //      RET
+        0xC0,               // l0:  RET NZ
+        0xC8,               //      RET Z
+        0xC8,               // l1:  RET Z
+        0xC0,               //      RET NZ
+        0xE8,               // l2:  RET PE
+        0xE0,               //      RET PO
+        0xF0,               // l3:  RET P
+        0xF8,               //      RET M
+        0xD0,               // l4:  RET NC
+        0xD8,               //      RET C
+    };
+    init(0x0204, prog, sizeof(prog));
+    TOP("SUB A");
+    TOP("CALL NZ,0229H");
+    TOP("CALL Z,0229H");
+    TOP("ADD A,01H");
+    TOP("CALL Z,022BH");
+    TOP("CALL NZ,022BH");
+    TOP("RLCA");
+    TOP("CALL PE,022DH");
+    TOP("CALL PO,022DH");
+    TOP("SUB 03H");
+    TOP("CALL P,022FH");
+    TOP("CALL M,022FH");
+    TOP("CALL NC,0231H");
+    TOP("CALL C,0231H");
+    TOP("RET");
+    TOP("RET NZ");
+    TOP("RET Z");
+    TOP("RET Z");
+    TOP("RET NZ");
+    TOP("RET PE");
+    TOP("RET PO");
+    TOP("RET P");
+    TOP("RET M");
+    TOP("RET NC");
+    TOP("RET C");
+}
+
+/* ADD HL,rr; ADC HL,rr; SBC HL,rr; ADD IX,rr; ADD IY,rr */
+void ADD_ADC_SBC_16(void) {
+    test("ADD HL,rr; ADC HL,rr; SBC HL,rr; ADD IX,rr; ADD IY,rr");
+    uint8_t prog[] = {
+        0x21, 0xFC, 0x00,       // LD HL,0x00FC
+        0x01, 0x08, 0x00,       // LD BC,0x0008
+        0x11, 0xFF, 0xFF,       // LD DE,0xFFFF
+        0x09,                   // ADD HL,BC
+        0x19,                   // ADD HL,DE
+        0xED, 0x4A,             // ADC HL,BC
+        0x29,                   // ADD HL,HL
+        0x19,                   // ADD HL,DE
+        0xED, 0x42,             // SBC HL,BC
+        0xDD, 0x21, 0xFC, 0x00, // LD IX,0x00FC
+        0x31, 0x00, 0x10,       // LD SP,0x1000
+        0xDD, 0x09,             // ADD IX, BC
+        0xDD, 0x19,             // ADD IX, DE
+        0xDD, 0x29,             // ADD IX, IX
+        0xDD, 0x39,             // ADD IX, SP
+        0xFD, 0x21, 0xFF, 0xFF, // LD IY,0xFFFF
+        0xFD, 0x09,             // ADD IY,BC
+        0xFD, 0x19,             // ADD IY,DE
+        0xFD, 0x29,             // ADD IY,IY
+        0xFD, 0x39,             // ADD IY,SP
+    };
+    init(0, prog, sizeof(prog));
+    TOP("LD HL,00FCH");
+    TOP("LD BC,0008H");
+    TOP("LD DE,FFFFH");
+    TOP("ADD HL,BC");
+    TOP("ADD HL,DE");
+    TOP("ADC HL,BC");
+    TOP("ADD HL,HL");
+    TOP("ADD HL,DE");
+    TOP("SBC HL,BC");
+    TOP("LD IX,00FCH");
+    TOP("LD SP,1000H");
+    TOP("ADD IX,BC");
+    TOP("ADD IX,DE");
+    TOP("ADD IX,IX");
+    TOP("ADD IX,SP");
+    TOP("LD IY,FFFFH");
+    TOP("ADD IY,BC");
+    TOP("ADD IY,DE");
+    TOP("ADD IY,IY");
+    TOP("ADD IY,SP");
+}
+
+/* IN */
+void IN(void) {
+    test("IN");
+    uint8_t prog[] = {
+        0x3E, 0x01,         // LD A,0x01
+        0xDB, 0x03,         // IN A,(0x03)
+        0xDB, 0x04,         // IN A,(0x04)
+        0x01, 0x02, 0x02,   // LD BC,0x0202
+        0xED, 0x78,         // IN A,(C)
+        0x01, 0xFF, 0x05,   // LD BC,0x05FF
+        0xED, 0x50,         // IN D,(C)
+        0x01, 0x05, 0x05,   // LD BC,0x0505
+        0xED, 0x58,         // IN E,(C)
+        0x01, 0x06, 0x01,   // LD BC,0x0106
+        0xED, 0x60,         // IN H,(C)
+        0x01, 0x00, 0x10,   // LD BC,0x1000
+        0xED, 0x68,         // IN L,(C)
+        0xED, 0x40,         // IN B,(C)
+        0xED, 0x48,         // IN C,(c)
+    };
+    init(0, prog, sizeof(prog));
+    TOP("LD A,01H");
+    TOP("IN A,(03H)");
+    TOP("IN A,(04H)");
+    TOP("LD BC,0202H");
+    TOP("IN A,(C)");
+    TOP("LD BC,05FFH");
+    TOP("IN D,(C)");
+    TOP("LD BC,0505H");
+    TOP("IN E,(C)");
+    TOP("LD BC,0106H");
+    TOP("IN H,(C)");
+    TOP("LD BC,1000H");
+    TOP("IN L,(C)");
+    TOP("IN B,(C)");
+    TOP("IN C,(C)");
+}
+
+/* OUT */
+void OUT(void) {
+    test("OUT");
+    uint8_t prog[] = {
+        0x3E, 0x01,         // LD A,0x01
+        0xD3, 0x01,         // OUT (0x01),A
+        0xD3, 0xFF,         // OUT (0xFF),A
+        0x01, 0x34, 0x12,   // LD BC,0x1234
+        0x11, 0x78, 0x56,   // LD DE,0x5678
+        0x21, 0xCD, 0xAB,   // LD HL,0xABCD
+        0xED, 0x79,         // OUT (C),A
+        0xED, 0x41,         // OUT (C),B
+        0xED, 0x49,         // OUT (C),C
+        0xED, 0x51,         // OUT (C),D
+        0xED, 0x59,         // OUT (C),E
+        0xED, 0x61,         // OUT (C),H
+        0xED, 0x69,         // OUT (C),L
+    };
+    init(0, prog, sizeof(prog));
+    TOP("LD A,01H");
+    TOP("OUT (01H),A");
+    TOP("OUT (FFH),A");
+    TOP("LD BC,1234H");
+    TOP("LD DE,5678H");
+    TOP("LD HL,ABCDH");
+    TOP("OUT (C),A");
+    TOP("OUT (C),B");
+    TOP("OUT (C),C");
+    TOP("OUT (C),D");
+    TOP("OUT (C),E");
+    TOP("OUT (C),H");
+    TOP("OUT (C),L");
+}
+
+/* INIR; INDR */
+void INIR_INDR(void) {
+    test("INIR; INDR");
+    uint8_t prog[] = {
+        0x21, 0x00, 0x10,       // LD HL,0x1000
+        0x01, 0x02, 0x03,       // LD BC,0x0302
+        0xED, 0xB2,             // INIR
+        0x01, 0x03, 0x03,       // LD BC,0x0303
+        0xED, 0xBA              // INDR
+    };
+    init(0, prog, sizeof(prog));
+    TOP("LD HL,1000H");
+    TOP("LD BC,0302H");
+    TOP("INIR");
+    TOP("LD BC,0303H");
+    TOP("INDR");
+}
+
+/* OTIR; OTDR */
+void OTIR_OTDR(void) {
+    test("OTIR; OTDR");
+    uint8_t prog[] = {
+        0x21, 0x00, 0x10,       // LD HL,0x1000
+        0x01, 0x02, 0x03,       // LD BC,0x0302
+        0xED, 0xB3,             // OTIR
+        0x01, 0x03, 0x03,       // LD BC,0x0303
+        0xED, 0xBB,             // OTDR
+    };
+    init(0, prog, sizeof(prog));
+    TOP("LD HL,1000H");
+    TOP("LD BC,0302H");
+    TOP("OTIR");
+    TOP("LD BC,0303H");
+    TOP("OTDR");
+}
+
 int main() {
     test_begin("z80dasm-test");
     LD_A_RI();
@@ -1426,6 +2425,42 @@ int main() {
     INC_DEC_ssIXIY();
     RLCA_RLA_RRCA_RRA();
     RLC_RL_RRC_RR_r();
+    RRC_RLC_RR_RL_iHLIXIYi();
+    SLA_r();
+    SLA_iHLIXIYi();
+    SRA_r();
+    SRA_iHLIXIYi();
+    SRL_r();
+    SRL_iHLIXIYi();
+    RLD_RRD();
+    HALT();
+    BIT();
+    SET();
+    RES();
+    DAA();
+    CPL();
+    CCF_SCF();
+    NEG();
+    LDI();
+    LDIR();
+    LDD();
+    LDDR();
+    CPI();
+    CPIR();
+    CPD();
+    CPDR();
+    DI_EI_IM();
+    JP_cc_nn();
+    JP_JR();
+    JR_cc_e();
+    DJNZ();
+    CALL_RET();
+    CALL_RET_cc();
+    ADD_ADC_SBC_16();
+    IN();
+    OUT();
+    INIR_INDR();
+    OTIR_OTDR();
     return test_end();
 }
 
