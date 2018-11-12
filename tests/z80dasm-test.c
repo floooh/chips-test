@@ -36,7 +36,7 @@ static uint8_t in_cb(void* user_data) {
 }
 
 static void out_cb(char c, void* user_data) {
-    if (ctx.str_pos < (sizeof(ctx.str)-1)) {
+    if ((ctx.str_pos + 1) < sizeof(ctx.str)) {
         ctx.str[ctx.str_pos++] = c;
         ctx.str[ctx.str_pos] = 0;
     }
