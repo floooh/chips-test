@@ -123,3 +123,8 @@ fips_begin_app(fdd-test cmdline)
     fips_dir(disks)
     fips_generate(FROM fdd-test.yml TYPE dump HEADER fdd-test.h)
 fips_end_app()
+
+fips_begin_app(z80dasm-test cmdline)
+    fips_vs_warning_level(3)
+    fips_files(z80dasm-test.c)
+fips_end_app()
