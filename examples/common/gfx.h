@@ -11,6 +11,7 @@ typedef struct {
     int aspect_x;
     int aspect_y;
     bool rot90;
+    void (*draw_extra_cb)(void);
 } gfx_desc_t;
 
 extern void gfx_init(const gfx_desc_t* desc);
@@ -46,6 +47,7 @@ typedef struct {
     int fb_aspect_y;
     bool rot90;
     uint32_t rgba8_buffer[GFX_MAX_FB_WIDTH * GFX_MAX_FB_HEIGHT];
+    void (*draw_extra_cb)(void);
 } gfx_state;
 static gfx_state gfx;
 
@@ -63,6 +65,7 @@ void gfx_init(const gfx_desc_t* desc) {
     gfx.fb_aspect_x = _GFX_DEF(desc->aspect_x, 1);
     gfx.fb_aspect_y = _GFX_DEF(desc->aspect_y, 1);
     gfx.rot90 = desc->rot90;
+    gfx.draw_extra_cb = desc->draw_extra_cb;
     sg_setup(&(sg_desc){
         .mtl_device = sapp_metal_get_device(),
         .mtl_renderpass_descriptor_cb = sapp_metal_get_renderpass_descriptor,
@@ -164,9 +167,7 @@ void gfx_init(const gfx_desc_t* desc) {
    and for 'portrait' orientations, keep the emulator display at the
    top, to make room at the bottom for mobile virtual keyboard
 */
-static void apply_viewport(void) {
-    const int canvas_width = sapp_width();
-    const int canvas_height = sapp_height();
+static void apply_viewport(int canvas_width, int canvas_height) {
     const float canvas_aspect = (float)canvas_width / (float)canvas_height;
     const float fb_aspect = (float)(gfx.fb_width*gfx.fb_aspect_x) / (float)(gfx.fb_height*gfx.fb_aspect_y);
     const int frame_x = 5;
@@ -203,10 +204,16 @@ void gfx_draw() {
     sg_end_pass();
 
     /* draw the final pass with linear filtering */
-    sg_begin_default_pass(&gfx_draw_pass_action, sapp_width(), sapp_height());
-    apply_viewport();
+    const int canvas_width = sapp_width();
+    const int canvas_height = sapp_height();
+    sg_begin_default_pass(&gfx_draw_pass_action, canvas_width, canvas_height);
+    apply_viewport(canvas_width, canvas_height);
     sg_apply_draw_state(&gfx.draw_state);
     sg_draw(0, 4, 1);
+    sg_apply_viewport(0, 0, canvas_width, canvas_height, true);
+    if (gfx.draw_extra_cb) {
+        gfx.draw_extra_cb();
+    }
     sg_end_pass();
     sg_commit();
 }

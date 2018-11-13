@@ -4,6 +4,10 @@
     KC85/2, /3 and /4.
 */
 #include "common.h"
+#ifdef CHIPS_USE_UI
+#include "ui.h"
+#include "ui/memui.h"
+#endif
 #define CHIPS_IMPL
 #include "chips/z80.h"
 #include "chips/z80ctc.h"
@@ -25,6 +29,12 @@ void app_init(void);
 void app_frame(void);
 void app_input(const sapp_event*);
 void app_cleanup(void);
+
+#ifdef CHIPS_USE_UI
+void kc85ui_init(void);
+void kc85ui_discard(void);
+void kc85ui_draw(void);
+#endif
 
 sapp_desc sokol_main(int argc, char* argv[]) {
     sargs_setup(&(sargs_desc) { .argc = argc, .argv = argv });
@@ -67,9 +77,15 @@ static void patch_snapshots(const char* snapshot_name, void* user_data) {
 
 void app_init(void) {
     gfx_init(&(gfx_desc_t) {
+        #ifdef CHIPS_USE_UI
+        .draw_extra_cb = ui_draw,
+        #endif
         .fb_width = KC85_DISPLAY_WIDTH,
         .fb_height = KC85_DISPLAY_HEIGHT
     });
+    #ifdef CHIPS_USE_UI
+    kc85ui_init();
+    #endif
     keybuf_init(6);
     clock_init();
     saudio_setup(&(saudio_desc){0});
@@ -178,6 +194,12 @@ void app_frame(void) {
 }
 
 void app_input(const sapp_event* event) {
+    #ifdef CHIPS_USE_UI
+    if (ui_input(event)) {
+        /* input was handled by UI */
+        return;
+    }
+    #endif
     const bool shift = event->modifiers & SAPP_MODIFIER_SHIFT;
     switch (event->type) {
         int c;
@@ -241,7 +263,25 @@ void app_input(const sapp_event* event) {
 
 void app_cleanup(void) {
     kc85_discard(&kc85);
+    #ifdef CHIPS_USE_UI
+    kc85ui_discard();
+    #endif
     saudio_shutdown();
     gfx_shutdown();
     sargs_shutdown();
 }
+
+/*=== optional debugging UI ==================================================*/
+#ifdef CHIPS_USE_UI
+void kc85ui_init(void) {
+    ui_init();
+}
+
+void kc85ui_discard(void) {
+    ui_discard();
+}
+
+void kc85ui_draw(void) {
+    ui_draw();
+}
+#endif
