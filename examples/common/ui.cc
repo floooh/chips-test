@@ -23,12 +23,16 @@ static sg_draw_state draw_state = { };
 
 static void imgui_draw_cb(ImDrawData*);
 static void ui_init_imgui(void);
+static void ui_draw_menu(void);
 
 extern const char* vs_src_imgui;
 extern const char* fs_src_imgui;
 
-void ui_init(void) {
+static ui_menudesc_t menu_desc;
+
+void ui_init(const ui_menudesc_t* desc) {
     ui_init_imgui();
+    menu_desc = *desc;
 }
 
 void ui_discard(void) {
@@ -58,12 +62,7 @@ void ui_draw(void) {
         sapp_show_keyboard(false);
     }
     ImGui::NewFrame();
-
-        ImGui::SetNextWindowSize(ImVec2(200,100), ImGuiSetCond_FirstUseEver);
-        ImGui::Begin("Hello World");
-        ImGui::Text("Hello");
-        ImGui::End();
-
+    ui_draw_menu();
     ImGui::Render();
 }
 
@@ -130,6 +129,28 @@ bool ui_input(const sapp_event* event) {
             break;
     }
     return false;
+}
+
+void ui_draw_menu(void) {
+    if (ImGui::BeginMainMenuBar()) {
+        for (int mi = 0; mi < UI_MAX_MENUS; mi++) {
+            const ui_menu_t* menu = &menu_desc.menus[mi];
+            if (menu->name) {
+                if (ImGui::BeginMenu(menu->name)) {
+                    for (int ii = 0; ii < UI_MAX_MENU_ITEMS; ii++) {
+                        const ui_menuitem_t* item = &menu->items[ii];
+                        if (item->name && item->func) {
+                            if (ImGui::MenuItem(item->name)) {
+                                item->func();
+                            }
+                        }
+                    }
+                    ImGui::EndMenu();
+                }
+            }
+        }
+        ImGui::EndMainMenuBar();
+    }
 }
 
 void ui_init_imgui(void) {

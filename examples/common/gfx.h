@@ -6,6 +6,7 @@
 #define GFX_MAX_FB_HEIGHT (1024)
 
 typedef struct {
+    int top_offset;
     int fb_width;
     int fb_height;
     int aspect_x;
@@ -41,6 +42,7 @@ typedef struct {
     sg_draw_state upscale_draw_state;
     sg_pass upscale_pass;
     sg_draw_state draw_state;
+    int top_offset;
     int fb_width;
     int fb_height;
     int fb_aspect_x;
@@ -60,6 +62,7 @@ int gfx_framebuffer_size(void) {
 }
 
 void gfx_init(const gfx_desc_t* desc) {
+    gfx.top_offset = desc->top_offset;
     gfx.fb_width = _GFX_DEF(desc->fb_width, 640);
     gfx.fb_height = _GFX_DEF(desc->fb_height, 512);
     gfx.fb_aspect_x = _GFX_DEF(desc->aspect_x, 1);
@@ -174,16 +177,16 @@ static void apply_viewport(int canvas_width, int canvas_height) {
     const int frame_y = 5;
     int vp_x, vp_y, vp_w, vp_h;
     if (fb_aspect < canvas_aspect) {
-        vp_y = frame_y;
-        vp_h = canvas_height - 2 * frame_y;
+        vp_y = frame_y + gfx.top_offset;
+        vp_h = canvas_height - (2 * frame_y - gfx.top_offset);
         vp_w = (int) (canvas_height * fb_aspect) - 2 * frame_x;
         vp_x = (canvas_width - vp_w) / 2;
     }
     else {
         vp_x = frame_x;
         vp_w = canvas_width - 2 * frame_x;
-        vp_h = (int) (canvas_width / fb_aspect) - 2 * frame_y;
-        vp_y = frame_y;
+        vp_h = (int) (canvas_width / fb_aspect) - (2 * frame_y - gfx.top_offset);
+        vp_y = frame_y + gfx.top_offset;
     }
     sg_apply_viewport(vp_x, vp_y, vp_w, vp_h, true);
 }

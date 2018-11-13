@@ -75,13 +75,39 @@ static void patch_snapshots(const char* snapshot_name, void* user_data) {
     }
 }
 
+/* get kc85_desc_t struct for a given KC85 type */
+static kc85_desc_t kc85_desc(kc85_type_t type) {
+    return (kc85_desc_t) {
+        .type = type,
+        .pixel_buffer = gfx_framebuffer(),
+        .pixel_buffer_size = gfx_framebuffer_size(),
+        .audio_cb = push_audio,
+        .audio_sample_rate = saudio_sample_rate(),
+        .patch_cb = patch_snapshots,
+        .rom_caos22 = dump_caos22,
+        .rom_caos22_size = sizeof(dump_caos22),
+        .rom_caos31 = dump_caos31,
+        .rom_caos31_size = sizeof(dump_caos31),
+        .rom_caos42c = dump_caos42c,
+        .rom_caos42c_size = sizeof(dump_caos42c),
+        .rom_caos42e = dump_caos42e,
+        .rom_caos42e_size = sizeof(dump_caos42e),
+        .rom_kcbasic = dump_basic_c0,
+        .rom_kcbasic_size = sizeof(dump_basic_c0)
+    };
+}
+
 void app_init(void) {
     gfx_init(&(gfx_desc_t) {
         #ifdef CHIPS_USE_UI
         .draw_extra_cb = ui_draw,
-        #endif
+        .top_offset = 16,
         .fb_width = KC85_DISPLAY_WIDTH,
-        .fb_height = KC85_DISPLAY_HEIGHT
+        .fb_height = KC85_DISPLAY_HEIGHT + 16,
+        #else
+        .fb_width = KC85_DISPLAY_WIDTH,
+        .fb_height = KC85_DISPLAY_HEIGHT,
+        #endif
     });
     #ifdef CHIPS_USE_UI
     kc85ui_init();
@@ -101,24 +127,8 @@ void app_init(void) {
         }
     }
     /* initialize the KC85 emulator */
-    kc85_init(&kc85, &(kc85_desc_t){
-        .type = type,
-        .pixel_buffer = gfx_framebuffer(),
-        .pixel_buffer_size = gfx_framebuffer_size(),
-        .audio_cb = push_audio,
-        .audio_sample_rate = saudio_sample_rate(),
-        .patch_cb = patch_snapshots,
-        .rom_caos22 = dump_caos22,
-        .rom_caos22_size = sizeof(dump_caos22),
-        .rom_caos31 = dump_caos31,
-        .rom_caos31_size = sizeof(dump_caos31),
-        .rom_caos42c = dump_caos42c,
-        .rom_caos42c_size = sizeof(dump_caos42c),
-        .rom_caos42e = dump_caos42e,
-        .rom_caos42e_size = sizeof(dump_caos42e),
-        .rom_kcbasic = dump_basic_c0,
-        .rom_kcbasic_size = sizeof(dump_basic_c0)
-    });
+    kc85_desc_t desc = kc85_desc(type);
+    kc85_init(&kc85, &desc);
     bool delay_input = false;
     /* snapshot file or rom-module image */
     if (sargs_exists("snapshot")) {
@@ -273,8 +283,34 @@ void app_cleanup(void) {
 
 /*=== optional debugging UI ==================================================*/
 #ifdef CHIPS_USE_UI
+void kc85ui_reset(void);
+void kc85ui_boot_kc852(void);
+void kc85ui_boot_kc853(void);
+void kc85ui_boot_kc854(void);
+void kc85ui_dummy(void);
+
 void kc85ui_init(void) {
-    ui_init();
+    ui_init(&(ui_menudesc_t) {
+        .menus = {
+            {
+                .name = "System",
+                .items = {
+                    { .name="Reset", .func=kc85ui_reset },
+                    { .name="Boot to KC85/2", .func=kc85ui_boot_kc852 },
+                    { .name="Boot to KC85/3", .func=kc85ui_boot_kc853 },
+                    { .name="Boot to KC85/4", .func=kc85ui_boot_kc854 }
+                }
+            },
+            {
+                .name = "Debug",
+                .items = {
+                    { .name="CPU Debugger", .func=kc85ui_dummy },
+                    { .name="Memory Editor", .func=kc85ui_dummy },
+                    { .name="Memory Map", .func=kc85ui_dummy }
+                }
+            }
+        }
+    });
 }
 
 void kc85ui_discard(void) {
@@ -283,5 +319,29 @@ void kc85ui_discard(void) {
 
 void kc85ui_draw(void) {
     ui_draw();
+}
+
+/*--- menu handler functions ---*/
+void kc85ui_reset(void) {
+    kc85_reset(&kc85);
+}
+
+void kc85ui_boot_kc852(void) {
+    kc85_desc_t desc = kc85_desc(KC85_TYPE_2);
+    kc85_init(&kc85, &desc);
+}
+
+void kc85ui_boot_kc853(void) {
+    kc85_desc_t desc = kc85_desc(KC85_TYPE_3);
+    kc85_init(&kc85, &desc);
+}
+
+void kc85ui_boot_kc854(void) {
+    kc85_desc_t desc = kc85_desc(KC85_TYPE_4);
+    kc85_init(&kc85, &desc);
+}
+
+void kc85ui_dummy(void) {
+    // FIXME
 }
 #endif
