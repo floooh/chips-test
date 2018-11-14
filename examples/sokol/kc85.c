@@ -6,7 +6,8 @@
 #include "common.h"
 #ifdef CHIPS_USE_UI
 #include "ui.h"
-#include "ui/memui.h"
+#include "ui/ui_mem.h"
+#include "ui/ui_z80dasm.h"
 #endif
 #define CHIPS_IMPL
 #include "chips/z80.h"
@@ -175,7 +176,13 @@ void app_init(void) {
 }
 
 void app_frame(void) {
-    kc85_exec(&kc85, clock_frame_time());
+    #if CHIPS_USE_UI
+        uint64_t start = stm_now();
+        kc85_exec(&kc85, clock_frame_time());
+        ui_set_exec_time(stm_since(start));
+    #else
+        kc85_exec(&kc85, clock_frame_time());
+    #endif
     gfx_draw();
     uint32_t delay_frames = kc85.type == KC85_TYPE_4 ? 180 : 480;
     if (fs_ptr() && clock_frame_count() > delay_frames) {
@@ -284,7 +291,8 @@ void app_cleanup(void) {
 /*=== optional debugging UI ==================================================*/
 #ifdef CHIPS_USE_UI
 
-static memui_t memui;
+static ui_mem_t ui_mem;
+static ui_z80dasm_t ui_z80dasm;
 
 /* menu handler functions */
 void kc85ui_reset(void) {
@@ -303,8 +311,12 @@ void kc85ui_boot_kc854(void) {
     kc85_desc_t desc = kc85_desc(KC85_TYPE_4); kc85_init(&kc85, &desc);
 }
 
-void kc85ui_memui_toggle(void) {
-    memui_toggle(&memui);
+void kc85ui_mem_toggle(void) {
+    ui_mem_toggle(&ui_mem);
+}
+
+void kc85ui_dasm_toggle(void) {
+    ui_z80dasm_toggle(&ui_z80dasm);
 }
 
 uint8_t kc85ui_mem_read(int layer, uint16_t addr, void* user_data) {
@@ -352,29 +364,37 @@ void kc85ui_init(void) {
             {
                 .name = "Debug",
                 .items = {
-                    { .name = "Memory Editor", .func = kc85ui_memui_toggle },
-                    { .name = "Disassembler (TODO)", .func = kc85ui_dummy },
+                    { .name = "Memory Editor", .func = kc85ui_mem_toggle },
+                    { .name = "Disassembler", .func = kc85ui_dasm_toggle },
                     { .name = "CPU Debugger (TODO)", .func = kc85ui_dummy },
                     { .name = "Scan Commands (TODO)", .func = kc85ui_dummy }
                 }
             }
         },
     });
-    memui_init(&memui, &(memui_desc_t){
+    ui_mem_init(&ui_mem, &(ui_mem_desc_t){
         .title = "Memory Editor",
-        .layers = { "CPU Visible", "Motherboard", "Slot 08", "Slot 0C" },
+        .layers = { "CPU Mapped", "Motherboard", "Slot 08", "Slot 0C" },
         .read_cb = kc85ui_mem_read,
         .write_cb = kc85ui_mem_write,
         .read_only = false,
         .x = 20, .y = 40, .h = 120
     });
+    ui_z80dasm_init(&ui_z80dasm, &(ui_z80dasm_desc_t){
+        .title = "Disassembler",
+        .layers = { "CPU Mapped", "Motherboard", "Slot 08", "Slot 0C" },
+        .read_cb = kc85ui_mem_read,
+        .x = 40, .y = 60, .w = 256, .h = 256
+    });
 }
 
 void kc85ui_discard(void) {
-    memui_discard(&memui);
+    ui_z80dasm_discard(&ui_z80dasm);
+    ui_mem_discard(&ui_mem);
 }
 
 void kc85ui_draw(void) {
-    memui_draw(&memui);
+    ui_mem_draw(&ui_mem);
+    ui_z80dasm_draw(&ui_z80dasm);
 }
 #endif

@@ -7,13 +7,17 @@
 #include "sokol_time.h"
 #include "imgui.h"
 #define CHIPS_IMPL
-#include "ui/memui.h"
+#include "ui/ui_util.h"
+#include "ui/ui_mem.h"
+#include "util/z80dasm.h"
+#include "ui/ui_z80dasm.h"
 
 typedef struct {
     ImVec2 disp_size;
 } vs_params_t;
 
 static uint64_t last_time = 0;
+static uint64_t exec_time = 0;
 static bool btn_down[SAPP_MAX_MOUSEBUTTONS] = { };
 static bool btn_up[SAPP_MAX_MOUSEBUTTONS] = { };
 static const int MaxVertices = (1<<17);
@@ -38,12 +42,17 @@ void ui_discard(void) {
     // FIXME
 }
 
+void ui_set_exec_time(uint64_t t) {
+    exec_time = t;
+}
+
 void ui_draw(void) {
     const int cur_width = sapp_width();
     const int cur_height = sapp_height();
+    uint64_t frame_time = stm_laptime(&last_time);
     ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize = ImVec2(float(cur_width), float(cur_height));
-    io.DeltaTime = (float) stm_sec(stm_laptime(&last_time));
+    io.DeltaTime = (float) stm_sec(frame_time);
     for (int i = 0; i < SAPP_MAX_MOUSEBUTTONS; i++) {
         if (btn_down[i]) {
             btn_down[i] = false;
@@ -133,7 +142,7 @@ bool ui_input(const sapp_event* event) {
     return io.WantCaptureKeyboard;
 }
 
-void ui_draw_menu(void) {
+void ui_draw_menu() {
     if (ImGui::BeginMainMenuBar()) {
         for (int mi = 0; mi < UI_MAX_MENUS; mi++) {
             const ui_menu_t* menu = &ui_desc.menus[mi];
@@ -151,6 +160,8 @@ void ui_draw_menu(void) {
                 }
             }
         }
+        ImGui::SameLine(ImGui::GetWindowWidth() - 120);
+        ImGui::Text("emu: %.2fms", stm_ms(exec_time));
         ImGui::EndMainMenuBar();
     }
 }
@@ -158,6 +169,11 @@ void ui_draw_menu(void) {
 void ui_init_imgui(void) {
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
+    auto& style = ImGui::GetStyle();
+    style.WindowRounding = 0.0f;
+    style.WindowBorderSize = 1.0f;
+    style.Alpha = 1.0f;
+    style.TouchExtraPadding = ImVec2(5.0f, 5.0f);
     ImGuiIO& io = ImGui::GetIO();
     io.Fonts->AddFontDefault();
     io.IniFilename = nullptr;
