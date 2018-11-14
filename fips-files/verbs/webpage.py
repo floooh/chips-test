@@ -9,11 +9,12 @@ from string import Template
 
 from mod import log, util, project
 
-systems = [ 'kc85', 'zx', 'c64', 'cpc', 'atom', 'z1013', 'z9001', 'arcade' ]
+systems = [ 'kc85', 'kc85-ui', 'zx', 'c64', 'cpc', 'atom', 'z1013', 'z9001', 'arcade' ]
 items = [
     { 'type':'emu',  'title':'KC85/2', 'system':'kc85',             'url':'kc85.html?type=kc85_2', 'img':'kc85/kc85_2.jpg', 'note':'' },
     { 'type':'emu',  'title':'KC85/3', 'system':'kc85',             'url':'kc85.html?type=kc85_3', 'img':'kc85/kc85_3.jpg', 'note':'' },
     { 'type':'emu',  'title':'KC85/4', 'system':'kc85',             'url':'kc85.html?type=kc85_4', 'img':'kc85/kc85_4.jpg', 'note':'' },
+    { 'type':'emu',  'title':'KC85 + UI', 'system':'kc85-ui',       'url':'kc85-ui.html?type=kc85_4', 'img':'kc85/kc85_ui.jpg', 'note':'' },
     { 'type':'emu',  'title':'KC Compact',      'system':'cpc',     'url':'cpc.html?type=kccompact', 'img':'cpc/kccompact.jpg', 'note':'' },
     { 'type':'emu',  'title':'Amstrad CPC464',  'system':'cpc',     'url':'cpc.html?type=cpc464', 'img':'cpc/cpc464.jpg', 'note':'' },
     { 'type':'emu',  'title':'Amstrad CPC6128', 'system':'cpc',     'url':'cpc.html', 'img':'cpc/cpc6128.jpg', 'note':'' },

@@ -283,65 +283,98 @@ void app_cleanup(void) {
 
 /*=== optional debugging UI ==================================================*/
 #ifdef CHIPS_USE_UI
-void kc85ui_reset(void);
-void kc85ui_boot_kc852(void);
-void kc85ui_boot_kc853(void);
-void kc85ui_boot_kc854(void);
-void kc85ui_dummy(void);
 
-void kc85ui_init(void) {
-    ui_init(&(ui_menudesc_t) {
-        .menus = {
-            {
-                .name = "System",
-                .items = {
-                    { .name="Reset", .func=kc85ui_reset },
-                    { .name="Boot to KC85/2", .func=kc85ui_boot_kc852 },
-                    { .name="Boot to KC85/3", .func=kc85ui_boot_kc853 },
-                    { .name="Boot to KC85/4", .func=kc85ui_boot_kc854 }
-                }
-            },
-            {
-                .name = "Debug",
-                .items = {
-                    { .name="CPU Debugger", .func=kc85ui_dummy },
-                    { .name="Memory Editor", .func=kc85ui_dummy },
-                    { .name="Memory Map", .func=kc85ui_dummy }
-                }
-            }
-        }
-    });
-}
+static memui_t memui;
 
-void kc85ui_discard(void) {
-    ui_discard();
-}
-
-void kc85ui_draw(void) {
-    ui_draw();
-}
-
-/*--- menu handler functions ---*/
+/* menu handler functions */
 void kc85ui_reset(void) {
     kc85_reset(&kc85);
 }
 
 void kc85ui_boot_kc852(void) {
-    kc85_desc_t desc = kc85_desc(KC85_TYPE_2);
-    kc85_init(&kc85, &desc);
+    kc85_desc_t desc = kc85_desc(KC85_TYPE_2); kc85_init(&kc85, &desc);
 }
 
 void kc85ui_boot_kc853(void) {
-    kc85_desc_t desc = kc85_desc(KC85_TYPE_3);
-    kc85_init(&kc85, &desc);
+    kc85_desc_t desc = kc85_desc(KC85_TYPE_3); kc85_init(&kc85, &desc);
 }
 
 void kc85ui_boot_kc854(void) {
-    kc85_desc_t desc = kc85_desc(KC85_TYPE_4);
-    kc85_init(&kc85, &desc);
+    kc85_desc_t desc = kc85_desc(KC85_TYPE_4); kc85_init(&kc85, &desc);
 }
 
-void kc85ui_dummy(void) {
-    // FIXME
+void kc85ui_memui_toggle(void) {
+    memui_toggle(&memui);
+}
+
+uint8_t kc85ui_mem_read(int layer, uint16_t addr, void* user_data) {
+    if (layer == 0) {
+        return mem_rd(&kc85.mem, addr);
+    }
+    else {
+        return mem_layer_rd(&kc85.mem, layer-1, addr);
+    }
+}
+
+void kc85ui_mem_write(int layer, uint16_t addr, uint8_t data, void* user_data) {
+    if (layer == 0) {
+        mem_wr(&kc85.mem, addr, data);
+    }
+    else {
+        mem_layer_wr(&kc85.mem, layer-1, addr, data);
+    }
+}
+
+void kc85ui_dummy(void) { }
+
+void kc85ui_init(void) {
+    ui_init(&(ui_desc_t) {
+        .draw = kc85ui_draw,
+        .menus = {
+            {
+                .name = "System",
+                .items = {
+                    { .name = "Reset", .func = kc85ui_reset },
+                    { .name = "Boot to KC85/2", .func = kc85ui_boot_kc852 },
+                    { .name = "Boot to KC85/3", .func = kc85ui_boot_kc853 },
+                    { .name = "Boot to KC85/4", .func = kc85ui_boot_kc854 }
+                }
+            },
+            {
+                .name = "Hardware",
+                .items = {
+                    { .name = "IO Ports (TODO)", .func = kc85ui_dummy },
+                    { .name = "Memory Map (TODO)", .func = kc85ui_dummy },
+                    { .name = "Z80 PIO (TODO)", .func = kc85ui_dummy },
+                    { .name = "Z80 CTC (TODO)", .func = kc85ui_dummy },
+                }
+            },
+            {
+                .name = "Debug",
+                .items = {
+                    { .name = "Memory Editor", .func = kc85ui_memui_toggle },
+                    { .name = "Disassembler (TODO)", .func = kc85ui_dummy },
+                    { .name = "CPU Debugger (TODO)", .func = kc85ui_dummy },
+                    { .name = "Scan Commands (TODO)", .func = kc85ui_dummy }
+                }
+            }
+        },
+    });
+    memui_init(&memui, &(memui_desc_t){
+        .title = "Memory Editor",
+        .layers = { "CPU Visible", "Motherboard", "Slot 08", "Slot 0C" },
+        .read_cb = kc85ui_mem_read,
+        .write_cb = kc85ui_mem_write,
+        .read_only = false,
+        .x = 20, .y = 40, .h = 120
+    });
+}
+
+void kc85ui_discard(void) {
+    memui_discard(&memui);
+}
+
+void kc85ui_draw(void) {
+    memui_draw(&memui);
 }
 #endif

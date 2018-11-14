@@ -20,10 +20,11 @@ typedef struct {
 } ui_menu_t;
 
 typedef struct {
+    void (*draw)(void);
     ui_menu_t menus[UI_MAX_MENUS];
-} ui_menudesc_t;
+} ui_desc_t;
 
-extern void ui_init(const ui_menudesc_t* desc);
+extern void ui_init(const ui_desc_t* desc);
 extern void ui_discard(void);
 extern void ui_draw(void);
 extern bool ui_input(const sapp_event* event);

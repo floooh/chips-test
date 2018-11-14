@@ -6,7 +6,6 @@
 #include "sokol_app.h"
 #include "sokol_time.h"
 #include "imgui.h"
-#include "ui/thirdparty/imgui_memory_editor.h"
 #define CHIPS_IMPL
 #include "ui/memui.h"
 
@@ -28,11 +27,11 @@ static void ui_draw_menu(void);
 extern const char* vs_src_imgui;
 extern const char* fs_src_imgui;
 
-static ui_menudesc_t menu_desc;
+static ui_desc_t ui_desc;
 
-void ui_init(const ui_menudesc_t* desc) {
+void ui_init(const ui_desc_t* desc) {
     ui_init_imgui();
-    menu_desc = *desc;
+    ui_desc = *desc;
 }
 
 void ui_discard(void) {
@@ -63,6 +62,9 @@ void ui_draw(void) {
     }
     ImGui::NewFrame();
     ui_draw_menu();
+    if (ui_desc.draw) {
+        ui_desc.draw();
+    }
     ImGui::Render();
 }
 
@@ -128,13 +130,13 @@ bool ui_input(const sapp_event* event) {
         default:
             break;
     }
-    return false;
+    return io.WantCaptureKeyboard;
 }
 
 void ui_draw_menu(void) {
     if (ImGui::BeginMainMenuBar()) {
         for (int mi = 0; mi < UI_MAX_MENUS; mi++) {
-            const ui_menu_t* menu = &menu_desc.menus[mi];
+            const ui_menu_t* menu = &ui_desc.menus[mi];
             if (menu->name) {
                 if (ImGui::BeginMenu(menu->name)) {
                     for (int ii = 0; ii < UI_MAX_MENU_ITEMS; ii++) {
