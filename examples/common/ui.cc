@@ -8,7 +8,7 @@
 #include "imgui.h"
 #define CHIPS_IMPL
 #include "ui/ui_util.h"
-#include "ui/ui_mem.h"
+#include "ui/ui_memedit.h"
 #include "util/z80dasm.h"
 #include "ui/ui_dasm.h"
 

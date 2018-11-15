@@ -6,7 +6,7 @@
 #include "common.h"
 #ifdef CHIPS_USE_UI
 #include "ui.h"
-#include "ui/ui_mem.h"
+#include "ui/ui_memedit.h"
 #include "ui/ui_dasm.h"
 #endif
 #define CHIPS_IMPL
@@ -291,7 +291,7 @@ void app_cleanup(void) {
 /*=== optional debugging UI ==================================================*/
 #ifdef CHIPS_USE_UI
 
-static ui_mem_t ui_mem;
+static ui_memedit_t ui_memedit;
 static ui_dasm_t ui_dasm;
 
 /* menu handler functions */
@@ -311,15 +311,15 @@ void kc85ui_boot_kc854(void) {
     kc85_desc_t desc = kc85_desc(KC85_TYPE_4); kc85_init(&kc85, &desc);
 }
 
-void kc85ui_mem_toggle(void) {
-    ui_mem_toggle(&ui_mem);
+void kc85ui_memedit_toggle(void) {
+    ui_memedit_toggle(&ui_memedit);
 }
 
 void kc85ui_dasm_toggle(void) {
     ui_dasm_toggle(&ui_dasm);
 }
 
-uint8_t kc85ui_mem_read(int layer, uint16_t addr, void* user_data) {
+uint8_t kc85ui_memedit_read(int layer, uint16_t addr, void* user_data) {
     if (layer == 0) {
         return mem_rd(&kc85.mem, addr);
     }
@@ -328,7 +328,7 @@ uint8_t kc85ui_mem_read(int layer, uint16_t addr, void* user_data) {
     }
 }
 
-void kc85ui_mem_write(int layer, uint16_t addr, uint8_t data, void* user_data) {
+void kc85ui_memedit_write(int layer, uint16_t addr, uint8_t data, void* user_data) {
     if (layer == 0) {
         mem_wr(&kc85.mem, addr, data);
     }
@@ -364,7 +364,7 @@ void kc85ui_init(void) {
             {
                 .name = "Debug",
                 .items = {
-                    { .name = "Memory Editor", .func = kc85ui_mem_toggle },
+                    { .name = "Memory Editor", .func = kc85ui_memedit_toggle },
                     { .name = "Disassembler", .func = kc85ui_dasm_toggle },
                     { .name = "CPU Debugger (TODO)", .func = kc85ui_dummy },
                     { .name = "Scan Commands (TODO)", .func = kc85ui_dummy }
@@ -372,11 +372,11 @@ void kc85ui_init(void) {
             }
         },
     });
-    ui_mem_init(&ui_mem, &(ui_mem_desc_t){
+    ui_memedit_init(&ui_memedit, &(ui_memedit_desc_t){
         .title = "Memory Editor",
         .layers = { "CPU Mapped", "Motherboard", "Slot 08", "Slot 0C" },
-        .read_cb = kc85ui_mem_read,
-        .write_cb = kc85ui_mem_write,
+        .read_cb = kc85ui_memedit_read,
+        .write_cb = kc85ui_memedit_write,
         .read_only = false,
         .x = 20, .y = 40, .h = 120
     });
@@ -384,18 +384,18 @@ void kc85ui_init(void) {
         .title = "Disassembler",
         .layers = { "CPU Mapped", "Motherboard", "Slot 08", "Slot 0C" },
         .start_addr = 0xF000,
-        .read_cb = kc85ui_mem_read,
+        .read_cb = kc85ui_memedit_read,
         .x = 40, .y = 60, .w = 400, .h = 256
     });
 }
 
 void kc85ui_discard(void) {
     ui_dasm_discard(&ui_dasm);
-    ui_mem_discard(&ui_mem);
+    ui_memedit_discard(&ui_memedit);
 }
 
 void kc85ui_draw(void) {
-    ui_mem_draw(&ui_mem);
+    ui_memedit_draw(&ui_memedit);
     ui_dasm_draw(&ui_dasm);
 }
 #endif
