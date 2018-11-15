@@ -10,7 +10,7 @@
 #include "ui/ui_util.h"
 #include "ui/ui_mem.h"
 #include "util/z80dasm.h"
-#include "ui/ui_z80dasm.h"
+#include "ui/ui_dasm.h"
 
 typedef struct {
     ImVec2 disp_size;

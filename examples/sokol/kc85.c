@@ -7,7 +7,7 @@
 #ifdef CHIPS_USE_UI
 #include "ui.h"
 #include "ui/ui_mem.h"
-#include "ui/ui_z80dasm.h"
+#include "ui/ui_dasm.h"
 #endif
 #define CHIPS_IMPL
 #include "chips/z80.h"
@@ -292,7 +292,7 @@ void app_cleanup(void) {
 #ifdef CHIPS_USE_UI
 
 static ui_mem_t ui_mem;
-static ui_z80dasm_t ui_z80dasm;
+static ui_dasm_t ui_dasm;
 
 /* menu handler functions */
 void kc85ui_reset(void) {
@@ -316,7 +316,7 @@ void kc85ui_mem_toggle(void) {
 }
 
 void kc85ui_dasm_toggle(void) {
-    ui_z80dasm_toggle(&ui_z80dasm);
+    ui_dasm_toggle(&ui_dasm);
 }
 
 uint8_t kc85ui_mem_read(int layer, uint16_t addr, void* user_data) {
@@ -380,7 +380,7 @@ void kc85ui_init(void) {
         .read_only = false,
         .x = 20, .y = 40, .h = 120
     });
-    ui_z80dasm_init(&ui_z80dasm, &(ui_z80dasm_desc_t){
+    ui_dasm_init(&ui_dasm, &(ui_dasm_desc_t){
         .title = "Disassembler",
         .layers = { "CPU Mapped", "Motherboard", "Slot 08", "Slot 0C" },
         .read_cb = kc85ui_mem_read,
@@ -389,12 +389,12 @@ void kc85ui_init(void) {
 }
 
 void kc85ui_discard(void) {
-    ui_z80dasm_discard(&ui_z80dasm);
+    ui_dasm_discard(&ui_dasm);
     ui_mem_discard(&ui_mem);
 }
 
 void kc85ui_draw(void) {
     ui_mem_draw(&ui_mem);
-    ui_z80dasm_draw(&ui_z80dasm);
+    ui_dasm_draw(&ui_dasm);
 }
 #endif
