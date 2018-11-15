@@ -173,7 +173,6 @@ void ui_init_imgui(void) {
     style.WindowRounding = 0.0f;
     style.WindowBorderSize = 1.0f;
     style.Alpha = 1.0f;
-    style.TouchExtraPadding = ImVec2(5.0f, 5.0f);
     ImGuiIO& io = ImGui::GetIO();
     io.Fonts->AddFontDefault();
     io.IniFilename = nullptr;
