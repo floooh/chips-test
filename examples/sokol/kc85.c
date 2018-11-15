@@ -7,6 +7,7 @@
 #ifdef CHIPS_USE_UI
 #include "ui.h"
 #include "ui/ui_memedit.h"
+#include "ui/ui_memmap.h"
 #include "ui/ui_dasm.h"
 #endif
 #define CHIPS_IMPL
@@ -292,6 +293,8 @@ void app_cleanup(void) {
 #ifdef CHIPS_USE_UI
 
 static ui_memedit_t ui_memedit;
+static ui_memmap_t ui_memmap;
+static ui_memmap_state_t ui_memmap_state;
 static ui_dasm_t ui_dasm;
 
 /* menu handler functions */
@@ -313,6 +316,10 @@ void kc85ui_boot_kc854(void) {
 
 void kc85ui_memedit_toggle(void) {
     ui_memedit_toggle(&ui_memedit);
+}
+
+void kc85ui_memmap_toggle(void) {
+    ui_memmap_toggle(&ui_memmap);
 }
 
 void kc85ui_dasm_toggle(void) {
@@ -355,8 +362,8 @@ void kc85ui_init(void) {
             {
                 .name = "Hardware",
                 .items = {
+                    { .name = "Memory Map", .func = kc85ui_memmap_toggle },
                     { .name = "IO Ports (TODO)", .func = kc85ui_dummy },
-                    { .name = "Memory Map (TODO)", .func = kc85ui_dummy },
                     { .name = "Z80 PIO (TODO)", .func = kc85ui_dummy },
                     { .name = "Z80 CTC (TODO)", .func = kc85ui_dummy },
                 }
@@ -380,6 +387,10 @@ void kc85ui_init(void) {
         .read_only = false,
         .x = 20, .y = 40, .h = 120
     });
+    ui_memmap_init(&ui_memmap, &(ui_memmap_desc_t){
+        .title = "Memory Map",
+        .x = 30, .y = 50, .w = 400, .h = 256
+    });
     ui_dasm_init(&ui_dasm, &(ui_dasm_desc_t){
         .title = "Disassembler",
         .layers = { "CPU Mapped", "Motherboard", "Slot 08", "Slot 0C" },
@@ -391,11 +402,13 @@ void kc85ui_init(void) {
 
 void kc85ui_discard(void) {
     ui_dasm_discard(&ui_dasm);
+    ui_memmap_discard(&ui_memmap);
     ui_memedit_discard(&ui_memedit);
 }
 
 void kc85ui_draw(void) {
     ui_memedit_draw(&ui_memedit);
+    ui_memmap_draw(&ui_memmap, &ui_memmap_state);
     ui_dasm_draw(&ui_dasm);
 }
 #endif
