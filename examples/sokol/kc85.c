@@ -383,8 +383,9 @@ void kc85ui_init(void) {
     ui_dasm_init(&ui_dasm, &(ui_dasm_desc_t){
         .title = "Disassembler",
         .layers = { "CPU Mapped", "Motherboard", "Slot 08", "Slot 0C" },
+        .start_addr = 0xF000,
         .read_cb = kc85ui_mem_read,
-        .x = 40, .y = 60, .w = 256, .h = 256
+        .x = 40, .y = 60, .w = 400, .h = 256
     });
 }
 
