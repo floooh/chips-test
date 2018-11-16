@@ -295,85 +295,6 @@ void app_cleanup(void) {
 static ui_memedit_t ui_memedit;
 static ui_memmap_t ui_memmap;
 static ui_dasm_t ui_dasm;
-static ui_memmap_state_t ui_memmap_state_kc852 = {
-    .layers = {
-        {
-            .name = "System",
-            .regions = {
-                { .name = "RAM 0", .addr = 0x0000, .len = 0x4000 },
-                { .name = "IRM",   .addr = 0x8000, .len = 0x4000 },
-                { .name = "CAOS ROM 1", .addr = 0xE000, .len = 0x0800 },
-                { .name = "CAOS ROM 2", .addr = 0xF000, .len = 0x0800 }
-            },
-        },
-        { .name = "Slot 08" },
-        { .name = "Slot 0C" }
-    }
-};
-static ui_memmap_state_t ui_memmap_state_kc853 = {
-    .layers = {
-        {
-            .name = "System",
-            .regions = {
-                { .name = "RAM0",       .addr = 0x0000, .len = 0x4000 },
-                { .name = "IRM",        .addr = 0x8000, .len = 0x4000 },
-                { .name = "BASIC ROM",  .addr = 0xC000, .len = 0x2000 },
-                { .name = "CAOS ROM",   .addr = 0xE000, .len = 0x2000 },
-            },
-        },
-        { .name = "Slot 08" },
-        { .name = "Slot 0C" }
-    }
-};
-static ui_memmap_state_t ui_memmap_state_kc854 = {
-    .layers = {
-        {
-            .name = "System 0",
-            .regions = {
-                { .name = "RAM0",           .addr = 0x0000, .len = 0x4000 },
-                { .name = "RAM4",           .addr = 0x4000, .len = 0x4000 },
-                { .name = "IRM0 (PIXELS)",  .addr = 0x8000, .len = 0x4000 },
-                { .name = "CAOS ROM E",     .addr = 0xE000, .len = 0x2000 },
-            },
-        },
-        {
-            .name = "System 1",
-            .regions = {
-                { .name = "IRM0 (COLORS)",  .addr = 0x8000, .len = 0x2800 },
-                { .name = "CAOS ROM C",     .addr = 0xC000, .len = 0x1000 },
-            }
-        },
-        {
-            .name = "System 2",
-            .regions = {
-                { .name = "IRM1 (PIXELS)",  .addr = 0x8000, .len = 0x2800 },
-                { .name = "BASIC ROM",      .addr = 0xC000, .len = 0x2000 },
-            }
-        },
-        {
-            .name = "System 3",
-            .regions = {
-                { .name = "IRM1 (COLORS)",  .addr = 0x8000, .len = 0x2800 },
-            }
-        },
-        {
-            .name = "System 4",
-            .regions = {
-                { .name = "RAM8 (BLOCK0)",  .addr = 0x8000, .len = 0x4000 },
-            }
-        },
-        {
-            .name = "System 5",
-            .regions = {
-                { .name = "RAM8 (BLOCK1)",  .addr = 0x8000, .len = 0x4000 },
-            }
-        },
-        { .name = "Slot 08" },
-        { .name = "Slot 0C" }
-
-    }
-};
-
 /* menu handler functions */
 void kc85ui_reset(void) {
     kc85_reset(&kc85);
@@ -483,27 +404,68 @@ void kc85ui_discard(void) {
     ui_memedit_discard(&ui_memedit);
 }
 
-const ui_memmap_state_t* kc85ui_update_memmap(void) {
+void kc85ui_update_memmap(void) {
+    const uint8_t pio_a = kc85.pio_a;
+    const uint8_t pio_b = kc85.pio_b;
+    const uint8_t io86  = kc85.io86;
+    const uint8_t io84  = kc85.io84;
+    ui_memmap_reset(&ui_memmap);
     if (KC85_TYPE_2 == kc85.type) {
-        return &ui_memmap_state_kc852;
+        /* KC85/2 memory map */
+        ui_memmap_layer(&ui_memmap, "System");
+            ui_memmap_region(&ui_memmap, "RAM0", 0x0000, 0x4000, pio_a & KC85_PIO_A_RAM);
+            ui_memmap_region(&ui_memmap, "IRM", 0x8000, 0x4000, pio_a & KC85_PIO_A_IRM);
+            ui_memmap_region(&ui_memmap, "CAOS ROM 1", 0xE000, 0x0800, pio_a & KC85_PIO_A_CAOS_ROM);
+            ui_memmap_region(&ui_memmap, "CAOS ROM 2", 0xF000, 0x0800, pio_a & KC85_PIO_A_CAOS_ROM);
     }
     else if (KC85_TYPE_3 == kc85.type) {
-        return &ui_memmap_state_kc853;
+        /* KC85/3 memory map */
+        ui_memmap_layer(&ui_memmap, "System");
+            ui_memmap_region(&ui_memmap, "RAM0", 0x0000, 0x4000, pio_a & KC85_PIO_A_RAM);
+            ui_memmap_region(&ui_memmap, "IRM", 0x8000, 0x4000, pio_a & KC85_PIO_A_IRM);
+            ui_memmap_region(&ui_memmap, "BASIC ROM", 0xC000, 0x2000, pio_a & KC85_PIO_A_BASIC_ROM);
+            ui_memmap_region(&ui_memmap, "CAOS ROM", 0xE000, 0x2000, pio_a & KC85_PIO_A_CAOS_ROM);
     }
     else {
-        return &ui_memmap_state_kc854;
+        /* KC85/4 memory map */
+        ui_memmap_layer(&ui_memmap, "System 0");
+            ui_memmap_region(&ui_memmap, "RAM0", 0x0000, 0x4000, pio_a & KC85_PIO_A_RAM);
+            ui_memmap_region(&ui_memmap, "RAM4", 0x4000, 0x4000, io86 & KC85_IO86_RAM4);
+            ui_memmap_region(&ui_memmap, "IRM0 PIXELS", 0x8000, 0x2800, (pio_a & KC85_PIO_A_IRM) && ((io84 & 6)==0));
+            ui_memmap_region(&ui_memmap, "IRM0", 0xA800, 0x1800, pio_a & KC85_PIO_A_IRM);
+            ui_memmap_region(&ui_memmap, "CAOS ROM E", 0xE000, 0x2000, pio_a & KC85_PIO_A_CAOS_ROM);
+        ui_memmap_layer(&ui_memmap, "System 1");
+            ui_memmap_region(&ui_memmap, "IRM0 COLORS", 0x8000, 0x2800, (pio_a & KC85_PIO_A_IRM) && ((io84 & 6)==2));
+            ui_memmap_region(&ui_memmap, "CAOS ROM C", 0xC000, 0x1000, io86 & KC85_IO86_CAOS_ROM_C);
+        ui_memmap_layer(&ui_memmap, "System 2");
+            ui_memmap_region(&ui_memmap, "IRM1 PIXELS", 0x8000, 0x2800, (pio_a & KC85_PIO_A_IRM) && ((io84 & 6)==4));
+            ui_memmap_region(&ui_memmap, "BASIC ROM", 0xC000, 0x2000, pio_a & KC85_PIO_A_BASIC_ROM);
+        ui_memmap_layer(&ui_memmap, "System 3");
+            ui_memmap_region(&ui_memmap, "IRM1 COLORS", 0x8000, 0x2800, (pio_a & KC85_PIO_A_IRM) && ((io84 & 6)==6));
+        ui_memmap_layer(&ui_memmap, "System 4");
+            ui_memmap_region(&ui_memmap, "RAM8 BANK0", 0x8000, 0x4000, (pio_b & KC85_PIO_B_RAM8) && !(io84 & KC85_IO84_SEL_RAM8));
+        ui_memmap_layer(&ui_memmap, "System 5");
+            ui_memmap_region(&ui_memmap, "RAM8 BANK1", 0x8000, 0x4000, (pio_b & KC85_PIO_B_RAM8) && (io84 & KC85_IO84_SEL_RAM8));
+    }
+    for (int i = 0; i < KC85_NUM_SLOTS; i++) {
+        const uint8_t slot_addr = kc85.exp.slot[i].addr;
+        ui_memmap_layer(&ui_memmap, slot_addr == 0x08 ? "Slot 08" : "Slot 0C");
+        if (kc85_slot_occupied(&kc85, slot_addr)) {
+            ui_memmap_region(&ui_memmap,
+                kc85_slot_mod_name(&kc85, slot_addr),
+                kc85_slot_cpu_addr(&kc85, slot_addr),
+                kc85_slot_mod_size(&kc85, slot_addr),
+                kc85_slot_ctrl(&kc85, slot_addr) & 1);
+        }
     }
 }
 
 void kc85ui_draw(void) {
-    if (ui_memedit_isopen(&ui_memedit)) {
-        ui_memedit_draw(&ui_memedit);
-    }
     if (ui_memmap_isopen(&ui_memmap)) {
-        ui_memmap_draw(&ui_memmap, kc85ui_update_memmap());
+        kc85ui_update_memmap();
     }
-    if (ui_dasm_isopen(&ui_dasm)) {
-        ui_dasm_draw(&ui_dasm);
-    }
+    ui_memedit_draw(&ui_memedit);
+    ui_memmap_draw(&ui_memmap);
+    ui_dasm_draw(&ui_dasm);
 }
 #endif
