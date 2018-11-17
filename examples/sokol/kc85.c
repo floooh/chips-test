@@ -23,6 +23,7 @@
 #include "ui/ui_dasm.h"
 #include "ui/ui_z80.h"
 #include "ui/ui_z80pio.h"
+#include "ui/ui_z80ctc.h"
 #endif
 
 kc85_t kc85;
@@ -301,6 +302,7 @@ static ui_memmap_t ui_memmap;
 static ui_dasm_t ui_dasm;
 static ui_z80_t ui_cpu;
 static ui_z80pio_t ui_pio;
+static ui_z80ctc_t ui_ctc;
 
 /* menu handler functions */
 void kc85ui_reset(void) { kc85_reset(&kc85); }
@@ -312,6 +314,7 @@ void kc85ui_memmap_toggle(void) { ui_memmap_toggle(&ui_memmap); }
 void kc85ui_dasm_toggle(void) { ui_dasm_toggle(&ui_dasm); }
 void kc85ui_cpu_toggle(void) { ui_z80_toggle(&ui_cpu); }
 void kc85ui_pio_toggle(void) { ui_z80pio_toggle(&ui_pio); }
+void kc85ui_ctc_toggle(void) { ui_z80ctc_toggle(&ui_ctc); }
 
 uint8_t kc85ui_memedit_read(int layer, uint16_t addr, void* user_data) {
     if (layer == 0) {
@@ -353,7 +356,7 @@ void kc85ui_init(void) {
                     { .name = "IO Ports (TODO)", .func = kc85ui_dummy },
                     { .name = "Z80 CPU", .func = kc85ui_cpu_toggle },
                     { .name = "Z80 PIO", .func = kc85ui_pio_toggle },
-                    { .name = "Z80 CTC (TODO)", .func = kc85ui_dummy },
+                    { .name = "Z80 CTC", .func = kc85ui_ctc_toggle },
                 }
             },
             {
@@ -402,9 +405,9 @@ void kc85ui_init(void) {
                 { .name = "D5",      .slot = 5, .mask = Z80_D5 },
                 { .name = "D6",      .slot = 6, .mask = Z80_D6 },
                 { .name = "D7",      .slot = 7, .mask = Z80_D7 },
-                { .name = "BASEL",   .slot = 9,  .mask = Z80PIO_BASEL },
-                { .name = "CDSEL",   .slot = 10, .mask = Z80PIO_CDSEL },
-                { .name = "CE",      .slot = 11, .mask = Z80PIO_CE },
+                { .name = "CE",      .slot = 9, .mask = Z80PIO_CE },
+                { .name = "BASEL",   .slot = 10,  .mask = Z80PIO_BASEL },
+                { .name = "CDSEL",   .slot = 11, .mask = Z80PIO_CDSEL },
                 { .name = "M1",      .slot = 12, .mask = Z80PIO_M1 },
                 { .name = "IORQ",    .slot = 13, .mask = Z80PIO_IORQ },
                 { .name = "RD",      .slot = 14, .mask = Z80PIO_RD },
@@ -413,6 +416,39 @@ void kc85ui_init(void) {
                 { .name = "ASTB",    .slot = 17, .mask = Z80PIO_ASTB },
                 { .name = "BRDY",    .slot = 19, .mask = Z80PIO_ARDY },
                 { .name = "BSTB",    .slot = 20, .mask = Z80PIO_ASTB },
+            }
+        }
+    });
+    ui_z80ctc_init(&ui_ctc, &(ui_z80ctc_desc_t){
+        .title = "Z80 CTC",
+        .ctc = &kc85.ctc,
+        .x = 40, .y = 60,
+        .chip_desc = {
+            .name = "Z80\nCTC",
+            .num_slots = 32,
+            .pins = {
+                { .name = "D0",     .slot = 0, .mask = Z80_D0 },
+                { .name = "D1",     .slot = 1, .mask = Z80_D1 },
+                { .name = "D2",     .slot = 2, .mask = Z80_D2 },
+                { .name = "D3",     .slot = 3, .mask = Z80_D3 },
+                { .name = "D4",     .slot = 4, .mask = Z80_D4 },
+                { .name = "D5",     .slot = 5, .mask = Z80_D5 },
+                { .name = "D6",     .slot = 6, .mask = Z80_D6 },
+                { .name = "D7",     .slot = 7, .mask = Z80_D7 },
+                { .name = "CE",     .slot = 9, .mask = Z80CTC_CE },
+                { .name = "CS0",    .slot = 10, .mask = Z80CTC_CS0 },
+                { .name = "CS1",    .slot = 11, .mask = Z80CTC_CS1 },
+                { .name = "M1",     .slot = 12, .mask = Z80CTC_M1 },
+                { .name = "IORQ",   .slot = 13, .mask = Z80CTC_IORQ },
+                { .name = "RD",     .slot = 14, .mask = Z80CTC_RD },
+                { .name = "INT",    .slot = 15, .mask = Z80CTC_INT },
+                { .name = "CT0",    .slot = 16, .mask = Z80CTC_CLKTRG0 },
+                { .name = "ZT0",    .slot = 17, .mask = Z80CTC_ZCTO0 },
+                { .name = "CT1",    .slot = 19, .mask = Z80CTC_CLKTRG1 },
+                { .name = "ZT1",    .slot = 20, .mask = Z80CTC_ZCTO1 },
+                { .name = "CT2",    .slot = 22, .mask = Z80CTC_CLKTRG2 },
+                { .name = "ZT2",    .slot = 23, .mask = Z80CTC_ZCTO2 },
+                { .name = "CT3",    .slot = 25, .mask = Z80CTC_CLKTRG3 }
             }
         }
     });
@@ -463,6 +499,7 @@ void kc85ui_init(void) {
 }
 
 void kc85ui_discard(void) {
+    ui_z80ctc_discard(&ui_ctc);
     ui_z80pio_discard(&ui_pio);
     ui_z80_discard(&ui_cpu);
     ui_dasm_discard(&ui_dasm);
@@ -532,6 +569,7 @@ void kc85ui_draw() {
     }
     ui_z80_draw(&ui_cpu);
     ui_z80pio_draw(&ui_pio);
+    ui_z80ctc_draw(&ui_ctc);
     ui_memedit_draw(&ui_memedit);
     ui_memmap_draw(&ui_memmap);
     ui_dasm_draw(&ui_dasm);

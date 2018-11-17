@@ -8,6 +8,7 @@
 #include "imgui.h"
 #include "chips/z80.h"
 #include "chips/z80pio.h"
+#include "chips/z80ctc.h"
 #define CHIPS_IMPL
 #include "ui/ui_util.h"
 #include "ui/ui_chip.h"
@@ -17,6 +18,7 @@
 #include "ui/ui_dasm.h"
 #include "ui/ui_z80.h"
 #include "ui/ui_z80pio.h"
+#include "ui/ui_z80ctc.h"
 
 typedef struct {
     ImVec2 disp_size;
