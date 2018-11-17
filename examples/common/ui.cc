@@ -7,11 +7,13 @@
 #include "sokol_time.h"
 #include "imgui.h"
 #define CHIPS_IMPL
+#include "chips/z80pio.h"
 #include "ui/ui_util.h"
 #include "ui/ui_memedit.h"
 #include "ui/ui_memmap.h"
 #include "util/z80dasm.h"
 #include "ui/ui_dasm.h"
+#include "ui/ui_z80pio.h"
 
 typedef struct {
     ImVec2 disp_size;

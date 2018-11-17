@@ -4,12 +4,6 @@
     KC85/2, /3 and /4.
 */
 #include "common.h"
-#ifdef CHIPS_USE_UI
-#include "ui.h"
-#include "ui/ui_memedit.h"
-#include "ui/ui_memmap.h"
-#include "ui/ui_dasm.h"
-#endif
 #define CHIPS_IMPL
 #include "chips/z80.h"
 #include "chips/z80ctc.h"
@@ -20,6 +14,14 @@
 #include "chips/mem.h"
 #include "systems/kc85.h"
 #include "kc85-roms.h"
+#ifdef CHIPS_USE_UI
+#undef CHIPS_IMPL
+#include "ui.h"
+#include "ui/ui_memedit.h"
+#include "ui/ui_memmap.h"
+#include "ui/ui_dasm.h"
+#include "ui/ui_z80pio.h"
+#endif
 
 kc85_t kc85;
 
@@ -295,6 +297,8 @@ void app_cleanup(void) {
 static ui_memedit_t ui_memedit;
 static ui_memmap_t ui_memmap;
 static ui_dasm_t ui_dasm;
+static ui_z80pio_t ui_pio;
+
 /* menu handler functions */
 void kc85ui_reset(void) {
     kc85_reset(&kc85);
@@ -322,6 +326,10 @@ void kc85ui_memmap_toggle(void) {
 
 void kc85ui_dasm_toggle(void) {
     ui_dasm_toggle(&ui_dasm);
+}
+
+void kc85ui_pio_toggle(void) {
+    ui_z80pio_toggle(&ui_pio);
 }
 
 uint8_t kc85ui_memedit_read(int layer, uint16_t addr, void* user_data) {
@@ -362,7 +370,7 @@ void kc85ui_init(void) {
                 .items = {
                     { .name = "Memory Map", .func = kc85ui_memmap_toggle },
                     { .name = "IO Ports (TODO)", .func = kc85ui_dummy },
-                    { .name = "Z80 PIO (TODO)", .func = kc85ui_dummy },
+                    { .name = "Z80 PIO", .func = kc85ui_pio_toggle },
                     { .name = "Z80 CTC (TODO)", .func = kc85ui_dummy },
                 }
             },
@@ -395,6 +403,11 @@ void kc85ui_init(void) {
         .start_addr = 0xF000,
         .read_cb = kc85ui_memedit_read,
         .x = 40, .y = 60, .w = 400, .h = 256
+    });
+    ui_z80pio_init(&ui_pio, &(ui_z80pio_desc_t){
+        .title = "Z80 PIO",
+        .pio = &kc85.pio,
+        .x = 40, .y = 60
     });
 }
 
@@ -464,6 +477,7 @@ void kc85ui_draw(void) {
     if (ui_memmap_isopen(&ui_memmap)) {
         kc85ui_update_memmap();
     }
+    ui_z80pio_draw(&ui_pio);
     ui_memedit_draw(&ui_memedit);
     ui_memmap_draw(&ui_memmap);
     ui_dasm_draw(&ui_dasm);
