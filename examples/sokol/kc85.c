@@ -21,6 +21,7 @@
 #include "ui/ui_memedit.h"
 #include "ui/ui_memmap.h"
 #include "ui/ui_dasm.h"
+#include "ui/ui_z80.h"
 #include "ui/ui_z80pio.h"
 #endif
 
@@ -298,40 +299,19 @@ void app_cleanup(void) {
 static ui_memedit_t ui_memedit;
 static ui_memmap_t ui_memmap;
 static ui_dasm_t ui_dasm;
+static ui_z80_t ui_cpu;
 static ui_z80pio_t ui_pio;
 
 /* menu handler functions */
-void kc85ui_reset(void) {
-    kc85_reset(&kc85);
-}
-
-void kc85ui_boot_kc852(void) {
-    kc85_desc_t desc = kc85_desc(KC85_TYPE_2); kc85_init(&kc85, &desc);
-}
-
-void kc85ui_boot_kc853(void) {
-    kc85_desc_t desc = kc85_desc(KC85_TYPE_3); kc85_init(&kc85, &desc);
-}
-
-void kc85ui_boot_kc854(void) {
-    kc85_desc_t desc = kc85_desc(KC85_TYPE_4); kc85_init(&kc85, &desc);
-}
-
-void kc85ui_memedit_toggle(void) {
-    ui_memedit_toggle(&ui_memedit);
-}
-
-void kc85ui_memmap_toggle(void) {
-    ui_memmap_toggle(&ui_memmap);
-}
-
-void kc85ui_dasm_toggle(void) {
-    ui_dasm_toggle(&ui_dasm);
-}
-
-void kc85ui_pio_toggle(void) {
-    ui_z80pio_toggle(&ui_pio);
-}
+void kc85ui_reset(void) { kc85_reset(&kc85); }
+void kc85ui_boot_kc852(void) { kc85_desc_t desc = kc85_desc(KC85_TYPE_2); kc85_init(&kc85, &desc); }
+void kc85ui_boot_kc853(void) { kc85_desc_t desc = kc85_desc(KC85_TYPE_3); kc85_init(&kc85, &desc); }
+void kc85ui_boot_kc854(void) { kc85_desc_t desc = kc85_desc(KC85_TYPE_4); kc85_init(&kc85, &desc); }
+void kc85ui_memedit_toggle(void) { ui_memedit_toggle(&ui_memedit); }
+void kc85ui_memmap_toggle(void) { ui_memmap_toggle(&ui_memmap); }
+void kc85ui_dasm_toggle(void) { ui_dasm_toggle(&ui_dasm); }
+void kc85ui_cpu_toggle(void) { ui_z80_toggle(&ui_cpu); }
+void kc85ui_pio_toggle(void) { ui_z80pio_toggle(&ui_pio); }
 
 uint8_t kc85ui_memedit_read(int layer, uint16_t addr, void* user_data) {
     if (layer == 0) {
@@ -371,6 +351,7 @@ void kc85ui_init(void) {
                 .items = {
                     { .name = "Memory Map", .func = kc85ui_memmap_toggle },
                     { .name = "IO Ports (TODO)", .func = kc85ui_dummy },
+                    { .name = "Z80 CPU", .func = kc85ui_cpu_toggle },
                     { .name = "Z80 PIO", .func = kc85ui_pio_toggle },
                     { .name = "Z80 CTC (TODO)", .func = kc85ui_dummy },
                 }
@@ -435,9 +416,55 @@ void kc85ui_init(void) {
             }
         }
     });
+    ui_z80_init(&ui_cpu, &(ui_z80_desc_t){
+        .title = "Z80 CPU",
+        .cpu = &kc85.cpu,
+        .x = 40, .y = 60,
+        .chip_desc = {
+            .name = "Z80\nCPU",
+            .num_slots = 36,
+            .pins = {
+                { .name = "D0",      .slot = 0, .mask = Z80_D0 },
+                { .name = "D1",      .slot = 1, .mask = Z80_D1 },
+                { .name = "D2",      .slot = 2, .mask = Z80_D2 },
+                { .name = "D3",      .slot = 3, .mask = Z80_D3 },
+                { .name = "D4",      .slot = 4, .mask = Z80_D4 },
+                { .name = "D5",      .slot = 5, .mask = Z80_D5 },
+                { .name = "D6",      .slot = 6, .mask = Z80_D6 },
+                { .name = "D7",      .slot = 7, .mask = Z80_D7 },
+                { .name = "M1",      .slot = 9, .mask = Z80_M1 },
+                { .name = "MREQ",    .slot = 10, .mask = Z80_MREQ },
+                { .name = "IORQ",    .slot = 11, .mask = Z80_IORQ },
+                { .name = "RD",      .slot = 12, .mask = Z80_RD },
+                { .name = "WR",      .slot = 13, .mask = Z80_WR },
+                { .name = "HALT",    .slot = 14, .mask = Z80_HALT },
+                { .name = "INT",     .slot = 15, .mask = Z80_INT },
+                { .name = "NMI",     .slot = 16, .mask = Z80_NMI },
+                { .name = "WAIT",    .slot = 17, .mask = Z80_WAIT_MASK },
+                { .name = "A0",      .slot = 18, .mask = Z80_A0 },
+                { .name = "A1",      .slot = 19, .mask = Z80_A1 },
+                { .name = "A2",      .slot = 20, .mask = Z80_A2 },
+                { .name = "A3",      .slot = 21, .mask = Z80_A3 },
+                { .name = "A4",      .slot = 22, .mask = Z80_A4 },
+                { .name = "A5",      .slot = 23, .mask = Z80_A5 },
+                { .name = "A6",      .slot = 24, .mask = Z80_A6 },
+                { .name = "A7",      .slot = 25, .mask = Z80_A7 },
+                { .name = "A8",      .slot = 26, .mask = Z80_A8 },
+                { .name = "A9",      .slot = 27, .mask = Z80_A9 },
+                { .name = "A10",     .slot = 28, .mask = Z80_A10 },
+                { .name = "A11",     .slot = 29, .mask = Z80_A11 },
+                { .name = "A12",     .slot = 30, .mask = Z80_A12 },
+                { .name = "A13",     .slot = 31, .mask = Z80_A13 },
+                { .name = "A14",     .slot = 32, .mask = Z80_A14 },
+                { .name = "A15",     .slot = 33, .mask = Z80_A15 }
+            }
+        }
+    });
 }
 
 void kc85ui_discard(void) {
+    ui_z80pio_discard(&ui_pio);
+    ui_z80_discard(&ui_cpu);
     ui_dasm_discard(&ui_dasm);
     ui_memmap_discard(&ui_memmap);
     ui_memedit_discard(&ui_memedit);
@@ -503,6 +530,7 @@ void kc85ui_draw() {
     if (ui_memmap_isopen(&ui_memmap)) {
         kc85ui_update_memmap();
     }
+    ui_z80_draw(&ui_cpu);
     ui_z80pio_draw(&ui_pio);
     ui_memedit_draw(&ui_memedit);
     ui_memmap_draw(&ui_memmap);

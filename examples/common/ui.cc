@@ -6,14 +6,16 @@
 #include "sokol_app.h"
 #include "sokol_time.h"
 #include "imgui.h"
-#define CHIPS_IMPL
+#include "chips/z80.h"
 #include "chips/z80pio.h"
+#define CHIPS_IMPL
 #include "ui/ui_util.h"
 #include "ui/ui_chip.h"
 #include "ui/ui_memedit.h"
 #include "ui/ui_memmap.h"
 #include "util/z80dasm.h"
 #include "ui/ui_dasm.h"
+#include "ui/ui_z80.h"
 #include "ui/ui_z80pio.h"
 
 typedef struct {
