@@ -9,6 +9,7 @@
 #define CHIPS_IMPL
 #include "chips/z80pio.h"
 #include "ui/ui_util.h"
+#include "ui/ui_chip.h"
 #include "ui/ui_memedit.h"
 #include "ui/ui_memmap.h"
 #include "util/z80dasm.h"

@@ -17,6 +17,7 @@
 #ifdef CHIPS_USE_UI
 #undef CHIPS_IMPL
 #include "ui.h"
+#include "ui/ui_chip.h"
 #include "ui/ui_memedit.h"
 #include "ui/ui_memmap.h"
 #include "ui/ui_dasm.h"
@@ -407,7 +408,32 @@ void kc85ui_init(void) {
     ui_z80pio_init(&ui_pio, &(ui_z80pio_desc_t){
         .title = "Z80 PIO",
         .pio = &kc85.pio,
-        .x = 40, .y = 60
+        .x = 40, .y = 60,
+        .chip_desc = {
+            .name = "Z80\nPIO",
+            .num_slots = 32,
+            .pins = {
+                { .name = "D0",      .slot = 0, .mask = Z80_D0 },
+                { .name = "D1",      .slot = 1, .mask = Z80_D1 },
+                { .name = "D2",      .slot = 2, .mask = Z80_D2 },
+                { .name = "D3",      .slot = 3, .mask = Z80_D3 },
+                { .name = "D4",      .slot = 4, .mask = Z80_D4 },
+                { .name = "D5",      .slot = 5, .mask = Z80_D5 },
+                { .name = "D6",      .slot = 6, .mask = Z80_D6 },
+                { .name = "D7",      .slot = 7, .mask = Z80_D7 },
+                { .name = "BASEL",   .slot = 9,  .mask = Z80PIO_BASEL },
+                { .name = "CDSEL",   .slot = 10, .mask = Z80PIO_CDSEL },
+                { .name = "CE",      .slot = 11, .mask = Z80PIO_CE },
+                { .name = "M1",      .slot = 12, .mask = Z80PIO_M1 },
+                { .name = "IORQ",    .slot = 13, .mask = Z80PIO_IORQ },
+                { .name = "RD",      .slot = 14, .mask = Z80PIO_RD },
+                { .name = "INT",     .slot = 15, .mask = Z80PIO_INT },
+                { .name = "ARDY",    .slot = 16, .mask = Z80PIO_ARDY },
+                { .name = "ASTB",    .slot = 17, .mask = Z80PIO_ASTB },
+                { .name = "BRDY",    .slot = 19, .mask = Z80PIO_ARDY },
+                { .name = "BSTB",    .slot = 20, .mask = Z80PIO_ASTB },
+            }
+        }
     });
 }
 
@@ -473,7 +499,7 @@ void kc85ui_update_memmap(void) {
     }
 }
 
-void kc85ui_draw(void) {
+void kc85ui_draw() {
     if (ui_memmap_isopen(&ui_memmap)) {
         kc85ui_update_memmap();
     }
