@@ -47,6 +47,7 @@ p {
     height: auto;
 }
 .thumb {
+    position: relative;
     width: 270px;
     height: 220px;
     margin-left: 10px;
@@ -61,13 +62,36 @@ p {
     text-align: center;
     color: limegreen;
     font-family: monospace;
-    font-size: 20px;        
+    font-size: 18px;        
+    font-weight: bold;
 }
 .img-frame {
     margin: 2px;
     width: auto;
     height: 165px;
 }
+
+.img-btn {
+    position: absolute;
+    top: 4px;
+    right: 8px;
+    width: 20px;
+    padding: 2px;
+    display: block;
+    background-color: limegreen;
+    cursor: pointer;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.img-btn-link {
+    text-decoration: none;
+    color: black;
+    font-weight: bold;
+    font-family: monospace;
+    font-size: 16px;
+}
+
 .image {
     display: block;
     height: 165px;

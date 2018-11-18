@@ -9,12 +9,11 @@ from string import Template
 
 from mod import log, util, project
 
-systems = [ 'kc85', 'kc85-ui', 'zx', 'c64', 'cpc', 'atom', 'z1013', 'z9001', 'arcade' ]
+systems = [ 'kc85', 'kc85-ui', 'zx', 'c64', 'cpc', 'atom', 'z1013', 'z1013-ui', 'z9001', 'z9001-ui', 'bombjack' ]
 items = [
     { 'type':'emu',  'title':'KC85/2', 'system':'kc85',             'url':'kc85.html?type=kc85_2', 'img':'kc85/kc85_2.jpg', 'note':'' },
     { 'type':'emu',  'title':'KC85/3', 'system':'kc85',             'url':'kc85.html?type=kc85_3', 'img':'kc85/kc85_3.jpg', 'note':'' },
     { 'type':'emu',  'title':'KC85/4', 'system':'kc85',             'url':'kc85.html?type=kc85_4', 'img':'kc85/kc85_4.jpg', 'note':'' },
-    { 'type':'emu',  'title':'KC85 + UI (WIP!)', 'system':'kc85-ui',       'url':'kc85-ui.html?type=kc85_4', 'img':'kc85/kc85_ui.jpg', 'note':'' },
     { 'type':'emu',  'title':'KC Compact',      'system':'cpc',     'url':'cpc.html?type=kccompact', 'img':'cpc/kccompact.jpg', 'note':'' },
     { 'type':'emu',  'title':'Amstrad CPC464',  'system':'cpc',     'url':'cpc.html?type=cpc464', 'img':'cpc/cpc464.jpg', 'note':'' },
     { 'type':'emu',  'title':'Amstrad CPC6128', 'system':'cpc',     'url':'cpc.html', 'img':'cpc/cpc6128.jpg', 'note':'' },
@@ -106,6 +105,7 @@ BuildConfig = 'wasm-ninja-release'
 def deploy_webpage(fips_dir, proj_dir, webpage_dir) :
     """builds the final webpage under under fips-deploy/chips-webpage"""
     ws_dir = util.get_workspace_dir(fips_dir)
+    emsc_deploy_dir = '{}/fips-deploy/chips-test/{}'.format(ws_dir, BuildConfig)
 
     # build the thumbnail gallery
     content = ''
@@ -113,11 +113,14 @@ def deploy_webpage(fips_dir, proj_dir, webpage_dir) :
         title = item['title']
         system = item['system']
         url = item['url']
+        ui_url = url.replace(".html", "-ui.html")
         image = item['img']
         note = item['note']
         log.info('> adding thumbnail for {}'.format(url))
         content += '<div class="thumb">\n'
         content += '  <div class="thumb-title">{}</div>\n'.format(title)
+        if os.path.exists(emsc_deploy_dir + '/' + system + '-ui.js'):
+            content += '<div class="img-btn"><a class="img-btn-link" href="{}">UI</a></div>'.format(ui_url)
         content += '  <div class="img-frame"><a href="{}"><img class="image" src="{}"></img></a></div>\n'.format(url,image)
         content += '  <div class="thumb-bar">{}</div>\n'.format(note)
         content += '</div>\n'
@@ -142,22 +145,17 @@ def deploy_webpage(fips_dir, proj_dir, webpage_dir) :
         shutil.copy(proj_dir + '/webpage/' + name, webpage_dir + '/' + name)
 
     # generate emu HTML pages
-    emsc_deploy_dir = '{}/fips-deploy/chips-test/{}'.format(ws_dir, BuildConfig)
-    for item in items :
-        if item['type'] != 'emu':
-            continue
-        name = os.path.splitext(item['url'])[0]
-        title = item['title']
-        log.info('> generate emscripten HTML page: {}'.format(name))
+    for system in systems :
+        log.info('> generate emscripten HTML page: {}'.format(system))
         for ext in ['wasm', 'js'] :
-            src_path = '{}/{}.{}'.format(emsc_deploy_dir, name, ext)
+            src_path = '{}/{}.{}'.format(emsc_deploy_dir, system, ext)
             if os.path.isfile(src_path) :
                 shutil.copy(src_path, '{}/'.format(webpage_dir))
         with open(proj_dir + '/webpage/emsc.html', 'r') as f :
             templ = Template(f.read())
         src_url = GitHubSamplesURL + name
-        html = templ.safe_substitute(name=title, prog=name, source=src_url)
-        with open('{}/{}.html'.format(webpage_dir, name), 'w') as f :
+        html = templ.safe_substitute(name=system, prog=system, source=src_url)
+        with open('{}/{}.html'.format(webpage_dir, system), 'w') as f :
             f.write(html)
 
     # copy data files and images
