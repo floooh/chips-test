@@ -316,7 +316,7 @@ void kc85ui_cpu_toggle(void) { ui_z80_toggle(&ui_cpu); }
 void kc85ui_pio_toggle(void) { ui_z80pio_toggle(&ui_pio); }
 void kc85ui_ctc_toggle(void) { ui_z80ctc_toggle(&ui_ctc); }
 
-uint8_t kc85ui_memedit_read(int layer, uint16_t addr, void* user_data) {
+uint8_t kc85ui_mem_read(int layer, uint16_t addr, void* user_data) {
     if (layer == 0) {
         return mem_rd(&kc85.mem, addr);
     }
@@ -325,7 +325,7 @@ uint8_t kc85ui_memedit_read(int layer, uint16_t addr, void* user_data) {
     }
 }
 
-void kc85ui_memedit_write(int layer, uint16_t addr, uint8_t data, void* user_data) {
+void kc85ui_mem_write(int layer, uint16_t addr, uint8_t data, void* user_data) {
     if (layer == 0) {
         mem_wr(&kc85.mem, addr, data);
     }
@@ -373,8 +373,8 @@ void kc85ui_init(void) {
     ui_memedit_init(&ui_memedit, &(ui_memedit_desc_t){
         .title = "Memory Editor",
         .layers = { "CPU Mapped", "Motherboard", "Slot 08", "Slot 0C" },
-        .read_cb = kc85ui_memedit_read,
-        .write_cb = kc85ui_memedit_write,
+        .read_cb = kc85ui_mem_read,
+        .write_cb = kc85ui_mem_write,
         .read_only = false,
         .x = 20, .y = 40, .h = 120
     });
@@ -386,7 +386,7 @@ void kc85ui_init(void) {
         .title = "Disassembler",
         .layers = { "CPU Mapped", "Motherboard", "Slot 08", "Slot 0C" },
         .start_addr = 0xF000,
-        .read_cb = kc85ui_memedit_read,
+        .read_cb = kc85ui_mem_read,
         .x = 40, .y = 60, .w = 400, .h = 256
     });
     ui_z80pio_init(&ui_pio, &(ui_z80pio_desc_t){

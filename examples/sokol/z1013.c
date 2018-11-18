@@ -209,11 +209,11 @@ void z1013ui_dasm_toggle(void) { ui_dasm_toggle(&ui_dasm); }
 void z1013ui_cpu_toggle(void) { ui_z80_toggle(&ui_cpu); }
 void z1013ui_pio_toggle(void) { ui_z80pio_toggle(&ui_pio); }
 
-uint8_t z1013ui_memedit_read(int layer, uint16_t addr, void* user_data) {
+uint8_t z1013ui_mem_read(int layer, uint16_t addr, void* user_data) {
     return mem_rd(&z1013.mem, addr);
 }
 
-void z1013ui_memedit_write(int layer, uint16_t addr, uint8_t data, void* user_data) {
+void z1013ui_mem_write(int layer, uint16_t addr, uint8_t data, void* user_data) {
     mem_wr(&z1013.mem, addr, data);
 }
 
@@ -253,8 +253,8 @@ void z1013ui_init(void) {
     ui_memedit_init(&ui_memedit, &(ui_memedit_desc_t){
         .title = "Memory Editor",
         .layers = { "System" },
-        .read_cb = z1013ui_memedit_read,
-        .write_cb = z1013ui_memedit_write,
+        .read_cb = z1013ui_mem_read,
+        .write_cb = z1013ui_mem_write,
         .read_only = false,
         .x = 20, .y = 40, .h = 120
     });
@@ -266,7 +266,7 @@ void z1013ui_init(void) {
         .title = "Disassembler",
         .layers = { "System" },
         .start_addr = 0xF000,
-        .read_cb = z1013ui_memedit_read,
+        .read_cb = z1013ui_mem_read,
         .x = 40, .y = 60, .w = 400, .h = 256
     });
     ui_z80pio_init(&ui_pio, &(ui_z80pio_desc_t){
@@ -355,20 +355,19 @@ void z1013ui_discard(void) {
 
 void z1013ui_update_memmap(void) {
     ui_memmap_reset(&ui_memmap);
+    ui_memmap_layer(&ui_memmap, "System");
     if ((Z1013_TYPE_01 == z1013.type) || (Z1013_TYPE_16 == z1013.type)) {
         /* Z1013/01 + /16 memory map */
-        ui_memmap_layer(&ui_memmap, "System");
-            ui_memmap_region(&ui_memmap, "RAM", 0x0000, 0x4000, true);
-            ui_memmap_region(&ui_memmap, "VIDEO", 0xEC00, 0x0400, true);
-            ui_memmap_region(&ui_memmap, "ROM", 0xF000, 0x0800, true);
+        ui_memmap_region(&ui_memmap, "RAM", 0x0000, 0x4000, true);
+        ui_memmap_region(&ui_memmap, "VIDEO", 0xEC00, 0x0400, true);
+        ui_memmap_region(&ui_memmap, "ROM", 0xF000, 0x0800, true);
     }
     else {
         /* Z1013/64 memory map */
-        ui_memmap_layer(&ui_memmap, "System");
-            ui_memmap_region(&ui_memmap, "RAM0", 0x0000, 0xEC00, true);
-            ui_memmap_region(&ui_memmap, "VIDEO", 0xEC00, 0x0400, true);
-            ui_memmap_region(&ui_memmap, "ROM", 0xF000, 0x0800, true);
-            ui_memmap_region(&ui_memmap, "RAM1", 0xF800, 0x0800, true);
+        ui_memmap_region(&ui_memmap, "RAM0", 0x0000, 0xEC00, true);
+        ui_memmap_region(&ui_memmap, "VIDEO", 0xEC00, 0x0400, true);
+        ui_memmap_region(&ui_memmap, "ROM", 0xF000, 0x0800, true);
+        ui_memmap_region(&ui_memmap, "RAM1", 0xF800, 0x0800, true);
     }
 }
 
