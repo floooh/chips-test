@@ -574,4 +574,4 @@ void kc85ui_draw() {
     ui_memmap_draw(&ui_memmap);
     ui_dasm_draw(&ui_dasm);
 }
-#endif
+#endif /* CHIPS_USE_UI */
