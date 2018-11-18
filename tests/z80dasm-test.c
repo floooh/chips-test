@@ -6,6 +6,7 @@
 #include "test.h"
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 
 #define TOP(str) T(op(str))
 
@@ -45,6 +46,9 @@ static void out_cb(char c, void* user_data) {
 static bool op(const char* res) {
     ctx.str_pos = 0;
     ctx.pc = z80dasm_op(ctx.pc, in_cb, out_cb, 0);
+    for (int i = 0; i < 32; i++) {
+        ctx.str[i] = toupper(ctx.str[i]);
+    }
     return 0 == strcmp(ctx.str, res);
 }
 
