@@ -24,7 +24,7 @@
 #include "ui/ui_z80.h"
 #include "ui/ui_z80pio.h"
 #include "ui/ui_z80ctc.h"
-#include "ui/ui_kc85io.h"
+#include "ui/ui_kc85.h"
 
 typedef struct {
     ImVec2 disp_size;

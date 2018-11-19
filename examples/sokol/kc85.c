@@ -24,7 +24,7 @@
 #include "ui/ui_z80.h"
 #include "ui/ui_z80pio.h"
 #include "ui/ui_z80ctc.h"
-#include "ui/ui_kc85io.h"
+#include "ui/ui_kc85.h"
 #endif
 
 kc85_t kc85;
@@ -304,7 +304,7 @@ static ui_dasm_t ui_dasm;
 static ui_z80_t ui_cpu;
 static ui_z80pio_t ui_pio;
 static ui_z80ctc_t ui_ctc;
-static ui_kc85io_t ui_kc85io;
+static ui_kc85_t ui_kc85;
 
 /* menu handler functions */
 void kc85ui_reset(void) { kc85_reset(&kc85); }
@@ -317,7 +317,7 @@ void kc85ui_dasm_toggle(void) { ui_dasm_toggle(&ui_dasm); }
 void kc85ui_cpu_toggle(void) { ui_z80_toggle(&ui_cpu); }
 void kc85ui_pio_toggle(void) { ui_z80pio_toggle(&ui_pio); }
 void kc85ui_ctc_toggle(void) { ui_z80ctc_toggle(&ui_ctc); }
-void kc85ui_kc85io_toggle(void) { ui_kc85io_toggle(&ui_kc85io); }
+void kc85ui_kc85_toggle(void) { ui_kc85_toggle(&ui_kc85); }
 
 uint8_t kc85ui_mem_read(int layer, uint16_t addr, void* user_data) {
     if (layer == 0) {
@@ -356,7 +356,7 @@ void kc85ui_init(void) {
                 .name = "Hardware",
                 .items = {
                     { .name = "Memory Map", .func = kc85ui_memmap_toggle },
-                    { .name = "IO Ports (TODO)", .func = kc85ui_kc85io_toggle },
+                    { .name = "System State",  .func = kc85ui_kc85_toggle },
                     { .name = "Z80 CPU", .func = kc85ui_cpu_toggle },
                     { .name = "Z80 PIO", .func = kc85ui_pio_toggle },
                     { .name = "Z80 CTC", .func = kc85ui_ctc_toggle },
@@ -392,8 +392,8 @@ void kc85ui_init(void) {
         .read_cb = kc85ui_mem_read,
         .x = 40, .y = 60, .w = 400, .h = 256
     });
-    ui_kc85io_init(&ui_kc85io, &(ui_kc85io_desc_t){
-        .title = "KC85 IO Ports",
+    ui_kc85_init(&ui_kc85, &(ui_kc85_desc_t){
+        .title = "System State",
         .kc85 = &kc85,
         .x = 40, .y = 60
     });
@@ -597,6 +597,6 @@ void kc85ui_draw() {
     ui_memedit_draw(&ui_memedit);
     ui_memmap_draw(&ui_memmap);
     ui_dasm_draw(&ui_dasm);
-    ui_kc85io_draw(&ui_kc85io);
+    ui_kc85_draw(&ui_kc85);
 }
 #endif /* CHIPS_USE_UI */
