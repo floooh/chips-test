@@ -523,6 +523,7 @@ void kc85ui_init(void) {
 }
 
 void kc85ui_discard(void) {
+    ui_kc85_discard(&ui_kc85);
     ui_z80ctc_discard(&ui_ctc);
     ui_z80pio_discard(&ui_pio);
     ui_z80_discard(&ui_cpu);
