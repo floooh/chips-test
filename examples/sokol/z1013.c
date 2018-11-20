@@ -203,11 +203,6 @@ void z1013ui_reset(void) { z1013_reset(&z1013); }
 void z1013ui_boot_01(void) { z1013_desc_t desc = z1013_desc(Z1013_TYPE_01); z1013_init(&z1013, &desc); }
 void z1013ui_boot_16(void) { z1013_desc_t desc = z1013_desc(Z1013_TYPE_16); z1013_init(&z1013, &desc); }
 void z1013ui_boot_64(void) { z1013_desc_t desc = z1013_desc(Z1013_TYPE_64); z1013_init(&z1013, &desc); }
-void z1013ui_memedit_toggle(void) { ui_memedit_toggle(&ui_memedit); }
-void z1013ui_memmap_toggle(void) { ui_memmap_toggle(&ui_memmap); }
-void z1013ui_dasm_toggle(void) { ui_dasm_toggle(&ui_dasm); }
-void z1013ui_cpu_toggle(void) { ui_z80_toggle(&ui_cpu); }
-void z1013ui_pio_toggle(void) { ui_z80pio_toggle(&ui_pio); }
 
 uint8_t z1013ui_mem_read(int layer, uint16_t addr, void* user_data) {
     return mem_rd(&z1013.mem, addr);
@@ -235,16 +230,16 @@ void z1013ui_init(void) {
             {
                 .name = "Hardware",
                 .items = {
-                    { .name = "Memory Map", .func = z1013ui_memmap_toggle },
-                    { .name = "Z80 CPU", .func = z1013ui_cpu_toggle },
-                    { .name = "Z80 PIO", .func = z1013ui_pio_toggle },
+                    { .name = "Memory Map", .open = &ui_memmap.open },
+                    { .name = "Z80 CPU", .open = &ui_cpu.open },
+                    { .name = "Z80 PIO", .open = &ui_pio.open },
                 }
             },
             {
                 .name = "Debug",
                 .items = {
-                    { .name = "Memory Editor", .func = z1013ui_memedit_toggle },
-                    { .name = "Disassembler", .func = z1013ui_dasm_toggle },
+                    { .name = "Memory Editor", .open = &ui_memedit.open },
+                    { .name = "Disassembler", .open = &ui_dasm.open },
                     { .name = "CPU Debugger (TODO)", .func = z1013ui_dummy },
                 }
             }

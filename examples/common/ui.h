@@ -11,6 +11,7 @@ extern "C" {
 
 typedef struct {
     const char* name;
+    bool *open;      /* optional pointer to 'open flag' */
     void (*func)(void);
 } ui_menuitem_t;
 

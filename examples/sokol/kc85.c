@@ -311,13 +311,6 @@ void kc85ui_reset(void) { kc85_reset(&kc85); }
 void kc85ui_boot_kc852(void) { kc85_desc_t desc = kc85_desc(KC85_TYPE_2); kc85_init(&kc85, &desc); }
 void kc85ui_boot_kc853(void) { kc85_desc_t desc = kc85_desc(KC85_TYPE_3); kc85_init(&kc85, &desc); }
 void kc85ui_boot_kc854(void) { kc85_desc_t desc = kc85_desc(KC85_TYPE_4); kc85_init(&kc85, &desc); }
-void kc85ui_memedit_toggle(void) { ui_memedit_toggle(&ui_memedit); }
-void kc85ui_memmap_toggle(void) { ui_memmap_toggle(&ui_memmap); }
-void kc85ui_dasm_toggle(void) { ui_dasm_toggle(&ui_dasm); }
-void kc85ui_cpu_toggle(void) { ui_z80_toggle(&ui_cpu); }
-void kc85ui_pio_toggle(void) { ui_z80pio_toggle(&ui_pio); }
-void kc85ui_ctc_toggle(void) { ui_z80ctc_toggle(&ui_ctc); }
-void kc85ui_kc85_toggle(void) { ui_kc85_toggle(&ui_kc85); }
 
 uint8_t kc85ui_mem_read(int layer, uint16_t addr, void* user_data) {
     if (layer == 0) {
@@ -355,18 +348,18 @@ void kc85ui_init(void) {
             {
                 .name = "Hardware",
                 .items = {
-                    { .name = "Memory Map", .func = kc85ui_memmap_toggle },
-                    { .name = "System State",  .func = kc85ui_kc85_toggle },
-                    { .name = "Z80 CPU", .func = kc85ui_cpu_toggle },
-                    { .name = "Z80 PIO", .func = kc85ui_pio_toggle },
-                    { .name = "Z80 CTC", .func = kc85ui_ctc_toggle },
+                    { .name = "Memory Map", .open = &ui_memmap.open },
+                    { .name = "System State", .open = &ui_kc85.open },
+                    { .name = "Z80 CPU", .open = &ui_cpu.open },
+                    { .name = "Z80 PIO", .open = &ui_pio.open },
+                    { .name = "Z80 CTC", .open = &ui_ctc.open },
                 }
             },
             {
                 .name = "Debug",
                 .items = {
-                    { .name = "Memory Editor", .func = kc85ui_memedit_toggle },
-                    { .name = "Disassembler", .func = kc85ui_dasm_toggle },
+                    { .name = "Memory Editor", .open = &ui_memedit.open },
+                    { .name = "Disassembler", .open = &ui_dasm.open },
                     { .name = "CPU Debugger (TODO)", .func = kc85ui_dummy },
                     { .name = "Scan Commands (TODO)", .func = kc85ui_dummy }
                 }

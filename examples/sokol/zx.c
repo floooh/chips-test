@@ -207,10 +207,6 @@ static ui_z80_t ui_cpu;
 void zxui_reset(void) { zx_reset(&zx); }
 void zxui_boot_zx48k(void) { zx_desc_t desc = zx_desc(ZX_TYPE_48K, zx.joystick_type); zx_init(&zx, &desc); }
 void zxui_boot_zx128(void) { zx_desc_t desc = zx_desc(ZX_TYPE_128, zx.joystick_type); zx_init(&zx, &desc); }
-void zxui_memedit_toggle(void) { ui_memedit_toggle(&ui_memedit); }
-void zxui_memmap_toggle(void) { ui_memmap_toggle(&ui_memmap); }
-void zxui_dasm_toggle(void) { ui_dasm_toggle(&ui_dasm); }
-void zxui_cpu_toggle(void) { ui_z80_toggle(&ui_cpu); }
 
 uint8_t* zxui_ptr(int layer, uint16_t addr) {
     if (0 == layer) {
@@ -291,16 +287,16 @@ void zxui_init(void) {
             {
                 .name = "Hardware",
                 .items = {
-                    { .name = "Memory Map", .func = zxui_memmap_toggle },
-                    { .name = "Z80 CPU", .func = zxui_cpu_toggle },
+                    { .name = "Memory Map", .open = &ui_memmap.open },
+                    { .name = "Z80 CPU", .open = &ui_cpu.open },
                     { .name = "AY-3-8910 (TODO)", .func = zxui_dummy },
                 }
             },
             {
                 .name = "Debug",
                 .items = {
-                    { .name = "Memory Editor", .func = zxui_memedit_toggle },
-                    { .name = "Disassembler", .func = zxui_dasm_toggle },
+                    { .name = "Memory Editor", .open = &ui_memedit.open },
+                    { .name = "Disassembler", .open = &ui_dasm.open },
                     { .name = "CPU Debugger (TODO)", .func = zxui_dummy },
                 }
             }

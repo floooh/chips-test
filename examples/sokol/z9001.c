@@ -215,13 +215,6 @@ static ui_z80ctc_t ui_ctc;
 void z9001ui_reset(void) { z9001_reset(&z9001); }
 void z9001ui_boot_z9001(void) { z9001_desc_t desc = z9001_desc(Z9001_TYPE_Z9001); z9001_init(&z9001, &desc); }
 void z9001ui_boot_kc87(void) { z9001_desc_t desc = z9001_desc(Z9001_TYPE_KC87); z9001_init(&z9001, &desc); }
-void z9001ui_memedit_toggle(void) { ui_memedit_toggle(&ui_memedit); }
-void z9001ui_memmap_toggle(void) { ui_memmap_toggle(&ui_memmap); }
-void z9001ui_dasm_toggle(void) { ui_dasm_toggle(&ui_dasm); }
-void z9001ui_cpu_toggle(void) { ui_z80_toggle(&ui_cpu); }
-void z9001ui_pio1_toggle(void) { ui_z80pio_toggle(&ui_pio_1); }
-void z9001ui_pio2_toggle(void) { ui_z80pio_toggle(&ui_pio_2); }
-void z9001ui_ctc_toggle(void) { ui_z80ctc_toggle(&ui_ctc); }
 
 uint8_t z9001ui_mem_read(int layer, uint16_t addr, void* user_data) {
     return mem_rd(&z9001.mem, addr);
@@ -248,18 +241,18 @@ void z9001ui_init(void) {
             {
                 .name = "Hardware",
                 .items = {
-                    { .name = "Memory Map", .func = z9001ui_memmap_toggle },
-                    { .name = "Z80 CPU", .func = z9001ui_cpu_toggle },
-                    { .name = "Z80 PIO 1", .func = z9001ui_pio1_toggle },
-                    { .name = "Z80 PIO 2", .func = z9001ui_pio2_toggle },
-                    { .name = "Z80 CTC", .func = z9001ui_ctc_toggle },
+                    { .name = "Memory Map", .open = &ui_memmap.open },
+                    { .name = "Z80 CPU", .open = &ui_cpu.open },
+                    { .name = "Z80 PIO 1", .open = &ui_pio_1.open },
+                    { .name = "Z80 PIO 2", .open = &ui_pio_2.open },
+                    { .name = "Z80 CTC", .open = &ui_ctc.open },
                 }
             },
             {
                 .name = "Debug",
                 .items = {
-                    { .name = "Memory Editor", .func = z9001ui_memedit_toggle },
-                    { .name = "Disassembler", .func = z9001ui_dasm_toggle },
+                    { .name = "Memory Editor", .open = &ui_memedit.open },
+                    { .name = "Disassembler", .open = &ui_dasm.open },
                     { .name = "CPU Debugger (TODO)", .func = z9001ui_dummy },
                     { .name = "Scan Commands (TODO)", .func = z9001ui_dummy }
                 }

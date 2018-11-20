@@ -164,9 +164,11 @@ void ui_draw_menu() {
                 if (ImGui::BeginMenu(menu->name)) {
                     for (int ii = 0; ii < UI_MAX_MENU_ITEMS; ii++) {
                         const ui_menuitem_t* item = &menu->items[ii];
-                        if (item->name && item->func) {
-                            if (ImGui::MenuItem(item->name)) {
-                                item->func();
+                        if (item->name) {
+                            if (ImGui::MenuItem(item->name, 0, item->open, true)) {
+                                if (item->func) {
+                                    item->func();
+                                }
                             }
                         }
                     }
