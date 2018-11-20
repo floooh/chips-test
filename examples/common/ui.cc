@@ -9,6 +9,7 @@
 #include "chips/z80.h"
 #include "chips/z80pio.h"
 #include "chips/z80ctc.h"
+#include "chips/ay38910.h"
 #include "chips/beeper.h"
 #include "chips/clk.h"
 #include "chips/mem.h"
@@ -25,6 +26,7 @@
 #include "ui/ui_z80pio.h"
 #include "ui/ui_z80ctc.h"
 #include "ui/ui_kc85.h"
+#include "ui/ui_ay38910.h"
 
 typedef struct {
     ImVec2 disp_size;

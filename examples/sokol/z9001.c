@@ -264,7 +264,6 @@ void z9001ui_init(void) {
         .layers = { "System" },
         .read_cb = z9001ui_mem_read,
         .write_cb = z9001ui_mem_write,
-        .read_only = false,
         .x = 20, .y = 40, .h = 120
     });
     ui_memmap_init(&ui_memmap, &(ui_memmap_desc_t){
@@ -485,7 +484,7 @@ void z9001ui_update_memmap(void) {
 }
 
 void z9001ui_draw() {
-    if (ui_memmap_isopen(&ui_memmap)) {
+    if (ui_memmap.open) {
         z9001ui_update_memmap();
     }
     ui_z80_draw(&ui_cpu);

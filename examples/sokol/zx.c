@@ -23,6 +23,7 @@
 #include "ui/ui_memmap.h"
 #include "ui/ui_dasm.h"
 #include "ui/ui_z80.h"
+#include "ui/ui_ay38910.h"
 #endif
 
 zx_t zx;
@@ -202,6 +203,7 @@ static ui_memedit_t ui_memedit;
 static ui_memmap_t ui_memmap;
 static ui_dasm_t ui_dasm;
 static ui_z80_t ui_cpu;
+static ui_ay38910_t ui_ay;
 
 /* menu handler functions */
 void zxui_reset(void) { zx_reset(&zx); }
@@ -289,7 +291,7 @@ void zxui_init(void) {
                 .items = {
                     { .name = "Memory Map", .open = &ui_memmap.open },
                     { .name = "Z80 CPU", .open = &ui_cpu.open },
-                    { .name = "AY-3-8910 (TODO)", .func = zxui_dummy },
+                    { .name = "AY-3-8912", .open = &ui_ay.open },
                 }
             },
             {
@@ -307,7 +309,6 @@ void zxui_init(void) {
         .layers = { "CPU Mapped", "Layer 0", "Layer 1", "Layer 2", "Layer 3", "Layer 4", "Layer 5", "Layer 6", "Layer 7" },
         .read_cb = zxui_mem_read,
         .write_cb = zxui_mem_write,
-        .read_only = false,
         .x = 20, .y = 40, .h = 120
     });
     ui_memmap_init(&ui_memmap, &(ui_memmap_desc_t){
@@ -365,6 +366,36 @@ void zxui_init(void) {
             }
         }
     });
+    ui_ay38910_init(&ui_ay, &(ui_ay38910_desc_t){
+        .title = "AY-3-8912",
+        .ay = &zx.ay,
+        .x = 40, .y = 60,
+        .w = 200, .h = 230,
+        .chip_desc = {
+            .name = "8912",
+            .num_slots = 22,
+            .pins = {
+                { .name = "DA0",  .slot = 0, .mask = AY38910_DA0 },
+                { .name = "DA1",  .slot = 1, .mask = AY38910_DA1 },
+                { .name = "DA2",  .slot = 2, .mask = AY38910_DA2 },
+                { .name = "DA3",  .slot = 3, .mask = AY38910_DA3 },
+                { .name = "DA4",  .slot = 4, .mask = AY38910_DA4 },
+                { .name = "DA5",  .slot = 5, .mask = AY38910_DA5 },
+                { .name = "DA6",  .slot = 6, .mask = AY38910_DA6 },
+                { .name = "DA7",  .slot = 7, .mask = AY38910_DA7 },
+                { .name = "BDIR", .slot = 9, .mask = AY38910_BDIR },
+                { .name = "BC1",  .slot = 10, .mask = AY38910_BC1 },
+                { .name = "IOA0", .slot = 11, .mask = AY38910_IOA0 },
+                { .name = "IOA1", .slot = 12, .mask = AY38910_IOA1 },
+                { .name = "IOA2", .slot = 13, .mask = AY38910_IOA2 },
+                { .name = "IOA3", .slot = 14, .mask = AY38910_IOA3 },
+                { .name = "IOA4", .slot = 15, .mask = AY38910_IOA4 },
+                { .name = "IOA5", .slot = 16, .mask = AY38910_IOA5 },
+                { .name = "IOA6", .slot = 17, .mask = AY38910_IOA6 },
+                { .name = "IOA7", .slot = 18, .mask = AY38910_IOA7 }
+            }
+        }
+    });
 }
 
 void zxui_discard(void) {
@@ -407,9 +438,10 @@ void zxui_update_memmap(void) {
 }
 
 void zxui_draw() {
-    if (ui_memmap_isopen(&ui_memmap)) {
+    if (ui_memmap.open) {
         zxui_update_memmap();
     }
+    ui_ay38190_draw(&ui_ay);
     ui_z80_draw(&ui_cpu);
     ui_memedit_draw(&ui_memedit);
     ui_memmap_draw(&ui_memmap);

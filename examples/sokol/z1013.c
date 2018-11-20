@@ -250,7 +250,6 @@ void z1013ui_init(void) {
         .layers = { "System" },
         .read_cb = z1013ui_mem_read,
         .write_cb = z1013ui_mem_write,
-        .read_only = false,
         .x = 20, .y = 40, .h = 120
     });
     ui_memmap_init(&ui_memmap, &(ui_memmap_desc_t){
@@ -383,7 +382,7 @@ void z1013ui_update_memmap(void) {
 }
 
 void z1013ui_draw() {
-    if (ui_memmap_isopen(&ui_memmap)) {
+    if (ui_memmap.open) {
         z1013ui_update_memmap();
     }
     ui_z80_draw(&ui_cpu);

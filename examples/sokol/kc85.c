@@ -371,7 +371,6 @@ void kc85ui_init(void) {
         .layers = { "CPU Mapped", "Motherboard", "Slot 08", "Slot 0C" },
         .read_cb = kc85ui_mem_read,
         .write_cb = kc85ui_mem_write,
-        .read_only = false,
         .x = 20, .y = 40, .h = 120
     });
     ui_memmap_init(&ui_memmap, &(ui_memmap_desc_t){
@@ -582,7 +581,7 @@ void kc85ui_update_memmap(void) {
 }
 
 void kc85ui_draw() {
-    if (ui_memmap_isopen(&ui_memmap)) {
+    if (ui_memmap.open) {
         kc85ui_update_memmap();
     }
     ui_z80_draw(&ui_cpu);
