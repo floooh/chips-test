@@ -290,6 +290,7 @@ void zxui_init(void) {
                 .name = "Hardware",
                 .items = {
                     { .name = "Memory Map", .open = &ui_memmap.open },
+                    { .name = "System State (TODO)", .func = zxui_dummy },
                     { .name = "Z80 CPU", .open = &ui_cpu.open },
                     { .name = "AY-3-8912", .open = &ui_ay.open },
                 }
@@ -400,6 +401,7 @@ void zxui_init(void) {
 
 void zxui_discard(void) {
     ui_z80_discard(&ui_cpu);
+    ui_ay38910_discard(&ui_ay);
     ui_dasm_discard(&ui_dasm);
     ui_memmap_discard(&ui_memmap);
     ui_memedit_discard(&ui_memedit);
