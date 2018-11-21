@@ -371,7 +371,6 @@ void zxui_init(void) {
         .title = "AY-3-8912",
         .ay = &zx.ay,
         .x = 40, .y = 60,
-        .w = 200, .h = 230,
         .chip_desc = {
             .name = "8912",
             .num_slots = 22,

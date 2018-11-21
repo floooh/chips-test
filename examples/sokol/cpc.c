@@ -394,7 +394,6 @@ void cpcui_init(void) {
         .title = "AY-3-8912",
         .ay = &cpc.psg,
         .x = 40, .y = 60,
-        .w = 400, .h = 230,
         .chip_desc = {
             .name = "8912",
             .num_slots = 22,
