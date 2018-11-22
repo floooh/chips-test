@@ -25,6 +25,7 @@
 #include "ui/ui_z80pio.h"
 #include "ui/ui_z80ctc.h"
 #include "ui/ui_kc85.h"
+#include "ui/ui_audio.h"
 #endif
 
 kc85_t kc85;
@@ -117,9 +118,6 @@ void app_init(void) {
         .fb_height = KC85_DISPLAY_HEIGHT,
         #endif
     });
-    #ifdef CHIPS_USE_UI
-    kc85ui_init();
-    #endif
     keybuf_init(6);
     clock_init();
     saudio_setup(&(saudio_desc){0});
@@ -137,6 +135,10 @@ void app_init(void) {
     /* initialize the KC85 emulator */
     kc85_desc_t desc = kc85_desc(type);
     kc85_init(&kc85, &desc);
+    #ifdef CHIPS_USE_UI
+    kc85ui_init();
+    #endif
+
     bool delay_input = false;
     /* snapshot file or rom-module image */
     if (sargs_exists("snapshot")) {
@@ -305,6 +307,7 @@ static ui_z80_t ui_cpu;
 static ui_z80pio_t ui_pio;
 static ui_z80ctc_t ui_ctc;
 static ui_kc85_t ui_kc85;
+static ui_audio_t ui_audio;
 
 /* menu handler functions */
 void kc85ui_reset(void) { kc85_reset(&kc85); }
@@ -340,9 +343,9 @@ void kc85ui_init(void) {
                 .name = "System",
                 .items = {
                     { .name = "Reset", .func = kc85ui_reset },
-                    { .name = "Boot to KC85/2", .func = kc85ui_boot_kc852 },
-                    { .name = "Boot to KC85/3", .func = kc85ui_boot_kc853 },
-                    { .name = "Boot to KC85/4", .func = kc85ui_boot_kc854 }
+                    { .name = "KC85/2", .func = kc85ui_boot_kc852 },
+                    { .name = "KC85/3", .func = kc85ui_boot_kc853 },
+                    { .name = "KC85/4", .func = kc85ui_boot_kc854 }
                 }
             },
             {
@@ -350,6 +353,7 @@ void kc85ui_init(void) {
                 .items = {
                     { .name = "Memory Map", .open = &ui_memmap.open },
                     { .name = "System State", .open = &ui_kc85.open },
+                    { .name = "Audio Output", .open = &ui_audio.open },
                     { .name = "Z80 CPU", .open = &ui_cpu.open },
                     { .name = "Z80 PIO", .open = &ui_pio.open },
                     { .name = "Z80 CTC", .open = &ui_ctc.open },
@@ -387,6 +391,12 @@ void kc85ui_init(void) {
     ui_kc85_init(&ui_kc85, &(ui_kc85_desc_t){
         .title = "System State",
         .kc85 = &kc85,
+        .x = 40, .y = 60
+    });
+    ui_audio_init(&ui_audio, &(ui_audio_desc_t){
+        .title = "Audio Output",
+        .sample_buffer = kc85.sample_buffer,
+        .num_samples = kc85.num_samples,
         .x = 40, .y = 60
     });
     ui_z80pio_init(&ui_pio, &(ui_z80pio_desc_t){
@@ -515,6 +525,7 @@ void kc85ui_init(void) {
 }
 
 void kc85ui_discard(void) {
+    ui_audio_discard(&ui_audio);
     ui_kc85_discard(&ui_kc85);
     ui_z80ctc_discard(&ui_ctc);
     ui_z80pio_discard(&ui_pio);
@@ -584,6 +595,7 @@ void kc85ui_draw() {
     if (ui_memmap.open) {
         kc85ui_update_memmap();
     }
+    ui_audio_draw(&ui_audio, kc85.sample_pos);
     ui_z80_draw(&ui_cpu);
     ui_z80pio_draw(&ui_pio);
     ui_z80ctc_draw(&ui_ctc);

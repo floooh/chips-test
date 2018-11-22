@@ -222,9 +222,9 @@ void z1013ui_init(void) {
                 .name = "System",
                 .items = {
                     { .name = "Reset", .func = z1013ui_reset },
-                    { .name = "Boot to Z1013/01", .func = z1013ui_boot_01 },
-                    { .name = "Boot to Z1013/16", .func = z1013ui_boot_16 },
-                    { .name = "Boot to Z1013/64", .func = z1013ui_boot_64 }
+                    { .name = "Z1013/01", .func = z1013ui_boot_01 },
+                    { .name = "Z1013/16", .func = z1013ui_boot_16 },
+                    { .name = "Z1013/64", .func = z1013ui_boot_64 }
                 }
             },
             {

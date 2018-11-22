@@ -27,6 +27,7 @@
 #include "ui/ui_z80.h"
 #include "ui/ui_z80pio.h"
 #include "ui/ui_z80ctc.h"
+#include "ui/ui_audio.h"
 #endif
 
 z9001_t z9001;
@@ -104,9 +105,6 @@ void app_init() {
         .fb_height = Z9001_DISPLAY_HEIGHT,
         #endif
     });
-    #ifdef CHIPS_USE_UI
-    z9001ui_init();
-    #endif
     clock_init();
     saudio_setup(&(saudio_desc){0});
     z9001_type_t type = Z9001_TYPE_Z9001;
@@ -117,6 +115,9 @@ void app_init() {
     }
     z9001_desc_t desc = z9001_desc(type);
     z9001_init(&z9001, &desc);
+    #ifdef CHIPS_USE_UI
+    z9001ui_init();
+    #endif
 }
 
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
@@ -210,6 +211,7 @@ static ui_z80_t ui_cpu;
 static ui_z80pio_t ui_pio_1;
 static ui_z80pio_t ui_pio_2;
 static ui_z80ctc_t ui_ctc;
+static ui_audio_t ui_audio;
 
 /* menu handler functions */
 void z9001ui_reset(void) { z9001_reset(&z9001); }
@@ -234,14 +236,15 @@ void z9001ui_init(void) {
                 .name = "System",
                 .items = {
                     { .name = "Reset", .func = z9001ui_reset },
-                    { .name = "Boot to Z9001", .func = z9001ui_boot_z9001 },
-                    { .name = "Boot to KC87", .func = z9001ui_boot_kc87 },
+                    { .name = "Z9001", .func = z9001ui_boot_z9001 },
+                    { .name = "KC87", .func = z9001ui_boot_kc87 },
                 }
             },
             {
                 .name = "Hardware",
                 .items = {
                     { .name = "Memory Map", .open = &ui_memmap.open },
+                    { .name = "Audio Output", .open = &ui_audio.open },
                     { .name = "Z80 CPU", .open = &ui_cpu.open },
                     { .name = "Z80 PIO 1", .open = &ui_pio_1.open },
                     { .name = "Z80 PIO 2", .open = &ui_pio_2.open },
@@ -276,6 +279,12 @@ void z9001ui_init(void) {
         .start_addr = 0xF000,
         .read_cb = z9001ui_mem_read,
         .x = 40, .y = 60, .w = 400, .h = 256
+    });
+    ui_audio_init(&ui_audio, &(ui_audio_desc_t) {
+        .title = "Audio Output",
+        .sample_buffer = z9001.sample_buffer,
+        .num_samples = z9001.num_samples,
+        .x = 40, .y = 60
     });
     ui_z80pio_init(&ui_pio_1, &(ui_z80pio_desc_t){
         .title = "Z80 PIO 1",
@@ -449,6 +458,7 @@ void z9001ui_init(void) {
 }
 
 void z9001ui_discard(void) {
+    ui_audio_discard(&ui_audio);
     ui_z80ctc_discard(&ui_ctc);
     ui_z80pio_discard(&ui_pio_1);
     ui_z80pio_discard(&ui_pio_2);
@@ -487,6 +497,7 @@ void z9001ui_draw() {
     if (ui_memmap.open) {
         z9001ui_update_memmap();
     }
+    ui_audio_draw(&ui_audio, z9001.sample_pos);
     ui_z80_draw(&ui_cpu);
     ui_z80pio_draw(&ui_pio_1);
     ui_z80pio_draw(&ui_pio_2);

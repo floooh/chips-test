@@ -15,6 +15,7 @@
 #include "chips/mem.h"
 #include "chips/kbd.h"
 #include "systems/kc85.h"
+#include "systems/zx.h"
 #define CHIPS_IMPL
 #include "ui/ui_util.h"
 #include "ui/ui_chip.h"
@@ -27,6 +28,7 @@
 #include "ui/ui_z80ctc.h"
 #include "ui/ui_kc85.h"
 #include "ui/ui_ay38910.h"
+#include "ui/ui_audio.h"
 
 typedef struct {
     ImVec2 disp_size;

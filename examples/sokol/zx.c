@@ -24,6 +24,7 @@
 #include "ui/ui_dasm.h"
 #include "ui/ui_z80.h"
 #include "ui/ui_ay38910.h"
+#include "ui/ui_audio.h"
 #endif
 
 zx_t zx;
@@ -94,9 +95,6 @@ void app_init() {
         .fb_height = ZX_DISPLAY_HEIGHT,
         #endif
     });
-    #ifdef CHIPS_USE_UI
-    zxui_init();
-    #endif
     clock_init();
     saudio_setup(&(saudio_desc){0});
     zx_type_t type = ZX_TYPE_128;
@@ -119,6 +117,9 @@ void app_init() {
     }
     zx_desc_t desc = zx_desc(type, joy_type);
     zx_init(&zx, &desc);
+    #ifdef CHIPS_USE_UI
+    zxui_init();
+    #endif
 }
 
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
@@ -204,6 +205,7 @@ static ui_memmap_t ui_memmap;
 static ui_dasm_t ui_dasm;
 static ui_z80_t ui_cpu;
 static ui_ay38910_t ui_ay;
+static ui_audio_t ui_audio;
 
 /* menu handler functions */
 void zxui_reset(void) { zx_reset(&zx); }
@@ -282,15 +284,15 @@ void zxui_init(void) {
                 .name = "System",
                 .items = {
                     { .name = "Reset", .func = zxui_reset },
-                    { .name = "Boot to ZX Spectrum 48k", .func = zxui_boot_zx48k },
-                    { .name = "Boot to ZX Spectrum 128", .func = zxui_boot_zx128 }
+                    { .name = "ZX Spectrum 48k", .func = zxui_boot_zx48k },
+                    { .name = "ZX Spectrum 128", .func = zxui_boot_zx128 }
                 }
             },
             {
                 .name = "Hardware",
                 .items = {
                     { .name = "Memory Map", .open = &ui_memmap.open },
-                    { .name = "System State (TODO)", .func = zxui_dummy },
+                    { .name = "Audio Output", .open = &ui_audio.open },
                     { .name = "Z80 CPU", .open = &ui_cpu.open },
                     { .name = "AY-3-8912", .open = &ui_ay.open },
                 }
@@ -322,6 +324,12 @@ void zxui_init(void) {
         .start_addr = 0x0000,
         .read_cb = zxui_mem_read,
         .x = 40, .y = 60, .w = 400, .h = 256
+    });
+    ui_audio_init(&ui_audio, &(ui_audio_desc_t) {
+        .title = "Audio Output",
+        .sample_buffer = zx.sample_buffer,
+        .num_samples = zx.num_samples,
+        .x = 40, .y = 60
     });
     ui_z80_init(&ui_cpu, &(ui_z80_desc_t){
         .title = "Z80 CPU",
@@ -399,6 +407,7 @@ void zxui_init(void) {
 }
 
 void zxui_discard(void) {
+    ui_audio_discard(&ui_audio);
     ui_z80_discard(&ui_cpu);
     ui_ay38910_discard(&ui_ay);
     ui_dasm_discard(&ui_dasm);
@@ -442,6 +451,7 @@ void zxui_draw() {
     if (ui_memmap.open) {
         zxui_update_memmap();
     }
+    ui_audio_draw(&ui_audio, zx.sample_pos);
     ui_ay38190_draw(&ui_ay);
     ui_z80_draw(&ui_cpu);
     ui_memedit_draw(&ui_memedit);

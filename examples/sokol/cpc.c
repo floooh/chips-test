@@ -27,6 +27,7 @@
 #include "ui/ui_dasm.h"
 #include "ui/ui_z80.h"
 #include "ui/ui_ay38910.h"
+#include "ui/ui_audio.h"
 #endif
 
 cpc_t cpc;
@@ -102,9 +103,6 @@ void app_init(void) {
         #endif
         .aspect_y = 2
     });
-    #ifdef CHIPS_USE_UI
-    cpcui_init();
-    #endif
     keybuf_init(10);
     clock_init();
     saudio_setup(&(saudio_desc){0});
@@ -135,6 +133,9 @@ void app_init(void) {
     }
     cpc_desc_t desc = cpc_desc(type, joy_type);
     cpc_init(&cpc, &desc);
+    #ifdef CHIPS_USE_UI
+    cpcui_init();
+    #endif
 
     /* keyboard input to send to emulator */
     if (!delay_input) {
@@ -265,6 +266,7 @@ static ui_memmap_t ui_memmap;
 static ui_dasm_t ui_dasm;
 static ui_z80_t ui_cpu;
 static ui_ay38910_t ui_ay;
+static ui_audio_t ui_audio;
 
 /* menu handler functions */
 void cpcui_reset(void) { cpc_reset(&cpc); }
@@ -301,9 +303,9 @@ void cpcui_init(void) {
                 .name = "System",
                 .items = {
                     { .name = "Reset", .func = cpcui_reset },
-                    { .name = "Boot to CPC 464", .func = cpcui_boot_464 },
-                    { .name = "Boot to CPC 6128", .func = cpcui_boot_6128 },
-                    { .name = "Boot to KC Compact", .func = cpcui_boot_kcc },
+                    { .name = "CPC 464", .func = cpcui_boot_464 },
+                    { .name = "CPC 6128", .func = cpcui_boot_6128 },
+                    { .name = "KC Compact", .func = cpcui_boot_kcc },
                 }
             },
             {
@@ -311,7 +313,8 @@ void cpcui_init(void) {
                 .items = {
                     { .name = "Memory Map", .open = &ui_memmap.open },
                     { .name = "System State (TODO)", .func = cpcui_dummy },
-                    { .name = "Z80", .open = &ui_cpu.open },
+                    { .name = "Audio Output", .open = &ui_audio.open },
+                    { .name = "Z80 CPU", .open = &ui_cpu.open },
                     { .name = "AY-3-8912", .open = &ui_ay.open },
                     { .name = "MC6845 (TODO)", .func = cpcui_dummy },
                     { .name = "i8255 (TODO)", .func = cpcui_dummy },
@@ -346,6 +349,13 @@ void cpcui_init(void) {
         .read_cb = cpcui_mem_read,
         .x = 40, .y = 60, .w = 400, .h = 256
     });
+    ui_audio_init(&ui_audio, &(ui_audio_desc_t) {
+        .title = "Audio Output",
+        .sample_buffer = cpc.sample_buffer,
+        .num_samples = cpc.num_samples,
+        .x = 40, .y = 60
+    });
+
     ui_z80_init(&ui_cpu, &(ui_z80_desc_t){
         .title = "Z80 CPU",
         .cpu = &cpc.cpu,
@@ -422,6 +432,7 @@ void cpcui_init(void) {
 }
 
 void cpcui_discard(void) {
+    ui_audio_discard(&ui_audio);
     ui_z80_discard(&ui_cpu);
     ui_ay38910_discard(&ui_ay);
     ui_dasm_discard(&ui_dasm);
@@ -439,6 +450,7 @@ void cpcui_draw() {
     if (ui_memmap.open) {
         cpcui_update_memmap();
     }
+    ui_audio_draw(&ui_audio, cpc.sample_pos);
     ui_ay38190_draw(&ui_ay);
     ui_z80_draw(&ui_cpu);
     ui_memedit_draw(&ui_memedit);
