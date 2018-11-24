@@ -37,6 +37,7 @@
 #include "ui/ui_z80ctc.h"
 #include "ui/ui_kc85sys.h"
 #include "ui/ui_ay38910.h"
+#include "ui/ui_mc6845.h"
 #include "ui/ui_audio.h"
 #include "ui/ui_kc85.h"
 #include "ui/ui_z1013.h"

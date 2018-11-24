@@ -27,6 +27,7 @@
 #include "ui/ui_dasm.h"
 #include "ui/ui_z80.h"
 #include "ui/ui_ay38910.h"
+#include "ui/ui_mc6845.h"
 #include "ui/ui_audio.h"
 #include "ui/ui_cpc.h"
 #endif
