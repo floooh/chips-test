@@ -28,20 +28,22 @@
 #include "ui/ui_z80.h"
 #include "ui/ui_ay38910.h"
 #include "ui/ui_audio.h"
+#include "ui/ui_cpc.h"
 #endif
 
-cpc_t cpc;
+static cpc_t cpc;
 
 /* sokol-app entry, configure application callbacks and window */
-void app_init(void);
-void app_frame(void);
-void app_input(const sapp_event*);
-void app_cleanup(void);
+static void app_init(void);
+static void app_frame(void);
+static void app_input(const sapp_event*);
+static void app_cleanup(void);
 
 #ifdef CHIPS_USE_UI
-void cpcui_init(void);
-void cpcui_discard(void);
-void cpcui_draw(void);
+static uint64_t exec_time;
+static void cpcui_init(void);
+static void cpcui_discard(void);
+static void cpcui_draw(void);
 #endif
 
 sapp_desc sokol_main(int argc, char* argv[]) {
@@ -150,7 +152,7 @@ void app_frame(void) {
     #if CHIPS_USE_UI
         uint64_t start = stm_now();
         cpc_exec(&cpc, clock_frame_time());
-        ui_set_exec_time(stm_since(start));
+        exec_time = stm_since(start);
     #else
         cpc_exec(&cpc, clock_frame_time());
     #endif
@@ -261,201 +263,28 @@ void app_cleanup(void) {
 /*=== optional debugging UI ==================================================*/
 #ifdef CHIPS_USE_UI
 
-static ui_memedit_t ui_memedit;
-static ui_memmap_t ui_memmap;
-static ui_dasm_t ui_dasm;
-static ui_z80_t ui_cpu;
-static ui_ay38910_t ui_ay;
-static ui_audio_t ui_audio;
+static ui_cpc_t ui_cpc;
 
-/* menu handler functions */
-void cpcui_reset(void) { cpc_reset(&cpc); }
-void cpcui_boot_6128(void) { cpc_desc_t desc = cpc_desc(CPC_TYPE_6128, cpc.joystick_type); cpc_init(&cpc, &desc); }
-void cpcui_boot_464(void) { cpc_desc_t desc = cpc_desc(CPC_TYPE_464, cpc.joystick_type); cpc_init(&cpc, &desc); }
-void cpcui_boot_kcc(void) { cpc_desc_t desc = cpc_desc(CPC_TYPE_KCCOMPACT, cpc.joystick_type); cpc_init(&cpc, &desc); }
-
-uint8_t cpcui_mem_read(int layer, uint16_t addr, void* user_data) {
-    if (0 == layer) {
-        return mem_rd(&cpc.mem, addr);
-    }
-    else {
-        // FIXME
-        return 0;
-    }
+/* reboot callback */
+static void boot_cb(cpc_t* sys, cpc_type_t type) {
+    cpc_desc_t desc = cpc_desc(type, sys->joystick_type);
+    cpc_init(sys, &desc);
 }
-
-void cpcui_mem_write(int layer, uint16_t addr, uint8_t data, void* user_data) {
-    if (0 == layer) {
-        return mem_wr(&cpc.mem, addr, data);
-    }
-    else {
-        // FIXME
-    }
-}
-
-void cpcui_dummy(void) { }
 
 void cpcui_init(void) {
-    ui_init(&(ui_desc_t) {
-        .draw = cpcui_draw,
-        .menus = {
-            {
-                .name = "System",
-                .items = {
-                    { .name = "Reset", .func = cpcui_reset },
-                    { .name = "CPC 464", .func = cpcui_boot_464 },
-                    { .name = "CPC 6128", .func = cpcui_boot_6128 },
-                    { .name = "KC Compact", .func = cpcui_boot_kcc },
-                }
-            },
-            {
-                .name = "Hardware",
-                .items = {
-                    { .name = "Memory Map", .open = &ui_memmap.open },
-                    { .name = "System State (TODO)", .func = cpcui_dummy },
-                    { .name = "Audio Output", .open = &ui_audio.open },
-                    { .name = "Z80 CPU", .open = &ui_cpu.open },
-                    { .name = "AY-3-8912", .open = &ui_ay.open },
-                    { .name = "MC6845 (TODO)", .func = cpcui_dummy },
-                    { .name = "i8255 (TODO)", .func = cpcui_dummy },
-                    { .name = "uPD 765 (TODO)", .func = cpcui_dummy },
-                }
-            },
-            {
-                .name = "Debug",
-                .items = {
-                    { .name = "Memory Editor", .open = &ui_memedit.open },
-                    { .name = "Disassembler", .open = &ui_dasm.open },
-                    { .name = "CPU Debugger (TODO)", .func = cpcui_dummy },
-                }
-            }
-        },
-    });
-    ui_memedit_init(&ui_memedit, &(ui_memedit_desc_t){
-        .title = "Memory Editor",
-        .layers = { "CPU Mapped", "FIXME" },
-        .read_cb = cpcui_mem_read,
-        .write_cb = cpcui_mem_write,
-        .x = 20, .y = 40, .h = 120
-    });
-    ui_memmap_init(&ui_memmap, &(ui_memmap_desc_t){
-        .title = "Memory Map",
-        .x = 30, .y = 50, .w = 400, .h = 64
-    });
-    ui_dasm_init(&ui_dasm, &(ui_dasm_desc_t){
-        .title = "Disassembler",
-        .layers = { "CPU Mapped", "FIXME" },
-        .start_addr = 0x0000,
-        .read_cb = cpcui_mem_read,
-        .x = 40, .y = 60, .w = 400, .h = 256
-    });
-    ui_audio_init(&ui_audio, &(ui_audio_desc_t) {
-        .title = "Audio Output",
-        .sample_buffer = cpc.sample_buffer,
-        .num_samples = cpc.num_samples,
-        .x = 40, .y = 60
-    });
-
-    ui_z80_init(&ui_cpu, &(ui_z80_desc_t){
-        .title = "Z80 CPU",
-        .cpu = &cpc.cpu,
-        .x = 40, .y = 60,
-        .chip_desc = {
-            .name = "Z80\nCPU",
-            .num_slots = 36,
-            .pins = {
-                { .name = "D0",      .slot = 0, .mask = Z80_D0 },
-                { .name = "D1",      .slot = 1, .mask = Z80_D1 },
-                { .name = "D2",      .slot = 2, .mask = Z80_D2 },
-                { .name = "D3",      .slot = 3, .mask = Z80_D3 },
-                { .name = "D4",      .slot = 4, .mask = Z80_D4 },
-                { .name = "D5",      .slot = 5, .mask = Z80_D5 },
-                { .name = "D6",      .slot = 6, .mask = Z80_D6 },
-                { .name = "D7",      .slot = 7, .mask = Z80_D7 },
-                { .name = "M1",      .slot = 9, .mask = Z80_M1 },
-                { .name = "MREQ",    .slot = 10, .mask = Z80_MREQ },
-                { .name = "IORQ",    .slot = 11, .mask = Z80_IORQ },
-                { .name = "RD",      .slot = 12, .mask = Z80_RD },
-                { .name = "WR",      .slot = 13, .mask = Z80_WR },
-                { .name = "HALT",    .slot = 14, .mask = Z80_HALT },
-                { .name = "INT",     .slot = 15, .mask = Z80_INT },
-                { .name = "NMI",     .slot = 16, .mask = Z80_NMI },
-                { .name = "WAIT",    .slot = 17, .mask = Z80_WAIT_MASK },
-                { .name = "A0",      .slot = 18, .mask = Z80_A0 },
-                { .name = "A1",      .slot = 19, .mask = Z80_A1 },
-                { .name = "A2",      .slot = 20, .mask = Z80_A2 },
-                { .name = "A3",      .slot = 21, .mask = Z80_A3 },
-                { .name = "A4",      .slot = 22, .mask = Z80_A4 },
-                { .name = "A5",      .slot = 23, .mask = Z80_A5 },
-                { .name = "A6",      .slot = 24, .mask = Z80_A6 },
-                { .name = "A7",      .slot = 25, .mask = Z80_A7 },
-                { .name = "A8",      .slot = 26, .mask = Z80_A8 },
-                { .name = "A9",      .slot = 27, .mask = Z80_A9 },
-                { .name = "A10",     .slot = 28, .mask = Z80_A10 },
-                { .name = "A11",     .slot = 29, .mask = Z80_A11 },
-                { .name = "A12",     .slot = 30, .mask = Z80_A12 },
-                { .name = "A13",     .slot = 31, .mask = Z80_A13 },
-                { .name = "A14",     .slot = 32, .mask = Z80_A14 },
-                { .name = "A15",     .slot = 33, .mask = Z80_A15 }
-            }
-        }
-    });
-    ui_ay38910_init(&ui_ay, &(ui_ay38910_desc_t){
-        .title = "AY-3-8912",
-        .ay = &cpc.psg,
-        .x = 40, .y = 60,
-        .chip_desc = {
-            .name = "8912",
-            .num_slots = 22,
-            .pins = {
-                { .name = "DA0",  .slot = 0, .mask = AY38910_DA0 },
-                { .name = "DA1",  .slot = 1, .mask = AY38910_DA1 },
-                { .name = "DA2",  .slot = 2, .mask = AY38910_DA2 },
-                { .name = "DA3",  .slot = 3, .mask = AY38910_DA3 },
-                { .name = "DA4",  .slot = 4, .mask = AY38910_DA4 },
-                { .name = "DA5",  .slot = 5, .mask = AY38910_DA5 },
-                { .name = "DA6",  .slot = 6, .mask = AY38910_DA6 },
-                { .name = "DA7",  .slot = 7, .mask = AY38910_DA7 },
-                { .name = "BDIR", .slot = 9, .mask = AY38910_BDIR },
-                { .name = "BC1",  .slot = 10, .mask = AY38910_BC1 },
-                { .name = "IOA0", .slot = 11, .mask = AY38910_IOA0 },
-                { .name = "IOA1", .slot = 12, .mask = AY38910_IOA1 },
-                { .name = "IOA2", .slot = 13, .mask = AY38910_IOA2 },
-                { .name = "IOA3", .slot = 14, .mask = AY38910_IOA3 },
-                { .name = "IOA4", .slot = 15, .mask = AY38910_IOA4 },
-                { .name = "IOA5", .slot = 16, .mask = AY38910_IOA5 },
-                { .name = "IOA6", .slot = 17, .mask = AY38910_IOA6 },
-                { .name = "IOA7", .slot = 18, .mask = AY38910_IOA7 }
-            }
-        }
+    ui_init(cpcui_draw);
+    ui_cpc_init(&ui_cpc, &(ui_cpc_desc_t){
+        .cpc = &cpc,
+        .boot_cb = boot_cb
     });
 }
 
 void cpcui_discard(void) {
-    ui_audio_discard(&ui_audio);
-    ui_z80_discard(&ui_cpu);
-    ui_ay38910_discard(&ui_ay);
-    ui_dasm_discard(&ui_dasm);
-    ui_memmap_discard(&ui_memmap);
-    ui_memedit_discard(&ui_memedit);
-}
-
-void cpcui_update_memmap(void) {
-    ui_memmap_reset(&ui_memmap);
-    ui_memmap_layer(&ui_memmap, "System");
-    ui_memmap_region(&ui_memmap, "FIXME FIXME FIXME", 0x0000, 0x10000, true);
+    ui_cpc_discard(&ui_cpc);
 }
 
 void cpcui_draw() {
-    if (ui_memmap.open) {
-        cpcui_update_memmap();
-    }
-    ui_audio_draw(&ui_audio, cpc.sample_pos);
-    ui_ay38190_draw(&ui_ay);
-    ui_z80_draw(&ui_cpu);
-    ui_memedit_draw(&ui_memedit);
-    ui_memmap_draw(&ui_memmap);
-    ui_dasm_draw(&ui_dasm);
+    ui_cpc_draw(&ui_cpc, stm_ms(exec_time));
 }
 #endif /* CHIPS_USE_UI */
 

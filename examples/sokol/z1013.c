@@ -198,7 +198,7 @@ static ui_z1013_t ui_z1013;
 /* reboot callback */
 static void boot_cb(z1013_t* sys, z1013_type_t type) {
     z1013_desc_t desc = z1013_desc(type);
-    z1013_init(&z1013, &desc);
+    z1013_init(sys, &desc);
 }
 
 void z1013ui_init(void) {

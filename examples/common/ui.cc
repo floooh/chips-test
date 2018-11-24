@@ -10,7 +10,13 @@
 #include "chips/z80pio.h"
 #include "chips/z80ctc.h"
 #include "chips/ay38910.h"
+#include "chips/i8255.h"
+#include "chips/mc6845.h"
+#include "chips/upd765.h"
+#include "chips/fdd.h"
+#include "chips/fdd_cpc.h"
 #include "chips/beeper.h"
+#include "chips/crt.h"
 #include "chips/clk.h"
 #include "chips/mem.h"
 #include "chips/kbd.h"
@@ -18,6 +24,7 @@
 #include "systems/z1013.h"
 #include "systems/z9001.h"
 #include "systems/zx.h"
+#include "systems/cpc.h"
 #define CHIPS_IMPL
 #include "ui/ui_util.h"
 #include "ui/ui_chip.h"
@@ -35,6 +42,7 @@
 #include "ui/ui_z1013.h"
 #include "ui/ui_z9001.h"
 #include "ui/ui_zx.h"
+#include "ui/ui_cpc.h"
 
 typedef struct {
     ImVec2 disp_size;

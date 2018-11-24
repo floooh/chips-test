@@ -211,7 +211,7 @@ static ui_z9001_t ui_z9001;
 /* reboot callback */
 static void boot_cb(z9001_t* sys, z9001_type_t type) {
     z9001_desc_t desc = z9001_desc(type);
-    z9001_init(&z9001, &desc);
+    z9001_init(sys, &desc);
 }
 
 void z9001ui_init(void) {

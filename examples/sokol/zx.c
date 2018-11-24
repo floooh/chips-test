@@ -207,7 +207,7 @@ static ui_zx_t ui_zx;
 /* reboot callback */
 static void boot_cb(zx_t* sys, zx_type_t type) {
     zx_desc_t desc = zx_desc(type, sys->joystick_type);
-    zx_init(&zx, &desc);
+    zx_init(sys, &desc);
 }
 
 void zxui_init(void) {

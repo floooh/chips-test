@@ -307,7 +307,7 @@ static ui_kc85_t ui_kc85;
 /* reboot callback */
 static void boot_cb(kc85_t* sys, kc85_type_t type) {
     kc85_desc_t desc = kc85_desc(type);
-    kc85_init(&kc85, &desc);
+    kc85_init(sys, &desc);
 }
 
 void kc85ui_init(void) {
