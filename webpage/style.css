@@ -81,15 +81,24 @@ p {
     background-color: limegreen;
     cursor: pointer;
     border-radius: 4px;
+    border-style: solid;
+    border-color: black;
     text-align: center;
+    color: black;
+}
+
+.img-btn:hover {
+    background-color: black;
+    border-color: limegreen;
+    color: limegreen;
 }
 
 .img-btn-link {
     text-decoration: none;
-    color: black;
     font-weight: bold;
     font-family: monospace;
     font-size: 16px;
+    color: inherit;
 }
 
 .image {
