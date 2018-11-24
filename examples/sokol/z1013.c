@@ -27,20 +27,22 @@
 #include "ui/ui_dasm.h"
 #include "ui/ui_z80.h"
 #include "ui/ui_z80pio.h"
+#include "ui/ui_z1013.h"
 #endif
 
 static z1013_t z1013;
 
 /* sokol-app entry, configure application callbacks and window */
-void app_init(void);
-void app_frame(void);
-void app_input(const sapp_event*);
-void app_cleanup(void);
+static void app_init(void);
+static void app_frame(void);
+static void app_input(const sapp_event*);
+static void app_cleanup(void);
 
 #ifdef CHIPS_USE_UI
-void z1013ui_init(void);
-void z1013ui_discard(void);
-void z1013ui_draw(void);
+static uint64_t exec_time;
+static void z1013ui_init(void);
+static void z1013ui_discard(void);
+static void z1013ui_draw(void);
 #endif
 
 sapp_desc sokol_main(int argc, char* argv[]) {
@@ -89,9 +91,6 @@ void app_init(void) {
         .fb_height = Z1013_DISPLAY_HEIGHT,
         #endif
     });
-    #ifdef CHIPS_USE_UI
-    z1013ui_init();
-    #endif
     clock_init();
     z1013_type_t type = Z1013_TYPE_64;
     if (sargs_exists("type")) {
@@ -104,9 +103,10 @@ void app_init(void) {
     }
     z1013_desc_t desc = z1013_desc(type);
     z1013_init(&z1013, &desc);
-    /* copy BASIC interpreter into RAM, so the user has something to play around 
-        with (started with "J 300 [Enter]"), skip first 0x20 bytes .z80 file format header
-    */
+    #ifdef CHIPS_USE_UI
+    z1013ui_init();
+    #endif
+    /* FIXME: remove BASIC interpreter and use snapshot loading in user-code instead */
     if (Z1013_TYPE_64 == z1013.type) {
         mem_write_range(&z1013.mem, 0x0100, dump_kc_basic+0x20, sizeof(dump_kc_basic)-0x20);
     }
@@ -117,7 +117,7 @@ void app_frame(void) {
     #if CHIPS_USE_UI
         uint64_t start = stm_now();
         z1013_exec(&z1013, clock_frame_time());
-        ui_set_exec_time(stm_since(start));
+        exec_time = stm_since(start);
     #else
         z1013_exec(&z1013, clock_frame_time());
     #endif
@@ -187,208 +187,33 @@ void app_cleanup(void) {
     z1013ui_discard();
     #endif
     gfx_shutdown();
+    sargs_shutdown();
 }
 
 /*=== optional debugging UI ==================================================*/
 #ifdef CHIPS_USE_UI
 
-static ui_memedit_t ui_memedit;
-static ui_memmap_t ui_memmap;
-static ui_dasm_t ui_dasm;
-static ui_z80_t ui_cpu;
-static ui_z80pio_t ui_pio;
+static ui_z1013_t ui_z1013;
 
-/* menu handler functions */
-void z1013ui_reset(void) { z1013_reset(&z1013); }
-void z1013ui_boot_01(void) { z1013_desc_t desc = z1013_desc(Z1013_TYPE_01); z1013_init(&z1013, &desc); }
-void z1013ui_boot_16(void) { z1013_desc_t desc = z1013_desc(Z1013_TYPE_16); z1013_init(&z1013, &desc); }
-void z1013ui_boot_64(void) { z1013_desc_t desc = z1013_desc(Z1013_TYPE_64); z1013_init(&z1013, &desc); }
-
-uint8_t z1013ui_mem_read(int layer, uint16_t addr, void* user_data) {
-    return mem_rd(&z1013.mem, addr);
+/* reboot callback */
+static void boot_cb(z1013_t* sys, z1013_type_t type) {
+    z1013_desc_t desc = z1013_desc(type);
+    z1013_init(&z1013, &desc);
 }
-
-void z1013ui_mem_write(int layer, uint16_t addr, uint8_t data, void* user_data) {
-    mem_wr(&z1013.mem, addr, data);
-}
-
-void z1013ui_dummy(void) { }
 
 void z1013ui_init(void) {
-    ui_init(&(ui_desc_t) {
-        .draw = z1013ui_draw,
-        .menus = {
-            {
-                .name = "System",
-                .items = {
-                    { .name = "Reset", .func = z1013ui_reset },
-                    { .name = "Z1013/01", .func = z1013ui_boot_01 },
-                    { .name = "Z1013/16", .func = z1013ui_boot_16 },
-                    { .name = "Z1013/64", .func = z1013ui_boot_64 }
-                }
-            },
-            {
-                .name = "Hardware",
-                .items = {
-                    { .name = "Memory Map", .open = &ui_memmap.open },
-                    { .name = "Z80 CPU", .open = &ui_cpu.open },
-                    { .name = "Z80 PIO", .open = &ui_pio.open },
-                }
-            },
-            {
-                .name = "Debug",
-                .items = {
-                    { .name = "Memory Editor", .open = &ui_memedit.open },
-                    { .name = "Disassembler", .open = &ui_dasm.open },
-                    { .name = "CPU Debugger (TODO)", .func = z1013ui_dummy },
-                }
-            }
-        },
-    });
-    ui_memedit_init(&ui_memedit, &(ui_memedit_desc_t){
-        .title = "Memory Editor",
-        .layers = { "System" },
-        .read_cb = z1013ui_mem_read,
-        .write_cb = z1013ui_mem_write,
-        .x = 20, .y = 40, .h = 120
-    });
-    ui_memmap_init(&ui_memmap, &(ui_memmap_desc_t){
-        .title = "Memory Map",
-        .x = 30, .y = 50, .w = 400, .h = 64
-    });
-    ui_dasm_init(&ui_dasm, &(ui_dasm_desc_t){
-        .title = "Disassembler",
-        .layers = { "System" },
-        .start_addr = 0xF000,
-        .read_cb = z1013ui_mem_read,
-        .x = 40, .y = 60, .w = 400, .h = 256
-    });
-    ui_z80pio_init(&ui_pio, &(ui_z80pio_desc_t){
-        .title = "Z80 PIO",
-        .pio = &z1013.pio,
-        .x = 40, .y = 60,
-        .chip_desc = {
-            .name = "Z80\nPIO",
-            .num_slots = 40,
-            .pins = {
-                { .name = "D0",      .slot = 0, .mask = Z80_D0 },
-                { .name = "D1",      .slot = 1, .mask = Z80_D1 },
-                { .name = "D2",      .slot = 2, .mask = Z80_D2 },
-                { .name = "D3",      .slot = 3, .mask = Z80_D3 },
-                { .name = "D4",      .slot = 4, .mask = Z80_D4 },
-                { .name = "D5",      .slot = 5, .mask = Z80_D5 },
-                { .name = "D6",      .slot = 6, .mask = Z80_D6 },
-                { .name = "D7",      .slot = 7, .mask = Z80_D7 },
-                { .name = "CE",      .slot = 9, .mask = Z80PIO_CE },
-                { .name = "BASEL",   .slot = 10, .mask = Z80PIO_BASEL },
-                { .name = "CDSEL",   .slot = 11, .mask = Z80PIO_CDSEL },
-                { .name = "M1",      .slot = 12, .mask = Z80PIO_M1 },
-                { .name = "IORQ",    .slot = 13, .mask = Z80PIO_IORQ },
-                { .name = "RD",      .slot = 14, .mask = Z80PIO_RD },
-                { .name = "INT",     .slot = 15, .mask = Z80PIO_INT },
-                { .name = "ARDY",    .slot = 20, .mask = Z80PIO_ARDY },
-                { .name = "ASTB",    .slot = 21, .mask = Z80PIO_ASTB },
-                { .name = "PA0",     .slot = 22, .mask = Z80PIO_PA0 },
-                { .name = "PA1",     .slot = 23, .mask = Z80PIO_PA1 },
-                { .name = "PA2",     .slot = 24, .mask = Z80PIO_PA2 },
-                { .name = "PA3",     .slot = 25, .mask = Z80PIO_PA3 },
-                { .name = "PA4",     .slot = 26, .mask = Z80PIO_PA4 },
-                { .name = "PA5",     .slot = 27, .mask = Z80PIO_PA5 },
-                { .name = "PA6",     .slot = 28, .mask = Z80PIO_PA6 },
-                { .name = "PA7",     .slot = 29, .mask = Z80PIO_PA7 },
-                { .name = "BRDY",    .slot = 30, .mask = Z80PIO_ARDY },
-                { .name = "BSTB",    .slot = 31, .mask = Z80PIO_ASTB },
-                { .name = "PB0",     .slot = 32, .mask = Z80PIO_PB0 },
-                { .name = "PB1",     .slot = 33, .mask = Z80PIO_PB1 },
-                { .name = "PB2",     .slot = 34, .mask = Z80PIO_PB2 },
-                { .name = "PB3",     .slot = 35, .mask = Z80PIO_PB3 },
-                { .name = "PB4",     .slot = 36, .mask = Z80PIO_PB4 },
-                { .name = "PB5",     .slot = 37, .mask = Z80PIO_PB5 },
-                { .name = "PB6",     .slot = 38, .mask = Z80PIO_PB6 },
-                { .name = "PB7",     .slot = 39, .mask = Z80PIO_PB7 },
-            }
-        }
-    });
-    ui_z80_init(&ui_cpu, &(ui_z80_desc_t){
-        .title = "Z80 CPU",
-        .cpu = &z1013.cpu,
-        .x = 40, .y = 60,
-        .chip_desc = {
-            .name = "Z80\nCPU",
-            .num_slots = 36,
-            .pins = {
-                { .name = "D0",      .slot = 0, .mask = Z80_D0 },
-                { .name = "D1",      .slot = 1, .mask = Z80_D1 },
-                { .name = "D2",      .slot = 2, .mask = Z80_D2 },
-                { .name = "D3",      .slot = 3, .mask = Z80_D3 },
-                { .name = "D4",      .slot = 4, .mask = Z80_D4 },
-                { .name = "D5",      .slot = 5, .mask = Z80_D5 },
-                { .name = "D6",      .slot = 6, .mask = Z80_D6 },
-                { .name = "D7",      .slot = 7, .mask = Z80_D7 },
-                { .name = "M1",      .slot = 9, .mask = Z80_M1 },
-                { .name = "MREQ",    .slot = 10, .mask = Z80_MREQ },
-                { .name = "IORQ",    .slot = 11, .mask = Z80_IORQ },
-                { .name = "RD",      .slot = 12, .mask = Z80_RD },
-                { .name = "WR",      .slot = 13, .mask = Z80_WR },
-                { .name = "HALT",    .slot = 14, .mask = Z80_HALT },
-                { .name = "INT",     .slot = 15, .mask = Z80_INT },
-                { .name = "NMI",     .slot = 16, .mask = Z80_NMI },
-                { .name = "WAIT",    .slot = 17, .mask = Z80_WAIT_MASK },
-                { .name = "A0",      .slot = 18, .mask = Z80_A0 },
-                { .name = "A1",      .slot = 19, .mask = Z80_A1 },
-                { .name = "A2",      .slot = 20, .mask = Z80_A2 },
-                { .name = "A3",      .slot = 21, .mask = Z80_A3 },
-                { .name = "A4",      .slot = 22, .mask = Z80_A4 },
-                { .name = "A5",      .slot = 23, .mask = Z80_A5 },
-                { .name = "A6",      .slot = 24, .mask = Z80_A6 },
-                { .name = "A7",      .slot = 25, .mask = Z80_A7 },
-                { .name = "A8",      .slot = 26, .mask = Z80_A8 },
-                { .name = "A9",      .slot = 27, .mask = Z80_A9 },
-                { .name = "A10",     .slot = 28, .mask = Z80_A10 },
-                { .name = "A11",     .slot = 29, .mask = Z80_A11 },
-                { .name = "A12",     .slot = 30, .mask = Z80_A12 },
-                { .name = "A13",     .slot = 31, .mask = Z80_A13 },
-                { .name = "A14",     .slot = 32, .mask = Z80_A14 },
-                { .name = "A15",     .slot = 33, .mask = Z80_A15 }
-            }
-        }
+    ui_init(z1013ui_draw);
+    ui_z1013_init(&ui_z1013, &(ui_z1013_desc_t){
+        .z1013 = &z1013,
+        .boot_cb = boot_cb
     });
 }
 
 void z1013ui_discard(void) {
-    ui_z80pio_discard(&ui_pio);
-    ui_z80_discard(&ui_cpu);
-    ui_dasm_discard(&ui_dasm);
-    ui_memmap_discard(&ui_memmap);
-    ui_memedit_discard(&ui_memedit);
-}
-
-void z1013ui_update_memmap(void) {
-    ui_memmap_reset(&ui_memmap);
-    ui_memmap_layer(&ui_memmap, "System");
-    if ((Z1013_TYPE_01 == z1013.type) || (Z1013_TYPE_16 == z1013.type)) {
-        /* Z1013/01 + /16 memory map */
-        ui_memmap_region(&ui_memmap, "RAM", 0x0000, 0x4000, true);
-        ui_memmap_region(&ui_memmap, "VIDEO", 0xEC00, 0x0400, true);
-        ui_memmap_region(&ui_memmap, "ROM", 0xF000, 0x0800, true);
-    }
-    else {
-        /* Z1013/64 memory map */
-        ui_memmap_region(&ui_memmap, "RAM0", 0x0000, 0xEC00, true);
-        ui_memmap_region(&ui_memmap, "VIDEO", 0xEC00, 0x0400, true);
-        ui_memmap_region(&ui_memmap, "ROM", 0xF000, 0x0800, true);
-        ui_memmap_region(&ui_memmap, "RAM1", 0xF800, 0x0800, true);
-    }
+    ui_z1013_discard(&ui_z1013);
 }
 
 void z1013ui_draw() {
-    if (ui_memmap.open) {
-        z1013ui_update_memmap();
-    }
-    ui_z80_draw(&ui_cpu);
-    ui_z80pio_draw(&ui_pio);
-    ui_memedit_draw(&ui_memedit);
-    ui_memmap_draw(&ui_memmap);
-    ui_dasm_draw(&ui_dasm);
+    ui_z1013_draw(&ui_z1013, stm_ms(exec_time));
 }
 #endif /* CHIPS_USE_UI */

@@ -29,22 +29,22 @@
 #include "ui/ui_kc85.h"
 #endif
 
-kc85_t kc85;
-uint64_t exec_time;
+static kc85_t kc85;
 
 /* module to insert after ROM module image has been loaded */
 kc85_module_type_t delay_insert_module = KC85_MODULE_NONE;
 
 /* sokol-app entry, configure application callbacks and window */
-void app_init(void);
-void app_frame(void);
-void app_input(const sapp_event*);
-void app_cleanup(void);
+static void app_init(void);
+static void app_frame(void);
+static void app_input(const sapp_event*);
+static void app_cleanup(void);
 
 #ifdef CHIPS_USE_UI
-void kc85ui_init(void);
-void kc85ui_discard(void);
-void kc85ui_draw(void);
+static uint64_t exec_time;
+static void kc85ui_init(void);
+static void kc85ui_discard(void);
+static void kc85ui_draw(void);
 #endif
 
 sapp_desc sokol_main(int argc, char* argv[]) {
@@ -304,7 +304,7 @@ void app_cleanup(void) {
 
 static ui_kc85_t ui_kc85;
 
-/* reboot callbacks */
+/* reboot callback */
 static void boot_cb(kc85_t* sys, kc85_type_t type) {
     kc85_desc_t desc = kc85_desc(type);
     kc85_init(&kc85, &desc);
