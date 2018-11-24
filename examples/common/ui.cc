@@ -10,12 +10,21 @@
 #include "chips/z80pio.h"
 #include "chips/z80ctc.h"
 #include "chips/ay38910.h"
+#include "chips/i8255.h"
+#include "chips/mc6845.h"
+#include "chips/upd765.h"
+#include "chips/fdd.h"
+#include "chips/fdd_cpc.h"
 #include "chips/beeper.h"
+#include "chips/crt.h"
 #include "chips/clk.h"
 #include "chips/mem.h"
 #include "chips/kbd.h"
 #include "systems/kc85.h"
+#include "systems/z1013.h"
+#include "systems/z9001.h"
 #include "systems/zx.h"
+#include "systems/cpc.h"
 #define CHIPS_IMPL
 #include "ui/ui_util.h"
 #include "ui/ui_chip.h"
@@ -26,16 +35,20 @@
 #include "ui/ui_z80.h"
 #include "ui/ui_z80pio.h"
 #include "ui/ui_z80ctc.h"
-#include "ui/ui_kc85.h"
+#include "ui/ui_kc85sys.h"
 #include "ui/ui_ay38910.h"
 #include "ui/ui_audio.h"
+#include "ui/ui_kc85.h"
+#include "ui/ui_z1013.h"
+#include "ui/ui_z9001.h"
+#include "ui/ui_zx.h"
+#include "ui/ui_cpc.h"
 
 typedef struct {
     ImVec2 disp_size;
 } vs_params_t;
 
 static uint64_t last_time = 0;
-static uint64_t exec_time = 0;
 static bool btn_down[SAPP_MAX_MOUSEBUTTONS] = { };
 static bool btn_up[SAPP_MAX_MOUSEBUTTONS] = { };
 static const int MaxVertices = (1<<17);
@@ -44,24 +57,19 @@ static sg_draw_state draw_state = { };
 
 static void imgui_draw_cb(ImDrawData*);
 static void ui_init_imgui(void);
-static void ui_draw_menu(void);
 
 extern const char* vs_src_imgui;
 extern const char* fs_src_imgui;
 
-static ui_desc_t ui_desc;
+static ui_draw_t ui_draw_cb;
 
-void ui_init(const ui_desc_t* desc) {
+void ui_init(ui_draw_t draw_cb) {
+    ui_draw_cb = draw_cb;
     ui_init_imgui();
-    ui_desc = *desc;
 }
 
 void ui_discard(void) {
     // FIXME
-}
-
-void ui_set_exec_time(uint64_t t) {
-    exec_time = t;
 }
 
 void ui_draw(void) {
@@ -88,9 +96,8 @@ void ui_draw(void) {
         sapp_show_keyboard(false);
     }
     ImGui::NewFrame();
-    ui_draw_menu();
-    if (ui_desc.draw) {
-        ui_desc.draw();
+    if (ui_draw_cb) {
+        ui_draw_cb();
     }
     ImGui::Render();
 }
@@ -158,32 +165,6 @@ bool ui_input(const sapp_event* event) {
             break;
     }
     return io.WantCaptureKeyboard;
-}
-
-void ui_draw_menu() {
-    if (ImGui::BeginMainMenuBar()) {
-        for (int mi = 0; mi < UI_MAX_MENUS; mi++) {
-            const ui_menu_t* menu = &ui_desc.menus[mi];
-            if (menu->name) {
-                if (ImGui::BeginMenu(menu->name)) {
-                    for (int ii = 0; ii < UI_MAX_MENU_ITEMS; ii++) {
-                        const ui_menuitem_t* item = &menu->items[ii];
-                        if (item->name) {
-                            if (ImGui::MenuItem(item->name, 0, item->open, true)) {
-                                if (item->func) {
-                                    item->func();
-                                }
-                            }
-                        }
-                    }
-                    ImGui::EndMenu();
-                }
-            }
-        }
-        ImGui::SameLine(ImGui::GetWindowWidth() - 120);
-        ImGui::Text("emu: %.2fms", stm_ms(exec_time));
-        ImGui::EndMainMenuBar();
-    }
 }
 
 void ui_init_imgui(void) {

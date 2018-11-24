@@ -28,20 +28,22 @@
 #include "ui/ui_z80pio.h"
 #include "ui/ui_z80ctc.h"
 #include "ui/ui_audio.h"
+#include "ui/ui_z9001.h"
 #endif
 
-z9001_t z9001;
+static z9001_t z9001;
 
 /* sokol-app entry, configure application callbacks and window */
-void app_init(void);
-void app_frame(void);
-void app_input(const sapp_event*);
-void app_cleanup(void);
+static void app_init(void);
+static void app_frame(void);
+static void app_input(const sapp_event*);
+static void app_cleanup(void);
 
 #ifdef CHIPS_USE_UI
-void z9001ui_init(void);
-void z9001ui_discard(void);
-void z9001ui_draw(void);
+static uint64_t exec_time;
+static void z9001ui_init(void);
+static void z9001ui_discard(void);
+static void z9001ui_draw(void);
 #endif
 
 sapp_desc sokol_main(int argc, char* argv[]) {
@@ -125,7 +127,7 @@ void app_frame() {
     #if CHIPS_USE_UI
         uint64_t start = stm_now();
         z9001_exec(&z9001, clock_frame_time());
-        ui_set_exec_time(stm_since(start));
+        exec_time = stm_since(start);
     #else
         z9001_exec(&z9001, clock_frame_time());
     #endif
@@ -204,306 +206,27 @@ void app_cleanup() {
 /*=== optional debugging UI ==================================================*/
 #ifdef CHIPS_USE_UI
 
-static ui_memedit_t ui_memedit;
-static ui_memmap_t ui_memmap;
-static ui_dasm_t ui_dasm;
-static ui_z80_t ui_cpu;
-static ui_z80pio_t ui_pio_1;
-static ui_z80pio_t ui_pio_2;
-static ui_z80ctc_t ui_ctc;
-static ui_audio_t ui_audio;
+static ui_z9001_t ui_z9001;
 
-/* menu handler functions */
-void z9001ui_reset(void) { z9001_reset(&z9001); }
-void z9001ui_boot_z9001(void) { z9001_desc_t desc = z9001_desc(Z9001_TYPE_Z9001); z9001_init(&z9001, &desc); }
-void z9001ui_boot_kc87(void) { z9001_desc_t desc = z9001_desc(Z9001_TYPE_KC87); z9001_init(&z9001, &desc); }
-
-uint8_t z9001ui_mem_read(int layer, uint16_t addr, void* user_data) {
-    return mem_rd(&z9001.mem, addr);
+/* reboot callback */
+static void boot_cb(z9001_t* sys, z9001_type_t type) {
+    z9001_desc_t desc = z9001_desc(type);
+    z9001_init(sys, &desc);
 }
-
-void z9001ui_mem_write(int layer, uint16_t addr, uint8_t data, void* user_data) {
-    mem_wr(&z9001.mem, addr, data);
-}
-
-void z9001ui_dummy(void) { }
 
 void z9001ui_init(void) {
-    ui_init(&(ui_desc_t) {
-        .draw = z9001ui_draw,
-        .menus = {
-            {
-                .name = "System",
-                .items = {
-                    { .name = "Reset", .func = z9001ui_reset },
-                    { .name = "Z9001", .func = z9001ui_boot_z9001 },
-                    { .name = "KC87", .func = z9001ui_boot_kc87 },
-                }
-            },
-            {
-                .name = "Hardware",
-                .items = {
-                    { .name = "Memory Map", .open = &ui_memmap.open },
-                    { .name = "Audio Output", .open = &ui_audio.open },
-                    { .name = "Z80 CPU", .open = &ui_cpu.open },
-                    { .name = "Z80 PIO 1", .open = &ui_pio_1.open },
-                    { .name = "Z80 PIO 2", .open = &ui_pio_2.open },
-                    { .name = "Z80 CTC", .open = &ui_ctc.open },
-                }
-            },
-            {
-                .name = "Debug",
-                .items = {
-                    { .name = "Memory Editor", .open = &ui_memedit.open },
-                    { .name = "Disassembler", .open = &ui_dasm.open },
-                    { .name = "CPU Debugger (TODO)", .func = z9001ui_dummy },
-                    { .name = "Scan Commands (TODO)", .func = z9001ui_dummy }
-                }
-            }
-        },
-    });
-    ui_memedit_init(&ui_memedit, &(ui_memedit_desc_t){
-        .title = "Memory Editor",
-        .layers = { "System" },
-        .read_cb = z9001ui_mem_read,
-        .write_cb = z9001ui_mem_write,
-        .x = 20, .y = 40, .h = 120
-    });
-    ui_memmap_init(&ui_memmap, &(ui_memmap_desc_t){
-        .title = "Memory Map",
-        .x = 30, .y = 50, .w = 400, .h = 64
-    });
-    ui_dasm_init(&ui_dasm, &(ui_dasm_desc_t){
-        .title = "Disassembler",
-        .layers = { "System" },
-        .start_addr = 0xF000,
-        .read_cb = z9001ui_mem_read,
-        .x = 40, .y = 60, .w = 400, .h = 256
-    });
-    ui_audio_init(&ui_audio, &(ui_audio_desc_t) {
-        .title = "Audio Output",
-        .sample_buffer = z9001.sample_buffer,
-        .num_samples = z9001.num_samples,
-        .x = 40, .y = 60
-    });
-    ui_z80pio_init(&ui_pio_1, &(ui_z80pio_desc_t){
-        .title = "Z80 PIO 1",
-        .pio = &z9001.pio1,
-        .x = 40, .y = 60,
-        .chip_desc = {
-            .name = "Z80\nPIO",
-            .num_slots = 40,
-            .pins = {
-                { .name = "D0",      .slot = 0, .mask = Z80_D0 },
-                { .name = "D1",      .slot = 1, .mask = Z80_D1 },
-                { .name = "D2",      .slot = 2, .mask = Z80_D2 },
-                { .name = "D3",      .slot = 3, .mask = Z80_D3 },
-                { .name = "D4",      .slot = 4, .mask = Z80_D4 },
-                { .name = "D5",      .slot = 5, .mask = Z80_D5 },
-                { .name = "D6",      .slot = 6, .mask = Z80_D6 },
-                { .name = "D7",      .slot = 7, .mask = Z80_D7 },
-                { .name = "CE",      .slot = 9, .mask = Z80PIO_CE },
-                { .name = "BASEL",   .slot = 10, .mask = Z80PIO_BASEL },
-                { .name = "CDSEL",   .slot = 11, .mask = Z80PIO_CDSEL },
-                { .name = "M1",      .slot = 12, .mask = Z80PIO_M1 },
-                { .name = "IORQ",    .slot = 13, .mask = Z80PIO_IORQ },
-                { .name = "RD",      .slot = 14, .mask = Z80PIO_RD },
-                { .name = "INT",     .slot = 15, .mask = Z80PIO_INT },
-                { .name = "ARDY",    .slot = 20, .mask = Z80PIO_ARDY },
-                { .name = "ASTB",    .slot = 21, .mask = Z80PIO_ASTB },
-                { .name = "PA0",     .slot = 22, .mask = Z80PIO_PA0 },
-                { .name = "PA1",     .slot = 23, .mask = Z80PIO_PA1 },
-                { .name = "PA2",     .slot = 24, .mask = Z80PIO_PA2 },
-                { .name = "PA3",     .slot = 25, .mask = Z80PIO_PA3 },
-                { .name = "PA4",     .slot = 26, .mask = Z80PIO_PA4 },
-                { .name = "PA5",     .slot = 27, .mask = Z80PIO_PA5 },
-                { .name = "PA6",     .slot = 28, .mask = Z80PIO_PA6 },
-                { .name = "PA7",     .slot = 29, .mask = Z80PIO_PA7 },
-                { .name = "BRDY",    .slot = 30, .mask = Z80PIO_ARDY },
-                { .name = "BSTB",    .slot = 31, .mask = Z80PIO_ASTB },
-                { .name = "PB0",     .slot = 32, .mask = Z80PIO_PB0 },
-                { .name = "PB1",     .slot = 33, .mask = Z80PIO_PB1 },
-                { .name = "PB2",     .slot = 34, .mask = Z80PIO_PB2 },
-                { .name = "PB3",     .slot = 35, .mask = Z80PIO_PB3 },
-                { .name = "PB4",     .slot = 36, .mask = Z80PIO_PB4 },
-                { .name = "PB5",     .slot = 37, .mask = Z80PIO_PB5 },
-                { .name = "PB6",     .slot = 38, .mask = Z80PIO_PB6 },
-                { .name = "PB7",     .slot = 39, .mask = Z80PIO_PB7 },
-            }
-        }
-    });
-    ui_z80pio_init(&ui_pio_2, &(ui_z80pio_desc_t){
-        .title = "Z80 PIO 2",
-        .pio = &z9001.pio2,
-        .x = 40, .y = 60,
-        .chip_desc = {
-            .name = "Z80\nPIO",
-            .num_slots = 40,
-            .pins = {
-                { .name = "D0",      .slot = 0, .mask = Z80_D0 },
-                { .name = "D1",      .slot = 1, .mask = Z80_D1 },
-                { .name = "D2",      .slot = 2, .mask = Z80_D2 },
-                { .name = "D3",      .slot = 3, .mask = Z80_D3 },
-                { .name = "D4",      .slot = 4, .mask = Z80_D4 },
-                { .name = "D5",      .slot = 5, .mask = Z80_D5 },
-                { .name = "D6",      .slot = 6, .mask = Z80_D6 },
-                { .name = "D7",      .slot = 7, .mask = Z80_D7 },
-                { .name = "CE",      .slot = 9, .mask = Z80PIO_CE },
-                { .name = "BASEL",   .slot = 10, .mask = Z80PIO_BASEL },
-                { .name = "CDSEL",   .slot = 11, .mask = Z80PIO_CDSEL },
-                { .name = "M1",      .slot = 12, .mask = Z80PIO_M1 },
-                { .name = "IORQ",    .slot = 13, .mask = Z80PIO_IORQ },
-                { .name = "RD",      .slot = 14, .mask = Z80PIO_RD },
-                { .name = "INT",     .slot = 15, .mask = Z80PIO_INT },
-                { .name = "ARDY",    .slot = 20, .mask = Z80PIO_ARDY },
-                { .name = "ASTB",    .slot = 21, .mask = Z80PIO_ASTB },
-                { .name = "PA0",     .slot = 22, .mask = Z80PIO_PA0 },
-                { .name = "PA1",     .slot = 23, .mask = Z80PIO_PA1 },
-                { .name = "PA2",     .slot = 24, .mask = Z80PIO_PA2 },
-                { .name = "PA3",     .slot = 25, .mask = Z80PIO_PA3 },
-                { .name = "PA4",     .slot = 26, .mask = Z80PIO_PA4 },
-                { .name = "PA5",     .slot = 27, .mask = Z80PIO_PA5 },
-                { .name = "PA6",     .slot = 28, .mask = Z80PIO_PA6 },
-                { .name = "PA7",     .slot = 29, .mask = Z80PIO_PA7 },
-                { .name = "BRDY",    .slot = 30, .mask = Z80PIO_ARDY },
-                { .name = "BSTB",    .slot = 31, .mask = Z80PIO_ASTB },
-                { .name = "PB0",     .slot = 32, .mask = Z80PIO_PB0 },
-                { .name = "PB1",     .slot = 33, .mask = Z80PIO_PB1 },
-                { .name = "PB2",     .slot = 34, .mask = Z80PIO_PB2 },
-                { .name = "PB3",     .slot = 35, .mask = Z80PIO_PB3 },
-                { .name = "PB4",     .slot = 36, .mask = Z80PIO_PB4 },
-                { .name = "PB5",     .slot = 37, .mask = Z80PIO_PB5 },
-                { .name = "PB6",     .slot = 38, .mask = Z80PIO_PB6 },
-                { .name = "PB7",     .slot = 39, .mask = Z80PIO_PB7 },
-            }
-        }
-    });
-    ui_z80ctc_init(&ui_ctc, &(ui_z80ctc_desc_t){
-        .title = "Z80 CTC",
-        .ctc = &z9001.ctc,
-        .x = 40, .y = 60,
-        .chip_desc = {
-            .name = "Z80\nCTC",
-            .num_slots = 32,
-            .pins = {
-                { .name = "D0",     .slot = 0, .mask = Z80_D0 },
-                { .name = "D1",     .slot = 1, .mask = Z80_D1 },
-                { .name = "D2",     .slot = 2, .mask = Z80_D2 },
-                { .name = "D3",     .slot = 3, .mask = Z80_D3 },
-                { .name = "D4",     .slot = 4, .mask = Z80_D4 },
-                { .name = "D5",     .slot = 5, .mask = Z80_D5 },
-                { .name = "D6",     .slot = 6, .mask = Z80_D6 },
-                { .name = "D7",     .slot = 7, .mask = Z80_D7 },
-                { .name = "CE",     .slot = 9, .mask = Z80CTC_CE },
-                { .name = "CS0",    .slot = 10, .mask = Z80CTC_CS0 },
-                { .name = "CS1",    .slot = 11, .mask = Z80CTC_CS1 },
-                { .name = "M1",     .slot = 12, .mask = Z80CTC_M1 },
-                { .name = "IORQ",   .slot = 13, .mask = Z80CTC_IORQ },
-                { .name = "RD",     .slot = 14, .mask = Z80CTC_RD },
-                { .name = "INT",    .slot = 15, .mask = Z80CTC_INT },
-                { .name = "CT0",    .slot = 16, .mask = Z80CTC_CLKTRG0 },
-                { .name = "ZT0",    .slot = 17, .mask = Z80CTC_ZCTO0 },
-                { .name = "CT1",    .slot = 19, .mask = Z80CTC_CLKTRG1 },
-                { .name = "ZT1",    .slot = 20, .mask = Z80CTC_ZCTO1 },
-                { .name = "CT2",    .slot = 22, .mask = Z80CTC_CLKTRG2 },
-                { .name = "ZT2",    .slot = 23, .mask = Z80CTC_ZCTO2 },
-                { .name = "CT3",    .slot = 25, .mask = Z80CTC_CLKTRG3 }
-            }
-        }
-    });
-    ui_z80_init(&ui_cpu, &(ui_z80_desc_t){
-        .title = "Z80 CPU",
-        .cpu = &z9001.cpu,
-        .x = 40, .y = 60,
-        .chip_desc = {
-            .name = "Z80\nCPU",
-            .num_slots = 36,
-            .pins = {
-                { .name = "D0",      .slot = 0, .mask = Z80_D0 },
-                { .name = "D1",      .slot = 1, .mask = Z80_D1 },
-                { .name = "D2",      .slot = 2, .mask = Z80_D2 },
-                { .name = "D3",      .slot = 3, .mask = Z80_D3 },
-                { .name = "D4",      .slot = 4, .mask = Z80_D4 },
-                { .name = "D5",      .slot = 5, .mask = Z80_D5 },
-                { .name = "D6",      .slot = 6, .mask = Z80_D6 },
-                { .name = "D7",      .slot = 7, .mask = Z80_D7 },
-                { .name = "M1",      .slot = 9, .mask = Z80_M1 },
-                { .name = "MREQ",    .slot = 10, .mask = Z80_MREQ },
-                { .name = "IORQ",    .slot = 11, .mask = Z80_IORQ },
-                { .name = "RD",      .slot = 12, .mask = Z80_RD },
-                { .name = "WR",      .slot = 13, .mask = Z80_WR },
-                { .name = "HALT",    .slot = 14, .mask = Z80_HALT },
-                { .name = "INT",     .slot = 15, .mask = Z80_INT },
-                { .name = "NMI",     .slot = 16, .mask = Z80_NMI },
-                { .name = "WAIT",    .slot = 17, .mask = Z80_WAIT_MASK },
-                { .name = "A0",      .slot = 18, .mask = Z80_A0 },
-                { .name = "A1",      .slot = 19, .mask = Z80_A1 },
-                { .name = "A2",      .slot = 20, .mask = Z80_A2 },
-                { .name = "A3",      .slot = 21, .mask = Z80_A3 },
-                { .name = "A4",      .slot = 22, .mask = Z80_A4 },
-                { .name = "A5",      .slot = 23, .mask = Z80_A5 },
-                { .name = "A6",      .slot = 24, .mask = Z80_A6 },
-                { .name = "A7",      .slot = 25, .mask = Z80_A7 },
-                { .name = "A8",      .slot = 26, .mask = Z80_A8 },
-                { .name = "A9",      .slot = 27, .mask = Z80_A9 },
-                { .name = "A10",     .slot = 28, .mask = Z80_A10 },
-                { .name = "A11",     .slot = 29, .mask = Z80_A11 },
-                { .name = "A12",     .slot = 30, .mask = Z80_A12 },
-                { .name = "A13",     .slot = 31, .mask = Z80_A13 },
-                { .name = "A14",     .slot = 32, .mask = Z80_A14 },
-                { .name = "A15",     .slot = 33, .mask = Z80_A15 }
-            }
-        }
+    ui_init(z9001ui_draw);
+    ui_z9001_init(&ui_z9001, &(ui_z9001_desc_t){
+        .z9001 = &z9001,
+        .boot_cb = boot_cb
     });
 }
 
 void z9001ui_discard(void) {
-    ui_audio_discard(&ui_audio);
-    ui_z80ctc_discard(&ui_ctc);
-    ui_z80pio_discard(&ui_pio_1);
-    ui_z80pio_discard(&ui_pio_2);
-    ui_z80_discard(&ui_cpu);
-    ui_dasm_discard(&ui_dasm);
-    ui_memmap_discard(&ui_memmap);
-    ui_memedit_discard(&ui_memedit);
-}
-
-void z9001ui_update_memmap(void) {
-    ui_memmap_reset(&ui_memmap);
-    ui_memmap_layer(&ui_memmap, "System");
-    if (Z9001_TYPE_Z9001 == z9001.type) {
-        /* Z9001 memory map */
-        ui_memmap_region(&ui_memmap, "RAM", 0x0000, 0x4000, true);
-        ui_memmap_region(&ui_memmap, "16KB RAM MODULE", 0x4000, 0x4000, true);
-        if (z9001.z9001_has_basic_rom) {
-            ui_memmap_region(&ui_memmap, "BASIC ROM MODULE", 0xC000, 0x2800, true);
-        }
-        ui_memmap_region(&ui_memmap, "ASCII RAM", 0xEC00, 0x0400, true);
-        ui_memmap_region(&ui_memmap, "OS ROM 1", 0xF000, 0x0800, true);
-        ui_memmap_region(&ui_memmap, "OS ROM 2", 0xF800, 0x0800, true);
-    }
-    else {
-        /* KC87 memory map */
-        ui_memmap_region(&ui_memmap, "RAM", 0x0000, 0xC000, true);
-        ui_memmap_region(&ui_memmap, "BASIC ROM", 0xC000, 0x2000, true);
-        ui_memmap_region(&ui_memmap, "OS ROM 1", 0xE000, 0x0800, true);
-        ui_memmap_region(&ui_memmap, "COLOR RAM", 0xE800, 0x0400, true);
-        ui_memmap_region(&ui_memmap, "ASCII RAM", 0xEC00, 0x0400, true);
-        ui_memmap_region(&ui_memmap, "OS ROM 2", 0xF000, 0x1000, true);
-    }
+    ui_z9001_discard(&ui_z9001);
 }
 
 void z9001ui_draw() {
-    if (ui_memmap.open) {
-        z9001ui_update_memmap();
-    }
-    ui_audio_draw(&ui_audio, z9001.sample_pos);
-    ui_z80_draw(&ui_cpu);
-    ui_z80pio_draw(&ui_pio_1);
-    ui_z80pio_draw(&ui_pio_2);
-    ui_z80ctc_draw(&ui_ctc);
-    ui_memedit_draw(&ui_memedit);
-    ui_memmap_draw(&ui_memmap);
-    ui_dasm_draw(&ui_dasm);
+    ui_z9001_draw(&ui_z9001, stm_ms(exec_time));
 }
 #endif /* CHIPS_USE_UI */
