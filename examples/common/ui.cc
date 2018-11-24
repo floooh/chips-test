@@ -34,6 +34,7 @@
 #include "ui/ui_kc85.h"
 #include "ui/ui_z1013.h"
 #include "ui/ui_z9001.h"
+#include "ui/ui_zx.h"
 
 typedef struct {
     ImVec2 disp_size;
