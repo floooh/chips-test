@@ -32,6 +32,7 @@
 #include "ui/ui_memmap.h"
 #include "util/z80dasm.h"
 #include "ui/ui_dasm.h"
+#include "ui/ui_kbd.h"
 #include "ui/ui_z80.h"
 #include "ui/ui_z80pio.h"
 #include "ui/ui_z80ctc.h"
