@@ -18,16 +18,14 @@
 #include "chips/clk.h"
 #include "systems/z1013.h"
 #include "z1013-roms.h"
+
+/* imports from z1013-ui.cc */
 #ifdef CHIPS_USE_UI
-#undef CHIPS_IMPL
 #include "ui.h"
-#include "ui/ui_chip.h"
-#include "ui/ui_memedit.h"
-#include "ui/ui_memmap.h"
-#include "ui/ui_dasm.h"
-#include "ui/ui_z80.h"
-#include "ui/ui_z80pio.h"
-#include "ui/ui_z1013.h"
+void z1013ui_init(z1013_t* z1013);
+void z1013ui_discard(void);
+void z1013ui_set_exec_time(double t);
+void z1013ui_draw(void);
 #endif
 
 static z1013_t z1013;
@@ -37,13 +35,6 @@ static void app_init(void);
 static void app_frame(void);
 static void app_input(const sapp_event*);
 static void app_cleanup(void);
-
-#ifdef CHIPS_USE_UI
-static uint64_t exec_time;
-static void z1013ui_init(void);
-static void z1013ui_discard(void);
-static void z1013ui_draw(void);
-#endif
 
 sapp_desc sokol_main(int argc, char* argv[]) {
     sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
@@ -64,7 +55,7 @@ sapp_desc sokol_main(int argc, char* argv[]) {
 }
 
 /* get z1013_desc_t struct for given Z1013 model */
-static z1013_desc_t z1013_desc(z1013_type_t type) {
+z1013_desc_t z1013_desc(z1013_type_t type) {
     return(z1013_desc_t) {
         .type = type,
         .pixel_buffer = gfx_framebuffer(),
@@ -104,7 +95,7 @@ void app_init(void) {
     z1013_desc_t desc = z1013_desc(type);
     z1013_init(&z1013, &desc);
     #ifdef CHIPS_USE_UI
-    z1013ui_init();
+    z1013ui_init(&z1013);
     #endif
     /* FIXME: remove BASIC interpreter and use snapshot loading in user-code instead */
     if (Z1013_TYPE_64 == z1013.type) {
@@ -117,7 +108,7 @@ void app_frame(void) {
     #if CHIPS_USE_UI
         uint64_t start = stm_now();
         z1013_exec(&z1013, clock_frame_time());
-        exec_time = stm_since(start);
+        z1013ui_set_exec_time(stm_ms(stm_since(start)));
     #else
         z1013_exec(&z1013, clock_frame_time());
     #endif
@@ -189,31 +180,3 @@ void app_cleanup(void) {
     gfx_shutdown();
     sargs_shutdown();
 }
-
-/*=== optional debugging UI ==================================================*/
-#ifdef CHIPS_USE_UI
-
-static ui_z1013_t ui_z1013;
-
-/* reboot callback */
-static void boot_cb(z1013_t* sys, z1013_type_t type) {
-    z1013_desc_t desc = z1013_desc(type);
-    z1013_init(sys, &desc);
-}
-
-void z1013ui_init(void) {
-    ui_init(z1013ui_draw);
-    ui_z1013_init(&ui_z1013, &(ui_z1013_desc_t){
-        .z1013 = &z1013,
-        .boot_cb = boot_cb
-    });
-}
-
-void z1013ui_discard(void) {
-    ui_z1013_discard(&ui_z1013);
-}
-
-void z1013ui_draw() {
-    ui_z1013_draw(&ui_z1013, stm_ms(exec_time));
-}
-#endif /* CHIPS_USE_UI */

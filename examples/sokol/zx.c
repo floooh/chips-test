@@ -15,18 +15,14 @@
 #include "chips/mem.h"
 #include "systems/zx.h"
 #include "zx-roms.h"
+
+/* imports from zx-ui.cc */
 #ifdef CHIPS_USE_UI
-#undef CHIPS_IMPL
 #include "ui.h"
-#include "ui/ui_chip.h"
-#include "ui/ui_memedit.h"
-#include "ui/ui_memmap.h"
-#include "ui/ui_dasm.h"
-#include "ui/ui_kbd.h"
-#include "ui/ui_z80.h"
-#include "ui/ui_ay38910.h"
-#include "ui/ui_audio.h"
-#include "ui/ui_zx.h"
+void zxui_init(zx_t* zx);
+void zxui_discard(void);
+void zxui_draw(void);
+void zxui_set_exec_time(double t);
 #endif
 
 static zx_t zx;
@@ -36,13 +32,6 @@ static void app_init(void);
 static void app_frame(void);
 static void app_input(const sapp_event*);
 static void app_cleanup(void);
-
-#ifdef CHIPS_USE_UI
-static uint64_t exec_time;
-static void zxui_init(void);
-static void zxui_discard(void);
-static void zxui_draw(void);
-#endif
 
 sapp_desc sokol_main(int argc, char* argv[]) {
     sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
@@ -121,7 +110,7 @@ void app_init() {
     zx_desc_t desc = zx_desc(type, joy_type);
     zx_init(&zx, &desc);
     #ifdef CHIPS_USE_UI
-    zxui_init();
+    zxui_init(&zx);
     #endif
 }
 
@@ -130,7 +119,7 @@ void app_frame() {
     #if CHIPS_USE_UI
         uint64_t start = stm_now();
         zx_exec(&zx, clock_frame_time());
-        exec_time = stm_since(start);
+        zxui_set_exec_time(stm_ms(stm_since(start)));
     #else
         zx_exec(&zx, clock_frame_time());
     #endif
@@ -199,31 +188,3 @@ void app_cleanup() {
     gfx_shutdown();
     sargs_shutdown();
 }
-
-/*=== optional debugging UI ==================================================*/
-#ifdef CHIPS_USE_UI
-
-static ui_zx_t ui_zx;
-
-/* reboot callback */
-static void boot_cb(zx_t* sys, zx_type_t type) {
-    zx_desc_t desc = zx_desc(type, sys->joystick_type);
-    zx_init(sys, &desc);
-}
-
-void zxui_init(void) {
-    ui_init(zxui_draw);
-    ui_zx_init(&ui_zx, &(ui_zx_desc_t){
-        .zx = &zx,
-        .boot_cb = boot_cb
-    });
-}
-
-void zxui_discard(void) {
-    ui_zx_discard(&ui_zx);
-}
-
-void zxui_draw() {
-    ui_zx_draw(&ui_zx, stm_ms(exec_time));
-}
-#endif /* CHIPS_USE_UI */

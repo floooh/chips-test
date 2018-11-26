@@ -14,19 +14,14 @@
 #include "chips/mem.h"
 #include "systems/kc85.h"
 #include "kc85-roms.h"
+
+/* imports from kc85-ui.cc */
 #ifdef CHIPS_USE_UI
-#undef CHIPS_IMPL
 #include "ui.h"
-#include "ui/ui_chip.h"
-#include "ui/ui_memedit.h"
-#include "ui/ui_memmap.h"
-#include "ui/ui_dasm.h"
-#include "ui/ui_z80.h"
-#include "ui/ui_z80pio.h"
-#include "ui/ui_z80ctc.h"
-#include "ui/ui_kc85sys.h"
-#include "ui/ui_audio.h"
-#include "ui/ui_kc85.h"
+void kc85ui_init(kc85_t* kc85);
+void kc85ui_discard(void);
+void kc85ui_set_exec_time(double t);
+void kc85ui_draw(void);
 #endif
 
 static kc85_t kc85;
@@ -39,13 +34,6 @@ static void app_init(void);
 static void app_frame(void);
 static void app_input(const sapp_event*);
 static void app_cleanup(void);
-
-#ifdef CHIPS_USE_UI
-static uint64_t exec_time;
-static void kc85ui_init(void);
-static void kc85ui_discard(void);
-static void kc85ui_draw(void);
-#endif
 
 sapp_desc sokol_main(int argc, char* argv[]) {
     sargs_setup(&(sargs_desc) { .argc = argc, .argv = argv });
@@ -87,7 +75,7 @@ static void patch_snapshots(const char* snapshot_name, void* user_data) {
 }
 
 /* get kc85_desc_t struct for a given KC85 type */
-static kc85_desc_t kc85_desc(kc85_type_t type) {
+kc85_desc_t kc85_desc(kc85_type_t type) {
     return (kc85_desc_t) {
         .type = type,
         .pixel_buffer = gfx_framebuffer(),
@@ -138,7 +126,7 @@ void app_init(void) {
     kc85_desc_t desc = kc85_desc(type);
     kc85_init(&kc85, &desc);
     #ifdef CHIPS_USE_UI
-    kc85ui_init();
+    kc85ui_init(&kc85);
     #endif
 
     bool delay_input = false;
@@ -190,7 +178,7 @@ void app_frame(void) {
     #if CHIPS_USE_UI
         uint64_t start = stm_now();
         kc85_exec(&kc85, clock_frame_time());
-        exec_time = stm_since(start);
+        kc85ui_set_exec_time(stm_ms(stm_since(start)));
     #else
         kc85_exec(&kc85, clock_frame_time());
     #endif
@@ -298,31 +286,3 @@ void app_cleanup(void) {
     gfx_shutdown();
     sargs_shutdown();
 }
-
-/*=== optional debugging UI ==================================================*/
-#ifdef CHIPS_USE_UI
-
-static ui_kc85_t ui_kc85;
-
-/* reboot callback */
-static void boot_cb(kc85_t* sys, kc85_type_t type) {
-    kc85_desc_t desc = kc85_desc(type);
-    kc85_init(sys, &desc);
-}
-
-void kc85ui_init(void) {
-    ui_init(kc85ui_draw);
-    ui_kc85_init(&ui_kc85, &(ui_kc85_desc_t){
-        .kc85 = &kc85,
-        .boot_cb = boot_cb
-    });
-}
-
-void kc85ui_discard(void) {
-    ui_kc85_discard(&ui_kc85);
-}
-
-void kc85ui_draw() {
-    ui_kc85_draw(&ui_kc85, stm_ms(exec_time));
-}
-#endif /* CHIPS_USE_UI */

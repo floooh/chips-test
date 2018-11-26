@@ -18,20 +18,14 @@
 #include "chips/fdd_cpc.h"
 #include "systems/cpc.h"
 #include "cpc-roms.h"
+
+/* imports from cpc-ui.cc */
 #ifdef CHIPS_USE_UI
-#undef CHIPS_IMPL
 #include "ui.h"
-#include "ui/ui_chip.h"
-#include "ui/ui_memedit.h"
-#include "ui/ui_memmap.h"
-#include "ui/ui_dasm.h"
-#include "ui/ui_z80.h"
-#include "ui/ui_ay38910.h"
-#include "ui/ui_mc6845.h"
-#include "ui/ui_i8255.h"
-#include "ui/ui_audio.h"
-#include "ui/ui_kbd.h"
-#include "ui/ui_cpc.h"
+void cpcui_init(cpc_t* cpc);
+void cpcui_discard(void);
+void cpcui_draw(void);
+void cpcui_set_exec_time(double t);
 #endif
 
 static cpc_t cpc;
@@ -41,13 +35,6 @@ static void app_init(void);
 static void app_frame(void);
 static void app_input(const sapp_event*);
 static void app_cleanup(void);
-
-#ifdef CHIPS_USE_UI
-static uint64_t exec_time;
-static void cpcui_init(void);
-static void cpcui_discard(void);
-static void cpcui_draw(void);
-#endif
 
 sapp_desc sokol_main(int argc, char* argv[]) {
     sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
@@ -139,7 +126,7 @@ void app_init(void) {
     cpc_desc_t desc = cpc_desc(type, joy_type);
     cpc_init(&cpc, &desc);
     #ifdef CHIPS_USE_UI
-    cpcui_init();
+    cpcui_init(&cpc);
     #endif
 
     /* keyboard input to send to emulator */
@@ -155,7 +142,7 @@ void app_frame(void) {
     #if CHIPS_USE_UI
         uint64_t start = stm_now();
         cpc_exec(&cpc, clock_frame_time());
-        exec_time = stm_since(start);
+        cpcui_set_exec_time(stm_ms(stm_since(start)));
     #else
         cpc_exec(&cpc, clock_frame_time());
     #endif
@@ -262,35 +249,3 @@ void app_cleanup(void) {
     gfx_shutdown();
     sargs_shutdown();
 }
-
-/*=== optional debugging UI ==================================================*/
-#ifdef CHIPS_USE_UI
-
-static ui_cpc_t ui_cpc;
-
-/* reboot callback */
-static void boot_cb(cpc_t* sys, cpc_type_t type) {
-    cpc_desc_t desc = cpc_desc(type, sys->joystick_type);
-    cpc_init(sys, &desc);
-}
-
-void cpcui_init(void) {
-    ui_init(cpcui_draw);
-    ui_cpc_init(&ui_cpc, &(ui_cpc_desc_t){
-        .cpc = &cpc,
-        .boot_cb = boot_cb
-    });
-}
-
-void cpcui_discard(void) {
-    ui_cpc_discard(&ui_cpc);
-}
-
-void cpcui_draw() {
-    ui_cpc_draw(&ui_cpc, stm_ms(exec_time));
-}
-#endif /* CHIPS_USE_UI */
-
-
-
-

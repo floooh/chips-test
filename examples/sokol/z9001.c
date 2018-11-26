@@ -17,19 +17,14 @@
 #include "chips/mem.h"
 #include "systems/z9001.h"
 #include "z9001-roms.h"
+
+/* imports from z9001-ui.cc */
 #ifdef CHIPS_USE_UI
-#undef CHIPS_IMPL
 #include "ui.h"
-#include "ui/ui_chip.h"
-#include "ui/ui_memedit.h"
-#include "ui/ui_memmap.h"
-#include "ui/ui_dasm.h"
-#include "ui/ui_kbd.h"
-#include "ui/ui_z80.h"
-#include "ui/ui_z80pio.h"
-#include "ui/ui_z80ctc.h"
-#include "ui/ui_audio.h"
-#include "ui/ui_z9001.h"
+void z9001ui_init(z9001_t* z9001);
+void z9001ui_discard(void);
+void z9001ui_set_exec_time(double t);
+void z9001ui_draw(void);
 #endif
 
 static z9001_t z9001;
@@ -39,13 +34,6 @@ static void app_init(void);
 static void app_frame(void);
 static void app_input(const sapp_event*);
 static void app_cleanup(void);
-
-#ifdef CHIPS_USE_UI
-static uint64_t exec_time;
-static void z9001ui_init(void);
-static void z9001ui_discard(void);
-static void z9001ui_draw(void);
-#endif
 
 sapp_desc sokol_main(int argc, char* argv[]) {
     sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
@@ -71,7 +59,7 @@ static void push_audio(const float* samples, int num_samples, void* user_data) {
 }
 
 /* get a z9001_desc_t struct for given Z9001 model */
-static z9001_desc_t z9001_desc(z9001_type_t type) {
+z9001_desc_t z9001_desc(z9001_type_t type) {
     return (z9001_desc_t) {
         .type = type,
         .audio_cb = push_audio,
@@ -119,7 +107,7 @@ void app_init() {
     z9001_desc_t desc = z9001_desc(type);
     z9001_init(&z9001, &desc);
     #ifdef CHIPS_USE_UI
-    z9001ui_init();
+    z9001ui_init(&z9001);
     #endif
 }
 
@@ -128,7 +116,7 @@ void app_frame() {
     #if CHIPS_USE_UI
         uint64_t start = stm_now();
         z9001_exec(&z9001, clock_frame_time());
-        exec_time = stm_since(start);
+        z9001ui_set_exec_time(stm_ms(stm_since(start)));
     #else
         z9001_exec(&z9001, clock_frame_time());
     #endif
@@ -203,31 +191,3 @@ void app_cleanup() {
     gfx_shutdown();
     sargs_shutdown();
 }
-
-/*=== optional debugging UI ==================================================*/
-#ifdef CHIPS_USE_UI
-
-static ui_z9001_t ui_z9001;
-
-/* reboot callback */
-static void boot_cb(z9001_t* sys, z9001_type_t type) {
-    z9001_desc_t desc = z9001_desc(type);
-    z9001_init(sys, &desc);
-}
-
-void z9001ui_init(void) {
-    ui_init(z9001ui_draw);
-    ui_z9001_init(&ui_z9001, &(ui_z9001_desc_t){
-        .z9001 = &z9001,
-        .boot_cb = boot_cb
-    });
-}
-
-void z9001ui_discard(void) {
-    ui_z9001_discard(&ui_z9001);
-}
-
-void z9001ui_draw() {
-    ui_z9001_draw(&ui_z9001, stm_ms(exec_time));
-}
-#endif /* CHIPS_USE_UI */
