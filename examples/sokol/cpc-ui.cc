@@ -29,6 +29,9 @@
 #include "ui/ui_audio.h"
 #include "ui/ui_kbd.h"
 #include "ui/ui_cpc.h"
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
+#endif
 
 extern "C" {
 

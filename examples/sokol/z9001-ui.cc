@@ -24,6 +24,9 @@
 #include "ui/ui_z80pio.h"
 #include "ui/ui_z80ctc.h"
 #include "ui/ui_z9001.h"
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
+#endif
 
 extern "C" {
 

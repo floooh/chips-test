@@ -22,6 +22,9 @@
 #include "ui/ui_ay38910.h"
 #include "ui/ui_audio.h"
 #include "ui/ui_zx.h"
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
+#endif
 
 extern "C" {
 

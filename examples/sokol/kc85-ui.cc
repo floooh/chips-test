@@ -25,6 +25,10 @@
 #include "ui/ui_audio.h"
 #include "ui/ui_kc85.h"
 
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
+#endif
+
 extern "C" {
 
 extern kc85_desc_t kc85_desc(kc85_type_t type);
