@@ -26,6 +26,7 @@
 #include "ui/ui_ay38910.h"
 #include "ui/ui_mc6845.h"
 #include "ui/ui_i8255.h"
+#include "ui/ui_cpc_ga.h"
 #include "ui/ui_audio.h"
 #include "ui/ui_kbd.h"
 #include "ui/ui_cpc.h"
