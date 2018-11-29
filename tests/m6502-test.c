@@ -785,7 +785,7 @@ void ASL() {
     uint8_t prog[] = {
         0xA9, 0x81,     // LDA #$81
         0xA2, 0x01,     // LDX #$01
-        0x85, 0x10,     // STA #$10
+        0x85, 0x10,     // STA $10
         0x06, 0x10,     // ASL $10
         0x16, 0x0F,     // ASL $0F,X
         0x0A,           // ASL
@@ -809,7 +809,7 @@ void LSR() {
     uint8_t prog[] = {
         0xA9, 0x81,     // LDA #$81
         0xA2, 0x01,     // LDX #$01
-        0x85, 0x10,     // STA #$10
+        0x85, 0x10,     // STA $10
         0x46, 0x10,     // LSR $10
         0x56, 0x0F,     // LSR $0F,X
         0x4A,           // LSR
@@ -833,7 +833,7 @@ void ROR_ROL() {
     uint8_t prog[] = {
         0xA9, 0x81,     // LDA #$81
         0xA2, 0x01,     // LDX #$01
-        0x85, 0x10,     // STA #$10
+        0x85, 0x10,     // STA $10
         0x26, 0x10,     // ROL $10
         0x36, 0x0F,     // ROL $0F,X
         0x76, 0x0F,     // ROR $0F,X
