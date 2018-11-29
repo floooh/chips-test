@@ -128,3 +128,8 @@ fips_begin_app(z80dasm-test cmdline)
     fips_vs_warning_level(3)
     fips_files(z80dasm-test.c)
 fips_end_app()
+
+fips_begin_app(m6502dasm-test cmdline)
+    fips_vs_warning_level(3)
+    fips_files(m6502dasm-test.c)
+fips_end_app()
