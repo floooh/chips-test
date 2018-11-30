@@ -11,6 +11,7 @@
 #include "chips/clk.h"
 #include "systems/z9001.h"
 #define CHIPS_IMPL
+#define UI_DASM_USE_Z80
 #include "ui.h"
 #include "util/z80dasm.h"
 #include "ui/ui_util.h"
@@ -41,7 +42,7 @@ static void boot_cb(z9001_t* sys, z9001_type_t type) {
     z9001_init(sys, &desc);
 }
 
-void z9001ui_draw() {
+void z9001ui_draw(void) {
     ui_z9001_draw(&ui_z9001, exec_time);
 }
 

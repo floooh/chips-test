@@ -23,13 +23,23 @@
 #include "systems/atom.h"
 #include "atom-roms.h"
 
-atom_t atom;
+/* imports from cpc-ui.cc */
+#ifdef CHIPS_USE_UI
+#include "ui.h"
+void atomui_init(atom_t* atom);
+void atomui_discard(void);
+void atomui_draw(void);
+void atomui_set_exec_time(double t);
+#endif
+
+static atom_t atom;
 
 /* sokol-app entry, configure application callbacks and window */
 void app_init(void);
 void app_frame(void);
 void app_input(const sapp_event*);
 void app_cleanup(void);
+
 sapp_desc sokol_main(int argc, char* argv[]) {
     sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
     fs_init();
@@ -53,22 +63,9 @@ static void push_audio(const float* samples, int num_samples, void* user_data) {
     saudio_push(samples, num_samples);
 }
 
-/* one-time application init */
-void app_init(void) {
-    gfx_init(&(gfx_desc_t) {
-        .fb_width = ATOM_DISPLAY_WIDTH,
-        .fb_height = ATOM_DISPLAY_HEIGHT
-    });
-    keybuf_init(10);
-    clock_init();
-    saudio_setup(&(saudio_desc){0});
-    atom_joystick_type_t joy_type = ATOM_JOYSTICKTYPE_NONE;
-    if (sargs_exists("joystick")) {
-        if (sargs_equals("joystick", "mmc") || sargs_equals("joystick", "yes")) {
-            joy_type = ATOM_JOYSTICKTYPE_MMC;
-        }
-    }
-    atom_init(&atom, &(atom_desc_t){
+/* get atom_desc_t struct based on joystick type */
+atom_desc_t atom_desc(atom_joystick_type_t joy_type) {
+    return (atom_desc_t) {
         .joystick_type = joy_type,
         .audio_cb = push_audio,
         .audio_sample_rate = saudio_sample_rate(),
@@ -80,12 +77,47 @@ void app_init(void) {
         .rom_afloat_size = sizeof(dump_afloat),
         .rom_dosrom = dump_dosrom,
         .rom_dosrom_size = sizeof(dump_dosrom)
+    };
+}
+
+/* one-time application init */
+void app_init(void) {
+    gfx_init(&(gfx_desc_t) {
+        #ifdef CHIPS_USE_UI
+        .draw_extra_cb = ui_draw,
+        .top_offset = 16,
+        .fb_width = ATOM_DISPLAY_WIDTH,
+        .fb_height = ATOM_DISPLAY_HEIGHT + 16
+        #else
+        .fb_width = ATOM_DISPLAY_WIDTH,
+        .fb_height = ATOM_DISPLAY_HEIGHT
+        #endif
     });
+    keybuf_init(10);
+    clock_init();
+    saudio_setup(&(saudio_desc){0});
+    atom_joystick_type_t joy_type = ATOM_JOYSTICKTYPE_NONE;
+    if (sargs_exists("joystick")) {
+        if (sargs_equals("joystick", "mmc") || sargs_equals("joystick", "yes")) {
+            joy_type = ATOM_JOYSTICKTYPE_MMC;
+        }
+    }
+    atom_desc_t desc = atom_desc(joy_type);
+    atom_init(&atom, &desc);
+    #ifdef CHIPS_USE_UI
+    atomui_init(&atom);
+    #endif
 }
 
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
 void app_frame() {
-    atom_exec(&atom, clock_frame_time());
+    #if CHIPS_USE_UI
+        uint64_t start = stm_now();
+        atom_exec(&atom, clock_frame_time());
+        atomui_set_exec_time(stm_ms(stm_since(start)));
+    #else
+        atom_exec(&atom, clock_frame_time());
+    #endif
     gfx_draw();
     uint8_t key_code;
     if (0 != (key_code = keybuf_get())) {
@@ -102,6 +134,12 @@ void app_frame() {
 
 /* keyboard input handling */
 void app_input(const sapp_event* event) {
+    #ifdef CHIPS_USE_UI
+    if (ui_input(event)) {
+        /* input was handled by UI */
+        return;
+    }
+    #endif
     int c = 0;
     switch (event->type) {
         case SAPP_EVENTTYPE_CHAR:
@@ -154,6 +192,10 @@ void app_input(const sapp_event* event) {
 /* application cleanup callback */
 void app_cleanup(void) {
     atom_discard(&atom);
+    #ifdef CHIPS_USE_UI
+    atomui_discard();
+    #endif
     saudio_shutdown();
     gfx_shutdown();
+    sargs_shutdown();
 }

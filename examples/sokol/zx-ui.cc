@@ -10,6 +10,7 @@
 #include "chips/mem.h"
 #include "systems/zx.h"
 #define CHIPS_IMPL
+#define UI_DASM_USE_Z80
 #include "ui.h"
 #include "util/z80dasm.h"
 #include "ui/ui_util.h"
@@ -39,7 +40,7 @@ static void boot_cb(zx_t* sys, zx_type_t type) {
     zx_init(sys, &desc);
 }
 
-void zxui_draw() {
+void zxui_draw(void) {
     ui_zx_draw(&ui_zx, exec_time);
 }
 

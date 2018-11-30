@@ -9,6 +9,7 @@
 #include "chips/clk.h"
 #include "systems/z1013.h"
 #define CHIPS_IMPL
+#define UI_DASM_USE_Z80
 #include "ui.h"
 #include "util/z80dasm.h"
 #include "ui/ui_util.h"
@@ -36,7 +37,7 @@ static void boot_cb(z1013_t* sys, z1013_type_t type) {
     z1013_init(sys, &desc);
 }
 
-void z1013ui_draw() {
+void z1013ui_draw(void) {
     ui_z1013_draw(&ui_z1013, exec_time);
 }
 

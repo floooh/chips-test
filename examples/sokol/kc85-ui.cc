@@ -11,6 +11,7 @@
 #include "chips/mem.h"
 #include "systems/kc85.h"
 #define CHIPS_IMPL
+#define UI_DASM_USE_Z80
 #include "ui.h"
 #include "util/z80dasm.h"
 #include "ui/ui_util.h"
@@ -42,7 +43,7 @@ static void boot_cb(kc85_t* sys, kc85_type_t type) {
     kc85_init(sys, &desc);
 }
 
-void kc85ui_draw() {
+void kc85ui_draw(void) {
     ui_kc85_draw(&ui_kc85, exec_time);
 }
 

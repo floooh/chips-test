@@ -15,6 +15,7 @@
 #include "chips/fdd_cpc.h"
 #include "systems/cpc.h"
 #define CHIPS_IMPL
+#define UI_DASM_USE_Z80
 #include "ui.h"
 #include "util/z80dasm.h"
 #include "ui/ui_util.h"
@@ -47,7 +48,7 @@ static void boot_cb(cpc_t* sys, cpc_type_t type) {
     cpc_init(sys, &desc);
 }
 
-void cpcui_draw() {
+void cpcui_draw(void) {
     ui_cpc_draw(&ui_cpc, exec_time);
 }
 
