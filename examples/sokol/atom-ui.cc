@@ -22,6 +22,7 @@
 #include "ui/ui_memmap.h"
 #include "ui/ui_dasm.h"
 #include "ui/ui_m6502.h"
+#include "ui/ui_m6522.h"
 #include "ui/ui_i8255.h"
 #include "ui/ui_audio.h"
 #include "ui/ui_kbd.h"
