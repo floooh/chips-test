@@ -14,6 +14,15 @@
 #include "systems/c64.h"
 #include "c64-roms.h"
 
+/* imports from cpc-ui.cc */
+#ifdef CHIPS_USE_UI
+#include "ui.h"
+void c64ui_init(c64_t* c64);
+void c64ui_discard(void);
+void c64ui_draw(void);
+void c64ui_set_exec_time(double t);
+#endif
+
 c64_t c64;
 
 /* sokol-app entry, configure application callbacks and window */
@@ -41,29 +50,9 @@ static void push_audio(const float* samples, int num_samples, void* user_data) {
     saudio_push(samples, num_samples);
 }
 
-/* one-time application init */
-void app_init(void) {
-    gfx_init(&(gfx_desc_t){
-        .fb_width = C64_DISPLAY_WIDTH,
-        .fb_height = C64_DISPLAY_HEIGHT
-    });
-    keybuf_init(5);
-    clock_init();
-    saudio_setup(&(saudio_desc){0});
-    fs_init();
-    if (sargs_exists("tape")) {
-        fs_load_file(sargs_value("tape"));
-    }
-    c64_joystick_type_t joy_type = C64_JOYSTICKTYPE_NONE;
-    if (sargs_exists("joystick")) {
-        if (sargs_equals("joystick", "digital_1")) {
-            joy_type = C64_JOYSTICKTYPE_DIGITAL_1;
-        }
-        else if (sargs_equals("joystick", "digital_2")) {
-            joy_type = C64_JOYSTICKTYPE_DIGITAL_2;
-        }
-    }
-    c64_init(&c64, &(c64_desc_t){
+/* get c64_desc_t struct based on joystick type */
+c64_desc_t c64_desc(c64_joystick_type_t joy_type) {
+    return (c64_desc_t) {
         .joystick_type = joy_type,
         .pixel_buffer = gfx_framebuffer(),
         .pixel_buffer_size = gfx_framebuffer_size(),
@@ -76,7 +65,46 @@ void app_init(void) {
         .rom_basic_size = sizeof(dump_c64_basic),
         .rom_kernal = dump_c64_kernalv3,
         .rom_kernal_size = sizeof(dump_c64_kernalv3)
+    };
+}
+
+/* one-time application init */
+void app_init(void) {
+    gfx_init(&(gfx_desc_t){
+        #ifdef CHIPS_USE_UI
+            .draw_extra_cb = ui_draw,
+            .top_offset = 16,
+            .fb_width = C64_DISPLAY_WIDTH,
+            .fb_height = C64_DISPLAY_HEIGHT + 16
+        #else
+            .fb_width = C64_DISPLAY_WIDTH,
+            .fb_height = C64_DISPLAY_HEIGHT
+        #endif
     });
+    keybuf_init(5);
+    clock_init();
+    saudio_setup(&(saudio_desc){0});
+    fs_init();
+    if (sargs_exists("tape")) {
+        fs_load_file(sargs_value("tape"));
+    }
+    if (sargs_exists("bin")) {
+        fs_load_file(sargs_value("bin"));
+    }
+    c64_joystick_type_t joy_type = C64_JOYSTICKTYPE_NONE;
+    if (sargs_exists("joystick")) {
+        if (sargs_equals("joystick", "digital_1")) {
+            joy_type = C64_JOYSTICKTYPE_DIGITAL_1;
+        }
+        else if (sargs_equals("joystick", "digital_2")) {
+            joy_type = C64_JOYSTICKTYPE_DIGITAL_2;
+        }
+    }
+    c64_desc_t desc = c64_desc(joy_type);
+    c64_init(&c64, &desc);
+    #ifdef CHIPS_USE_UI
+        c64ui_init(&c64);
+    #endif
     if (sargs_exists("input")) {
         keybuf_put(sargs_value("input"));
     }
@@ -84,13 +112,24 @@ void app_init(void) {
 
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
 void app_frame(void) {
-    c64_exec(&c64, clock_frame_time());
+    #ifdef CHIPS_USE_UI
+        uint64_t start = stm_now();
+        c64_exec(&c64, clock_frame_time());
+        c64ui_set_exec_time(stm_ms(stm_since(start)));
+    #else
+        c64_exec(&c64, clock_frame_time());
+    #endif
     gfx_draw();
     if (fs_ptr() && clock_frame_count() > 180) {
-        if (c64_insert_tape(&c64, fs_ptr(), fs_size())) {
-            /* send load command */
-            keybuf_put("LOAD\n");
-            c64_start_tape(&c64);
+        if (sargs_exists("bin")) {
+            c64_quickload(&c64, fs_ptr(), fs_size());
+        }
+        else {
+            if (c64_insert_tape(&c64, fs_ptr(), fs_size())) {
+                /* send load command */
+                keybuf_put("LOAD\n");
+                c64_start_tape(&c64);
+            }
         }
         fs_free();
     }
@@ -107,6 +146,12 @@ void app_frame(void) {
 
 /* keyboard input handling */
 void app_input(const sapp_event* event) {
+    #ifdef CHIPS_USE_UI
+    if (ui_input(event)) {
+        /* input was handled by UI */
+        return;
+    }
+    #endif
     const bool shift = event->modifiers & SAPP_MODIFIER_SHIFT;
     switch (event->type) {
         int c;
@@ -164,6 +209,9 @@ void app_input(const sapp_event* event) {
 
 /* application cleanup callback */
 void app_cleanup(void) {
+    #ifdef CHIPS_USE_UI
+        c64ui_discard();
+    #endif
     c64_discard(&c64);
     saudio_shutdown();
     gfx_shutdown();
