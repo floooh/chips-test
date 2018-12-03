@@ -861,4 +861,5 @@ int main() {
     JMP_indirect_wrap();
     JSR_RTS();
     RTI();
+    return test_end();
 }
