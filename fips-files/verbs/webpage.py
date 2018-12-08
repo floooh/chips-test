@@ -120,7 +120,7 @@ def deploy_webpage(fips_dir, proj_dir, webpage_dir) :
         content += '<div class="thumb">\n'
         content += '  <div class="thumb-title">{}</div>\n'.format(title)
         if os.path.exists(emsc_deploy_dir + '/' + system + '-ui.js'):
-            content += '<div class="img-btn"><a class="img-btn-link" href="{}">UI</a></div>'.format(ui_url)
+            content += '<a class="img-btn-link" href="{}"><div class="img-btn">UI</div></a>'.format(ui_url)
         content += '  <div class="img-frame"><a href="{}"><img class="image" src="{}"></img></a></div>\n'.format(url,image)
         content += '  <div class="thumb-bar">{}</div>\n'.format(note)
         content += '</div>\n'
