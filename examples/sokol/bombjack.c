@@ -760,8 +760,6 @@ static void bombjack_decode_video() {
 /* one time app init */
 static void app_init(void) {
     gfx_init(&(gfx_desc_t) {
-        .fb_width = DISPLAY_WIDTH,
-        .fb_height = DISPLAY_HEIGHT,
         .aspect_x = 4,
         .aspect_y = 5,
         .rot90 = true
@@ -774,7 +772,7 @@ static void app_init(void) {
 /* per-frame stuff */
 static void app_frame(void) {
     bombjack_exec(clock_frame_time());
-    gfx_draw();
+    gfx_draw(DISPLAY_WIDTH, DISPLAY_HEIGHT);
 }
 
 /* input handling */

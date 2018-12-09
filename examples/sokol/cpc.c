@@ -26,6 +26,9 @@ void cpcui_init(cpc_t* cpc);
 void cpcui_discard(void);
 void cpcui_draw(void);
 void cpcui_set_exec_time(double t);
+static const int ui_extra_height = 16;
+#else
+static const int ui_extra_height = 0;
 #endif
 
 static cpc_t cpc;
@@ -43,8 +46,8 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .frame_cb = app_frame,
         .event_cb = app_input,
         .cleanup_cb = app_cleanup,
-        .width = CPC_DISPLAY_WIDTH,
-        .height = 2 * CPC_DISPLAY_HEIGHT,
+        .width = cpc_std_display_width(),
+        .height = 2 * cpc_std_display_height() + ui_extra_height,
         .window_title = "CPC 6128",
         .ios_keyboard_resizes_canvas = true
     };
@@ -86,12 +89,7 @@ void app_init(void) {
     gfx_init(&(gfx_desc_t){
         #ifdef CHIPS_USE_UI
         .draw_extra_cb = ui_draw,
-        .top_offset = 16,
-        .fb_width = CPC_DISPLAY_WIDTH,
-        .fb_height = CPC_DISPLAY_HEIGHT + 16,
-        #else
-        .fb_width = CPC_DISPLAY_WIDTH,
-        .fb_height = CPC_DISPLAY_HEIGHT,
+        .top_offset = ui_extra_height,
         #endif
         .aspect_y = 2
     });
@@ -146,7 +144,7 @@ void app_frame(void) {
     #else
         cpc_exec(&cpc, clock_frame_time());
     #endif
-    gfx_draw();
+    gfx_draw(cpc_display_width(&cpc), cpc_display_height(&cpc));
     /* load a data file? FIXME: this needs proper file type detection in case
        a file has been dragged'n'dropped
     */

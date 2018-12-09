@@ -22,6 +22,9 @@ void kc85ui_init(kc85_t* kc85);
 void kc85ui_discard(void);
 void kc85ui_set_exec_time(double t);
 void kc85ui_draw(void);
+static const int ui_extra_height = 16;
+#else
+static const int ui_extra_height = 0;
 #endif
 
 static kc85_t kc85;
@@ -42,8 +45,8 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .frame_cb = app_frame,
         .event_cb = app_input,
         .cleanup_cb = app_cleanup,
-        .width = 2 * KC85_DISPLAY_WIDTH,
-        .height = 2 * KC85_DISPLAY_HEIGHT,
+        .width = 2 * kc85_std_display_width(),
+        .height = 2 * kc85_std_display_height() + ui_extra_height,
         .window_title = "KC85",
         .ios_keyboard_resizes_canvas = true
     };
@@ -100,12 +103,7 @@ void app_init(void) {
     gfx_init(&(gfx_desc_t) {
         #ifdef CHIPS_USE_UI
         .draw_extra_cb = ui_draw,
-        .top_offset = 16,
-        .fb_width = KC85_DISPLAY_WIDTH,
-        .fb_height = KC85_DISPLAY_HEIGHT + 16,
-        #else
-        .fb_width = KC85_DISPLAY_WIDTH,
-        .fb_height = KC85_DISPLAY_HEIGHT,
+        .top_offset = ui_extra_height,
         #endif
     });
     keybuf_init(6);
@@ -182,7 +180,7 @@ void app_frame(void) {
     #else
         kc85_exec(&kc85, clock_frame_time());
     #endif
-    gfx_draw();
+    gfx_draw(kc85_display_width(&kc85), kc85_display_height(&kc85));
     uint32_t delay_frames = kc85.type == KC85_TYPE_4 ? 180 : 480;
     if (fs_ptr() && clock_frame_count() > delay_frames) {
         if (sargs_exists("snapshot")) {

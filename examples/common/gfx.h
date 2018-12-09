@@ -7,8 +7,6 @@
 
 typedef struct {
     int top_offset;
-    int fb_width;
-    int fb_height;
     int aspect_x;
     int aspect_y;
     bool rot90;
@@ -18,7 +16,7 @@ typedef struct {
 extern void gfx_init(const gfx_desc_t* desc);
 extern uint32_t* gfx_framebuffer(void);
 extern int gfx_framebuffer_size(void);
-extern void gfx_draw(void);
+extern void gfx_draw(int width, int height);
 extern void gfx_shutdown(void);
 
 /*== IMPLEMENTATION ==========================================================*/
@@ -61,10 +59,46 @@ int gfx_framebuffer_size(void) {
     return sizeof(gfx.rgba8_buffer);
 }
 
+void gfx_init_images_and_pass(void) {
+
+    /* destroy previous resources (if exist) */
+    sg_destroy_image(gfx.upscale_draw_state.fs_images[0]);
+    sg_destroy_image(gfx.draw_state.fs_images[0]);
+    sg_destroy_pass(gfx.upscale_pass);
+
+    /* a texture with the emulator's raw pixel data */
+    gfx.upscale_draw_state.fs_images[0] = sg_make_image(&(sg_image_desc){
+        .width = gfx.fb_width,
+        .height = gfx.fb_height,
+        .pixel_format = SG_PIXELFORMAT_RGBA8,
+        .usage = SG_USAGE_STREAM,
+        .min_filter = SG_FILTER_NEAREST,
+        .mag_filter = SG_FILTER_NEAREST,
+        .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
+        .wrap_v = SG_WRAP_CLAMP_TO_EDGE
+    });
+    /* a 2x upscaled render-target-texture */
+    gfx.draw_state.fs_images[0] = sg_make_image(&(sg_image_desc){
+        .render_target = true,
+        .width = 2 * gfx.fb_width,
+        .height = 2 * gfx.fb_height,
+        .pixel_format = SG_PIXELFORMAT_RGBA8,
+        .min_filter = SG_FILTER_LINEAR,
+        .mag_filter = SG_FILTER_LINEAR,
+        .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
+        .wrap_v = SG_WRAP_CLAMP_TO_EDGE
+    });
+
+    /* a render pass for the 2x upscaling */
+    gfx.upscale_pass = sg_make_pass(&(sg_pass_desc){
+        .color_attachments[0].image = gfx.draw_state.fs_images[0]
+    });
+}
+
 void gfx_init(const gfx_desc_t* desc) {
     gfx.top_offset = desc->top_offset;
-    gfx.fb_width = _GFX_DEF(desc->fb_width, 640);
-    gfx.fb_height = _GFX_DEF(desc->fb_height, 512);
+    gfx.fb_width = 0;
+    gfx.fb_height = 0;
     gfx.fb_aspect_x = _GFX_DEF(desc->aspect_x, 1);
     gfx.fb_aspect_y = _GFX_DEF(desc->aspect_y, 1);
     gfx.rot90 = desc->rot90;
@@ -136,34 +170,6 @@ void gfx_init(const gfx_desc_t* desc) {
     gfx.draw_state.pipeline = sg_make_pipeline(&pip_desc);
     pip_desc.blend.depth_format = SG_PIXELFORMAT_NONE;
     gfx.upscale_draw_state.pipeline = sg_make_pipeline(&pip_desc);
-
-    /* a texture with the emulator's raw pixel data */
-    gfx.upscale_draw_state.fs_images[0] = sg_make_image(&(sg_image_desc){
-        .width = gfx.fb_width,
-        .height = gfx.fb_height,
-        .pixel_format = SG_PIXELFORMAT_RGBA8,
-        .usage = SG_USAGE_STREAM,
-        .min_filter = SG_FILTER_NEAREST,
-        .mag_filter = SG_FILTER_NEAREST,
-        .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
-        .wrap_v = SG_WRAP_CLAMP_TO_EDGE
-    });
-    /* a 2x upscaled render-target-texture */
-    gfx.draw_state.fs_images[0] = sg_make_image(&(sg_image_desc){
-        .render_target = true,
-        .width = 2*gfx.fb_width,
-        .height = 2*gfx.fb_height,
-        .pixel_format = SG_PIXELFORMAT_RGBA8,
-        .min_filter = SG_FILTER_LINEAR,
-        .mag_filter = SG_FILTER_LINEAR,
-        .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
-        .wrap_v = SG_WRAP_CLAMP_TO_EDGE
-    });
-
-    /* a render pass for the 2x upscaling */
-    gfx.upscale_pass = sg_make_pass(&(sg_pass_desc){
-        .color_attachments[0].image = gfx.draw_state.fs_images[0]
-    });
 }
 
 /* apply a viewport rectangle to preserve the emulator's aspect ratio,
@@ -191,7 +197,14 @@ static void apply_viewport(int canvas_width, int canvas_height) {
     sg_apply_viewport(vp_x, vp_y, vp_w, vp_h, true);
 }
 
-void gfx_draw() {
+void gfx_draw(int width, int height) {
+    /* check if framebuffer size has changed, need to create new backing texture */
+    if ((width != gfx.fb_width) || (height != gfx.fb_height)) {
+        gfx.fb_width = width;
+        gfx.fb_height = height;
+        gfx_init_images_and_pass();
+    }
+
     /* copy emulator pixel data into upscaling source texture */
     sg_update_image(gfx.upscale_draw_state.fs_images[0], &(sg_image_content){
         .subimage[0][0] = { 

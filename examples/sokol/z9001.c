@@ -25,6 +25,9 @@ void z9001ui_init(z9001_t* z9001);
 void z9001ui_discard(void);
 void z9001ui_set_exec_time(double t);
 void z9001ui_draw(void);
+static const int ui_extra_height = 16;
+#else
+static const int ui_extra_height = 0;
 #endif
 
 static z9001_t z9001;
@@ -46,8 +49,8 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .frame_cb = app_frame,
         .event_cb = app_input,
         .cleanup_cb = app_cleanup,
-        .width = 2 * Z9001_DISPLAY_WIDTH,
-        .height = 2 * Z9001_DISPLAY_HEIGHT,
+        .width = 2 * z9001_std_display_width(),
+        .height = 2 * z9001_std_display_height() + ui_extra_height,
         .window_title = "Robotron Z9001/KC87",
         .ios_keyboard_resizes_canvas = true
     };
@@ -89,11 +92,6 @@ void app_init() {
         #ifdef CHIPS_USE_UI
         .draw_extra_cb = ui_draw,
         .top_offset = 16,
-        .fb_width = Z9001_DISPLAY_WIDTH,
-        .fb_height = Z9001_DISPLAY_HEIGHT + 16,
-        #else
-        .fb_width = Z9001_DISPLAY_WIDTH,
-        .fb_height = Z9001_DISPLAY_HEIGHT,
         #endif
     });
     clock_init();
@@ -120,7 +118,7 @@ void app_frame() {
     #else
         z9001_exec(&z9001, clock_frame_time());
     #endif
-    gfx_draw();
+    gfx_draw(z9001_display_width(&z9001), z9001_display_height(&z9001));
     if (fs_ptr() && clock_frame_count() > 20) {
         z9001_quickload(&z9001, fs_ptr(), fs_size());
         fs_free();

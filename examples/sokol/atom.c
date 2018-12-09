@@ -30,6 +30,9 @@ void atomui_init(atom_t* atom);
 void atomui_discard(void);
 void atomui_draw(void);
 void atomui_set_exec_time(double t);
+static const int ui_extra_height = 16;
+#else
+static const int ui_extra_height = 0;
 #endif
 
 static atom_t atom;
@@ -51,8 +54,8 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .frame_cb = app_frame,
         .event_cb = app_input,
         .cleanup_cb = app_cleanup,
-        .width = 2 * ATOM_DISPLAY_WIDTH,
-        .height = 2 * ATOM_DISPLAY_HEIGHT,
+        .width = 2 * atom_std_display_width(),
+        .height = 2 * atom_std_display_height() + ui_extra_height,
         .window_title = "Acorn Atom",
         .ios_keyboard_resizes_canvas = true
     };
@@ -85,12 +88,7 @@ void app_init(void) {
     gfx_init(&(gfx_desc_t) {
         #ifdef CHIPS_USE_UI
         .draw_extra_cb = ui_draw,
-        .top_offset = 16,
-        .fb_width = ATOM_DISPLAY_WIDTH,
-        .fb_height = ATOM_DISPLAY_HEIGHT + 16
-        #else
-        .fb_width = ATOM_DISPLAY_WIDTH,
-        .fb_height = ATOM_DISPLAY_HEIGHT
+        .top_offset = ui_extra_height,
         #endif
     });
     keybuf_init(10);
@@ -118,7 +116,7 @@ void app_frame() {
     #else
         atom_exec(&atom, clock_frame_time());
     #endif
-    gfx_draw();
+    gfx_draw(atom_display_width(&atom), atom_display_height(&atom));
     uint8_t key_code;
     if (0 != (key_code = keybuf_get())) {
         atom_key_down(&atom, key_code);

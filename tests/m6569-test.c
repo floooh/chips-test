@@ -31,10 +31,8 @@ void test_rw() {
         .vis_w = 392,
         .vis_h = 272,
     });
-    int w, h;
-    m6569_display_size(&vic, &w, &h);
-    T(w == 392);
-    T(h == 272);
+    T(m6569_display_width(&vic) == 392);
+    T(m6569_display_height(&vic) == 272);
 }
 
 int main() {

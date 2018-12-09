@@ -26,6 +26,9 @@ void z1013ui_init(z1013_t* z1013);
 void z1013ui_discard(void);
 void z1013ui_set_exec_time(double t);
 void z1013ui_draw(void);
+static const int ui_extra_height = 16;
+#else
+static const int ui_extra_height = 0;
 #endif
 
 static z1013_t z1013;
@@ -47,8 +50,8 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .frame_cb = app_frame,
         .event_cb = app_input,
         .cleanup_cb = app_cleanup,
-        .width = 2 * Z1013_DISPLAY_WIDTH,
-        .height = 2 * Z1013_DISPLAY_HEIGHT,
+        .width = 2 * z1013_std_display_width(),
+        .height = 2 * z1013_std_display_height() + ui_extra_height,
         .window_title = "Robotron Z1013",
         .ios_keyboard_resizes_canvas = true
     };
@@ -75,11 +78,6 @@ void app_init(void) {
         #ifdef CHIPS_USE_UI
         .draw_extra_cb = ui_draw,
         .top_offset = 16,
-        .fb_width = Z1013_DISPLAY_WIDTH,
-        .fb_height = Z1013_DISPLAY_HEIGHT + 16,
-        #else
-        .fb_width = Z1013_DISPLAY_WIDTH,
-        .fb_height = Z1013_DISPLAY_HEIGHT,
         #endif
     });
     clock_init();
@@ -112,7 +110,7 @@ void app_frame(void) {
     #else
         z1013_exec(&z1013, clock_frame_time());
     #endif
-    gfx_draw();
+    gfx_draw(z1013_display_width(&z1013), z1013_display_height(&z1013));
     if (fs_ptr() && clock_frame_count() > 20) {
         z1013_quickload(&z1013, fs_ptr(), fs_size());
         fs_free();

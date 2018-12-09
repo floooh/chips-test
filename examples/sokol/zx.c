@@ -23,6 +23,9 @@ void zxui_init(zx_t* zx);
 void zxui_discard(void);
 void zxui_draw(void);
 void zxui_set_exec_time(double t);
+static const int ui_extra_height = 16;
+#else
+static const int ui_extra_height = 0;
 #endif
 
 static zx_t zx;
@@ -44,8 +47,8 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .frame_cb = app_frame,
         .event_cb = app_input,
         .cleanup_cb = app_cleanup,
-        .width = 2 * ZX_DISPLAY_WIDTH,
-        .height = 2 * ZX_DISPLAY_HEIGHT,
+        .width = 2 * zx_std_display_width(),
+        .height = 2 * zx_std_display_height() + ui_extra_height,
         .window_title = "ZX Spectrum",
         .ios_keyboard_resizes_canvas = true
     };
@@ -79,12 +82,7 @@ void app_init() {
     gfx_init(&(gfx_desc_t){
         #ifdef CHIPS_USE_UI
         .draw_extra_cb = ui_draw,
-        .top_offset = 16,
-        .fb_width = ZX_DISPLAY_WIDTH,
-        .fb_height = ZX_DISPLAY_HEIGHT + 16,
-        #else
-        .fb_width = ZX_DISPLAY_WIDTH,
-        .fb_height = ZX_DISPLAY_HEIGHT,
+        .top_offset = ui_extra_height,
         #endif
     });
     clock_init();
@@ -123,7 +121,7 @@ void app_frame() {
     #else
         zx_exec(&zx, clock_frame_time());
     #endif
-    gfx_draw();
+    gfx_draw(zx_display_width(&zx), zx_display_height(&zx));
     if (fs_ptr() && clock_frame_count() > 120) {
         zx_quickload(&zx, fs_ptr(), fs_size());
         fs_free();

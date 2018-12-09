@@ -21,6 +21,9 @@ void c64ui_init(c64_t* c64);
 void c64ui_discard(void);
 void c64ui_draw(void);
 void c64ui_set_exec_time(double t);
+static const int ui_extra_height = 16;
+#else
+static const int ui_extra_height = 0;
 #endif
 
 c64_t c64;
@@ -38,8 +41,8 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .frame_cb = app_frame,
         .event_cb = app_input,
         .cleanup_cb = app_cleanup,
-        .width = 2 * C64_DISPLAY_WIDTH,
-        .height = 2 * C64_DISPLAY_HEIGHT,
+        .width = 2 * c64_std_display_width(),
+        .height = 2 * c64_std_display_height() + ui_extra_height,
         .window_title = "C64",
         .ios_keyboard_resizes_canvas = true
     };
@@ -74,11 +77,6 @@ void app_init(void) {
         #ifdef CHIPS_USE_UI
             .draw_extra_cb = ui_draw,
             .top_offset = 16,
-            .fb_width = C64_DISPLAY_WIDTH,
-            .fb_height = C64_DISPLAY_HEIGHT + 16
-        #else
-            .fb_width = C64_DISPLAY_WIDTH,
-            .fb_height = C64_DISPLAY_HEIGHT
         #endif
     });
     keybuf_init(5);
@@ -119,7 +117,7 @@ void app_frame(void) {
     #else
         c64_exec(&c64, clock_frame_time());
     #endif
-    gfx_draw();
+    gfx_draw(c64_display_width(&c64), c64_display_height(&c64));
     if (fs_ptr() && clock_frame_count() > 180) {
         if (sargs_exists("bin")) {
             c64_quickload(&c64, fs_ptr(), fs_size());
