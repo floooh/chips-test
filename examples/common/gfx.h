@@ -184,14 +184,14 @@ static void apply_viewport(int canvas_width, int canvas_height) {
     int vp_x, vp_y, vp_w, vp_h;
     if (fb_aspect < canvas_aspect) {
         vp_y = frame_y + gfx.top_offset;
-        vp_h = canvas_height - (2 * frame_y - gfx.top_offset);
+        vp_h = canvas_height - (2 * frame_y) - gfx.top_offset;
         vp_w = (int) (canvas_height * fb_aspect) - 2 * frame_x;
         vp_x = (canvas_width - vp_w) / 2;
     }
     else {
         vp_x = frame_x;
         vp_w = canvas_width - 2 * frame_x;
-        vp_h = (int) (canvas_width / fb_aspect) - (2 * frame_y - gfx.top_offset);
+        vp_h = (int) (canvas_width / fb_aspect) - (2 * frame_y) - gfx.top_offset;
         vp_y = frame_y + gfx.top_offset;
     }
     sg_apply_viewport(vp_x, vp_y, vp_w, vp_h, true);
