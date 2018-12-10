@@ -112,8 +112,8 @@ char petscii2ascii(uint8_t p) {
 }
 
 /* check for special trap addresses, and perform OS functions, return false to exit */
-bool trap() {
-    if (cpu.trap_id == 0) {
+bool handle_trap() {
+    if (cpu.trap_id == 1) {
         /* print character */
         mem_wr(&mem, 0x030C, 0x00);
         if (text_enabled) {
@@ -122,7 +122,7 @@ bool trap() {
         cpu.state.PC = pop();
         cpu.state.PC++;
     }
-    else if (cpu.trap_id == 1) {
+    else if (cpu.trap_id == 2) {
         /* load dump */
         uint8_t l = mem_rd(&mem, 0x00BB);   // petscii filename address, low byte
         uint8_t h = mem_rd(&mem, 0x00BC);   // petscii filename address, high byte
@@ -141,7 +141,7 @@ bool trap() {
         cpu.state.PC = 0x0816;
         text_enabled = true;
     }
-    else if (cpu.trap_id == 2) {
+    else if (cpu.trap_id == 3) {
         /* scan keyboard, this is called when an error was encountered,
            we'll continue, but disable text output until the next test is loaded
         */
@@ -173,6 +173,17 @@ uint64_t tick(uint64_t pins, void* user_data) {
     return pins;
 }
 
+int trap(uint16_t pc, void* user_data) {
+    switch (pc) {
+        case 0xFFD2: return 1; /* trap for print character function */
+        case 0xE16F: return 2; /* trap for load dump function */
+        case 0xFFE4: return 3; /* trap for 'scan keyboard' function */
+        case 0x8000: return 4; /* traps for error and finished */
+        case 0xA474: return 5;
+        default: return 0;
+    }
+}
+
 int main() {
     puts(">>> Running Wolfgang Lorenz C64 test suite...");
 
@@ -184,21 +195,13 @@ int main() {
         .tick_cb = tick
     });
     m6502_reset(&cpu);
-    /* trap for print character function */
-    m6502_set_trap(&cpu, 0, 0xFFD2);
-    /* trap for load dump function */
-    m6502_set_trap(&cpu, 1, 0xE16F);
-    /* trap for 'scan keyboard' function */
-    m6502_set_trap(&cpu, 2, 0xFFE4);
-    /* traps for error and finished */
-    m6502_set_trap(&cpu, 3, 0x8000);
-    m6502_set_trap(&cpu, 4, 0xA474);
+    m6502_trap_cb(&cpu, trap);
 
     load_test("_start");
     bool done = false;
     while (!done) {
         m6502_exec(&cpu, (1<<30));
-        if (!trap()) {
+        if (!handle_trap()) {
             done = true;
         }
     }

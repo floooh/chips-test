@@ -42,6 +42,19 @@ static uint64_t tick(int num, uint64_t pins, void* user_data) {
     return pins;
 }
 
+/* Z80 trap callback, checks for addresses 0x000 and 0x005 */
+static int trap(uint16_t pc, void* user_data) {
+    if (pc == 0x0000) {
+        return 1;
+    }
+    else if (pc == 0x0005) {
+        return 2;
+    }
+    else {
+        return 0;
+    }
+}
+
 /* emulate character and string output CP/M system calls */
 static bool cpm_bdos(z80_t* cpu) {
     bool retval = true;
@@ -118,8 +131,7 @@ static bool zexdoc() {
     z80_set_sp(&cpu, 0xF000);
     z80_set_pc(&cpu, 0x0100);
     /* trap when reaching address 0x0000 or 0x0005 */
-    z80_set_trap(&cpu, 0, 0x0000);
-    z80_set_trap(&cpu, 1, 0x0005);
+    z80_trap_cb(&cpu, trap);
     return run_test(&cpu, "ZEXDOC");
 }
 
@@ -133,8 +145,7 @@ static bool zexall() {
     z80_set_sp(&cpu, 0xF000);
     z80_set_pc(&cpu, 0x0100);
     /* trap when reaching address 0x0000 or 0x0005 */
-    z80_set_trap(&cpu, 0, 0x0000);
-    z80_set_trap(&cpu, 1, 0x0005);
+    z80_trap_cb(&cpu, trap);
     return run_test(&cpu, "ZEXALL");
 }
 
