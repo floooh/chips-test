@@ -12,6 +12,7 @@
 #include "systems/kc85.h"
 #define CHIPS_IMPL
 #define UI_DASM_USE_Z80
+#define UI_DBG_USE_Z80
 #include "ui.h"
 #include "util/z80dasm.h"
 #include "ui/ui_util.h"
@@ -19,6 +20,7 @@
 #include "ui/ui_memedit.h"
 #include "ui/ui_memmap.h"
 #include "ui/ui_dasm.h"
+#include "ui/ui_dbg.h"
 #include "ui/ui_z80.h"
 #include "ui/ui_z80pio.h"
 #include "ui/ui_z80ctc.h"
