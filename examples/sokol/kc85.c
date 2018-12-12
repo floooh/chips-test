@@ -20,8 +20,8 @@
 #include "ui.h"
 void kc85ui_init(kc85_t* kc85);
 void kc85ui_discard(void);
-void kc85ui_set_exec_time(double t);
 void kc85ui_draw(void);
+void kc85ui_exec(kc85_t* kc85, uint32_t frame_time_us);
 static const int ui_extra_height = 16;
 #else
 static const int ui_extra_height = 0;
@@ -174,9 +174,7 @@ void app_init(void) {
 
 void app_frame(void) {
     #if CHIPS_USE_UI
-        uint64_t start = stm_now();
-        kc85_exec(&kc85, clock_frame_time());
-        kc85ui_set_exec_time(stm_ms(stm_since(start)));
+        kc85ui_exec(&kc85, clock_frame_time());
     #else
         kc85_exec(&kc85, clock_frame_time());
     #endif

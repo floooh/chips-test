@@ -131,7 +131,7 @@ static bool zexdoc() {
     z80_set_sp(&cpu, 0xF000);
     z80_set_pc(&cpu, 0x0100);
     /* trap when reaching address 0x0000 or 0x0005 */
-    z80_trap_cb(&cpu, trap);
+    z80_trap_cb(&cpu, trap, 0);
     return run_test(&cpu, "ZEXDOC");
 }
 
@@ -145,7 +145,7 @@ static bool zexall() {
     z80_set_sp(&cpu, 0xF000);
     z80_set_pc(&cpu, 0x0100);
     /* trap when reaching address 0x0000 or 0x0005 */
-    z80_trap_cb(&cpu, trap);
+    z80_trap_cb(&cpu, trap, 0);
     return run_test(&cpu, "ZEXALL");
 }
 

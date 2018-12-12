@@ -1,6 +1,7 @@
 /*
     UI implementation for kc85.c, this must live in its own .cc file.
 */
+#include "common.h"
 #include "imgui.h"
 #include "chips/z80.h"
 #include "chips/z80ctc.h"
@@ -61,8 +62,16 @@ void kc85ui_discard(void) {
     ui_kc85_discard(&ui_kc85);
 }
 
-void kc85ui_set_exec_time(double t) {
-    exec_time = t;
+void kc85ui_exec(kc85_t* kc85, uint32_t frame_time_us) {
+    if (ui_dbg_before_exec(&ui_kc85.dbg)) {
+        uint64_t start = stm_now();
+        kc85_exec(kc85, frame_time_us);
+        exec_time = stm_ms(stm_since(start));
+        ui_dbg_after_exec(&ui_kc85.dbg);
+    }
+    else {
+        exec_time = 0.0;
+    }
 }
 
 } /* extern "C" */

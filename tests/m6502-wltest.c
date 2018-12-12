@@ -195,7 +195,7 @@ int main() {
         .tick_cb = tick
     });
     m6502_reset(&cpu);
-    m6502_trap_cb(&cpu, trap);
+    m6502_trap_cb(&cpu, trap, 0);
 
     load_test("_start");
     bool done = false;
