@@ -43,7 +43,7 @@ static uint64_t tick(int num, uint64_t pins, void* user_data) {
 }
 
 /* Z80 trap callback, checks for addresses 0x000 and 0x005 */
-static int trap(uint16_t pc, void* user_data) {
+static int trap(uint16_t pc, int ticks, uint64_t pins, void* user_data) {
     if (pc == 0x0000) {
         return 1;
     }

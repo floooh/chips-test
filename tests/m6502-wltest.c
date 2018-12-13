@@ -173,7 +173,7 @@ uint64_t tick(uint64_t pins, void* user_data) {
     return pins;
 }
 
-int trap(uint16_t pc, void* user_data) {
+int trap(uint16_t pc, int ticks, uint64_t pins, void* user_data) {
     switch (pc) {
         case 0xFFD2: return 1; /* trap for print character function */
         case 0xE16F: return 2; /* trap for load dump function */
