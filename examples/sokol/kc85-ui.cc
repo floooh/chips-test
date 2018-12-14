@@ -55,6 +55,9 @@ void kc85ui_init(kc85_t* kc85) {
     ui_kc85_desc_t desc = { 0 };
     desc.kc85 = kc85;
     desc.boot_cb = boot_cb;
+    desc.create_texture_cb = gfx_create_texture;
+    desc.update_texture_cb = gfx_update_texture;
+    desc.destroy_texture_cb = gfx_destroy_texture;
     ui_kc85_init(&ui_kc85, &desc);
 }
 

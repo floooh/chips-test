@@ -2,6 +2,13 @@
 /* 
     Common graphics functions for the chips-test example emulators.
 */
+#include <stdint.h>
+#include <stdbool.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define GFX_MAX_FB_WIDTH (1024)
 #define GFX_MAX_FB_HEIGHT (1024)
 
@@ -18,6 +25,13 @@ extern uint32_t* gfx_framebuffer(void);
 extern int gfx_framebuffer_size(void);
 extern void gfx_draw(int width, int height);
 extern void gfx_shutdown(void);
+extern void* gfx_create_texture(int w, int h);
+extern void gfx_update_texture(void* h, void* data, int data_byte_size);
+extern void gfx_destroy_texture(void* h);
+
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
 
 /*== IMPLEMENTATION ==========================================================*/
 #ifdef COMMON_IMPL
@@ -236,6 +250,30 @@ void gfx_draw(int width, int height) {
 
 void gfx_shutdown() {
     sg_shutdown();
+}
+
+void* gfx_create_texture(int w, int h) {
+    sg_image img = sg_make_image(&(sg_image_desc){
+        .width = w,
+        .height = h,
+        .pixel_format = SG_PIXELFORMAT_RGBA8,
+        .usage = SG_USAGE_STREAM,
+        .min_filter = SG_FILTER_NEAREST,
+        .mag_filter = SG_FILTER_NEAREST,
+        .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
+        .wrap_v = SG_WRAP_CLAMP_TO_EDGE
+    });
+    return (void*)(uintptr_t)img.id;
+}
+
+void gfx_update_texture(void* h, void* data, int data_byte_size) {
+    sg_image img = { .id=(uint32_t)(uintptr_t)h };
+    sg_update_image(img, &(sg_image_content){.subimage[0][0] = { .ptr = data, .size=data_byte_size } });
+}
+
+void gfx_destroy_texture(void* h) {
+    sg_image img = { .id=(uint32_t)(uintptr_t)h };
+    sg_destroy_image(img);
 }
 
 /* shader source code for GL, GLES2, Metal and D3D11 */

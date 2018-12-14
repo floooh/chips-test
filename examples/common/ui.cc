@@ -188,7 +188,7 @@ void ui_init_imgui(void) {
     img_desc.mag_filter = SG_FILTER_LINEAR;
     img_desc.content.subimage[0][0].ptr = font_pixels;
     img_desc.content.subimage[0][0].size = font_width * font_height * 4;
-    draw_state.fs_images[0] = sg_make_image(&img_desc);
+    io.Fonts->TexID = (ImTextureID) sg_make_image(&img_desc).id;
 
     // shader object for imgui rendering
     sg_shader_desc shd_desc = { };
@@ -247,8 +247,10 @@ void imgui_draw_cb(ImDrawData* draw_data) {
             continue;
         }
 
+        ImTextureID tex_id = ImGui::GetIO().Fonts->TexID;
         draw_state.vertex_buffer_offsets[0] = vb_offset;
         draw_state.index_buffer_offset = ib_offset;
+        draw_state.fs_images[0].id = (uint32_t)(uintptr_t)tex_id;
         sg_apply_draw_state(&draw_state);
         sg_apply_uniform_block(SG_SHADERSTAGE_VS, 0, &vs_params, sizeof(vs_params));
 
@@ -258,6 +260,12 @@ void imgui_draw_cb(ImDrawData* draw_data) {
                 pcmd.UserCallback(cl, &pcmd);
             }
             else {
+                if (tex_id != pcmd.TextureId) {
+                    tex_id = pcmd.TextureId;
+                    draw_state.fs_images[0].id = (uint32_t)(uintptr_t)tex_id;
+                    sg_apply_draw_state(&draw_state);
+                    sg_apply_uniform_block(SG_SHADERSTAGE_VS, 0, &vs_params, sizeof(vs_params));
+                }
                 const int scissor_x = (int) (pcmd.ClipRect.x);
                 const int scissor_y = (int) (pcmd.ClipRect.y);
                 const int scissor_w = (int) (pcmd.ClipRect.z - pcmd.ClipRect.x);
