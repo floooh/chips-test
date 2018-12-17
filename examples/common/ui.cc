@@ -188,7 +188,7 @@ void ui_init_imgui(void) {
     img_desc.mag_filter = SG_FILTER_LINEAR;
     img_desc.content.subimage[0][0].ptr = font_pixels;
     img_desc.content.subimage[0][0].size = font_width * font_height * 4;
-    io.Fonts->TexID = (ImTextureID) sg_make_image(&img_desc).id;
+    io.Fonts->TexID = (ImTextureID)(uintptr_t) sg_make_image(&img_desc).id;
 
     // shader object for imgui rendering
     sg_shader_desc shd_desc = { };
