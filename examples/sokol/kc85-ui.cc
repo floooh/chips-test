@@ -66,8 +66,6 @@ void kc85ui_init(kc85_t* kc85) {
     desc.dbg_keys.step_over_name = "F6";
     desc.dbg_keys.step_into_keycode = SAPP_KEYCODE_F7;
     desc.dbg_keys.step_into_name = "F7";
-    desc.dbg_keys.step_out_keycode = SAPP_KEYCODE_F8;
-    desc.dbg_keys.step_out_name = "F8";
     desc.dbg_keys.toggle_breakpoint_keycode = SAPP_KEYCODE_F9;
     desc.dbg_keys.toggle_breakpoint_name = "F9";
     ui_kc85_init(&ui_kc85, &desc);
