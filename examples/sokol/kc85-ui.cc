@@ -76,11 +76,11 @@ void kc85ui_discard(void) {
 }
 
 void kc85ui_exec(kc85_t* kc85, uint32_t frame_time_us) {
-    if (ui_dbg_before_exec(&ui_kc85.dbg)) {
+    if (ui_kc85_before_exec(&ui_kc85)) {
         uint64_t start = stm_now();
         kc85_exec(kc85, frame_time_us);
         exec_time = stm_ms(stm_since(start));
-        ui_dbg_after_exec(&ui_kc85.dbg);
+        ui_kc85_after_exec(&ui_kc85);
     }
     else {
         exec_time = 0.0;
