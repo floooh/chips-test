@@ -2,12 +2,6 @@
     z1013.c
 
     The Robotron Z1013, see chips/systems/z1013.h for details!
-
-    I have added a pre-loaded KC-BASIC interpreter:
-
-    Start the BASIC interpreter with 'J 300', return to OS with 'BYE'.
-
-    Enter BASIC editing mode with 'AUTO', leave by pressing Esc.
 */
 #include "common.h"
 #define CHIPS_IMPL
@@ -24,8 +18,8 @@
 #include "ui.h"
 void z1013ui_init(z1013_t* z1013);
 void z1013ui_discard(void);
-void z1013ui_set_exec_time(double t);
 void z1013ui_draw(void);
+void z1013ui_exec(z1013_t* z1013, uint32_t frame_time_us);
 static const int ui_extra_height = 16;
 #else
 static const int ui_extra_height = 0;
@@ -95,18 +89,12 @@ void app_init(void) {
     #ifdef CHIPS_USE_UI
     z1013ui_init(&z1013);
     #endif
-    /* FIXME: remove BASIC interpreter and use snapshot loading in user-code instead */
-    if (Z1013_TYPE_64 == z1013.type) {
-        mem_write_range(&z1013.mem, 0x0100, dump_kc_basic+0x20, sizeof(dump_kc_basic)-0x20);
-    }
 }
 
 /* per frame stuff: tick the emulator, render the framebuffer, delay-load game files */
 void app_frame(void) {
     #if CHIPS_USE_UI
-        uint64_t start = stm_now();
-        z1013_exec(&z1013, clock_frame_time());
-        z1013ui_set_exec_time(stm_ms(stm_since(start)));
+        z1013ui_exec(&z1013, clock_frame_time());
     #else
         z1013_exec(&z1013, clock_frame_time());
     #endif
