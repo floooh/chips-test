@@ -23,8 +23,8 @@
 #include "ui.h"
 void z9001ui_init(z9001_t* z9001);
 void z9001ui_discard(void);
-void z9001ui_set_exec_time(double t);
 void z9001ui_draw(void);
+void z9001ui_exec(z9001_t* z9001, uint32_t frame_time_us);
 static const int ui_extra_height = 16;
 #else
 static const int ui_extra_height = 0;
@@ -112,9 +112,7 @@ void app_init() {
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
 void app_frame() {
     #if CHIPS_USE_UI
-        uint64_t start = stm_now();
-        z9001_exec(&z9001, clock_frame_time());
-        z9001ui_set_exec_time(stm_ms(stm_since(start)));
+        z9001ui_exec(&z9001, clock_frame_time());
     #else
         z9001_exec(&z9001, clock_frame_time());
     #endif
