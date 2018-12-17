@@ -22,7 +22,7 @@
 void zxui_init(zx_t* zx);
 void zxui_discard(void);
 void zxui_draw(void);
-void zxui_set_exec_time(double t);
+void zxui_exec(zx_t* zx, uint32_t frame_time_us);
 static const int ui_extra_height = 16;
 #else
 static const int ui_extra_height = 0;
@@ -115,9 +115,7 @@ void app_init() {
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
 void app_frame() {
     #if CHIPS_USE_UI
-        uint64_t start = stm_now();
-        zx_exec(&zx, clock_frame_time());
-        zxui_set_exec_time(stm_ms(stm_since(start)));
+        zxui_exec(&zx, clock_frame_time());
     #else
         zx_exec(&zx, clock_frame_time());
     #endif
