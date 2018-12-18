@@ -29,7 +29,7 @@
 void atomui_init(atom_t* atom);
 void atomui_discard(void);
 void atomui_draw(void);
-void atomui_set_exec_time(double t);
+void atomui_exec(atom_t* atom, uint32_t frame_time_us);
 static const int ui_extra_height = 16;
 #else
 static const int ui_extra_height = 0;
@@ -110,9 +110,7 @@ void app_init(void) {
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
 void app_frame() {
     #if CHIPS_USE_UI
-        uint64_t start = stm_now();
-        atom_exec(&atom, clock_frame_time());
-        atomui_set_exec_time(stm_ms(stm_since(start)));
+        atomui_exec(&atom, clock_frame_time());
     #else
         atom_exec(&atom, clock_frame_time());
     #endif
