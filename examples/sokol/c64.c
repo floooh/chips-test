@@ -20,7 +20,7 @@
 void c64ui_init(c64_t* c64);
 void c64ui_discard(void);
 void c64ui_draw(void);
-void c64ui_set_exec_time(double t);
+void c64ui_exec(c64_t* c64, uint32_t frame_time_us);
 static const int ui_extra_height = 16;
 #else
 static const int ui_extra_height = 0;
@@ -111,9 +111,7 @@ void app_init(void) {
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
 void app_frame(void) {
     #ifdef CHIPS_USE_UI
-        uint64_t start = stm_now();
-        c64_exec(&c64, clock_frame_time());
-        c64ui_set_exec_time(stm_ms(stm_since(start)));
+        c64ui_exec(&c64, clock_frame_time());
     #else
         c64_exec(&c64, clock_frame_time());
     #endif
