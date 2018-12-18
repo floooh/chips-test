@@ -91,8 +91,8 @@ void app_init() {
     gfx_init(&(gfx_desc_t) {
         #ifdef CHIPS_USE_UI
         .draw_extra_cb = ui_draw,
-        .top_offset = 16,
         #endif
+        .top_offset = ui_extra_height
     });
     clock_init();
     saudio_setup(&(saudio_desc){0});

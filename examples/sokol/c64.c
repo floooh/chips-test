@@ -75,9 +75,9 @@ c64_desc_t c64_desc(c64_joystick_type_t joy_type) {
 void app_init(void) {
     gfx_init(&(gfx_desc_t){
         #ifdef CHIPS_USE_UI
-            .draw_extra_cb = ui_draw,
-            .top_offset = 16,
+        .draw_extra_cb = ui_draw,
         #endif
+        .top_offset = ui_extra_height
     });
     keybuf_init(5);
     clock_init();

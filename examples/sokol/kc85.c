@@ -103,8 +103,8 @@ void app_init(void) {
     gfx_init(&(gfx_desc_t) {
         #ifdef CHIPS_USE_UI
         .draw_extra_cb = ui_draw,
-        .top_offset = ui_extra_height,
         #endif
+        .top_offset = ui_extra_height
     });
     keybuf_init(6);
     clock_init();

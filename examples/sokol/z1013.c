@@ -71,8 +71,8 @@ void app_init(void) {
     gfx_init(&(gfx_desc_t){
         #ifdef CHIPS_USE_UI
         .draw_extra_cb = ui_draw,
-        .top_offset = 16,
         #endif
+        .top_offset = ui_extra_height
     });
     clock_init();
     z1013_type_t type = Z1013_TYPE_64;
