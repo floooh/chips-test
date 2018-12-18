@@ -1,6 +1,7 @@
 /*
     UI implementation for cpc.c, this must live in its own .cc file.
 */
+#include "common.h"
 #include "imgui.h"
 #include "chips/z80.h"
 #include "chips/ay38910.h"
@@ -16,6 +17,7 @@
 #include "systems/cpc.h"
 #define CHIPS_IMPL
 #define UI_DASM_USE_Z80
+#define UI_DBG_USE_Z80
 #include "ui.h"
 #include "util/z80dasm.h"
 #include "ui/ui_util.h"
@@ -23,6 +25,7 @@
 #include "ui/ui_memedit.h"
 #include "ui/ui_memmap.h"
 #include "ui/ui_dasm.h"
+#include "ui/ui_dbg.h"
 #include "ui/ui_z80.h"
 #include "ui/ui_ay38910.h"
 #include "ui/ui_mc6845.h"
@@ -57,6 +60,19 @@ void cpcui_init(cpc_t* cpc) {
     ui_cpc_desc_t desc = {0};
     desc.cpc = cpc;
     desc.boot_cb = boot_cb;
+    desc.create_texture_cb = gfx_create_texture;
+    desc.update_texture_cb = gfx_update_texture;
+    desc.destroy_texture_cb = gfx_destroy_texture;
+    desc.dbg_keys.break_keycode = SAPP_KEYCODE_F5;
+    desc.dbg_keys.break_name = "F5";
+    desc.dbg_keys.continue_keycode = SAPP_KEYCODE_F5;
+    desc.dbg_keys.continue_name = "F5";
+    desc.dbg_keys.step_over_keycode = SAPP_KEYCODE_F6;
+    desc.dbg_keys.step_over_name = "F6";
+    desc.dbg_keys.step_into_keycode = SAPP_KEYCODE_F7;
+    desc.dbg_keys.step_into_name = "F7";
+    desc.dbg_keys.toggle_breakpoint_keycode = SAPP_KEYCODE_F9;
+    desc.dbg_keys.toggle_breakpoint_name = "F9";
     ui_cpc_init(&ui_cpc, &desc);
 }
 
@@ -64,8 +80,16 @@ void cpcui_discard(void) {
     ui_cpc_discard(&ui_cpc);
 }
 
-void cpcui_set_exec_time(double t) {
-    exec_time = t;
+void cpcui_exec(cpc_t* cpc, uint32_t frame_time_us) {
+    if (ui_cpc_before_exec(&ui_cpc)) {
+        uint64_t start = stm_now();
+        cpc_exec(cpc, frame_time_us);
+        exec_time = stm_ms(stm_since(start));
+        ui_cpc_after_exec(&ui_cpc);
+    }
+    else {
+        exec_time = 0.0;
+    }
 }
 
 } /* extern "C" */

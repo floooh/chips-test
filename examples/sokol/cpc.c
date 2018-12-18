@@ -25,7 +25,7 @@
 void cpcui_init(cpc_t* cpc);
 void cpcui_discard(void);
 void cpcui_draw(void);
-void cpcui_set_exec_time(double t);
+void cpcui_exec(cpc_t* cpc, uint32_t frame_time_us);
 static const int ui_extra_height = 16;
 #else
 static const int ui_extra_height = 0;
@@ -138,9 +138,7 @@ void app_init(void) {
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
 void app_frame(void) {
     #if CHIPS_USE_UI
-        uint64_t start = stm_now();
-        cpc_exec(&cpc, clock_frame_time());
-        cpcui_set_exec_time(stm_ms(stm_since(start)));
+        cpcui_exec(&cpc, clock_frame_time());
     #else
         cpc_exec(&cpc, clock_frame_time());
     #endif
