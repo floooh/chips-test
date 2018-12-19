@@ -34,6 +34,7 @@
 #include "ui/ui_cpc_ga.h"
 #include "ui/ui_audio.h"
 #include "ui/ui_kbd.h"
+#include "ui/ui_fdd.h"
 #include "ui/ui_cpc.h"
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wmissing-field-initializers"
