@@ -28,6 +28,7 @@ items = [
     { 'type':'demo', 'title':'FORTH (Z1013)',   'system':'z1013',   'url':'z1013.html?type=z1013_64&file=z1013/z1013_forth.z80', 'img':'z1013/z1013_forth.jpg', 'note':''},
     { 'type':'demo', 'title':'BASIC (Z1013)',   'system':'z1013',   'url':'z1013.html?type=z1013_64&file=z1013/kc_basic.z80', 'img':'z1013/z1013_basic.jpg', 'note':''},
     { 'type':'demo', 'title':'ASMDEV (KC85/4)', 'system':'kc85',    'url':'kc85.html?type=kc85_4&mod=m027&mod_image=kc85/develop.853&input=SWITCH%208%20C1%0AMENU%0A', 'img':'kc85/development.jpg', 'note':''},
+    { 'type':'demo', 'title':'CP/M 2.2 (CPC)',  'system':'cpc',     'url':'cpc.html?disc=cpc/6128sp_4.dsk&input=%7Ccpm%0A', 'img':'cpc/cpm_cpc.jpg', 'note':''},
     { 'type':'demo', 'title':'DTC (CPC)',        'system':'cpc',     'url':'cpc.html?disc=cpc/dtc_cpc.dsk&input=run%22-DTC%0A', 'img':'cpc/dtc.jpg', 'note':'by Arkos/Overlanders' },
     { 'type':'demo', 'title':'Tire Au Flan (CPC)',  'system':'cpc',     'url':'cpc.html?disc=cpc/tireauflan_cpc.dsk&input=run%22TAFAPLIB%0A', 'img':'cpc/tireauflan.jpg', 'note':'press SPACE!' },
     { 'type':'demo', 'title':'Wolfenstrad (CPC)',   'system':'cpc',     'url':'cpc.html?disc=cpc/wolfenstrad.dsk&input=run%22-WOLF%0A', 'img':'cpc/wolfenstrad.jpg', 'note':'by Dirty Minds' },
