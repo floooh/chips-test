@@ -33,6 +33,7 @@ items = [
     { 'type':'demo', 'title':'Wolfenstrad (CPC)',   'system':'cpc',     'url':'cpc.html?disc=cpc/wolfenstrad.dsk&input=run%22-WOLF%0A', 'img':'cpc/wolfenstrad.jpg', 'note':'by Dirty Minds' },
     { 'type':'demo', 'title':"Byte'98 (CPC)",       'system':'cpc',     'url':"cpc.html?disc=cpc/byte98.dsk&input=run%22-BYTE'98%0A", 'img':'cpc/byte98.jpg', 'note':'by mortel/Overlanders' },
     { 'type':'demo', 'title':'Ecole Buissonniere',  'system':'cpc',     'url':'cpc.html?file=cpc/ecole_buissonniere.sna', 'img':'cpc/ecole_buissonniere.jpg', 'note':'by MadRam/OVL (CPC)'},
+    { 'type':'demo', 'title':'demoizart (CPC)',     'system':'cpc',     'url':'cpc.html?disc=cpc/demoizart_cpc.dsk&input=run%22DIA%0A', 'img':'cpc/demoizart.jpg', 'note':'display bugs, strobe warning!' },
     { 'type':'demo', 'title':'Serious (KC85/4)',    'system':'kc85',    'url':'kc85.html?type=kc85_4&snapshot=kc85/serious.kcc', 'img':'kc85/serious.jpg', 'note':'by Moods Plateau'},
     { 'type':'game', 'title':'Digger (KC85/3)',     'system':'kc85',    'url':'kc85.html?type=kc85_3&mod=m022&snapshot=kc85/digger3.tap', 'img':'kc85/digger_3.jpg', 'note':'' },
     { 'type':'demo', 'title':'Jungle (KC85/3)',     'system':'kc85',    'url':'kc85.html?type=kc85_3&mod=m022&snapshot=kc85/jungle.kcc', 'img':'kc85/jungle.jpg', 'note':'' },
