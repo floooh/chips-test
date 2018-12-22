@@ -11,7 +11,6 @@
 #include "chips/mc6845.h"
 #include "chips/am40010.h"
 #include "chips/upd765.h"
-#include "chips/crt.h"
 #include "chips/clk.h"
 #include "chips/kbd.h"
 #include "chips/mem.h"
