@@ -9,6 +9,7 @@
 #include "chips/ay38910.h"
 #include "chips/i8255.h"
 #include "chips/mc6845.h"
+#include "chips/am40010.h"
 #include "chips/upd765.h"
 #include "chips/crt.h"
 #include "chips/clk.h"
