@@ -35,7 +35,7 @@ void setup_80x24(mc6845_t* crtc) {
     wr(crtc, MC6845_VDISPLAYED, 24);
     wr(crtc, MC6845_VSYNCPOS, 25);
     wr(crtc, MC6845_INTERLACEMODE, 0);
-    wr(crtc, MC6845_MAXSCALINEADDR, 11);
+    wr(crtc, MC6845_MAXSCANLINEADDR, 11);
     wr(crtc, MC6845_CURSORSTART, 0);
     wr(crtc, MC6845_CURSOREND, 11);
     wr(crtc, MC6845_STARTADDRHI, 0);
