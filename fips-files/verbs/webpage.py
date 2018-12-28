@@ -37,6 +37,7 @@ items = [
     { 'type':'demo', 'title':'Demoizart (CPC)',     'system':'cpc',     'url':'cpc.html?file=cpc/demoizart_cpc.dsk&input=run%22DIA%0A', 'img':'cpc/demoizart.jpg', 'note':'strobe warning!' },
     { 'type':'demo', 'title':"Logon's Run (CPC)",    'system':'cpc',     'url':'cpc.html?file=cpc/logons_run_cpc.dsk&input=run%22logon%27s%0A', 'img':'cpc/logons_run.jpg', 'note':'by Overflow/Logon System' },
     { 'type':'demo', 'title':"YAP! (CPC)",          'system':'cpc',     'url':'cpc.html?file=cpc/yet_another_plasma.dsk&input=run%22-yap%21%0A', 'img':'cpc/yet_another_plasma.jpg', 'note':'by Logon System' },
+    { 'type':'demo', 'title':"Backtro (CPC)",       'system':'cpc',     'url':'cpc.html?file=cpc/backtro.dsk&input=run%22-backtro%0A', 'img':'cpc/backtro.jpg', 'note':'by Overflow/Logon System' },
     { 'type':'demo', 'title':'Isometrikum (CPC)',   'system':'cpc',     'url':'cpc.html?file=cpc/isometrikum.dsk&input=run%22isometri.kum%0A', 'img':'cpc/isometrikum.jpg', 'note':'by Vanity'},
     { 'type':'demo', 'title':'Serious (KC85/4)',    'system':'kc85',    'url':'kc85.html?type=kc85_4&file=kc85/serious.kcc', 'img':'kc85/serious.jpg', 'note':'by Moods Plateau'},
     { 'type':'game', 'title':'Digger (KC85/3)',     'system':'kc85',    'url':'kc85.html?type=kc85_3&mod=m022&file=kc85/digger3.tap', 'img':'kc85/digger_3.jpg', 'note':'' },
