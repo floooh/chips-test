@@ -40,10 +40,6 @@ static void app_cleanup(void);
 
 sapp_desc sokol_main(int argc, char* argv[]) {
     sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
-    fs_init();
-    if (sargs_exists("file")) {
-        fs_load_file(sargs_value("file"));
-    }
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,
@@ -94,7 +90,9 @@ void app_init() {
         #endif
         .top_offset = ui_extra_height
     });
+    keybuf_init(12);
     clock_init();
+    fs_init();
     saudio_setup(&(saudio_desc){0});
     z9001_type_t type = Z9001_TYPE_Z9001;
     if (sargs_exists("type")) {
@@ -107,6 +105,18 @@ void app_init() {
     #ifdef CHIPS_USE_UI
     z9001ui_init(&z9001);
     #endif
+    bool delay_input = false;
+    if (sargs_exists("file")) {
+        delay_input = true;
+        if (!fs_load_file(sargs_value("file"))) {
+            gfx_flash_error();
+        }
+    }
+    if (!delay_input) {
+        if (sargs_exists("input")) {
+            keybuf_put(sargs_value("input"));
+        }
+    }
 }
 
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
@@ -118,8 +128,29 @@ void app_frame() {
     #endif
     gfx_draw(z9001_display_width(&z9001), z9001_display_height(&z9001));
     if (fs_ptr() && clock_frame_count() > 20) {
-        z9001_quickload(&z9001, fs_ptr(), fs_size());
+        bool load_success = false;
+        if (fs_ext("txt") || (fs_ext("bas"))) {
+            load_success = true;
+            keybuf_put((const char*)fs_ptr());
+        }
+        else {
+            load_success = z9001_quickload(&z9001, fs_ptr(), fs_size());
+        }
+        if (load_success) {
+            gfx_flash_success();
+            if (sargs_exists("input")) {
+                keybuf_put(sargs_value("input"));
+            }
+        }
+        else {
+            gfx_flash_error();
+        }
         fs_free();
+    }
+    uint8_t key_code;
+    if (0 != (key_code = keybuf_get())) {
+        z9001_key_down(&z9001, key_code);
+        z9001_key_up(&z9001, key_code);
     }
 }
 

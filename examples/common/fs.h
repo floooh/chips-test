@@ -4,46 +4,70 @@
 */
 extern void fs_init(void);
 extern bool fs_load_file(const char* path);
-extern void fs_load_mem(const uint8_t* ptr, uint32_t size);
+extern void fs_load_mem(const char* path, const uint8_t* ptr, uint32_t size);
 extern uint32_t fs_size(void);
 extern const uint8_t* fs_ptr(void);
 extern void fs_free(void);
+extern bool fs_ext(const char* str);
 
 /*== IMPLEMENTATION ==========================================================*/
 #ifdef COMMON_IMPL
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #if !defined(__EMSCRIPTEN__)
 #include <stdio.h>
 #else
 #include <emscripten/emscripten.h>
 #endif
 
-#define FS_MAX_SIZE (512 * 1024)
+#define FS_EXT_SIZE (16)
+#define FS_MAX_SIZE (1024 * 1024)
 typedef struct {
+    char ext[FS_EXT_SIZE];
     uint8_t* ptr;
     uint32_t size;
-    uint8_t buf[FS_MAX_SIZE];
+    uint8_t buf[FS_MAX_SIZE + 1];
 } fs_state;
 static fs_state fs;
 
-void fs_free(void) {
-    fs.ptr = 0;
-    fs.size = 0;
+void fs_copy_ext(const char* path) {
+    const char* ext = strrchr(path, '.');
+    if (ext) {
+        int i = 0;
+        char c = 0;
+        while ((c = *++ext) && (i < (FS_EXT_SIZE-1))) {
+            fs.ext[i] = tolower(c);
+            i++;
+        }
+        fs.ext[i] = 0;
+    }
 }
 
-void fs_load_mem(const uint8_t* ptr, uint32_t size) {
+bool fs_ext(const char* ext) {
+    return 0 == strcmp(ext, fs.ext);
+}
+
+void fs_free(void) {
+    memset(&fs, 0, sizeof(fs));
+}
+
+void fs_load_mem(const char* path, const uint8_t* ptr, uint32_t size) {
     fs_free();
     if ((size > 0) && (size <= FS_MAX_SIZE)) {
+        fs_copy_ext(path);
         fs.size = size;
         fs.ptr = fs.buf;
         memcpy(fs.ptr, ptr, size);
+        /* zero-terminate in case this is a text file */
+        fs.ptr[fs.size] = 0;
     }
 }
 
 #if !defined(__EMSCRIPTEN__)
 bool fs_load_file(const char* path) {
     fs_free();
+    fs_copy_ext(path);
     FILE* fp = fopen(path, "rb");
     if (fp) {
         fseek(fp, 0, SEEK_END);
@@ -56,14 +80,16 @@ bool fs_load_file(const char* path) {
                 fread(fs.ptr, 1, fs.size, fp);
             }
             fclose(fp);
+            /* zero-terminate in case this is a text file */
+            fs.ptr[fs.size] = 0;
             return true;
         }
     }
     return false;
 }
 #else
-EMSCRIPTEN_KEEPALIVE void emsc_load_data(const uint8_t* ptr, int size) {
-    fs_load_mem(ptr, size);
+EMSCRIPTEN_KEEPALIVE void emsc_load_data(const char* path, const uint8_t* ptr, int size) {
+    fs_load_mem(path, ptr, size);
 }
 
 EM_JS(void, emsc_load_file, (const char* path_cstr), {
@@ -75,8 +101,8 @@ EM_JS(void, emsc_load_file, (const char* path_cstr), {
         var uint8Array = new Uint8Array(req.response);
         var res = Module.ccall('emsc_load_data',
             'int',
-            ['array', 'number'],
-            [uint8Array, uint8Array.length]);
+            ['string', 'array', 'number'],
+            [path, uint8Array, uint8Array.length]);
     };
     req.send();
 });
@@ -87,14 +113,12 @@ EM_JS(void, emsc_load_file, (const char* path_cstr), {
 bool fs_load_file(const char* path) {
     fs_free();
     emsc_load_file(path);
-    return false;
+    return true;
 }
 #endif
 
 void fs_init(void) {
-    fs.ptr = 0;
-    fs.size = 0;
-    memset(fs.buf, 0, sizeof(fs.buf));
+    memset(&fs, 0, sizeof(fs));
 }
 
 const uint8_t* fs_ptr(void) {

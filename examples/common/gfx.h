@@ -20,14 +20,16 @@ typedef struct {
     void (*draw_extra_cb)(void);
 } gfx_desc_t;
 
-extern void gfx_init(const gfx_desc_t* desc);
-extern uint32_t* gfx_framebuffer(void);
-extern int gfx_framebuffer_size(void);
-extern void gfx_draw(int width, int height);
-extern void gfx_shutdown(void);
-extern void* gfx_create_texture(int w, int h);
-extern void gfx_update_texture(void* h, void* data, int data_byte_size);
-extern void gfx_destroy_texture(void* h);
+void gfx_init(const gfx_desc_t* desc);
+uint32_t* gfx_framebuffer(void);
+int gfx_framebuffer_size(void);
+void gfx_draw(int width, int height);
+void gfx_shutdown(void);
+void* gfx_create_texture(int w, int h);
+void gfx_update_texture(void* h, void* data, int data_byte_size);
+void gfx_destroy_texture(void* h);
+void gfx_flash_success(void);
+void gfx_flash_error(void);
 
 #ifdef __cplusplus
 } /* extern "C" */
@@ -47,13 +49,15 @@ static const char* gfx_fs_src;
 static const sg_pass_action gfx_upscale_pass_action = {
     .colors[0] = { .action = SG_ACTION_DONTCARE }
 };
-static const sg_pass_action gfx_draw_pass_action = {
+static sg_pass_action gfx_draw_pass_action = {
     .colors[0] = { .action = SG_ACTION_CLEAR, .val = { 0.05f, 0.05f, 0.05f, 1.0f } }
 };
 typedef struct {
     sg_draw_state upscale_draw_state;
     sg_pass upscale_pass;
     sg_draw_state draw_state;
+    int flash_success_count;
+    int flash_error_count;
     int top_offset;
     int fb_width;
     int fb_height;
@@ -64,6 +68,14 @@ typedef struct {
     void (*draw_extra_cb)(void);
 } gfx_state;
 static gfx_state gfx;
+
+void gfx_flash_success(void) {
+    gfx.flash_success_count = 20;
+}
+
+void gfx_flash_error(void) {
+    gfx.flash_error_count = 20;
+}
 
 uint32_t* gfx_framebuffer(void) {
     return gfx.rgba8_buffer;
@@ -232,6 +244,20 @@ void gfx_draw(int width, int height) {
     sg_apply_draw_state(&gfx.upscale_draw_state);
     sg_draw(0, 4, 1);
     sg_end_pass();
+
+    /* tint the clear color red or green if flash feedback is requested */
+    if (gfx.flash_error_count > 0) {
+        gfx.flash_error_count--;
+        gfx_draw_pass_action.colors[0].val[0] = 0.7f;
+    }
+    else if (gfx.flash_success_count > 0) {
+        gfx.flash_success_count--;
+        gfx_draw_pass_action.colors[0].val[1] = 0.7f;
+    }
+    else {
+        gfx_draw_pass_action.colors[0].val[0] = 0.05f;
+        gfx_draw_pass_action.colors[0].val[1] = 0.05f;
+    }
 
     /* draw the final pass with linear filtering */
     const int canvas_width = sapp_width();

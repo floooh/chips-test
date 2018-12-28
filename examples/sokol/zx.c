@@ -38,10 +38,6 @@ static void app_cleanup(void);
 
 sapp_desc sokol_main(int argc, char* argv[]) {
     sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
-    fs_init();
-    if (sargs_exists("file")) {
-        fs_load_file(sargs_value("file"));
-    }
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,
@@ -85,8 +81,10 @@ void app_init() {
         #endif
         .top_offset = ui_extra_height
     });
+    keybuf_init(6);
     clock_init();
     saudio_setup(&(saudio_desc){0});
+    fs_init();
     zx_type_t type = ZX_TYPE_128;
     if (sargs_exists("type")) {
         if (sargs_equals("type", "zx48k")) {
@@ -110,6 +108,18 @@ void app_init() {
     #ifdef CHIPS_USE_UI
     zxui_init(&zx);
     #endif
+    bool delay_input = false;
+    if (sargs_exists("file")) {
+        delay_input = true;
+        if (!fs_load_file(sargs_value("file"))) {
+            gfx_flash_error();
+        }
+    }
+    if (!delay_input) {
+        if (sargs_exists("input")) {
+            keybuf_put(sargs_value("input"));
+        }
+    }
 }
 
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
@@ -121,8 +131,29 @@ void app_frame() {
     #endif
     gfx_draw(zx_display_width(&zx), zx_display_height(&zx));
     if (fs_ptr() && clock_frame_count() > 120) {
-        zx_quickload(&zx, fs_ptr(), fs_size());
+        bool load_success = false;
+        if (fs_ext("txt") || fs_ext("bas")) {
+            load_success = true;
+            keybuf_put((const char*)fs_ptr());
+        }
+        else {
+            load_success = zx_quickload(&zx, fs_ptr(), fs_size());
+        }
+        if (load_success) {
+            gfx_flash_success();
+            if (sargs_exists("input")) {
+                keybuf_put(sargs_value("input"));
+            }
+        }
+        else {
+            gfx_flash_error();
+        }
         fs_free();
+    }
+    uint8_t key_code;
+    if (0 != (key_code = keybuf_get())) {
+        zx_key_down(&zx, key_code);
+        zx_key_up(&zx, key_code);
     }
 }
 

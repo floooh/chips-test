@@ -129,12 +129,16 @@ void app_init(void) {
 
     bool delay_input = false;
     /* snapshot file or rom-module image */
-    if (sargs_exists("snapshot")) {
+    if (sargs_exists("file")) {
         delay_input=true;
-        fs_load_file(sargs_value("snapshot"));
+        if (!fs_load_file(sargs_value("file"))) {
+            gfx_flash_error();
+        }
     }
     else if (sargs_exists("mod_image")) {
-        fs_load_file(sargs_value("mod_image"));
+        if (!fs_load_file(sargs_value("mod_image"))) {
+            gfx_flash_error();
+        }
     }
     /* check if any modules should be inserted */
     if (sargs_exists("mod")) {
@@ -181,20 +185,28 @@ void app_frame(void) {
     gfx_draw(kc85_display_width(&kc85), kc85_display_height(&kc85));
     uint32_t delay_frames = kc85.type == KC85_TYPE_4 ? 180 : 480;
     if (fs_ptr() && clock_frame_count() > delay_frames) {
-        if (sargs_exists("snapshot")) {
-            kc85_quickload(&kc85, fs_ptr(), fs_size());
+        bool load_success = false;
+        if (sargs_exists("mod_image")) {
+            /* insert the rom module */
+            if (delay_insert_module != KC85_MODULE_NONE) {
+                load_success = kc85_insert_rom_module(&kc85, 0x08, delay_insert_module, fs_ptr(), fs_size());
+            }
+        }
+        else if (fs_ext("txt") || fs_ext("bas")) {
+            load_success = true;
+            keybuf_put((const char*)fs_ptr());
+        }
+        else {
+            load_success = kc85_quickload(&kc85, fs_ptr(), fs_size());
+        }
+        if (load_success) {
+            gfx_flash_success();
             if (sargs_exists("input")) {
                 keybuf_put(sargs_value("input"));
             }
         }
-        else if (sargs_exists("mod_image")) {
-            /* insert the rom module */
-            if (delay_insert_module != KC85_MODULE_NONE) {
-                kc85_insert_rom_module(&kc85, 0x08, delay_insert_module, fs_ptr(), fs_size());
-            }
-            if (sargs_exists("input")) {
-                keybuf_put(sargs_value("input"));
-            }
+        else {
+            gfx_flash_error();
         }
         fs_free();
     }

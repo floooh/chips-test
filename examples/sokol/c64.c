@@ -83,11 +83,12 @@ void app_init(void) {
     clock_init();
     saudio_setup(&(saudio_desc){0});
     fs_init();
-    if (sargs_exists("tape")) {
-        fs_load_file(sargs_value("tape"));
-    }
-    if (sargs_exists("bin")) {
-        fs_load_file(sargs_value("bin"));
+    bool delay_input = false;
+    if (sargs_exists("file")) {
+        delay_input = true;
+        if (!fs_load_file(sargs_value("file"))) {
+            gfx_flash_error();
+        }
     }
     c64_joystick_type_t joy_type = C64_JOYSTICKTYPE_NONE;
     if (sargs_exists("joystick")) {
@@ -103,8 +104,10 @@ void app_init(void) {
     #ifdef CHIPS_USE_UI
         c64ui_init(&c64);
     #endif
-    if (sargs_exists("input")) {
-        keybuf_put(sargs_value("input"));
+    if (!delay_input) {
+        if (sargs_exists("input")) {
+            keybuf_put(sargs_value("input"));
+        }
     }
 }
 
@@ -117,15 +120,31 @@ void app_frame(void) {
     #endif
     gfx_draw(c64_display_width(&c64), c64_display_height(&c64));
     if (fs_ptr() && clock_frame_count() > 180) {
-        if (sargs_exists("bin")) {
-            c64_quickload(&c64, fs_ptr(), fs_size());
+        bool load_success = false;
+        if (fs_ext("txt") || fs_ext("bas")) {
+            load_success = true;
+            keybuf_put((const char*)fs_ptr());
         }
-        else {
-            if (c64_insert_tape(&c64, fs_ptr(), fs_size())) {
-                /* send load command */
-                keybuf_put("LOAD\n");
+        else if (fs_ext("bin")) {
+            load_success = c64_quickload(&c64, fs_ptr(), fs_size());
+        }
+        else if (fs_ext("tap")) {
+            load_success = c64_insert_tape(&c64, fs_ptr(), fs_size());
+        }
+        if (load_success) {
+            gfx_flash_success();
+            if (fs_ext("tap")) {
                 c64_start_tape(&c64);
             }
+            if (sargs_exists("input")) {
+                keybuf_put(sargs_value("input"));
+            }
+            else if (fs_ext("tap")) {
+                keybuf_put("LOAD\n");
+            }
+        }
+        else {
+            gfx_flash_error();
         }
         fs_free();
     }

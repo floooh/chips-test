@@ -45,10 +45,6 @@ void app_cleanup(void);
 
 sapp_desc sokol_main(int argc, char* argv[]) {
     sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
-    fs_init();
-    if (sargs_exists("tape")) {
-        fs_load_file(sargs_value("tape"));
-    }
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,
@@ -93,6 +89,14 @@ void app_init(void) {
     });
     keybuf_init(10);
     clock_init();
+    bool delay_input = false;
+    fs_init();
+    if (sargs_exists("file")) {
+        delay_input = true;
+        if (!fs_load_file(sargs_value("file"))) {
+            gfx_flash_error();
+        }
+    }
     saudio_setup(&(saudio_desc){0});
     atom_joystick_type_t joy_type = ATOM_JOYSTICKTYPE_NONE;
     if (sargs_exists("joystick")) {
@@ -105,6 +109,12 @@ void app_init(void) {
     #ifdef CHIPS_USE_UI
     atomui_init(&atom);
     #endif
+    /* keyboard input to send to emulator */
+    if (!delay_input) {
+        if (sargs_exists("input")) {
+            keybuf_put(sargs_value("input"));
+        }
+    }
 }
 
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
@@ -115,16 +125,30 @@ void app_frame() {
         atom_exec(&atom, clock_frame_time());
     #endif
     gfx_draw(atom_display_width(&atom), atom_display_height(&atom));
+    if (fs_ptr() && clock_frame_count() > 48) {
+        bool load_success = false;
+        if (fs_ext("txt") || fs_ext("bas")) {
+            load_success = true;
+            keybuf_put((const char*)fs_ptr());
+        }
+        if (fs_ext("tap")) {
+            load_success = atom_insert_tape(&atom, fs_ptr(), fs_size());
+        }
+        if (load_success) {
+            gfx_flash_success();
+            if (sargs_exists("input")) {
+                keybuf_put(sargs_value("input"));
+            }
+        }
+        else {
+            gfx_flash_error();
+        }
+        fs_free();
+    }
     uint8_t key_code;
     if (0 != (key_code = keybuf_get())) {
         atom_key_down(&atom, key_code);
         atom_key_up(&atom, key_code);
-    }
-    if (fs_ptr() && clock_frame_count() > 48) {
-        if (atom_insert_tape(&atom, fs_ptr(), fs_size())) {
-            keybuf_put("*LOAD\n\n");
-        }
-        fs_free();
     }
 }
 

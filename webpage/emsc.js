@@ -75,7 +75,7 @@ function load_file(files) {
         console.log('  size: ' + file.size);
         
         // load the file content (ignore big files)
-        if (file.size < 256000) {
+        if (file.size < (1024*1024)) {
             let reader = new FileReader();
             reader.onload = function(loadEvent) {
                 console.log('file loaded!')
@@ -85,8 +85,8 @@ function load_file(files) {
                     let uint8Array = new Uint8Array(content);
                     let res = Module.ccall('emsc_load_data',
                         'int',
-                        ['array', 'number'],  // name, data, size
-                        [uint8Array, uint8Array.length]);
+                        ['string', 'array', 'number'],  // name, data, size
+                        [file.name, uint8Array, uint8Array.length]);
                     if (res == 0) {
                         console.warn('emsc_loadfile() failed!');
                     } 

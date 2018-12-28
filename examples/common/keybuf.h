@@ -20,7 +20,7 @@ extern uint8_t keybuf_get();
 #include <string.h>
 #include "keybuf.h"
 
-#define KEYBUF_MAX_KEYS (1024)
+#define KEYBUF_MAX_KEYS (64 * 1024)
 typedef struct {
     int cur_pos;
     int delay_count;

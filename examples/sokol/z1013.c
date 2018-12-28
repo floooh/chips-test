@@ -35,10 +35,6 @@ static void app_cleanup(void);
 
 sapp_desc sokol_main(int argc, char* argv[]) {
     sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
-    fs_init();
-    if (sargs_exists("file")) {
-        fs_load_file(sargs_value("file"));
-    }
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,
@@ -74,7 +70,9 @@ void app_init(void) {
         #endif
         .top_offset = ui_extra_height
     });
+    keybuf_init(6);
     clock_init();
+    fs_init();
     z1013_type_t type = Z1013_TYPE_64;
     if (sargs_exists("type")) {
         if (sargs_equals("type", "z1013_01")) {
@@ -89,6 +87,18 @@ void app_init(void) {
     #ifdef CHIPS_USE_UI
     z1013ui_init(&z1013);
     #endif
+    bool delay_input = false;
+    if (sargs_exists("file")) {
+        delay_input = true;
+        if (!fs_load_file(sargs_value("file"))) {
+            gfx_flash_error();
+        }
+    }
+    if (!delay_input) {
+        if (sargs_exists("input")) {
+            keybuf_put(sargs_value("input"));
+        }
+    }
 }
 
 /* per frame stuff: tick the emulator, render the framebuffer, delay-load game files */
@@ -100,8 +110,29 @@ void app_frame(void) {
     #endif
     gfx_draw(z1013_display_width(&z1013), z1013_display_height(&z1013));
     if (fs_ptr() && clock_frame_count() > 20) {
-        z1013_quickload(&z1013, fs_ptr(), fs_size());
+        bool load_success = false;
+        if (fs_ext("txt") || fs_ext("bas")) {
+            load_success = true;
+            keybuf_put((const char*)fs_ptr());
+        }
+        else {
+            load_success = z1013_quickload(&z1013, fs_ptr(), fs_size());
+        }
+        if (load_success) {
+            gfx_flash_success();
+            if (sargs_exists("input")) {
+                keybuf_put(sargs_value("input"));
+            }
+        }
+        else {
+            gfx_flash_error();
+        }
         fs_free();
+    }
+    uint8_t key_code;
+    if (0 != (key_code = keybuf_get())) {
+        z1013_key_down(&z1013, key_code);
+        z1013_key_up(&z1013, key_code);
     }
 }
 

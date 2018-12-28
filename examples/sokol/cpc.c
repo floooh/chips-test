@@ -93,20 +93,16 @@ void app_init(void) {
         .top_offset = ui_extra_height,
         .aspect_y = 2
     });
-    keybuf_init(10);
+    keybuf_init(5);
     clock_init();
     saudio_setup(&(saudio_desc){0});
     fs_init();
     bool delay_input = false;
     if (sargs_exists("file")) {
-        fs_load_file(sargs_value("file"));
-    }
-    if (sargs_exists("tape")) {
-        fs_load_file(sargs_value("tape"));
-    }
-    if (sargs_exists("disc")) {
         delay_input = true;
-        fs_load_file(sargs_value("disc"));
+        if (!fs_load_file(sargs_value("file"))) {
+            gfx_flash_error();
+        }
     }
     cpc_type_t type = CPC_TYPE_6128;
     if (sargs_exists("type")) {
@@ -143,27 +139,29 @@ void app_frame(void) {
         cpc_exec(&cpc, clock_frame_time());
     #endif
     gfx_draw(cpc_display_width(&cpc), cpc_display_height(&cpc));
-    /* load a data file? FIXME: this needs proper file type detection in case
-       a file has been dragged'n'dropped
-    */
     if (fs_ptr() && clock_frame_count() > 120) {
-        if (sargs_exists("tape")) {
-            /* load the file data via the tape-emulation (TAP format) */
-            if (cpc_insert_tape(&cpc, fs_ptr(), fs_size())) {
-                /* issue the right commands to start loading from tape */
-                keybuf_put("|tape\nrun\"\n\n");
-            }
+        bool load_success = false;
+        if (fs_ext("txt") || fs_ext("bas")) {
+            load_success = true;
+            keybuf_put((const char*)fs_ptr());
         }
-        else if (sargs_exists("disc")) {
-            if (cpc_insert_disc(&cpc, fs_ptr(), fs_size())) {
-                if (sargs_exists("input")) {
-                    keybuf_put(sargs_value("input"));
-                }
+        else if (fs_ext("tap")) {
+            load_success = cpc_insert_tape(&cpc, fs_ptr(), fs_size());
+        }
+        else if (fs_ext("dsk")) {
+            load_success = cpc_insert_disc(&cpc, fs_ptr(), fs_size());
+        }
+        else if (fs_ext("sna") || fs_ext("bin")) {
+            load_success = cpc_quickload(&cpc, fs_ptr(), fs_size());
+        }
+        if (load_success) {
+            gfx_flash_success();
+            if (sargs_exists("input")) {
+                keybuf_put(sargs_value("input"));
             }
         }
         else {
-            /* load the file data as a quickload-snapshot (SNA or BIN format)*/
-            cpc_quickload(&cpc, fs_ptr(), fs_size());
+            gfx_flash_error();
         }
         fs_free();
     }
