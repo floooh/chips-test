@@ -3,7 +3,7 @@
 #   Dump binary files into C arrays.
 #-------------------------------------------------------------------------------
 
-Version = 1
+Version = 3
 
 import sys
 import os.path
@@ -53,7 +53,7 @@ def gen_header(out_hdr, files) :
         f.write('typedef struct { const char* name; const uint8_t* ptr; int size; } dump_item;\n')
         f.write('#define DUMP_NUM_ITEMS ({})\n'.format(len(items)))
         f.write('dump_item dump_items[DUMP_NUM_ITEMS] = {\n')
-        for name,size in items.items():
+        for name,size in sorted(items.items()):
             f.write('{{ "{}", {}, {} }},\n'.format(name[5:], name, size))
         f.write('};\n')
 

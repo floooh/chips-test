@@ -2,6 +2,8 @@
 # chips-test
 #
 ---
+policies:
+  no_auto_import: true
 imports:
   fips-imgui:
     git: https://github.com/fips-libs/fips-imgui.git
