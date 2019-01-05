@@ -139,7 +139,7 @@ void app_frame(void) {
         cpc_exec(&cpc, clock_frame_time());
     #endif
     gfx_draw(cpc_display_width(&cpc), cpc_display_height(&cpc));
-    if (fs_ptr() && clock_frame_count() > 120) {
+    if (fs_ptr() && ((clock_frame_count() > 120) || fs_ext("sna"))) {
         bool load_success = false;
         if (fs_ext("txt") || fs_ext("bas")) {
             load_success = true;
