@@ -130,6 +130,11 @@ void gfx_init(const gfx_desc_t* desc) {
     gfx.rot90 = desc->rot90;
     gfx.draw_extra_cb = desc->draw_extra_cb;
     sg_setup(&(sg_desc){
+        .buffer_pool_size = 8,
+        .image_pool_size = 8,
+        .shader_pool_size = 4,
+        .pipeline_pool_size = 4,
+        .context_pool_size = 2,
         .mtl_device = sapp_metal_get_device(),
         .mtl_renderpass_descriptor_cb = sapp_metal_get_renderpass_descriptor,
         .mtl_drawable_cb = sapp_metal_get_drawable,
