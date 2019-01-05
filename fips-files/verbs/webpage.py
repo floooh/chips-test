@@ -150,7 +150,7 @@ def deploy_webpage(fips_dir, proj_dir, webpage_dir) :
         f.write(css)
 
     # copy other required files
-    for name in ['emsc.js', 'favicon.png', 'help.html'] :
+    for name in ['favicon.png', 'help.html'] :
         log.info('> copy file: {}'.format(name))
         shutil.copy(proj_dir + '/webpage/' + name, webpage_dir + '/' + name)
 

@@ -124,24 +124,3 @@ p {
     height: 30px;
     clear: both;
 }
-
-/* the emscripten canvas must not have any border or padding, or mouse coords will be wrong */
-.game {
-    position: absolute;
-    top: 0px;
-    left: 0px;
-    margin: 0px;
-    border: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    display: block;
-    image-rendering: optimizeSpeed;
-    image-rendering: -moz-crisp-edges;
-    image-rendering: -o-crisp-edges;
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: optimize-contrast;
-    image-rendering: crisp-edges;
-    image-rendering: pixelated;
-    -ms-interpolation-mode: nearest-neighbor; 
-}
