@@ -119,7 +119,8 @@ void app_frame(void) {
         c64_exec(&c64, clock_frame_time());
     #endif
     gfx_draw(c64_display_width(&c64), c64_display_height(&c64));
-    if (fs_ptr() && clock_frame_count() > 180) {
+    const uint32_t load_delay_frames = 180;
+    if (fs_ptr() && clock_frame_count() > load_delay_frames) {
         bool load_success = false;
         if (fs_ext("txt") || fs_ext("bas")) {
             load_success = true;
@@ -132,7 +133,9 @@ void app_frame(void) {
             load_success = c64_insert_tape(&c64, fs_ptr(), fs_size());
         }
         if (load_success) {
-            gfx_flash_success();
+            if (clock_frame_count() > (load_delay_frames + 10)) {
+                gfx_flash_success();
+            }
             if (fs_ext("tap")) {
                 c64_start_tape(&c64);
             }

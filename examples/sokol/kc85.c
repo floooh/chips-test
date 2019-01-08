@@ -183,8 +183,8 @@ void app_frame(void) {
         kc85_exec(&kc85, clock_frame_time());
     #endif
     gfx_draw(kc85_display_width(&kc85), kc85_display_height(&kc85));
-    uint32_t delay_frames = kc85.type == KC85_TYPE_4 ? 180 : 480;
-    if (fs_ptr() && clock_frame_count() > delay_frames) {
+    const uint32_t load_delay_frames = kc85.type == KC85_TYPE_4 ? 180 : 480;
+    if (fs_ptr() && clock_frame_count() > load_delay_frames) {
         bool load_success = false;
         if (sargs_exists("mod_image")) {
             /* insert the rom module */
@@ -200,7 +200,9 @@ void app_frame(void) {
             load_success = kc85_quickload(&kc85, fs_ptr(), fs_size());
         }
         if (load_success) {
-            gfx_flash_success();
+            if (clock_frame_count() > (load_delay_frames + 10)) {
+                gfx_flash_success();
+            }
             if (sargs_exists("input")) {
                 keybuf_put(sargs_value("input"));
             }

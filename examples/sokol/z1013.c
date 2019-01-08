@@ -109,7 +109,8 @@ void app_frame(void) {
         z1013_exec(&z1013, clock_frame_time());
     #endif
     gfx_draw(z1013_display_width(&z1013), z1013_display_height(&z1013));
-    if (fs_ptr() && clock_frame_count() > 20) {
+    const uint32_t load_delay_frames = 20;
+    if (fs_ptr() && clock_frame_count() > load_delay_frames) {
         bool load_success = false;
         if (fs_ext("txt") || fs_ext("bas")) {
             load_success = true;
@@ -119,7 +120,9 @@ void app_frame(void) {
             load_success = z1013_quickload(&z1013, fs_ptr(), fs_size());
         }
         if (load_success) {
-            gfx_flash_success();
+            if (clock_frame_count() > (load_delay_frames + 10)) {
+                gfx_flash_success();
+            }
             if (sargs_exists("input")) {
                 keybuf_put(sargs_value("input"));
             }
