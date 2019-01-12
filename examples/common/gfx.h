@@ -53,9 +53,11 @@ static sg_pass_action gfx_draw_pass_action = {
     .colors[0] = { .action = SG_ACTION_CLEAR, .val = { 0.05f, 0.05f, 0.05f, 1.0f } }
 };
 typedef struct {
-    sg_draw_state upscale_draw_state;
+    sg_pipeline upscale_pip;
+    sg_bindings upscale_bind;
     sg_pass upscale_pass;
-    sg_draw_state draw_state;
+    sg_pipeline draw_pip;
+    sg_bindings draw_bind;
     int flash_success_count;
     int flash_error_count;
     int top_offset;
@@ -88,12 +90,12 @@ int gfx_framebuffer_size(void) {
 void gfx_init_images_and_pass(void) {
 
     /* destroy previous resources (if exist) */
-    sg_destroy_image(gfx.upscale_draw_state.fs_images[0]);
-    sg_destroy_image(gfx.draw_state.fs_images[0]);
+    sg_destroy_image(gfx.upscale_bind.fs_images[0]);
+    sg_destroy_image(gfx.draw_bind.fs_images[0]);
     sg_destroy_pass(gfx.upscale_pass);
 
     /* a texture with the emulator's raw pixel data */
-    gfx.upscale_draw_state.fs_images[0] = sg_make_image(&(sg_image_desc){
+    gfx.upscale_bind.fs_images[0] = sg_make_image(&(sg_image_desc){
         .width = gfx.fb_width,
         .height = gfx.fb_height,
         .pixel_format = SG_PIXELFORMAT_RGBA8,
@@ -104,7 +106,7 @@ void gfx_init_images_and_pass(void) {
         .wrap_v = SG_WRAP_CLAMP_TO_EDGE
     });
     /* a 2x upscaled render-target-texture */
-    gfx.draw_state.fs_images[0] = sg_make_image(&(sg_image_desc){
+    gfx.draw_bind.fs_images[0] = sg_make_image(&(sg_image_desc){
         .render_target = true,
         .width = 2 * gfx.fb_width,
         .height = 2 * gfx.fb_height,
@@ -117,7 +119,7 @@ void gfx_init_images_and_pass(void) {
 
     /* a render pass for the 2x upscaling */
     gfx.upscale_pass = sg_make_pass(&(sg_pass_desc){
-        .color_attachments[0].image = gfx.draw_state.fs_images[0]
+        .color_attachments[0].image = gfx.draw_bind.fs_images[0]
     });
 }
 
@@ -169,11 +171,11 @@ void gfx_init(const gfx_desc_t* desc) {
         0.0f, 1.0f, 0.0f, 1.0f,
         1.0f, 1.0f, 0.0f, 0.0f
     };
-    gfx.upscale_draw_state.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+    gfx.upscale_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
         .size = sizeof(verts),
         .content = verts,
     });
-    gfx.draw_state.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+    gfx.draw_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
         .size = sizeof(verts),
         .content = sg_query_feature(SG_FEATURE_ORIGIN_TOP_LEFT) ? 
                         (gfx.rot90 ? verts_rot : verts) :
@@ -198,9 +200,9 @@ void gfx_init(const gfx_desc_t* desc) {
         .shader = fsq_shd,
         .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP
     };
-    gfx.draw_state.pipeline = sg_make_pipeline(&pip_desc);
+    gfx.draw_pip = sg_make_pipeline(&pip_desc);
     pip_desc.blend.depth_format = SG_PIXELFORMAT_NONE;
-    gfx.upscale_draw_state.pipeline = sg_make_pipeline(&pip_desc);
+    gfx.upscale_pip = sg_make_pipeline(&pip_desc);
 }
 
 /* apply a viewport rectangle to preserve the emulator's aspect ratio,
@@ -237,7 +239,7 @@ void gfx_draw(int width, int height) {
     }
 
     /* copy emulator pixel data into upscaling source texture */
-    sg_update_image(gfx.upscale_draw_state.fs_images[0], &(sg_image_content){
+    sg_update_image(gfx.upscale_bind.fs_images[0], &(sg_image_content){
         .subimage[0][0] = { 
             .ptr = gfx.rgba8_buffer,
             .size = gfx.fb_width*gfx.fb_height*sizeof(uint32_t)
@@ -246,7 +248,8 @@ void gfx_draw(int width, int height) {
 
     /* upscale the original framebuffer 2x with nearest filtering */
     sg_begin_pass(gfx.upscale_pass, &gfx_upscale_pass_action);
-    sg_apply_draw_state(&gfx.upscale_draw_state);
+    sg_apply_pipeline(gfx.upscale_pip);
+    sg_apply_bindings(&gfx.upscale_bind);
     sg_draw(0, 4, 1);
     sg_end_pass();
 
@@ -269,7 +272,8 @@ void gfx_draw(int width, int height) {
     const int canvas_height = sapp_height();
     sg_begin_default_pass(&gfx_draw_pass_action, canvas_width, canvas_height);
     apply_viewport(canvas_width, canvas_height);
-    sg_apply_draw_state(&gfx.draw_state);
+    sg_apply_pipeline(gfx.draw_pip);
+    sg_apply_bindings(&gfx.draw_bind);
     sg_draw(0, 4, 1);
     sg_apply_viewport(0, 0, canvas_width, canvas_height, true);
     if (gfx.draw_extra_cb) {
