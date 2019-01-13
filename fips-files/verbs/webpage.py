@@ -39,7 +39,7 @@ items = [
     { 'type':'demo', 'title':"YAP! (CPC)",          'system':'cpc',     'url':'cpc.html?file=cpc/yet_another_plasma.dsk&input=run%22-yap%21%0A', 'img':'cpc/yet_another_plasma.jpg', 'note':'by Logon System' },
     { 'type':'demo', 'title':"Backtro (CPC)",       'system':'cpc',     'url':'cpc.html?file=cpc/backtro.dsk&input=run%22-backtro%0A', 'img':'cpc/backtro.jpg', 'note':'by Overflow/Logon System' },
     { 'type':'demo', 'title':'Isometrikum (CPC)',   'system':'cpc',     'url':'cpc.html?file=cpc/isometrikum.dsk&input=run%22isometri.kum%0A', 'img':'cpc/isometrikum.jpg', 'note':'by Vanity'},
-    { 'type':'demo', 'title':'SotB Demo (CPC)',     'system':'cpc',     'url':'cpc.html?file=cpc/ovf-prev.dsk&input=run%22-PREVIEW%0A', 'img':'cpc/sotb_cpc.jpg', 'note':'select "Preview 1"!'},
+    { 'type':'demo', 'title':'SotB Demo (CPC)',     'system':'cpc',     'url':'cpc.html?file=cpc/ovf-prev.dsk&input=run%22-PREVIEW%0A', 'img':'cpc/sotb_cpc.jpg', 'note':'"Preview 1", then SPACE!'},
     { 'type':'demo', 'title':'Points Barres (CPC)', 'system':'cpc',     'url':'cpc.html?file=cpc/points_barres.dsk&input=run%22-PBARRES%0A', 'img':'cpc/points_barres.jpg', 'note':'press SPACE!'},
     { 'type':'demo', 'title':'Still Rising (CPC)',  'system':'cpc',     'url':'cpc.html?file=cpc/stillrising.dsk&input=run%22-RISING%0A', 'img':'cpc/stillrising.jpg', 'note':'by Vanity'},
     { 'type':'demo', 'title':'Serious (KC85/4)',    'system':'kc85',    'url':'kc85.html?type=kc85_4&file=kc85/serious.kcc', 'img':'kc85/serious.jpg', 'note':'by Moods Plateau'},
