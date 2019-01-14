@@ -77,7 +77,7 @@ void test_hdisplayed() {
     for (int tick = 0; tick < 1024; tick++) {
         mc6845_tick(&crtc);
         // need to run a complete line to 'warm up'
-        if (crtc.scanline_ctr > 0) {
+        if (crtc.r_ctr > 0) {
             // the h_de flag should be active from h_pos 0..79,
             // and inactive for the rest of the line
             if (crtc.h_ctr < 80) {
@@ -141,11 +141,11 @@ void test_hori_visual() {
     mc6845_t crtc;
     mc6845_init(&crtc, MC6845_TYPE_MC6845);
     setup_80x24(&crtc);
-    printf("\n%2d: ?", crtc.scanline_ctr);
+    printf("\n%2d: ?", crtc.r_ctr);
     for (int tick = 0; tick < 1024; tick++) {
         mc6845_tick(&crtc);
         if (0 == crtc.h_ctr) {
-            printf("\n%2d: ", crtc.scanline_ctr);
+            printf("\n%2d: ", crtc.r_ctr);
         }
         if (crtc.h_de) {
             putchar('D');
@@ -166,14 +166,14 @@ void test_scanline_row_visual() {
     mc6845_t crtc;
     mc6845_init(&crtc, MC6845_TYPE_MC6845);
     setup_80x24(&crtc);
-    printf("\n%2d %2d: ?", crtc.scanline_ctr, crtc.row_ctr);
+    printf("\n%2d %2d: ?", crtc.r_ctr, crtc.v_ctr);
     for (int tick = 0; tick < 4096; tick++) {
         mc6845_tick(&crtc);
         if (0 == crtc.h_ctr) {
-            printf("\n%2d %2d: ", crtc.scanline_ctr, crtc.row_ctr);
+            printf("\n%2d %2d: ", crtc.r_ctr, crtc.h_ctr);
         }
         if (crtc.h_de) {
-            putchar((crtc.row_ctr & 1) ? 'd':'D');
+            putchar((crtc.v_ctr & 1) ? 'd':'D');
         }
         if (crtc.hs) {
             putchar('H');
@@ -198,14 +198,14 @@ void test_frame_visual() {
     crtc.h_de = crtc.v_de = true;
     for (int tick = 0; tick < 80000; tick++) {
         uint64_t pins = mc6845_tick(&crtc);
-        if (crtc.scanline_ctr > 0) {
+        if (crtc.r_ctr > 0) {
             valid = true;
         }
         if (valid) {
             if (0 == crtc.h_ctr) {
                 uint16_t ma = MC6845_GET_ADDR(pins);
                 uint8_t ra = MC6845_GET_RA(pins);
-                printf("\n%2d %2d (%04X|%02X): ", crtc.scanline_ctr, crtc.row_ctr, ma, ra);
+                printf("\n%2d %2d (%04X|%02X): ", crtc.r_ctr, crtc.v_ctr, ma, ra);
             }
             if (pins & MC6845_DE) {
                 putchar('D');
@@ -220,12 +220,7 @@ void test_frame_visual() {
                 putchar('X');
             }
             if (!(pins & (MC6845_DE|MC6845_HS|MC6845_VS))) {
-                if (crtc.in_adj) {
-                    putchar('.');
-                }
-                else {
-                    putchar('-');
-                }
+                putchar('-');
             }
         }
     }
