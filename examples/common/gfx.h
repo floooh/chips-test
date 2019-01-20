@@ -330,7 +330,7 @@ static const char* gfx_fs_src =
     "void main() {\n"
     "  frag_color = texture(tex, uv);\n"
     "}\n";
-#elif defined(SOKOL_GLES2)
+#elif defined(SOKOL_GLES2) || defined(SOKOL_GLES3)
 static const char* gfx_vs_src =
     "attribute vec2 in_pos;\n"
     "attribute vec2 in_uv;\n"
