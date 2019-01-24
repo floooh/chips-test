@@ -19,7 +19,7 @@ static const int MaxIndices = MaxVertices * 3;
 static sg_pipeline pip;
 static sg_bindings bind;
 
-static void imgui_draw_cb(ImDrawData*);
+static void ui_draw_imgui(ImDrawData*);
 static void ui_init_imgui(void);
 
 extern const char* vs_src_imgui;
@@ -64,6 +64,7 @@ void ui_draw(void) {
         ui_draw_cb();
     }
     ImGui::Render();
+    ui_draw_imgui(ImGui::GetDrawData());
 }
 
 bool ui_input(const sapp_event* event) {
@@ -141,7 +142,6 @@ void ui_init_imgui(void) {
     ImGuiIO& io = ImGui::GetIO();
     io.Fonts->AddFontDefault();
     io.IniFilename = nullptr;
-    io.RenderDrawListsFn = imgui_draw_cb;
     io.KeyMap[ImGuiKey_Tab] = SAPP_KEYCODE_TAB;
     io.KeyMap[ImGuiKey_LeftArrow] = SAPP_KEYCODE_LEFT;
     io.KeyMap[ImGuiKey_RightArrow] = SAPP_KEYCODE_RIGHT;
@@ -219,8 +219,8 @@ void ui_init_imgui(void) {
     pip = sg_make_pipeline(&pip_desc);
 }
 
-// imgui draw callback
-void imgui_draw_cb(ImDrawData* draw_data) {
+// draw ImGui draw lists via sokol-gfx
+void ui_draw_imgui(ImDrawData* draw_data) {
     assert(draw_data);
     if (draw_data->CmdListsCount == 0) {
         return;
