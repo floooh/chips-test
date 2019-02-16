@@ -103,7 +103,7 @@ body {
                     if (content) {
                         console.log('content length: ' + content.byteLength);
                         let uint8Array = new Uint8Array(content);
-                        let res = Module.ccall('emsc_load_data',
+                        let res = ccall('emsc_load_data',
                             'int',
                             ['string', 'array', 'number'],  // name, data, size
                             [file.name, uint8Array, uint8Array.length]);

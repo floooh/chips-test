@@ -93,13 +93,13 @@ EMSCRIPTEN_KEEPALIVE void emsc_load_data(const char* path, const uint8_t* ptr, i
 }
 
 EM_JS(void, emsc_load_file, (const char* path_cstr), {
-    var path = Pointer_stringify(path_cstr);
+    var path = UTF8ToString(path_cstr);
     var req = new XMLHttpRequest();
     req.open("GET", path);
     req.responseType = "arraybuffer";
     req.onload = function(e) {
         var uint8Array = new Uint8Array(req.response);
-        var res = Module.ccall('emsc_load_data',
+        var res = ccall('emsc_load_data',
             'int',
             ['string', 'array', 'number'],
             [path, uint8Array, uint8Array.length]);
