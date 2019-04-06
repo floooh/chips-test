@@ -92,6 +92,11 @@ EMSCRIPTEN_KEEPALIVE void emsc_load_data(const char* path, const uint8_t* ptr, i
     fs_load_mem(path, ptr, size);
 }
 
+EM_JS(void, emsc_fs_init, (void), {
+    console.log("fs.h: registering Module['ccall']");
+    Module['ccall'] = ccall;
+});
+
 EM_JS(void, emsc_load_file, (const char* path_cstr), {
     var path = UTF8ToString(path_cstr);
     var req = new XMLHttpRequest();
@@ -119,6 +124,7 @@ bool fs_load_file(const char* path) {
 
 void fs_init(void) {
     memset(&fs, 0, sizeof(fs));
+    emsc_fs_init();
 }
 
 const uint8_t* fs_ptr(void) {
