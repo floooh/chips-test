@@ -124,7 +124,9 @@ bool fs_load_file(const char* path) {
 
 void fs_init(void) {
     memset(&fs, 0, sizeof(fs));
+    #if defined(__EMSCRIPTEN__)
     emsc_fs_init();
+    #endif
 }
 
 const uint8_t* fs_ptr(void) {
