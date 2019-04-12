@@ -1,0 +1,9 @@
+---
+platform: osx
+generator: Ninja 
+build_tool: vscode_cmake
+build_type: Release
+vscode_additional_defines: [ 'CHIPS_IMPL', 'SOKOL_IMPL' ]
+defines:
+    FIPS_OSX_USE_ARC: ON
+
