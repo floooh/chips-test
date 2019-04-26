@@ -184,6 +184,10 @@ void gfx_init(const gfx_desc_t* desc) {
 
     /* a shader to render a textured quad */
     sg_shader fsq_shd = sg_make_shader(&(sg_shader_desc){
+        .attrs = {
+            [0] = { .name="in_pos", .sem_name = "POS" },
+            [1] = { .name="in_uv", .sem_name = "UV" }
+        },
         .fs.images = {
             [0] = { .name="tex", .type=SG_IMAGETYPE_2D },
         },
@@ -194,8 +198,10 @@ void gfx_init(const gfx_desc_t* desc) {
     /* 2 pipeline-state-objects, one for upscaling, one for rendering */
     sg_pipeline_desc pip_desc = {
         .layout = {
-            .attrs[0] = { .name="in_pos", .sem_name="POS", .format=SG_VERTEXFORMAT_FLOAT2 },
-            .attrs[1] = { .name="in_uv", .sem_name="UV", .format=SG_VERTEXFORMAT_FLOAT2 }
+            .attrs = {
+                [0].format = SG_VERTEXFORMAT_FLOAT2,
+                [1].format = SG_VERTEXFORMAT_FLOAT2
+            }
         },
         .shader = fsq_shd,
         .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP
