@@ -183,7 +183,7 @@ void gfx_init(const gfx_desc_t* desc) {
 
     /* 2 pipeline-state-objects, one for upscaling, one for rendering */
     sg_pipeline_desc pip_desc = {
-        .shader = sg_make_shader(&fsq_shader_desc),
+        .shader = sg_make_shader(fsq_shader_desc()),
         .layout = {
             .attrs = {
                 [vs_in_pos].format = SG_VERTEXFORMAT_FLOAT2,
