@@ -4,12 +4,12 @@
 #define CHIPS_IMPL
 #include "chips/fdd.h"
 #include "chips/fdd_cpc.h"
-#include "test.h"
 #include "disks/fdd-test.h"
+#include "utest.h"
 
+#define T(b) ASSERT_TRUE(b)
 
-void test_load_cpc_dsk(void) {
-    test("load cpc dsk image");
+UTEST(fdd, load_cpc_dsk) {
     fdd_t fdd;
     fdd_init(&fdd);
     bool load_successful = fdd_cpc_insert_dsk(&fdd, dump_boulderdash_cpc, sizeof(dump_boulderdash_cpc));
@@ -38,8 +38,7 @@ void test_load_cpc_dsk(void) {
     }
 }
 
-void test_load_cpc_extdsk(void) {
-    test("load cpc extended dsk image");
+UTEST(fdd, load_cpc_extdsk) {
     fdd_t fdd;
     fdd_init(&fdd);
     bool load_success = fdd_cpc_insert_dsk(&fdd, dump_dtc_cpc, sizeof(dump_dtc_cpc));
@@ -71,11 +70,4 @@ void test_load_cpc_extdsk(void) {
             T(0 == sector->info.upd765.st2);
         }
     }
-}
-
-int main() {
-    test_begin("fdd-test");
-    test_load_cpc_dsk();
-    test_load_cpc_extdsk();
-    return test_end();
 }

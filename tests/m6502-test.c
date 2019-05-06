@@ -3,15 +3,15 @@
 //------------------------------------------------------------------------------
 #define CHIPS_IMPL
 #include "chips/m6502.h"
-#include <stdio.h>
-#include "test.h"
+#include "utest.h"
 
+#define T(b) ASSERT_TRUE(b)
 #define R(r) cpu.state.r
 
-m6502_t cpu;
-uint8_t mem[1<<16] = { 0 };
+static m6502_t cpu;
+static uint8_t mem[1<<16] = { 0 };
 
-uint64_t tick(uint64_t pins, void* user_data) {
+static uint64_t tick(uint64_t pins, void* user_data) {
     const uint16_t addr = M6502_GET_ADDR(pins);
     if (pins & M6502_RW) {
         /* memory read */
@@ -24,22 +24,22 @@ uint64_t tick(uint64_t pins, void* user_data) {
     return pins;
 }
 
-void w8(uint16_t addr, uint8_t data) {
+static void w8(uint16_t addr, uint8_t data) {
     mem[addr] = data;
 }
 
-void w16(uint16_t addr, uint16_t data) {
+static void w16(uint16_t addr, uint16_t data) {
     mem[addr] = data & 0xFF;
     mem[(addr+1)&0xFFFF] = data>>8;
 }
 
-uint16_t r16(uint16_t addr) {
+static uint16_t r16(uint16_t addr) {
     uint8_t l = mem[addr];
     uint8_t h = mem[(addr+1)&0xFFFF];
     return (h<<8)|l;
 }
 
-void init() {
+static void init() {
     memset(mem, 0, sizeof(mem));
     m6502_init(&cpu, &(m6502_desc_t){
         .tick_cb = tick,
@@ -48,23 +48,22 @@ void init() {
     m6502_reset(&cpu);
 }
 
-void copy(uint16_t addr, uint8_t* bytes, size_t num) {
+static void copy(uint16_t addr, uint8_t* bytes, size_t num) {
     assert((addr + num) <= sizeof(mem));
     memcpy(&mem[addr], bytes, num);
 }
 
-uint32_t step() {
+static uint32_t step() {
     return m6502_exec(&cpu, 0);
 }
 
-bool tf(uint8_t expected) {
+static bool tf(uint8_t expected) {
     /* XF is always set */
     expected |= M6502_XF;
     return (R(P) & expected) == expected;
 }
 
-void INIT() {
-    test("INIT");
+UTEST(m6502, INIT) {
     init();
     T(0 == R(A));
     T(0 == R(X));
@@ -74,8 +73,7 @@ void INIT() {
     T(tf(0));
 }
 
-void RESET() {
-    test("RESET");
+UTEST(m6502, RESET) {
     init();
     w16(0xFFFC, 0x1234);
     m6502_reset(&cpu);
@@ -84,8 +82,7 @@ void RESET() {
     T(tf(M6502_IF));
 }
 
-void LDA() {
-    test("LDA");
+UTEST(m6502, LDA) {
     init();
     uint8_t prog[] = {
         // immediate
@@ -181,8 +178,7 @@ void LDA() {
     T(6 == step()); T(R(A) == 0xA8); T(tf(M6502_NF));
 }
 
-void LDX() {
-    test("LDX");
+UTEST(m6502, LDX) {
     init();
     uint8_t prog[] = {
         // immediate
@@ -249,8 +245,7 @@ void LDX() {
     T(5 == step()); T(R(X) == 0x56); T(tf(0));
 }
 
-void LDY() {
-    test("LDY");
+UTEST(m6502, LDY) {
     init();
     uint8_t prog[] = {
         // immediate
@@ -317,8 +312,7 @@ void LDY() {
     T(5 == step()); T(R(Y) == 0x56); T(tf(0));
 }
 
-void STA() {
-    test("STA");
+UTEST(m6502, STA) {
     init();
     uint8_t prog[] = {
         0xA9, 0x23,             // LDA #$23
@@ -347,8 +341,7 @@ void STA() {
     T(6 == step()); T(mem[0x43E1] == 0x23);
 }
 
-void STX() {
-    test("STX");
+UTEST(m6502, STX) {
     init();
     uint8_t prog[] = {
         0xA2, 0x23,             // LDX #$23
@@ -367,8 +360,7 @@ void STX() {
     T(4 == step()); T(mem[0x0020] == 0x23);
 }
 
-void STY() {
-    test("STY");
+UTEST(m6502, STY) {
     init();
     uint8_t prog[] = {
         0xA0, 0x23,             // LDY #$23
@@ -387,8 +379,7 @@ void STY() {
     T(4 == step()); T(mem[0x0020] == 0x23);
 }
 
-void TAX_TXA() {
-    test("TAX,TXA");
+UTEST(m6502, TAX_TXA) {
     init();
     uint8_t prog[] = {
         0xA9, 0x00,     // LDA #$00
@@ -416,8 +407,7 @@ void TAX_TXA() {
     T(2 == step()); T(R(A) == 0xF0); T(tf(M6502_NF));
 }
 
-void TAY_TYA() {
-    test("TAY,TYA");
+UTEST(m6502, TAY_TYA) {
     init();
     uint8_t prog[] = {
         0xA9, 0x00,     // LDA #$00
@@ -445,8 +435,7 @@ void TAY_TYA() {
     T(2 == step()); T(R(A) == 0xF0); T(tf(M6502_NF));
 }
 
-void DEX_INX_DEY_INY() {
-    test("DEX,INX,DEY,INY");
+UTEST(m6502, DEX_INX_DEY_INY) {
     init();
     uint8_t prog[] = {
         0xA2, 0x01,     // LDX #$01
@@ -474,8 +463,7 @@ void DEX_INX_DEY_INY() {
     T(2 == step()); T(R(Y) == 0x01); T(tf(0));
 }
 
-void TXS_TSX() {
-    test("TXS,TSX");
+UTEST(m6502, TXS_TSX) {
     init();
     uint8_t prog[] = {
         0xA2, 0xAA,     // LDX #$AA
@@ -493,8 +481,7 @@ void TXS_TSX() {
     T(2 == step()); T(R(X) == 0xAA); T(tf(M6502_NF));
 }
 
-void ORA() {
-    test("ORA");
+UTEST(m6502, ORA) {
     init();
     uint8_t prog[] = {
         0xA9, 0x00,         // LDA #$00
@@ -533,8 +520,7 @@ void ORA() {
     T(5 == step()); T(R(A) == 0x7F); T(tf(0));
 }
 
-void AND() {
-    test("AND");
+UTEST(m6502, AND) {
     init();
     uint8_t prog[] = {
         0xA9, 0xFF,         // LDA #$FF
@@ -573,8 +559,7 @@ void AND() {
     T(5 == step()); T(R(A) == 0x01); T(tf(0));
 }
 
-void EOR() {
-    test("EOR");
+UTEST(m6502, EOR) {
     init();
     uint8_t prog[] = {
         0xA9, 0xFF,         // LDA #$FF
@@ -613,8 +598,7 @@ void EOR() {
     T(5 == step()); T(R(A) == 0x55); T(tf(0));
 }
 
-void NOP() {
-    test("NOP");
+UTEST(m6502, NOP) {
     init();
     uint8_t prog[] = {
         0xEA,       // NOP
@@ -623,8 +607,7 @@ void NOP() {
     T(2 == step());
 }
 
-void PHA_PLA_PHP_PLP() {
-    test("PHA,PLA,PHP,PLP");
+UTEST(m6502, PHA_PLA_PHP_PLP) {
     init();
     uint8_t prog[] = {
         0xA9, 0x23,     // LDA #$23
@@ -646,8 +629,7 @@ void PHA_PLA_PHP_PLP() {
     T(4 == step()); T(R(S) == 0xFD); T(tf(0));
 }
 
-void CLC_SEC_CLI_SEI_CLV_CLD_SED() {
-    test("CLC,SEC,CLI,SEI,CLV,CLD,SED");
+UTEST(m6502, CLC_SEC_CLI_SEI_CLV_CLD_SED) {
     init();
     uint8_t prog[] = {
         0xB8,       // CLV
@@ -670,8 +652,7 @@ void CLC_SEC_CLI_SEI_CLV_CLD_SED() {
     T(2 == step()); T(tf(0));
 }
 
-void INC_DEC() {
-    test("INC,DEC");
+UTEST(m6502, INC_DEC) {
     init();
     uint8_t prog[] = {
         0xA2, 0x10,         // LDX #$10
@@ -697,8 +678,7 @@ void INC_DEC() {
     T(7 == step()); T(0x00 == mem[0x1010]); T(tf(M6502_ZF));
 }
 
-void ADC_SBC() {
-    test("ADC,SBC");
+UTEST(m6502, ADC_SBC) {
     init();
     uint8_t prog[] = {
         0xA9, 0x01,         // LDA #$01
@@ -747,8 +727,7 @@ void ADC_SBC() {
     T(2 == step()); T(0xFB == R(A)); T(tf(M6502_NF|M6502_CF));
 }
 
-void CMP_CPX_CPY() {
-    test("CMP,CPX,CPY");
+UTEST(m6502, CMP_CPX_CPY) {
     init();
     // FIXME: non-immediate addressing modes
     uint8_t prog[] = {
@@ -778,8 +757,7 @@ void CMP_CPX_CPY() {
     T(2 == step()); T(tf(M6502_NF));
 }
 
-void ASL() {
-    test("ASL");
+UTEST(m6502, ASL) {
     init();
     // FIXME: more addressing modes
     uint8_t prog[] = {
@@ -802,8 +780,7 @@ void ASL() {
     T(2 == step()); T(0x04 == R(A)); T(tf(0));
 }
 
-void LSR() {
-    test("LSR");
+UTEST(m6502, LSR) {
     init();
     // FIXME: more addressing modes
     uint8_t prog[] = {
@@ -826,8 +803,7 @@ void LSR() {
     T(2 == step()); T(0x20 == R(A)); T(tf(0));
 }
 
-void ROR_ROL() {
-    test("ROR,ROL");
+UTEST(m6502, ROR_ROL) {
     init();
     // FIXME: more adressing modes
     uint8_t prog[] = {
@@ -858,8 +834,7 @@ void ROR_ROL() {
     T(2 == step()); T(0x81 == R(A)); T(tf(M6502_NF));
 }
 
-void BIT() {
-    test("BIT");
+UTEST(m6502, BIT) {
     init();
     uint8_t prog[] = {
         0xA9, 0x00,         // LDA #$00
@@ -885,8 +860,7 @@ void BIT() {
     T(4 == step()); T(tf(M6502_NF|M6502_VF));
 }
 
-void BNE_BEQ() {
-    test("BNE,BEQ");
+UTEST(m6502, BNE_BEQ) {
     init();
     uint8_t prog[] = {
         0xA9, 0x10,         // LDA #$10
@@ -918,8 +892,7 @@ void BNE_BEQ() {
     // FIXME: test the other branches
 }
 
-void JMP() {
-    test("JMP");
+UTEST(m6502, JMP) {
     init();
     uint8_t prog[] = {
         0x4C, 0x00, 0x10,   // JMP $1000
@@ -928,8 +901,7 @@ void JMP() {
     T(3 == step()); T(R(PC) == 0x1000);
 }
 
-void JMP_indirect_samepage() {
-    test("JMP indirect, same page");
+UTEST(m6502, JMP_indirect_samepage) {
     init();
     uint8_t prog[] = {
         0xA9, 0x33,         // LDA #$33
@@ -946,8 +918,7 @@ void JMP_indirect_samepage() {
     T(5 == step()); T(R(PC) == 0x2233);
 }
 
-void JMP_indirect_wrap() {
-    test("JMP indirect, cross page");
+UTEST(m6502, JMP_indirect_wrap) {
     init();
     uint8_t prog[] = {
         0xA9, 0x33,         // LDA #$33
@@ -965,8 +936,7 @@ void JMP_indirect_wrap() {
     T(5 == step()); T(R(PC) == 0x2233);
 }
 
-void JSR_RTS() {
-    test("JSR,RTS");
+UTEST(m6502, JSR_RTS) {
     init();
     uint8_t prog[] = {
         0x20, 0x05, 0x03,   // JSR fun
@@ -983,8 +953,7 @@ void JSR_RTS() {
     T(6 == step()); T(R(PC) == 0x0303); T(R(S) == 0xFD);
 }
 
-void RTI() {
-    test("RTI");
+UTEST(m6502, RTI) {
     init();
     uint8_t prog[] = {
         0xA9, 0x11,     // LDA #$11
@@ -1006,40 +975,4 @@ void RTI() {
     T(2 == step()); T(R(A) == 0x33);
     T(3 == step()); T(R(S) == 0xFA);
     T(6 == step()); T(R(S) == 0xFD); T(R(PC) == 0x1122); T(tf(M6502_ZF|M6502_CF));
-}
-
-int main() {
-    test_begin("m6502-test");
-    INIT();
-    RESET();
-    LDA();
-    LDX();
-    LDY();
-    STA();
-    STX();
-    STY();
-    TAX_TXA();
-    TAY_TYA();
-    DEX_INX_DEY_INY();
-    TXS_TSX();
-    ORA();
-    AND();
-    EOR();
-    NOP();
-    PHA_PLA_PHP_PLP();
-    CLC_SEC_CLI_SEI_CLV_CLD_SED();
-    INC_DEC();
-    ADC_SBC();
-    CMP_CPX_CPY();
-    ASL();
-    LSR();
-    ROR_ROL();
-    BIT();
-    BNE_BEQ();
-    JMP();
-    JMP_indirect_samepage();
-    JMP_indirect_wrap();
-    JSR_RTS();
-    RTI();
-    return test_end();
 }

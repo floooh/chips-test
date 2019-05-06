@@ -1,15 +1,11 @@
 //------------------------------------------------------------------------------
 //  ay38910-test.c
 //------------------------------------------------------------------------------
-// force assert() enabled
-#ifdef NDEBUG
-#undef NDEBUG
-#endif
 #define CHIPS_IMPL
 #include "chips/ay38910.h"
+#include "utest.h"
 
-uint32_t num_tests = 0;
-#define T(x) { assert(x); num_tests++; }
+#define T(b) ASSERT_TRUE(b)
 #define PINS(p,d) ((p)|((d&0xFF)<<16))
 
 /* pin mask to select register address */
@@ -21,7 +17,7 @@ uint32_t num_tests = 0;
 /* extract data from pin mask */
 #define DATA(p) ((p>>16)&0xFF)
 
-void test_read_write() {
+UTEST(ay38910, read_write) {
     ay38910_t ay;
     ay38910_desc_t ay_desc = {
         .type = AY38910_TYPE_8912,
@@ -51,9 +47,4 @@ void test_read_write() {
     ay38910_iorq(&ay, ADDR(AY38910_REG_PERIOD_B_COARSE));
     pins = ay38910_iorq(&ay, READ());
     T(DATA(pins) == 0x02);
-}
-
-int main() {
-    test_read_write();
-    return 0;
 }

@@ -4,12 +4,11 @@
 //------------------------------------------------------------------------------
 #define CHIPS_IMPL
 #include "chips/kbd.h"
-#include <stdio.h>
+#include "utest.h"
 
-uint32_t num_tests = 0;
-#define T(x) { assert(x); num_tests++; }
+#define T(b) ASSERT_TRUE(b)
 
-int main() {
+UTEST(kbd, kbd) {
     kbd_t kbd;
     kbd_init(&kbd, 0);
     kbd_register_modifier(&kbd, 0, 0, 0);
@@ -66,6 +65,4 @@ int main() {
         kbd_update(&kbd);
     }
     T(0 == kbd_test_lines(&kbd, 0xFFFF));
-
-    return 0;
 }

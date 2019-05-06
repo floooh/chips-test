@@ -3,11 +3,11 @@
 //------------------------------------------------------------------------------
 #define CHIPS_IMPL
 #include "util/m6502dasm.h"
-#include "test.h"
-#include <stdio.h>
+#include "utest.h"
 #include <string.h>
 #include <ctype.h>
 
+#define T(b) ASSERT_TRUE(b)
 #define TOP(str) T(op(str))
 
 typedef struct {
@@ -17,7 +17,7 @@ typedef struct {
     size_t str_pos;
     char str[32];
 } ctx_t;
-ctx_t ctx;
+static ctx_t ctx;
 
 static void init(uint16_t pc, const uint8_t* ptr, size_t len) {
     ctx.ptr = ptr;
@@ -52,8 +52,7 @@ static bool op(const char* res) {
     return 0 == strcmp(ctx.str, res);
 }
 
-void LDA() {
-    test("LDA");
+UTEST(m6502dasm, LDA) {
     uint8_t prog[] = {
         // immediate
         0xA9, 0x00,         // LDA #$00
@@ -126,8 +125,7 @@ void LDA() {
     TOP("LDA ($7F),Y");
 }
 
-void LDX() {
-    test("LDX");
+UTEST(m6502dasm, LDX) {
     uint8_t prog[] = {
         // immediate
         0xA2, 0x00,         // LDX #$00
@@ -180,8 +178,7 @@ void LDX() {
     TOP("LDX $FF31,Y")
 }
 
-void LDY() {
-    test("LDY");
+UTEST(m6502dasm, LDY) {
     uint8_t prog[] = {
         // immediate
         0xA0, 0x00,         // LDY #$00
@@ -234,8 +231,7 @@ void LDY() {
     TOP("LDY $FF31,X");
 }
 
-void STA() {
-    test("STA");
+UTEST(m6502dasm, STA) {
     uint8_t prog[] = {
         0xA9, 0x23,             // LDA #$23
         0xA2, 0x10,             // LDX #$10
@@ -261,8 +257,7 @@ void STA() {
     TOP("STA ($20),Y");
 }
 
-void STX() {
-    test("STX");
+UTEST(m6502dasm, STX) {
     uint8_t prog[] = {
         0xA2, 0x23,             // LDX #$23
         0xA0, 0x10,             // LDY #$10
@@ -278,8 +273,7 @@ void STX() {
     TOP("STX $10,Y");
 }
 
-void STY() {
-    test("STY");
+UTEST(m6502dasm, STY) {
     uint8_t prog[] = {
         0xA0, 0x23,             // LDY #$23
         0xA2, 0x10,             // LDX #$10
@@ -295,8 +289,7 @@ void STY() {
     TOP("STY $10,X");
 }
 
-void TAX_TXA() {
-    test("TAX,TXA");
+UTEST(m6502dasm, TAX_TXA) {
     uint8_t prog[] = {
         0xA9, 0x00,     // LDA #$00
         0xA2, 0x10,     // LDX #$10
@@ -322,8 +315,7 @@ void TAX_TXA() {
     TOP("TXA");
 }
 
-void TAY_TYA() {
-    test("TAY,TYA");
+UTEST(m6502dasm, TAY_TYA) {
     uint8_t prog[] = {
         0xA9, 0x00,     // LDA #$00
         0xA0, 0x10,     // LDY #$10
@@ -349,8 +341,7 @@ void TAY_TYA() {
     TOP("TYA");
 }
 
-void DEX_INX_DEY_INY() {
-    test("DEX,INX,DEY,INY");
+UTEST(m6502dasm, DEX_INX_DEY_INY) {
     uint8_t prog[] = {
         0xA2, 0x01,     // LDX #$01
         0xCA,           // DEX
@@ -376,8 +367,7 @@ void DEX_INX_DEY_INY() {
     TOP("INY");
 }
 
-void TXS_TSX() {
-    test("TXS,TSX");
+UTEST(m6502dasm, TXS_TSX) {
     uint8_t prog[] = {
         0xA2, 0xAA,     // LDX #$AA
         0xA9, 0x00,     // LDA #$00
@@ -393,8 +383,7 @@ void TXS_TSX() {
     TOP("TSX");
 }
 
-void ORA() {
-    test("ORA");
+UTEST(m6502dasm, ORA) {
     uint8_t prog[] = {
         0xA9, 0x00,         // LDA #$00
         0xA2, 0x01,         // LDX #$01
@@ -422,8 +411,7 @@ void ORA() {
     TOP("ORA ($20),Y");
 }
 
-void AND() {
-    test("AND");
+UTEST(m6502dasm, AND) {
     uint8_t prog[] = {
         0xA9, 0xFF,         // LDA #$FF
         0xA2, 0x01,         // LDX #$01
@@ -451,8 +439,7 @@ void AND() {
     TOP("AND ($20),Y");
 }
 
-void EOR() {
-    test("EOR");
+UTEST(m6502dasm, EOR) {
     uint8_t prog[] = {
         0xA9, 0xFF,         // LDA #$FF
         0xA2, 0x01,         // LDX #$01
@@ -480,8 +467,7 @@ void EOR() {
     TOP("EOR ($20),Y");
 }
 
-void NOP() {
-    test("NOP");
+UTEST(m6502dasm, NOP) {
     uint8_t prog[] = {
         0xEA,       // NOP
     };
@@ -489,8 +475,7 @@ void NOP() {
     TOP("NOP");
 }
 
-void PHA_PLA_PHP_PLP() {
-    test("PHA,PLA,PHP,PLP");
+UTEST(m6502dasm, PHA_PLA_PHP_PLP) {
     uint8_t prog[] = {
         0xA9, 0x23,     // LDA #$23
         0x48,           // PHA
@@ -510,8 +495,7 @@ void PHA_PLA_PHP_PLP() {
     TOP("PLP");
 }
 
-void CLC_SEC_CLI_SEI_CLV_CLD_SED() {
-    test("CLC,SEC,CLI,SEI,CLV,CLD,SED");
+UTEST(m6502dasm, CLC_SEC_CLI_SEI_CLV_CLD_SED) {
     uint8_t prog[] = {
         0xB8,       // CLV
         0x78,       // SEI
@@ -531,8 +515,7 @@ void CLC_SEC_CLI_SEI_CLV_CLD_SED() {
     TOP("CLD");
 }
 
-void INC_DEC() {
-    test("INC,DEC");
+UTEST(m6502dasm, INC_DEC) {
     uint8_t prog[] = {
         0xA2, 0x10,         // LDX #$10
         0xE6, 0x33,         // INC $33
@@ -556,8 +539,7 @@ void INC_DEC() {
     TOP("DEC $1000,X");
 }
 
-void ADC_SBC() {
-    test("ADC,SBC");
+UTEST(m6502dasm, ADC_SBC) {
     uint8_t prog[] = {
         0xA9, 0x01,         // LDA #$01
         0x85, 0x10,         // STA $10
@@ -602,8 +584,7 @@ void ADC_SBC() {
     TOP("SBC #$01");
 }
 
-void CMP_CPX_CPY() {
-    test("CMP,CPX,CPY");
+UTEST(m6502dasm, CMP_CPX_CPY) {
     uint8_t prog[] = {
         0xA9, 0x01,     // LDA #$01
         0xA2, 0x02,     // LDX #$02
@@ -633,8 +614,7 @@ void CMP_CPX_CPY() {
     TOP("CPY #$03");
 }
 
-void ASL() {
-    test("ASL");
+UTEST(m6502dasm, ASL) {
     uint8_t prog[] = {
         0xA9, 0x81,     // LDA #$81
         0xA2, 0x01,     // LDX #$01
@@ -654,8 +634,7 @@ void ASL() {
     TOP("ASL");
 }
 
-void LSR() {
-    test("LSR");
+UTEST(m6502dasm, LSR) {
     uint8_t prog[] = {
         0xA9, 0x81,     // LDA #$81
         0xA2, 0x01,     // LDX #$01
@@ -675,8 +654,7 @@ void LSR() {
     TOP("LSR");
 }
 
-void ROR_ROL() {
-    test("ROR,ROL");
+UTEST(m6502dasm, ROR_ROL) {
     uint8_t prog[] = {
         0xA9, 0x81,     // LDA #$81
         0xA2, 0x01,     // LDX #$01
@@ -704,8 +682,7 @@ void ROR_ROL() {
     TOP("ROL");
 }
 
-void BIT() {
-    test("BIT");
+UTEST(m6502dasm, BIT) {
     uint8_t prog[] = {
         0xA9, 0x00,         // LDA #$00
         0x85, 0x1F,         // STA $1F
@@ -729,8 +706,7 @@ void BIT() {
     TOP("BIT $1000");
 }
 
-void BNE_BEQ() {
-    test("BNE,BEQ");
+UTEST(m6502dasm, BNE_BEQ) {
     uint8_t prog[] = {
         0xA9, 0x10,         // LDA #$10
         0xC9, 0x10,         // CMP #$10
@@ -750,8 +726,7 @@ void BNE_BEQ() {
     TOP("NOP");
 }
 
-void JMP() {
-    test("JMP");
+UTEST(m6502dasm, JMP) {
     uint8_t prog[] = {
         0x4C, 0x00, 0x10,   // JMP $1000
     };
@@ -759,8 +734,7 @@ void JMP() {
     TOP("JMP $1000");
 }
 
-void JMP_indirect_samepage() {
-    test("JMP indirect, same page");
+UTEST(m6502dasm, JMP_indirect_samepage) {
     uint8_t prog[] = {
         0xA9, 0x33,         // LDA #$33
         0x8D, 0x10, 0x21,   // STA $2110
@@ -776,8 +750,7 @@ void JMP_indirect_samepage() {
     TOP("JMP ($2110)");
 }
 
-void JMP_indirect_wrap() {
-    test("JMP indirect, cross page");
+UTEST(m6502dasm, JMP_indirect_wrap) {
     uint8_t prog[] = {
         0xA9, 0x33,         // LDA #$33
         0x8D, 0xFF, 0x21,   // STA $21FF
@@ -793,8 +766,7 @@ void JMP_indirect_wrap() {
     TOP("JMP ($21FF)");
 }
 
-void JSR_RTS() {
-    test("JSR,RTS");
+UTEST(m6502dasm, JSR_RTS) {
     uint8_t prog[] = {
         0x20, 0x05, 0x03,   // JSR fun
         0xEA, 0xEA,         // NOP, NOP
@@ -809,8 +781,7 @@ void JSR_RTS() {
     TOP("RTS");
 }
 
-void RTI() {
-    test("RTI");
+UTEST(m6502dasm, RTI) {
     uint8_t prog[] = {
         0xA9, 0x11,     // LDA #$11
         0x48,           // PHA
@@ -828,38 +799,4 @@ void RTI() {
     TOP("LDA #$33");
     TOP("PHA");
     TOP("RTI");
-}
-
-int main() {
-    test_begin("m6502dasm-test");
-    LDA();
-    LDX();
-    LDY();
-    STA();
-    STX();
-    STY();
-    TAX_TXA();
-    TAY_TYA();
-    DEX_INX_DEY_INY();
-    TXS_TSX();
-    ORA();
-    AND();
-    EOR();
-    NOP();
-    PHA_PLA_PHP_PLP();
-    CLC_SEC_CLI_SEI_CLV_CLD_SED();
-    INC_DEC();
-    ADC_SBC();
-    CMP_CPX_CPY();
-    ASL();
-    LSR();
-    ROR_ROL();
-    BIT();
-    BNE_BEQ();
-    JMP();
-    JMP_indirect_samepage();
-    JMP_indirect_wrap();
-    JSR_RTS();
-    RTI();
-    return test_end();
 }

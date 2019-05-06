@@ -4,30 +4,25 @@
 //  FIXME:
 //  - interrupt handling (e.g. used in KC87 keyboard input)
 //------------------------------------------------------------------------------
-// force assert() enabled
-#ifdef NDEBUG
-#undef NDEBUG
-#endif
 #define CHIPS_IMPL
 #include "chips/z80pio.h"
-#include <stdio.h>
+#include "utest.h"
 
-uint32_t num_tests = 0;
-#define T(x) { assert(x); num_tests++; }
+#define T(b) ASSERT_TRUE(b)
 
-uint8_t PORT_A = 0;
-uint8_t PORT_B = 0;
+static uint8_t PORT_A = 0;
+static uint8_t PORT_B = 0;
 
-uint8_t in_cb(int port_id, void* user_data) {
+static uint8_t in_cb(int port_id, void* user_data) {
     return (port_id == Z80PIO_PORT_A) ? PORT_A : PORT_B;
 }
 
-void out_cb(int port_id, uint8_t data, void* user_data) {
+static void out_cb(int port_id, uint8_t data, void* user_data) {
     if (port_id == Z80PIO_PORT_A) { PORT_A = data; }
     else { PORT_B = data; }
 }
 
-void test_read_write_control() {
+UTEST(z80pio, read_write_control) {
     z80pio_t pio;
     z80pio_init(&pio, &(z80pio_desc_t){
         .in_cb = in_cb,
@@ -88,9 +83,4 @@ void test_read_write_control() {
     _z80pio_write_ctrl(&pio, Z80PIO_PORT_B, Z80PIO_INTCTRL_EI|Z80PIO_INTCTRL_ANDOR|0x07);
     uint8_t data = _z80pio_read_ctrl(&pio);
     T(data == 0x4C);
-}
-
-int main() {
-    test_read_write_control();
-    return 0;
 }

@@ -6,7 +6,9 @@ branches:
 clone_depth: 3 
 
 build_script:
-    # only check whether it compiles, don't run tests
     - cmd: c:/Python36/python.exe fips build win64-vstudio-debug
     - cmd: c:/Python36/python.exe fips build win64-vstudio-release
+    # tests
+    - cmd: c:/Python36/python.exe fips set config win64-vstudio-debug
+    - cmd: c:/Python36/python.exe fips run chips-test
 

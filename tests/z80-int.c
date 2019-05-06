@@ -1,13 +1,10 @@
 //------------------------------------------------------------------------------
 //  z80-int.c
 //------------------------------------------------------------------------------
-// force assert() enabled
-#ifdef NDEBUG
-#undef NDEBUG
-#endif
-#define CHIPS_IMPL
 #include "chips/z80.h"
-#include <stdio.h>
+#include "utest.h"
+
+#define T(b) ASSERT_TRUE(b)
 
 #define _A z80_a(&cpu)
 #define _F z80_f(&cpu)
@@ -37,11 +34,12 @@
 #define _IFF1 z80_iff1(&cpu)
 #define _IFF2 z80_iff2(&cpu)
 #define _EI_PENDING z80_ei_pending(&cpu)
-z80_t cpu;
-uint8_t mem[1<<16] = { 0 };
-bool reti_executed = false;
 
-uint64_t tick(int num, uint64_t pins, void* user_data) {
+static z80_t cpu;
+static uint8_t mem[1<<16] = { 0 };
+static bool reti_executed = false;
+
+static uint64_t tick(int num, uint64_t pins, void* user_data) {
     if (pins & Z80_MREQ) {
         const uint16_t addr = Z80_GET_ADDR(pins);
         if (pins & Z80_RD) {
@@ -72,24 +70,18 @@ uint64_t tick(int num, uint64_t pins, void* user_data) {
     return pins;
 }
 
-void w16(uint16_t addr, uint16_t data) {
+static void w16(uint16_t addr, uint16_t data) {
     mem[addr]   = (uint8_t) data;
     mem[addr+1] = (uint8_t) (data>>8);
 }
 
-void copy(uint16_t addr, uint8_t* bytes, size_t num) {
-    assert((addr + num) <= sizeof(mem));
-    memcpy(&mem[addr], bytes, num);
+static void copy(uint16_t addr, uint8_t* bytes, size_t num) {
+    if ((addr + num) <= sizeof(mem)) {
+        memcpy(&mem[addr], bytes, num);
+    }
 }
 
-uint32_t step() {
-    return z80_exec(&cpu, 0);
-}
-
-uint32_t num_tests = 0;
-#define T(x) { assert(x); num_tests++; }
-
-int main() {
+UTEST(z80int, z80int) {
     z80_init(&cpu, &(z80_desc_t){ .tick_cb = tick });
 
     /* place the address 0x0200 of an interrupt service routine at 0x00E0 */

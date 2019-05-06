@@ -2,18 +2,14 @@
 //  z80ctc_test.c
 //------------------------------------------------------------------------------
 // force assert() enabled
-#ifdef NDEBUG
-#undef NDEBUG
-#endif
-#define CHIPS_IMPL
 #include "chips/z80.h"
+#define CHIPS_IMPL
 #include "chips/z80ctc.h"
-#include <stdio.h>
+#include "utest.h"
 
-uint32_t num_tests = 0;
-#define T(x) { assert(x); num_tests++; }
+#define T(b) ASSERT_TRUE(b)
 
-void test_intvector() {
+UTEST(z80ctc, intvector) {
     z80ctc_t ctc;
     z80ctc_init(&ctc);
     /* write interrupt vector */
@@ -24,7 +20,7 @@ void test_intvector() {
     T(ctc.chn[3].int_vector == 0xE6);
 }
 
-void test_timer() {
+UTEST(z80ctc, timer) {
     z80ctc_t ctc;
     z80ctc_init(&ctc);
     uint64_t pins = 0;
@@ -52,7 +48,7 @@ void test_timer() {
     }
 }
 
-void test_timer_wait_trigger() {
+UTEST(z80ctc, timer_wait_trigger) {
     z80ctc_t ctc;
     z80ctc_init(&ctc);
     uint64_t pins = 0;
@@ -90,7 +86,7 @@ void test_timer_wait_trigger() {
     }
 }
 
-void test_counter() {
+UTEST(z80ctc, counter) {
     z80ctc_t ctc;
     z80ctc_init(&ctc);
     uint64_t pins = 0;
@@ -124,11 +120,11 @@ void test_counter() {
 }
 
 /* a complete, integrated interrupt handling test */
-z80_t cpu;
-z80ctc_t ctc;
-uint8_t mem[1<<16];
+static z80_t cpu;
+static z80ctc_t ctc;
+static uint8_t mem[1<<16];
 
-uint64_t tick(int num_ticks, uint64_t pins, void* user_data) {
+static uint64_t tick(int num_ticks, uint64_t pins, void* user_data) {
     for (int i = 0; i < num_ticks; i++) {
         pins = z80ctc_tick(&ctc, pins);
     }
@@ -154,17 +150,17 @@ uint64_t tick(int num_ticks, uint64_t pins, void* user_data) {
     return pins & Z80_PIN_MASK;
 }
 
-void w16(uint16_t addr, uint16_t data) {
+static void w16(uint16_t addr, uint16_t data) {
     mem[addr]   = (uint8_t) data;
     mem[addr+1] = (uint8_t) (data>>8);
 }
 
-void copy(uint16_t addr, uint8_t* bytes, size_t num) {
+static void copy(uint16_t addr, uint8_t* bytes, size_t num) {
     assert((addr + num) <= sizeof(mem));
     memcpy(&mem[addr], bytes, num);
 }
 
-void test_interrupt() {
+UTEST(z80ctc, interrupt) {
     z80_init(&cpu, &(z80_desc_t){
         .tick_cb = tick,
         .user_data = 0
@@ -226,13 +222,4 @@ void test_interrupt() {
     z80_exec(&cpu, 4500);
     T(mem[0x0000] == 4);
     T(mem[0x0001] == 4);
-}
-
-int main() {
-    test_intvector();
-    test_timer();
-    test_timer_wait_trigger();
-    test_counter();
-    test_interrupt();
-    return 0;
 }

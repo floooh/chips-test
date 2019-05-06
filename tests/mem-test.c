@@ -4,12 +4,11 @@
 //------------------------------------------------------------------------------
 #define CHIPS_IMPL
 #include "chips/mem.h"
-#include <stdio.h>
+#include "utest.h"
 
-uint32_t num_tests = 0;
-#define T(x) { assert(x); num_tests++; }
+#define T(b) ASSERT_TRUE(b)
 
-int main() {
+UTEST(mem, mem) {
     mem_t mem;
     mem_init(&mem);
 
@@ -65,8 +64,6 @@ int main() {
     mem_wr(&mem, 0xF800, 0xAA);
     T(mem_rd(&mem, 0xF800)==0x78);
     T(bank4[0x1800] == 0xAA);
-
-    return 0;
 }
 
 

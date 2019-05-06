@@ -1,19 +1,14 @@
 //------------------------------------------------------------------------------
 //  mc6845-test.c
 //------------------------------------------------------------------------------
-// force assert() enabled
-#ifdef NDEBUG
-#undef NDEBUG
-#endif
 #define CHIPS_IMPL
 #include "chips/mc6845.h"
-#include <stdio.h>
+#include "utest.h"
 
-uint32_t num_tests = 0;
-#define T(x) { assert(x); num_tests++; }
+#define T(b) ASSERT_TRUE(b)
 
 // write value to the MC6845
-void wr(mc6845_t* crtc, uint8_t reg, uint8_t val) {
+static void wr(mc6845_t* crtc, uint8_t reg, uint8_t val) {
     uint64_t pins = MC6845_CS;
     // first write register address
     MC6845_SET_DATA(pins, reg);
@@ -25,7 +20,7 @@ void wr(mc6845_t* crtc, uint8_t reg, uint8_t val) {
 }
 
 // setup the MC6845 to a 80x24 characters at 60Hz configuration (see 'TABLE 7' in datasheet)
-void setup_80x24(mc6845_t* crtc) {
+static void setup_80x24(mc6845_t* crtc) {
     wr(crtc, MC6845_HTOTAL, 101);
     wr(crtc, MC6845_HDISPLAYED, 80);
     wr(crtc, MC6845_HSYNCPOS, 86);
@@ -44,7 +39,7 @@ void setup_80x24(mc6845_t* crtc) {
     wr(crtc, MC6845_CURSORLO, 128);
 }
 
-void test_write() {
+UTEST(mc6845, write) {
     mc6845_t crtc;
     mc6845_init(&crtc, MC6845_TYPE_MC6845);
     
@@ -70,7 +65,7 @@ void test_write() {
     T(crtc.cursor_lo == 128);
 }
 
-void test_hdisplayed() {
+UTEST(mc6845, hdisplayed) {
     mc6845_t crtc;
     mc6845_init(&crtc, MC6845_TYPE_MC6845);
     setup_80x24(&crtc);
@@ -94,7 +89,7 @@ void test_hdisplayed() {
     }
 }
 
-void test_hsync() {
+UTEST(mc6845, hsync) {
     mc6845_t crtc;
     mc6845_init(&crtc, MC6845_TYPE_MC6845);
     setup_80x24(&crtc);
@@ -112,127 +107,3 @@ void test_hsync() {
         }
     }
 }
-
-void print_hori_ruler(int start) {
-    for (int i = 0; i < start; i++) {
-        putchar(' ');
-    }
-    for (int i = 0; i < 120; i++) {
-        printf("%d", i % 10);
-    }
-    putchar('\n');
-    for (int i = 0; i < start; i++) {
-        putchar(' ');
-    }
-    for (int i = 0; i < 120; i++) {
-        if ((i % 10) == 0) {
-            printf("%d", i/10);
-        }
-        else {
-            putchar(' ');
-        }
-    }
-    putchar('\n');
-}
-
-void test_hori_visual() {
-    printf("\n\nMC6845 scanline visualization:\n\n");
-    print_hori_ruler(4);
-    mc6845_t crtc;
-    mc6845_init(&crtc, MC6845_TYPE_MC6845);
-    setup_80x24(&crtc);
-    printf("\n%2d: ?", crtc.r_ctr);
-    for (int tick = 0; tick < 1024; tick++) {
-        mc6845_tick(&crtc);
-        if (0 == crtc.h_ctr) {
-            printf("\n%2d: ", crtc.r_ctr);
-        }
-        if (crtc.h_de) {
-            putchar('D');
-        }
-        if (crtc.hs) {
-            putchar('H');
-        }
-        if (!(crtc.h_de || crtc.hs)) {
-            putchar('-');
-        }
-    }
-    printf("...\n\n");
-}
-
-void test_scanline_row_visual() {
-    printf("\n\nMC6845 scanline/row visualzation:\n\n");
-    print_hori_ruler(7);
-    mc6845_t crtc;
-    mc6845_init(&crtc, MC6845_TYPE_MC6845);
-    setup_80x24(&crtc);
-    printf("\n%2d %2d: ?", crtc.r_ctr, crtc.v_ctr);
-    for (int tick = 0; tick < 4096; tick++) {
-        mc6845_tick(&crtc);
-        if (0 == crtc.h_ctr) {
-            printf("\n%2d %2d: ", crtc.r_ctr, crtc.h_ctr);
-        }
-        if (crtc.h_de) {
-            putchar((crtc.v_ctr & 1) ? 'd':'D');
-        }
-        if (crtc.hs) {
-            putchar('H');
-        }
-        if (!(crtc.h_de || crtc.hs)) {
-            putchar('-');
-        }
-    }
-    printf("...\n");
-}
-
-void test_frame_visual() {
-    printf("\n\n\nMC6845 frame visualization:\n\n");
-    print_hori_ruler(17);
-    mc6845_t crtc;
-    mc6845_init(&crtc, MC6845_TYPE_MC6845);
-    setup_80x24(&crtc);
-    bool valid = false;
-    // horizontal DE flag won't be valid for the first scanline, and
-    // the vertical DE flag for the first frame, instead of skipping the
-    // first frame, we cheat here and set those flags manually
-    crtc.h_de = crtc.v_de = true;
-    for (int tick = 0; tick < 80000; tick++) {
-        uint64_t pins = mc6845_tick(&crtc);
-        if (crtc.r_ctr > 0) {
-            valid = true;
-        }
-        if (valid) {
-            if (0 == crtc.h_ctr) {
-                uint16_t ma = MC6845_GET_ADDR(pins);
-                uint8_t ra = MC6845_GET_RA(pins);
-                printf("\n%2d %2d (%04X|%02X): ", crtc.r_ctr, crtc.v_ctr, ma, ra);
-            }
-            if (pins & MC6845_DE) {
-                putchar('D');
-            }
-            if ((pins & (MC6845_HS|MC6845_VS)) == MC6845_HS) {
-                putchar('H');
-            }
-            if ((pins & (MC6845_HS|MC6845_VS)) == MC6845_VS) {
-                putchar('V');
-            }
-            if ((pins & (MC6845_HS|MC6845_VS)) == (MC6845_HS|MC6845_VS)) {
-                putchar('X');
-            }
-            if (!(pins & (MC6845_DE|MC6845_HS|MC6845_VS))) {
-                putchar('-');
-            }
-        }
-    }
-    printf("...\n");
-}
-
-int main() {
-    test_write();
-    test_hdisplayed();
-    test_hsync();
-    test_hori_visual();
-    test_scanline_row_visual();
-    test_frame_visual();
-}
-
