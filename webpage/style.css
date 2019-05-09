@@ -1,6 +1,6 @@
 body {
     margin: 0;
-    background-color: rgb(2, 43, 2);
+    background-color:#455a64;
 }
 
 p {
@@ -9,24 +9,28 @@ p {
 
 /** sample header styling **/
 .title {    
+    cursor: default;
+    background-color: #ff3d00;
     text-decoration: none;
-    color: limegreen;
     text-align: left;
+    text-shadow: 3px 0px black;
     padding-left: 20px;
     font-family: monospace;
     font-size: 60px;
     margin-top: 0px;
+    border-bottom: 2px solid black;
 }
 
 .main-menu-item {
     font-size: 18px;
+    text-shadow: 2px 0px black;
     padding-left: 10px;
     font-family: Arial, Helvetica, sans-serif;
 }
 
 .main-menu-link {
+    color: white;
     text-decoration: none;
-    color: limegreen;
 }
 
 .help {
@@ -34,7 +38,7 @@ p {
     margin-right: auto;
     display: block;
     height: auto;
-    color: limegreen;
+    color:white;
     text-align: left;
     font-size: 16px;
     font-family: Arial, Helvetica, sans-serif;
@@ -46,51 +50,71 @@ p {
     display: block;
     height: auto;
 }
-.thumb {
+.thumb-frame {
     position: relative;
     width: 270px;
     height: 220px;
     margin-left: 10px;
     margin-right: 10px;
     margin-top: 20px;
-    padding: 1px;
+    padding: 0px;
     float: left;
-    background-color: rgb(1, 26, 1);
-    border: 1px solid rgb(3, 61, 3);
+    border: 2px solid black;
+    border-radius: 10px;
+    overflow: hidden;
 }
+
 .thumb-title {
+    background-color: rgba(84, 110, 122, 0.8);
+    position: relative;
+    display: block;
+    margin: auto;
+    z-index: 1;
     text-align: center;
-    color: limegreen;
+    height: 21px;
+    color: white;
+    font-size: 18px;
     font-family: monospace;
-    font-size: 18px;        
     font-weight: bold;
+    text-shadow: 2px 2px 0px black;
 }
-.img-frame {
-    margin: 2px;
-    width: auto;
-    height: 165px;
+
+.thumb-footer {
+    background-color: rgba(84, 110, 122, 0.8);
+    position: relative;
+    display: block;
+    margin: auto;
+    z-index: 1;
+    top: -42px;
+    text-align: center;
+    height: 21px;
+    color: white;
+    font-size: 15px;
+    font-family: monospace;
+    font-weight: bold;
+    text-shadow: 2px 2px 0px black;
 }
 
 .img-btn {
     position: absolute;
+    z-index: 2;
     top: 4px;
-    right: 8px;
+    right: 4px;
     width: 20px;
     padding: 2px;
     display: block;
-    background-color: limegreen;
+    background-color: #ff3d00;
     cursor: pointer;
+    border: 2px solid black;
     border-radius: 4px;
-    border-style: solid;
-    border-color: black;
     text-align: center;
-    color: black;
+    color: white;
+    text-shadow: 2px 2px 0px black;
+    transition: transform 0.07s ease-in-out;
 }
 
 .img-btn:hover {
-    background-color: black;
-    border-color: limegreen;
-    color: limegreen;
+    transform:scale(1.2);
 }
 
 .img-btn-link {
@@ -99,27 +123,22 @@ p {
     font-family: monospace;
     font-size: 16px;
     color: inherit;
+    border-radius: 10px;
 }
 
 .image {
+    position: relative;
+    top: -21px;
     display: block;
-    height: 165px;
-    width: auto;
-    max-width: 236px;
-    margin-left: auto;
-    margin-right: auto;
-    border: 1px solid black;
-}
-.thumb-bar {
-    vertical-align: bottom;
-    padding-top: 5px;
-    font-family: monospace;
-    font-size: 14px;    
+    height: 100%;
     width: 100%;
-    color: limegreen;
-    text-align: center;
-    text-decoration: none;
+    transition: transform 0.07s ease-in-out;
 }
+
+.image:hover {
+    transform: scale(1.1);
+}
+
 .gallery-bottom {
     height: 30px;
     clear: both;
