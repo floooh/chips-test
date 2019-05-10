@@ -13,7 +13,7 @@ p {
     background-color: #ff3d00;
     text-decoration: none;
     text-align: left;
-    text-shadow: 3px 0px black;
+    text-shadow: 2px 2px 0px black;
     padding-left: 20px;
     font-family: monospace;
     font-size: 60px;
@@ -23,7 +23,7 @@ p {
 
 .main-menu-item {
     font-size: 18px;
-    text-shadow: 2px 0px black;
+    text-shadow: 1px 1px 0px black;
     padding-left: 10px;
     font-family: Arial, Helvetica, sans-serif;
 }
