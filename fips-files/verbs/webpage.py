@@ -136,7 +136,8 @@ def deploy_webpage(fips_dir, proj_dir, webpage_dir) :
         if os.path.exists(emsc_deploy_dir + '/' + system + '-ui.js'):
             content += '<a class="img-btn-link" href="{}"><div class="img-btn">UI</div></a>'.format(ui_url)
         content += '  <a href="{}"><img class="image" src="{}"></img></a>\n'.format(url,image)
-        content += '  <span class="thumb-footer">{}</span>\n'.format(note)
+        if note != '':
+            content += '  <span class="thumb-footer">{}</span>\n'.format(note)
         content += '</div>\n'
 
     # populate the html template, and write to the build directory
