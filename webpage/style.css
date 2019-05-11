@@ -47,18 +47,18 @@ p {
 .gallery {
     margin-left: 40px;
     margin-right: auto;
-    display: inline-block;
+    display: block;
     height: auto;
 }
 .thumb-frame {
     position: relative;
-    display: inline-block;
     width: 270px;
     height: 220px;
     margin-left: 10px;
     margin-right: 10px;
     margin-top: 20px;
     padding: 0px;
+    float: left;
     border: 2px solid black;
     border-radius: 10px;
     overflow: hidden;
