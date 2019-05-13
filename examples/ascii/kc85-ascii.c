@@ -302,7 +302,7 @@ int main(int argc, char* argv[]) {
                 // get ASCII code from character buffer at 0xB200
                 char chr = (char) kc85.ram[4][0x3200 + y*40 + x];
                 // get character code from ASCII buffer
-                if ((chr < 32) || (chr > 127)) {
+                if ((chr < 32) || (chr > 126)) {
                     chr = 32;
                 }
                 // padding to get proper aspect ratio

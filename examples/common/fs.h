@@ -15,6 +15,7 @@ extern bool fs_ext(const char* str);
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <assert.h>
 #if !defined(__EMSCRIPTEN__)
 #include <stdio.h>
 #else
@@ -69,6 +70,7 @@ bool fs_load_file(const char* path) {
     fs_free();
     fs_copy_ext(path);
     FILE* fp = fopen(path, "rb");
+    bool success = false;
     if (fp) {
         fseek(fp, 0, SEEK_END);
         int size = ftell(fp);
@@ -77,15 +79,15 @@ bool fs_load_file(const char* path) {
             fseek(fp, 0, SEEK_SET);
             if (fs.size > 0) {
                 fs.ptr = fs.buf;
-                fread(fs.ptr, 1, fs.size, fp);
+                uint32_t res = (int) fread(fs.ptr, 1, fs.size, fp); (void)res;
+                success = (res == fs.size);
             }
             fclose(fp);
             /* zero-terminate in case this is a text file */
             fs.ptr[fs.size] = 0;
-            return true;
         }
     }
-    return false;
+    return success;
 }
 #else
 EMSCRIPTEN_KEEPALIVE void emsc_load_data(const char* path, const uint8_t* ptr, int size) {
