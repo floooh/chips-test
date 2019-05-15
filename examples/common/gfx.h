@@ -41,11 +41,10 @@ void gfx_flash_error(void);
 #include "sokol_gfx.h"
 #include "sokol_app.h"
 #include "sokol_time.h"
+#include "shaders.glsl.h"
 
 #define _GFX_DEF(v,def) (v?v:def)
 
-static const char* gfx_vs_src; 
-static const char* gfx_fs_src;
 static const sg_pass_action gfx_upscale_pass_action = {
     .colors[0] = { .action = SG_ACTION_DONTCARE }
 };
@@ -182,28 +181,15 @@ void gfx_init(const gfx_desc_t* desc) {
                         (gfx.rot90 ? verts_flipped_rot : verts_flipped)
     });
 
-    /* a shader to render a textured quad */
-    sg_shader fsq_shd = sg_make_shader(&(sg_shader_desc){
-        .attrs = {
-            [0] = { .name="in_pos", .sem_name = "POS" },
-            [1] = { .name="in_uv", .sem_name = "UV" }
-        },
-        .fs.images = {
-            [0] = { .name="tex", .type=SG_IMAGETYPE_2D },
-        },
-        .vs.source = gfx_vs_src,
-        .fs.source = gfx_fs_src,
-    });
-
     /* 2 pipeline-state-objects, one for upscaling, one for rendering */
     sg_pipeline_desc pip_desc = {
+        .shader = sg_make_shader(fsq_shader_desc()),
         .layout = {
             .attrs = {
-                [0].format = SG_VERTEXFORMAT_FLOAT2,
-                [1].format = SG_VERTEXFORMAT_FLOAT2
+                [ATTR_vs_in_pos].format = SG_VERTEXFORMAT_FLOAT2,
+                [ATTR_vs_in_uv].format = SG_VERTEXFORMAT_FLOAT2
             }
         },
-        .shader = fsq_shd,
         .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP
     };
     gfx.draw_pip = sg_make_pipeline(&pip_desc);
@@ -316,91 +302,4 @@ void gfx_destroy_texture(void* h) {
     sg_image img = { .id=(uint32_t)(uintptr_t)h };
     sg_destroy_image(img);
 }
-
-/* shader source code for GL, GLES2, Metal and D3D11 */
-#if defined(SOKOL_GLCORE33)
-static const char* gfx_vs_src =
-    "#version 330\n"
-    "in vec2 in_pos;\n"
-    "in vec2 in_uv;\n"
-    "out vec2 uv;\n"
-    "void main() {\n"
-    "  gl_Position = vec4(in_pos*2.0-1.0, 0.5, 1.0);\n"
-    "  uv = in_uv;\n"
-    "}\n";
-static const char* gfx_fs_src =
-    "#version 330\n"
-    "uniform sampler2D tex;\n"
-    "in vec2 uv;\n"
-    "out vec4 frag_color;\n"
-    "void main() {\n"
-    "  frag_color = texture(tex, uv);\n"
-    "}\n";
-#elif defined(SOKOL_GLES2) || defined(SOKOL_GLES3)
-static const char* gfx_vs_src =
-    "attribute vec2 in_pos;\n"
-    "attribute vec2 in_uv;\n"
-    "varying vec2 uv;\n"
-    "void main() {\n"
-    "  gl_Position = vec4(in_pos*2.0-1.0, 0.5, 1.0);\n"
-    "  uv = in_uv;\n"
-    "}\n";
-static const char* gfx_fs_src =
-    "precision mediump float;\n"
-    "uniform sampler2D tex;"
-    "varying vec2 uv;\n"
-    "void main() {\n"
-    "  gl_FragColor = texture2D(tex, uv);\n"
-    "}\n";
-#elif defined(SOKOL_METAL)
-static const char* gfx_vs_src =
-    "#include <metal_stdlib>\n"
-    "using namespace metal;\n"
-    "struct vs_in {\n"
-    "  float2 pos [[attribute(0)]];\n"
-    "  float2 uv [[attribute(1)]];\n"
-    "};\n"
-    "struct vs_out {\n"
-    "  float4 pos [[position]];\n"
-    "  float2 uv;\n"
-    "};\n"
-    "vertex vs_out _main(vs_in in [[stage_in]]) {\n"
-    "  vs_out out;\n"
-    "  out.pos = float4(in.pos*2.0-1.0, 0.5, 1.0);\n"
-    "  out.uv = in.uv;\n"
-    "  return out;\n"
-    "}\n";
-static const char* gfx_fs_src =
-    "#include <metal_stdlib>\n"
-    "using namespace metal;\n"
-    "struct fs_in {\n"
-    "  float2 uv;\n"
-    "};\n"
-    "fragment float4 _main(fs_in in [[stage_in]], texture2d<float> tex [[texture(0)]], sampler smp [[sampler(0)]]) {\n"
-    "  return tex.sample(smp, in.uv);\n"
-    "}\n";
-#elif defined(SOKOL_D3D11)
-static const char* gfx_vs_src =
-    "struct vs_in {\n"
-    "  float2 pos: POS;\n"
-    "  float2 uv:  UV;\n"
-    "};\n"
-    "struct vs_out {\n"
-    "  float2 uv: TEXCOORD0;\n"
-    "  float4 pos: SV_Position;\n"
-    "};\n"
-    "vs_out main(vs_in inp) {\n"
-    "  vs_out outp;\n"
-    "  outp.pos = float4(inp.pos*2.0-1.0, 0.5, 1.0);\n"
-    "  outp.uv = inp.uv;\n"
-    "  return outp;\n"
-    "}\n";
-static const char* gfx_fs_src =
-    "Texture2D<float4> tex: register(t0);\n"
-    "sampler smp: register(s0);\n"
-    "float4 main(float2 uv: TEXCOORD0): SV_Target0 {\n"
-    "  return tex.Sample(smp, uv);\n"
-    "}\n";
-#endif
-
 #endif /* COMMON_IMPL */
