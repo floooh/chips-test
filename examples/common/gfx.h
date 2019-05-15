@@ -186,8 +186,8 @@ void gfx_init(const gfx_desc_t* desc) {
         .shader = sg_make_shader(fsq_shader_desc()),
         .layout = {
             .attrs = {
-                [vs_in_pos].format = SG_VERTEXFORMAT_FLOAT2,
-                [vs_in_uv].format = SG_VERTEXFORMAT_FLOAT2
+                [ATTR_vs_in_pos].format = SG_VERTEXFORMAT_FLOAT2,
+                [ATTR_vs_in_uv].format = SG_VERTEXFORMAT_FLOAT2
             }
         },
         .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP
