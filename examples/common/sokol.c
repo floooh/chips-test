@@ -3,7 +3,6 @@ on MacOS and iOS the implementation must be compiled as Objective-C, so there
 must be a *.m file on MacOS/iOS, and *.c file everywhere else
 */
 #define SOKOL_IMPL
-#define SOKOL_D3D11_SHADER_COMPILER
 #if defined(_WIN32)
 #include <Windows.h>
 #define SOKOL_LOG(s) OutputDebugStringA(s)
