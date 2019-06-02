@@ -55,8 +55,8 @@ typedef struct {
     sg_pipeline upscale_pip;
     sg_bindings upscale_bind;
     sg_pass upscale_pass;
-    sg_pipeline draw_pip;
-    sg_bindings draw_bind;
+    sg_pipeline display_pip;
+    sg_bindings display_bind;
     int flash_success_count;
     int flash_error_count;
     int top_offset;
@@ -90,7 +90,7 @@ void gfx_init_images_and_pass(void) {
 
     /* destroy previous resources (if exist) */
     sg_destroy_image(gfx.upscale_bind.fs_images[0]);
-    sg_destroy_image(gfx.draw_bind.fs_images[0]);
+    sg_destroy_image(gfx.display_bind.fs_images[0]);
     sg_destroy_pass(gfx.upscale_pass);
 
     /* a texture with the emulator's raw pixel data */
@@ -99,13 +99,13 @@ void gfx_init_images_and_pass(void) {
         .height = gfx.fb_height,
         .pixel_format = SG_PIXELFORMAT_RGBA8,
         .usage = SG_USAGE_STREAM,
-        .min_filter = SG_FILTER_NEAREST,
-        .mag_filter = SG_FILTER_NEAREST,
+        .min_filter = SG_FILTER_LINEAR,
+        .mag_filter = SG_FILTER_LINEAR,
         .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
         .wrap_v = SG_WRAP_CLAMP_TO_EDGE
     });
     /* a 2x upscaled render-target-texture */
-    gfx.draw_bind.fs_images[0] = sg_make_image(&(sg_image_desc){
+    gfx.display_bind.fs_images[0] = sg_make_image(&(sg_image_desc){
         .render_target = true,
         .width = 2 * gfx.fb_width,
         .height = 2 * gfx.fb_height,
@@ -118,7 +118,7 @@ void gfx_init_images_and_pass(void) {
 
     /* a render pass for the 2x upscaling */
     gfx.upscale_pass = sg_make_pass(&(sg_pass_desc){
-        .color_attachments[0].image = gfx.draw_bind.fs_images[0]
+        .color_attachments[0].image = gfx.display_bind.fs_images[0]
     });
 }
 
@@ -174,7 +174,7 @@ void gfx_init(const gfx_desc_t* desc) {
         .size = sizeof(verts),
         .content = verts,
     });
-    gfx.draw_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+    gfx.display_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
         .size = sizeof(verts),
         .content = sg_query_feature(SG_FEATURE_ORIGIN_TOP_LEFT) ? 
                         (gfx.rot90 ? verts_rot : verts) :
@@ -182,19 +182,27 @@ void gfx_init(const gfx_desc_t* desc) {
     });
 
     /* 2 pipeline-state-objects, one for upscaling, one for rendering */
-    sg_pipeline_desc pip_desc = {
-        .shader = sg_make_shader(fsq_shader_desc()),
+    gfx.display_pip = sg_make_pipeline(&(sg_pipeline_desc){
+        .shader = sg_make_shader(display_shader_desc()),
         .layout = {
             .attrs = {
-                [ATTR_vs_in_pos].format = SG_VERTEXFORMAT_FLOAT2,
-                [ATTR_vs_in_uv].format = SG_VERTEXFORMAT_FLOAT2
+                [0].format = SG_VERTEXFORMAT_FLOAT2,
+                [1].format = SG_VERTEXFORMAT_FLOAT2
             }
         },
         .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP
-    };
-    gfx.draw_pip = sg_make_pipeline(&pip_desc);
-    pip_desc.blend.depth_format = SG_PIXELFORMAT_NONE;
-    gfx.upscale_pip = sg_make_pipeline(&pip_desc);
+    });
+    gfx.upscale_pip = sg_make_pipeline(&(sg_pipeline_desc){
+        .shader = sg_make_shader(upscale_shader_desc()),
+        .layout = {
+            .attrs = {
+                [0].format = SG_VERTEXFORMAT_FLOAT2,
+                [1].format = SG_VERTEXFORMAT_FLOAT2
+            }
+        },
+        .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
+        .blend.depth_format = SG_PIXELFORMAT_NONE
+    });
 }
 
 /* apply a viewport rectangle to preserve the emulator's aspect ratio,
@@ -260,14 +268,14 @@ void gfx_draw(int width, int height) {
     }
 
     /* draw the final pass with linear filtering */
-    const int canvas_width = sapp_width();
-    const int canvas_height = sapp_height();
-    sg_begin_default_pass(&gfx_draw_pass_action, canvas_width, canvas_height);
-    apply_viewport(canvas_width, canvas_height);
-    sg_apply_pipeline(gfx.draw_pip);
-    sg_apply_bindings(&gfx.draw_bind);
+    int w = (int) sapp_width();
+    int h = (int) sapp_height();
+    sg_begin_default_pass(&gfx_draw_pass_action, w, h);
+    apply_viewport(w, h);
+    sg_apply_pipeline(gfx.display_pip);
+    sg_apply_bindings(&gfx.display_bind);
     sg_draw(0, 4, 1);
-    sg_apply_viewport(0, 0, canvas_width, canvas_height, true);
+    sg_apply_viewport(0, 0, w, h, true);
     if (gfx.draw_extra_cb) {
         gfx.draw_extra_cb();
     }
