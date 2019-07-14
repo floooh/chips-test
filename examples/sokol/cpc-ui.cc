@@ -80,6 +80,7 @@ void cpcui_init(cpc_t* cpc) {
 
 void cpcui_discard(void) {
     ui_cpc_discard(&ui_cpc);
+    ui_discard();
 }
 
 void cpcui_exec(cpc_t* cpc, uint32_t frame_time_us) {

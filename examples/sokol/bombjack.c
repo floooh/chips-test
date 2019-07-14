@@ -9,59 +9,21 @@
 #include "chips/ay38910.h"
 #include "chips/clk.h"
 #include "chips/mem.h"
+#include "bombjack.h"
 #include "bombjack-roms.h"
 
-#define DISPLAY_WIDTH (256)
-#define DISPLAY_HEIGHT (256)
+/* imports from cpc-ui.cc */
+#ifdef CHIPS_USE_UI
+#include "ui.h"
+void bombjackui_init(bombjack_t* bj);
+void bombjackui_discard(void);
+void bombjackui_draw(void);
+void bombjackui_exec(uint32_t frame_time_us);
+static const int ui_extra_height = 16;
+#else
+static const int ui_extra_height = 0;
+#endif
 
-#define VSYNC_PERIOD_4MHZ (4000000 / 60)
-#define VBLANK_DURATION_4MHZ (((4000000 / 60) / 525) * (525 - 483))
-#define VSYNC_PERIOD_3MHZ (3000000 / 60)
-
-#define NUM_AUDIO_SAMPLES (128)
-
-/* the Bomb Jack arcade machine is 2 separate computers, the main board and sound board */
-typedef struct {
-    z80_t cpu;
-    clk_t clk;
-    uint8_t p1;             /* joystick 1 state */
-    uint8_t p2;             /* joystick 2 state */
-    uint8_t sys;            /* coins and start buttons */
-    uint8_t dsw1;           /* dip-switches 1 */
-    uint8_t dsw2;           /* dip-switches 2 */
-    uint8_t nmi_mask;       /* if 0, no NMIs are generated */
-    uint8_t bg_image;       /* current background image */
-    int vsync_count;
-    int vblank_count;
-    mem_t mem;
-} mainboard_t;
-
-typedef struct {
-    z80_t cpu;
-    clk_t clk;
-    ay38910_t psg[3];
-    uint32_t tick_count;
-    int vsync_count;
-    mem_t mem;
-} soundboard_t;
-
-typedef struct {
-    mainboard_t main;
-    soundboard_t sound;
-    uint8_t sound_latch;            /* shared latch, written by main board, read by sound board */
-    uint8_t main_ram[0x1C00];
-    uint8_t sound_ram[0x0400];
-    uint8_t rom_chars[0x3000];
-    uint8_t rom_tiles[0x6000];
-    uint8_t rom_sprites[0x6000];
-    uint8_t rom_maps[0x1000];
-    /* small intermediate buffer for generated audio samples */
-    int num_samples;
-    int sample_pos;
-    float sample_buffer[NUM_AUDIO_SAMPLES];
-    /* 32-bit RGBA color palette cache */
-    uint32_t palette_cache[128];
-} bombjack_t;
 bombjack_t bj;
 
 static uint64_t bombjack_tick_main(int num, uint64_t pins, void* user_data);
@@ -69,7 +31,7 @@ static uint64_t bombjack_tick_sound(int num, uint64_t pins, void* user_data);
 static void bombjack_decode_video(void);
 
 /* initialize the Bombjack arcade hardware */
-static void bombjack_init(void) {
+void bombjack_init(void) {
     memset(&bj, 0, sizeof(bj));
 
     /* The VSYNC/VBLANK mainly controls the interrupts (Bombjack generally
@@ -168,6 +130,7 @@ static void bombjack_init(void) {
 }
 
 /* run the emulation for one frame */
+#if !CHIPS_USE_UI
 static void bombjack_exec(uint32_t micro_seconds) {
 
     /* Run the main board and sound board interleaved for half a frame.
@@ -204,9 +167,8 @@ static void bombjack_exec(uint32_t micro_seconds) {
             clk_ticks_executed(&bj.sound.clk, ticks_executed);
         }
     }
-    /* decode the video image once per host frame */
-    bombjack_decode_video();
 }
+#endif
 
 /* Maintain a color palette cache with 32-bit colors, this is called for
     CPU writes to the palette RAM area. The hardware palette is 128
@@ -760,6 +722,10 @@ static void bombjack_decode_video() {
 /* one time app init */
 static void app_init(void) {
     gfx_init(&(gfx_desc_t) {
+        #ifdef CHIPS_USE_UI
+        .draw_extra_cb = ui_draw,
+        #endif
+        .top_offset = ui_extra_height,
         .aspect_x = 4,
         .aspect_y = 5,
         .rot90 = true
@@ -767,16 +733,30 @@ static void app_init(void) {
     clock_init();
     saudio_setup(&(saudio_desc){0});
     bombjack_init();
+    #ifdef CHIPS_USE_UI
+    bombjackui_init(&bj);
+    #endif
 }
 
 /* per-frame stuff */
 static void app_frame(void) {
-    bombjack_exec(clock_frame_time());
+    #if CHIPS_USE_UI
+        bombjackui_exec(clock_frame_time());
+    #else
+        bombjack_exec(clock_frame_time());
+    #endif
+    bombjack_decode_video();
     gfx_draw(DISPLAY_WIDTH, DISPLAY_HEIGHT);
 }
 
 /* input handling */
 static void app_input(const sapp_event* event) {
+    #ifdef CHIPS_USE_UI
+    if (ui_input(event)) {
+        /* input was handled by UI */
+        return;
+    }
+    #endif
     switch (event->type) {
         case SAPP_EVENTTYPE_KEY_DOWN:
             switch (event->key_code) {
@@ -814,6 +794,9 @@ static void app_input(const sapp_event* event) {
 
 /* app shutdown */
 static void app_cleanup(void) {
+    #ifdef CHIPS_USE_UI
+    bombjackui_discard();
+    #endif
     saudio_shutdown();
     gfx_shutdown();
 }
@@ -826,7 +809,7 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .event_cb = app_input,
         .cleanup_cb = app_cleanup,
         .width = DISPLAY_WIDTH * 2,
-        .height = DISPLAY_HEIGHT * 2,
+        .height = DISPLAY_HEIGHT * 2 + ui_extra_height,
         .window_title = "Bomb Jack"
     };
 }

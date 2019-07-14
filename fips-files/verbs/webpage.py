@@ -9,7 +9,7 @@ from string import Template
 
 from mod import log, util, project
 
-systems = [ 'kc85', 'kc85-ui', 'zx', 'zx-ui', 'c64', 'c64-ui', 'cpc', 'cpc-ui', 'atom', 'atom-ui', 'z1013', 'z1013-ui', 'z9001', 'z9001-ui', 'bombjack' ]
+systems = [ 'kc85', 'kc85-ui', 'zx', 'zx-ui', 'c64', 'c64-ui', 'cpc', 'cpc-ui', 'atom', 'atom-ui', 'z1013', 'z1013-ui', 'z9001', 'z9001-ui', 'bombjack', 'bombjack-ui' ]
 items = [
     { 'type':'emu',  'title':'KC85/2', 'system':'kc85',             'url':'kc85.html?type=kc85_2', 'img':'kc85/kc85_2.jpg', 'note':'' },
     { 'type':'emu',  'title':'KC85/3', 'system':'kc85',             'url':'kc85.html?type=kc85_3', 'img':'kc85/kc85_3.jpg', 'note':'' },
