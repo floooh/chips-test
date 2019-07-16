@@ -9,8 +9,10 @@
 #include "chips/ay38910.h"
 #include "chips/clk.h"
 #include "chips/mem.h"
-#include "bombjack.h"
 #include "bombjack-roms.h"
+
+// the actual emulator is here: https://github.com/floooh/chips/blob/master/systems/bombjack.h
+#include "systems/bombjack.h"
 
 /* imports from cpc-ui.cc */
 #ifdef CHIPS_USE_UI
