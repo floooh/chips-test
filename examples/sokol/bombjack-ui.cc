@@ -7,6 +7,7 @@
 #include "chips/ay38910.h"
 #include "chips/clk.h"
 #include "chips/mem.h"
+#include "systems/bombjack.h"
 #define CHIPS_IMPL
 #define UI_DASM_USE_Z80
 #define UI_DBG_USE_Z80
@@ -24,7 +25,6 @@
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wmissing-field-initializers"
 #endif
-#include "bombjack.h"
 
 extern "C" {
 
@@ -118,17 +118,17 @@ static const char* memlayer_names[NUM_MEMLAYERS] = {
 static uint8_t _ui_bombjack_mem_read(int layer, uint16_t addr, void* /*user_data*/) {
     switch (layer) {
         case MEMLAYER_MAIN:
-            return mem_rd(&ui.bj->main.mem, addr);
+            return mem_rd(&ui.bj->mainboard.mem, addr);
         case MEMLAYER_SOUND:
-            return mem_rd(&ui.bj->sound.mem, addr);
+            return mem_rd(&ui.bj->soundboard.mem, addr);
         case MEMLAYER_CHARS:
-            return (addr < 0x3000) ? ui.bj->rom_chars[addr] : 0xFF;
+            return (addr < 0x3000) ? ui.bj->rom_chars[addr/0x1000][addr&0x0FFF] : 0xFF;
         case MEMLAYER_TILES:
-            return (addr < 0x6000) ? ui.bj->rom_tiles[addr] : 0xFF;
+            return (addr < 0x6000) ? ui.bj->rom_tiles[addr/0x2000][addr&0x1FFF] : 0xFF;
         case MEMLAYER_SPRITES:
-            return (addr < 0x6000) ? ui.bj->rom_sprites[addr] : 0xFF;
+            return (addr < 0x6000) ? ui.bj->rom_sprites[addr/0x2000][addr&0x1FFF] : 0xFF;
         case MEMLAYER_MAPS:
-            return (addr < 0x1000) ? ui.bj->rom_maps[addr] : 0xFF;
+            return (addr < 0x1000) ? ui.bj->rom_maps[addr/0x1000][addr&0x0FFF] : 0xFF;
         default:
             return 0xFF;
     }
@@ -137,36 +137,68 @@ static uint8_t _ui_bombjack_mem_read(int layer, uint16_t addr, void* /*user_data
 static void _ui_bombjack_mem_write(int layer, uint16_t addr, uint8_t data, void* /*user_data*/) {
     switch (layer) {
         case MEMLAYER_MAIN:
-            mem_wr(&ui.bj->main.mem, addr, data);
+            mem_wr(&ui.bj->mainboard.mem, addr, data);
             break;
         case MEMLAYER_SOUND:
-            mem_wr(&ui.bj->sound.mem, addr, data);
+            mem_wr(&ui.bj->soundboard.mem, addr, data);
             break;
         case MEMLAYER_CHARS:
             if (addr < 0x3000) {
-                ui.bj->rom_chars[addr] = data;
+                ui.bj->rom_chars[addr/0x1000][addr&0x0FFF] = data;
             }
             break;
         case MEMLAYER_TILES:
             if (addr < 0x6000) {
-                ui.bj->rom_tiles[addr] = data;
+                ui.bj->rom_tiles[addr/0x2000][addr&0x1FFF] = data;
             }
             break;
         case MEMLAYER_SPRITES:
             if (addr < 0x6000) {
-                ui.bj->rom_sprites[addr] = data;
+                ui.bj->rom_sprites[addr/0x2000][addr&0x1FFF] = data;
             }
             break;
         case MEMLAYER_MAPS:
             if (addr < 0x1000) {
-                ui.bj->rom_maps[addr] = data;
+                ui.bj->rom_maps[0][addr] = data;
             }
             break;
     }
 }
 
+static bool test_bits(uint8_t val, uint8_t mask, uint8_t bits) {
+    return bits == (val & mask);
+}
+
+static uint8_t set_bits(uint8_t val, uint8_t mask, uint8_t bits) {
+    return (val & ~mask) | bits;
+}
+
+static uint8_t toggle_bits(uint8_t val, uint8_t mask, uint8_t bits) {
+    return (val & ~mask) ^ bits;
+}
+
+static bool test_dsw1(uint8_t mask, uint8_t bits) {
+    return test_bits(ui.bj->mainboard.dsw1, mask, bits);
+}
+
+static void set_dsw1(uint8_t mask, uint8_t bits) {
+    ui.bj->mainboard.dsw1 = set_bits(ui.bj->mainboard.dsw1, mask, bits);
+}
+
+static void toggle_dsw1(uint8_t mask, uint8_t bits) {
+    ui.bj->mainboard.dsw1 = toggle_bits(ui.bj->mainboard.dsw1, mask, bits);
+}
+
+static bool test_dsw2(uint8_t mask, uint8_t bits) {
+    return test_bits(ui.bj->mainboard.dsw2, mask, bits);
+}
+
+static void set_dsw2(uint8_t mask, uint8_t bits) {
+    ui.bj->mainboard.dsw2 = set_bits(ui.bj->mainboard.dsw2, mask, bits);
+}
+
 void bombjackui_draw(void) {
-    ui.bj->main.sys = 0;
+    ui.bj->mainboard.sys = 0;
     ui_memmap_draw(&ui.memmap);
     ui_dbg_draw(&ui.main.dbg);
     ui_dbg_draw(&ui.sound.dbg);
@@ -183,149 +215,121 @@ void bombjackui_draw(void) {
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("System")) {
             if (ImGui::MenuItem("Reboot")) {
-                bombjack_init();
+                bombjack_reset(ui.bj);
                 ui_dbg_reboot(&ui.main.dbg);
                 ui_dbg_reboot(&ui.sound.dbg);
             }
             if (ImGui::BeginMenu("Player 1")) {
                 if (ImGui::MenuItem("Insert Coin")) {
-                    ui.bj->main.sys |= (1<<0);
+                    ui.bj->mainboard.sys |= BOMBJACK_SYS_P1_COIN;
                 }
                 if (ImGui::BeginMenu("1 Coin gives:")) {
-                    if (ImGui::MenuItem("1 Credit", nullptr, 0 == (ui.bj->main.dsw1 & 3))) {
-                        ui.bj->main.dsw1 = (ui.bj->main.dsw1 & ~3) | 0;
+                    if (ImGui::MenuItem("1 Credit", nullptr, test_dsw1(BOMBJACK_DSW1_P1_MASK, BOMBJACK_DSW1_P1_1COIN_1PLAY))) {
+                        set_dsw1(BOMBJACK_DSW1_P1_MASK, BOMBJACK_DSW1_P1_1COIN_1PLAY);
                     }
-                    if (ImGui::MenuItem("2 Credits", nullptr, 1 == (ui.bj->main.dsw1 & 3))) {
-                        ui.bj->main.dsw1 = (ui.bj->main.dsw1 & ~3) | 1;
+                    if (ImGui::MenuItem("2 Credits", nullptr, test_dsw1(BOMBJACK_DSW1_P1_MASK, BOMBJACK_DSW1_P1_1COIN_2PLAY))) {
+                        set_dsw1(BOMBJACK_DSW1_P1_MASK, BOMBJACK_DSW1_P1_1COIN_2PLAY);
                     }
-                    if (ImGui::MenuItem("3 Credits", nullptr, 2 == (ui.bj->main.dsw1 & 3))) {
-                        ui.bj->main.dsw1 = (ui.bj->main.dsw1 & ~3) | 2;
+                    if (ImGui::MenuItem("3 Credits", nullptr, test_dsw1(BOMBJACK_DSW1_P1_MASK, BOMBJACK_DSW1_P1_1COIN_3PLAY))) {
+                        set_dsw1(BOMBJACK_DSW1_P1_MASK, BOMBJACK_DSW1_P1_1COIN_3PLAY);
                     }
-                    if (ImGui::MenuItem("6 Credits", nullptr, 3 == (ui.bj->main.dsw1 & 3))) {
-                        ui.bj->main.dsw1 = (ui.bj->main.dsw1 & ~3) | 3;
+                    if (ImGui::MenuItem("6 Credits", nullptr, test_dsw1(BOMBJACK_DSW1_P1_MASK, BOMBJACK_DSW1_P1_1COIN_5PLAY))) {
+                        set_dsw1(BOMBJACK_DSW1_P1_MASK, BOMBJACK_DSW1_P1_1COIN_5PLAY);
                     }
                     ImGui::EndMenu();
                 }
                 if (ImGui::MenuItem("Play Button")) {
-                    ui.bj->main.sys |= (1<<2);
+                    ui.bj->mainboard.sys |= BOMBJACK_SYS_P1_START;
                 }
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Player 2")) {
                 if (ImGui::MenuItem("Insert Coin")) {
-                    ui.bj->main.sys |= (1<<1);
+                    ui.bj->mainboard.sys |= BOMBJACK_SYS_P2_COIN;
                 }
-                // FIXME?
                 if (ImGui::BeginMenu("1 Coin gives:")) {
-                    if (ImGui::MenuItem("1 Credit", nullptr, 0 == (ui.bj->main.dsw1 & 0xC))) {
-                        ui.bj->main.dsw1 = (ui.bj->main.dsw1 & ~0xC) | 0;
+                    if (ImGui::MenuItem("1 Credit", nullptr, test_dsw1(BOMBJACK_DSW1_P2_MASK, BOMBJACK_DSW1_P2_1COIN_1PLAY))) {
+                        set_dsw1(BOMBJACK_DSW1_P2_MASK, BOMBJACK_DSW1_P2_1COIN_1PLAY);
                     }
-                    if (ImGui::MenuItem("2 Credits", nullptr, 4 == (ui.bj->main.dsw1 & 0xC))) {
-                        ui.bj->main.dsw1 = (ui.bj->main.dsw1 & ~0xC) | 4;
+                    if (ImGui::MenuItem("2 Credits", nullptr, test_dsw1(BOMBJACK_DSW1_P2_MASK, BOMBJACK_DSW1_P2_1COIN_2PLAY))) {
+                        set_dsw1(BOMBJACK_DSW1_P2_MASK, BOMBJACK_DSW1_P2_1COIN_2PLAY);
                     }
-                    if (ImGui::MenuItem("3 Credits", nullptr, 8 == (ui.bj->main.dsw1 & 0xC))) {
-                        ui.bj->main.dsw1 = (ui.bj->main.dsw1 & ~0xC) | 8;
+                    if (ImGui::MenuItem("3 Credits", nullptr, test_dsw1(BOMBJACK_DSW1_P2_MASK, BOMBJACK_DSW1_P2_1COIN_3PLAY))) {
+                        set_dsw1(BOMBJACK_DSW1_P2_MASK, BOMBJACK_DSW1_P2_1COIN_3PLAY);
                     }
-                    if (ImGui::MenuItem("6 Credits", nullptr, 0xC == (ui.bj->main.dsw1 & 0xC))) {
-                        ui.bj->main.dsw1 = (ui.bj->main.dsw1 & ~0xC) | 12;
+                    if (ImGui::MenuItem("6 Credits", nullptr, test_dsw1(BOMBJACK_DSW1_P2_MASK, BOMBJACK_DSW1_P2_1COIN_5PLAY))) {
+                        set_dsw1(BOMBJACK_DSW1_P2_MASK, BOMBJACK_DSW1_P2_1COIN_5PLAY);
                     }
                     ImGui::EndMenu();
                 }
                 if (ImGui::MenuItem("Play Button")) {
-                    ui.bj->main.sys |= (1<<3);
+                    ui.bj->mainboard.sys |= BOMBJACK_SYS_P2_START;
                 }
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Lives")) {
-                if (ImGui::MenuItem("2", nullptr, 0x30 == (ui.bj->main.dsw1 & 0x30))) {
-                    ui.bj->main.dsw1 = (ui.bj->main.dsw1 & ~0x30) | 0x30;
+                if (ImGui::MenuItem("2", nullptr, test_dsw1(BOMBJACK_DSW1_JACKS_MASK, BOMBJACK_DSW1_JACKS_2))) {
+                    set_dsw1(BOMBJACK_DSW1_JACKS_MASK, BOMBJACK_DSW1_JACKS_2);
                 }
-                if (ImGui::MenuItem("3", nullptr, 0x00 == (ui.bj->main.dsw1 & 0x30))) {
-                    ui.bj->main.dsw1 = (ui.bj->main.dsw1 & ~0x30) | 0x00;
+                if (ImGui::MenuItem("3", nullptr, test_dsw1(BOMBJACK_DSW1_JACKS_MASK, BOMBJACK_DSW1_JACKS_3))) {
+                    set_dsw1(BOMBJACK_DSW1_JACKS_MASK, BOMBJACK_DSW1_JACKS_3);
                 }
-                if (ImGui::MenuItem("4", nullptr, 0x10 == (ui.bj->main.dsw1 & 0x30))) {
-                    ui.bj->main.dsw1 = (ui.bj->main.dsw1 & ~0x30) | 0x10;
+                if (ImGui::MenuItem("4", nullptr, test_dsw1(BOMBJACK_DSW1_JACKS_MASK, BOMBJACK_DSW1_JACKS_4))) {
+                    set_dsw1(BOMBJACK_DSW1_JACKS_MASK, BOMBJACK_DSW1_JACKS_4);
                 }
-                if (ImGui::MenuItem("5", nullptr, 0x20 == (ui.bj->main.dsw1 & 0x30))) {
-                    ui.bj->main.dsw1 = (ui.bj->main.dsw1 & ~0x30) | 0x20;
+                if (ImGui::MenuItem("5", nullptr, test_dsw1(BOMBJACK_DSW1_JACKS_MASK, BOMBJACK_DSW1_JACKS_5))) {
+                    set_dsw1(BOMBJACK_DSW1_JACKS_MASK, BOMBJACK_DSW1_JACKS_5);
                 }
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Cabinet")) {
-                if (ImGui::MenuItem("Upright", nullptr, 0x40 == (ui.bj->main.dsw1 & 0x40))) {
-                    ui.bj->main.dsw1 = (ui.bj->main.dsw1 & ~0x40) | 0x40;
+                if (ImGui::MenuItem("Upright", nullptr, test_dsw1(BOMBJACK_DSW1_CABINET_MASK, BOMBJACK_DSW1_CABINET_UPRIGHT))) {
+                    set_dsw1(BOMBJACK_DSW1_CABINET_MASK, BOMBJACK_DSW1_CABINET_UPRIGHT);
                 }
-                if (ImGui::MenuItem("Cocktail (not impl)", nullptr, 0x00 == (ui.bj->main.dsw1 & 0x40))) {
-                    ui.bj->main.dsw1 = (ui.bj->main.dsw1 & ~0x40) | 0x00;
+                if (ImGui::MenuItem("Cocktail (not impl)", nullptr, test_dsw1(BOMBJACK_DSW1_CABINET_MASK, BOMBJACK_DSW1_CABINET_COCKTAIL))) {
+                    set_dsw1(BOMBJACK_DSW1_CABINET_MASK, BOMBJACK_DSW1_CABINET_COCKTAIL);
                 }
                 ImGui::EndMenu();
             }
-            if (ImGui::MenuItem("Demo Sounds", nullptr, 0x80 == (ui.bj->main.dsw1 & 0x80))) {
-                ui.bj->main.dsw1 ^= 0x80;
-            }
-            if (ImGui::BeginMenu("Bonus Life")) {
-                if (ImGui::MenuItem("None", nullptr, 0 == (ui.bj->main.dsw2 & 7))) {
-                    ui.bj->main.dsw2 = (ui.bj->main.dsw2 & ~7) | 0;
-                }
-                if (ImGui::MenuItem("Every 30k", nullptr, 2 == (ui.bj->main.dsw2 & 7))) {
-                    ui.bj->main.dsw2 = (ui.bj->main.dsw2 & ~7) | 2;
-                }
-                if (ImGui::MenuItem("Every 100k", nullptr, 1 == (ui.bj->main.dsw2 & 7))) {
-                    ui.bj->main.dsw2 = (ui.bj->main.dsw2 & ~7) | 1;
-                }
-                if (ImGui::MenuItem("50k, 100k and 300k", nullptr, 7 == (ui.bj->main.dsw2 & 7))) {
-                    ui.bj->main.dsw2 = (ui.bj->main.dsw2 & ~7) | 7;
-                }
-                if (ImGui::MenuItem("50k and 100k", nullptr, 5 == (ui.bj->main.dsw2 & 7))) {
-                    ui.bj->main.dsw2 = (ui.bj->main.dsw2 & ~7) | 5;
-                }
-                if (ImGui::MenuItem("50k only", nullptr, 3 == (ui.bj->main.dsw2 & 7))) {
-                    ui.bj->main.dsw2 = (ui.bj->main.dsw2 & ~7) | 3;
-                }
-                if (ImGui::MenuItem("100k and 300k", nullptr, 6 == (ui.bj->main.dsw2 & 7))) {
-                    ui.bj->main.dsw2 = (ui.bj->main.dsw2 & ~7) | 6;
-                }
-                if (ImGui::MenuItem("100k only", nullptr, 4 == (ui.bj->main.dsw2 & 7))) {
-                    ui.bj->main.dsw2 = (ui.bj->main.dsw2 & ~7) | 4;
-                }
-                ImGui::EndMenu();
+            if (ImGui::MenuItem("Demo Sounds", nullptr, test_dsw1(BOMBJACK_DSW1_DEMOSOUND_MASK, BOMBJACK_DSW1_DEMOSOUND_ON))) {
+                toggle_dsw1(BOMBJACK_DSW1_DEMOSOUND_MASK, BOMBJACK_DSW1_DEMOSOUND_ON);
             }
             if (ImGui::BeginMenu("Bird Speed")) {
-                if (ImGui::MenuItem("Easy", nullptr, 0x00 == (ui.bj->main.dsw2 & 0x18))) {
-                    ui.bj->main.dsw2 = (ui.bj->main.dsw2 & ~0x18) | 0x00;
+                if (ImGui::MenuItem("Easy", nullptr, test_dsw2(BOMBJACK_DSW2_BIRDSPEED_MASK, BOMBJACK_DSW2_BIRDSPEED_EASY))) {
+                    set_dsw2(BOMBJACK_DSW2_BIRDSPEED_MASK, BOMBJACK_DSW2_BIRDSPEED_EASY);
                 }
-                if (ImGui::MenuItem("Medium", nullptr, 0x08 == (ui.bj->main.dsw2 & 0x18))) {
-                    ui.bj->main.dsw2 = (ui.bj->main.dsw2 & ~0x18) | 0x08;
+                if (ImGui::MenuItem("Medium", nullptr, test_dsw2(BOMBJACK_DSW2_BIRDSPEED_MASK, BOMBJACK_DSW2_BIRDSPEED_MODERATE))) {
+                    set_dsw2(BOMBJACK_DSW2_BIRDSPEED_MASK, BOMBJACK_DSW2_BIRDSPEED_MODERATE);
                 }
-                if (ImGui::MenuItem("Hard", nullptr, 0x10 == (ui.bj->main.dsw2 & 0x18))) {
-                    ui.bj->main.dsw2 = (ui.bj->main.dsw2 & ~0x18) | 0x10;
+                if (ImGui::MenuItem("Hard", nullptr, test_dsw2(BOMBJACK_DSW2_BIRDSPEED_MASK, BOMBJACK_DSW2_BIRDSPEED_HARD))) {
+                    set_dsw2(BOMBJACK_DSW2_BIRDSPEED_MASK, BOMBJACK_DSW2_BIRDSPEED_HARD);
                 }
-                if (ImGui::MenuItem("Hardest", nullptr, 0x18 == (ui.bj->main.dsw2 & 0x18))) {
-                    ui.bj->main.dsw2 = (ui.bj->main.dsw2 & ~0x18) | 0x18;
+                if (ImGui::MenuItem("Hardest", nullptr, test_dsw2(BOMBJACK_DSW2_BIRDSPEED_MASK, BOMBJACK_DSW2_BIRDSPEED_HARDER))) {
+                    set_dsw2(BOMBJACK_DSW2_BIRDSPEED_MASK, BOMBJACK_DSW2_BIRDSPEED_HARDER);
                 }
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Enemies Number & Speed")) {
-                if (ImGui::MenuItem("Easy", nullptr, 0x20 == (ui.bj->main.dsw2 & 0x60))) {
-                    ui.bj->main.dsw2 = (ui.bj->main.dsw2 & ~0x60) | 0x20;
+                if (ImGui::MenuItem("Easy", nullptr, test_dsw2(BOMBJACK_DSW2_DIFFICULTY_MASK, BOMBJACK_DSW2_DIFFICULTY_EASY))) {
+                    set_dsw2(BOMBJACK_DSW2_DIFFICULTY_MASK, BOMBJACK_DSW2_DIFFICULTY_EASY);
                 }
-                if (ImGui::MenuItem("Medium", nullptr, 0x00 == (ui.bj->main.dsw2 & 0x60))) {
-                    ui.bj->main.dsw2 = (ui.bj->main.dsw2 & ~0x60) | 0x00;
+                if (ImGui::MenuItem("Medium", nullptr, test_dsw2(BOMBJACK_DSW2_DIFFICULTY_MASK, BOMBJACK_DSW2_DIFFICULTY_MODERATE))) {
+                    set_dsw2(BOMBJACK_DSW2_DIFFICULTY_MASK, BOMBJACK_DSW2_DIFFICULTY_MODERATE);
                 }
-                if (ImGui::MenuItem("Hard", nullptr, 0x40 == (ui.bj->main.dsw2 & 0x60))) {
-                    ui.bj->main.dsw2 = (ui.bj->main.dsw2 & ~0x60) | 0x40;
+                if (ImGui::MenuItem("Hard", nullptr, test_dsw2(BOMBJACK_DSW2_DIFFICULTY_MASK, BOMBJACK_DSW2_DIFFICULTY_HARD))) {
+                    set_dsw2(BOMBJACK_DSW2_DIFFICULTY_MASK, BOMBJACK_DSW2_DIFFICULTY_HARD);
                 }
-                if (ImGui::MenuItem("Hardest", nullptr, 0x60 == (ui.bj->main.dsw2 & 0x60))) {
-                    ui.bj->main.dsw2 = (ui.bj->main.dsw2 & ~0x60) | 0x60;
+                if (ImGui::MenuItem("Hardest", nullptr, test_dsw2(BOMBJACK_DSW2_DIFFICULTY_MASK, BOMBJACK_DSW2_DIFFICULTY_HARDER))) {
+                    set_dsw2(BOMBJACK_DSW2_DIFFICULTY_MASK, BOMBJACK_DSW2_DIFFICULTY_HARDER);
                 }
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Special Coin")) {
-                if (ImGui::MenuItem("Easy", nullptr, 0x00 == (ui.bj->main.dsw2 & 0x80))) {
-                    ui.bj->main.dsw2 = (ui.bj->main.dsw2 & ~0x80) | 0x00;
+                if (ImGui::MenuItem("Easy", nullptr, test_dsw2(BOMBJACK_DSW2_SPECIALCOIN_MASK, BOMBJACK_DSW2_SPECIALCOIN_EASY))) {
+                    set_dsw2(BOMBJACK_DSW2_SPECIALCOIN_MASK, BOMBJACK_DSW2_SPECIALCOIN_EASY);
                 }
-                if (ImGui::MenuItem("Hard", nullptr, 0x80 == (ui.bj->main.dsw2 & 0x80))) {
-                    ui.bj->main.dsw2 = (ui.bj->main.dsw2 & ~0x80) | 0x80;
+                if (ImGui::MenuItem("Hard", nullptr, test_dsw2(BOMBJACK_DSW2_SPECIALCOIN_MASK, BOMBJACK_DSW2_SPECIALCOIN_HARD))) {
+                    set_dsw2(BOMBJACK_DSW2_SPECIALCOIN_MASK, BOMBJACK_DSW2_SPECIALCOIN_HARD);
                 }
                 ImGui::EndMenu();
             }
@@ -386,7 +390,7 @@ void bombjackui_init(bombjack_t* bj) {
         desc.title = "CPU Debugger (Main)";
         desc.x = x;
         desc.y = y;
-        desc.z80 = &ui.bj->main.cpu;
+        desc.z80 = &ui.bj->mainboard.cpu;
         desc.read_cb = _ui_bombjack_mem_read;
         desc.read_layer = MEMLAYER_MAIN;
         desc.create_texture_cb = gfx_create_texture;
@@ -406,7 +410,7 @@ void bombjackui_init(bombjack_t* bj) {
         x += dx; desc.x = x;
         y += dy; desc.y = y;
         desc.title = "CPU Debugger (Sound)";
-        desc.z80 = &ui.bj->sound.cpu;
+        desc.z80 = &ui.bj->soundboard.cpu;
         desc.read_layer = MEMLAYER_SOUND;
         ui_dbg_init(&ui.sound.dbg, &desc);
     }
@@ -414,7 +418,7 @@ void bombjackui_init(bombjack_t* bj) {
     {
         ui_z80_desc_t desc = {0};
         desc.title = "Z80 CPU (Main)";
-        desc.cpu = &bj->main.cpu;
+        desc.cpu = &bj->mainboard.cpu;
         desc.x = x;
         desc.y = y;
         UI_CHIP_INIT_DESC(&desc.chip_desc, "Z80\nCPU", 36, _ui_bombjack_cpu_pins);
@@ -424,7 +428,7 @@ void bombjackui_init(bombjack_t* bj) {
     {
         ui_z80_desc_t desc = {0};
         desc.title = "Z80 CPU (Sound)";
-        desc.cpu = &bj->sound.cpu;
+        desc.cpu = &bj->soundboard.cpu;
         desc.x = x;
         desc.y = y;
         UI_CHIP_INIT_DESC(&desc.chip_desc, "Z80\nCPU", 36, _ui_bombjack_cpu_pins);
@@ -438,7 +442,7 @@ void bombjackui_init(bombjack_t* bj) {
             case 1: desc.title = "AY-3-8910 (1)"; break;
             case 2: desc.title = "AY-3-8910 (2)"; break;
         }
-        desc.ay = &bj->sound.psg[i];
+        desc.ay = &bj->soundboard.psg[i];
         desc.x = x;
         desc.y = y;
         UI_CHIP_INIT_DESC(&desc.chip_desc, "8910", 22, _ui_bombjack_psg_pins);
@@ -449,7 +453,7 @@ void bombjackui_init(bombjack_t* bj) {
         ui_audio_desc_t desc = {0};
         desc.title = "Audio Output";
         desc.sample_buffer = ui.bj->sample_buffer;
-        desc.num_samples = NUM_AUDIO_SAMPLES;
+        desc.num_samples = ui.bj->num_samples,
         desc.x = x;
         desc.y = y;
         ui_audio_init(&ui.sound.audio, &desc);
@@ -546,20 +550,21 @@ void bombjackui_exec(uint32_t frame_time_us) {
         /* tick the main board */
         if (ui_dbg_before_exec(&ui.main.dbg)) {
             uint64_t start = stm_now();
-            uint32_t ticks_to_run = clk_ticks_to_run(&ui.bj->main.clk, slice_us);
-            uint32_t ticks_executed = z80_exec(&ui.bj->main.cpu, ticks_to_run);
-            clk_ticks_executed(&ui.bj->main.clk, ticks_executed);
+            uint32_t ticks_to_run = clk_ticks_to_run(&ui.bj->mainboard.clk, slice_us);
+            uint32_t ticks_executed = z80_exec(&ui.bj->mainboard.cpu, ticks_to_run);
+            clk_ticks_executed(&ui.bj->mainboard.clk, ticks_executed);
             ui.exec_time = stm_ms(stm_since(start));
             ui_dbg_after_exec(&ui.main.dbg);
         }
         /* tick the sound board */
         if (ui_dbg_before_exec(&ui.sound.dbg)) {
-            uint32_t ticks_to_run = clk_ticks_to_run(&ui.bj->sound.clk, slice_us);
-            uint32_t ticks_executed = z80_exec(&ui.bj->sound.cpu, ticks_to_run);
-            clk_ticks_executed(&ui.bj->sound.clk, ticks_executed);
+            uint32_t ticks_to_run = clk_ticks_to_run(&ui.bj->soundboard.clk, slice_us);
+            uint32_t ticks_executed = z80_exec(&ui.bj->soundboard.cpu, ticks_to_run);
+            clk_ticks_executed(&ui.bj->soundboard.clk, ticks_executed);
             ui_dbg_after_exec(&ui.sound.dbg);
         }
     }
+    bombjack_decode_video(ui.bj);
 }
 
 } // extern "C"
