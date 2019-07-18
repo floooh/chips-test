@@ -20,7 +20,7 @@
 void bombjackui_init(bombjack_t* bj);
 void bombjackui_discard(void);
 void bombjackui_draw(void);
-void bombjackui_exec(uint32_t frame_time_us);
+void bombjackui_exec(bombjack_t* bj, uint32_t frame_time_us);
 static const int ui_extra_height = 16;
 #else
 static const int ui_extra_height = 0;
@@ -95,7 +95,7 @@ static void app_init(void) {
 /* per-frame callback */
 static void app_frame(void) {
     #if CHIPS_USE_UI
-        bombjackui_exec(clock_frame_time());
+        bombjackui_exec(&bj, clock_frame_time());
     #else
         bombjack_exec(&bj, clock_frame_time());
     #endif
