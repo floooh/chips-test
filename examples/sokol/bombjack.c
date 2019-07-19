@@ -41,8 +41,8 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .frame_cb = app_frame,
         .event_cb = app_input,
         .cleanup_cb = app_cleanup,
-        .width = 2 * bombjack_std_display_width(),
-        .height = 2 * bombjack_std_display_height() + ui_extra_height,
+        .width = 3 * bombjack_std_display_width(),
+        .height = 3 * bombjack_std_display_height() + ui_extra_height,
         .window_title = "Bomb Jack Arcade"
     };
 }
