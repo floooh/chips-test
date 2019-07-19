@@ -132,7 +132,7 @@ void gfx_init(const gfx_desc_t* desc) {
     gfx.draw_extra_cb = desc->draw_extra_cb;
     sg_setup(&(sg_desc){
         .buffer_pool_size = 8,
-        .image_pool_size = 8,
+        .image_pool_size = 128,
         .shader_pool_size = 4,
         .pipeline_pool_size = 4,
         .context_pool_size = 2,
