@@ -38,7 +38,7 @@ out vec4 frag_color;
 
 vec3 calc_mask(vec2 uv) {
     float iy = mod(gl_FragCoord.y * 0.5, 1.0);
-    return vec3(iy * 1.25);
+    return vec3(iy + 0.3);
 }
 
 void main() {
