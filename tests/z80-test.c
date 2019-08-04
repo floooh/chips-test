@@ -752,7 +752,7 @@ UTEST(z80, PUSH_POP_qqIXIY) {
 }
 
 /* EX DE,HL; EX AF,AF'; EX (SP),HL; EX (SP),IX; EX (SP),IY */
-UTEST(z80, E) {
+UTEST(z80, EX) {
     uint8_t prog[] = {
         0x21, 0x34, 0x12,       // LD HL,0x1234
         0x11, 0x78, 0x56,       // LD DE,0x5678
