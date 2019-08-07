@@ -86,16 +86,16 @@ kc85_desc_t kc85_desc(kc85_type_t type) {
         .audio_cb = push_audio,
         .audio_sample_rate = saudio_sample_rate(),
         .patch_cb = patch_snapshots,
-        .rom_caos22 = dump_caos22,
-        .rom_caos22_size = sizeof(dump_caos22),
-        .rom_caos31 = dump_caos31,
-        .rom_caos31_size = sizeof(dump_caos31),
-        .rom_caos42c = dump_caos42c,
-        .rom_caos42c_size = sizeof(dump_caos42c),
-        .rom_caos42e = dump_caos42e,
-        .rom_caos42e_size = sizeof(dump_caos42e),
-        .rom_kcbasic = dump_basic_c0,
-        .rom_kcbasic_size = sizeof(dump_basic_c0)
+        .rom_caos22 = dump_caos22_852,
+        .rom_caos22_size = sizeof(dump_caos22_852),
+        .rom_caos31 = dump_caos31_853,
+        .rom_caos31_size = sizeof(dump_caos31_853),
+        .rom_caos42c = dump_caos42c_854,
+        .rom_caos42c_size = sizeof(dump_caos42c_854),
+        .rom_caos42e = dump_caos42e_854,
+        .rom_caos42e_size = sizeof(dump_caos42e_854),
+        .rom_kcbasic = dump_basic_c0_853,
+        .rom_kcbasic_size = sizeof(dump_basic_c0_853)
     };
 }
 

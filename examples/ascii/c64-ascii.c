@@ -70,12 +70,12 @@ static void init_c64_colors(void) {
 
 int main(int argc, char* argv[]) {
     c64_init(&c64, &(c64_desc_t){
-        .rom_char = dump_c64_char,
-        .rom_char_size = sizeof(dump_c64_char),
-        .rom_basic = dump_c64_basic,
-        .rom_basic_size = sizeof(dump_c64_basic),
-        .rom_kernal = dump_c64_kernalv3,
-        .rom_kernal_size = sizeof(dump_c64_kernalv3)
+        .rom_char = dump_c64_char_bin,
+        .rom_char_size = sizeof(dump_c64_char_bin),
+        .rom_basic = dump_c64_basic_bin,
+        .rom_basic_size = sizeof(dump_c64_basic_bin),
+        .rom_kernal = dump_c64_kernalv3_bin,
+        .rom_kernal_size = sizeof(dump_c64_kernalv3_bin)
     });
 
     // install a Ctrl-C signal handler

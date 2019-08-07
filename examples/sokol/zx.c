@@ -64,12 +64,12 @@ zx_desc_t zx_desc(zx_type_t type, zx_joystick_type_t joy_type) {
         .pixel_buffer_size = gfx_framebuffer_size(),
         .audio_cb = push_audio,
         .audio_sample_rate = saudio_sample_rate(),
-        .rom_zx48k = dump_amstrad_zx48k,
-        .rom_zx48k_size = sizeof(dump_amstrad_zx48k),
-        .rom_zx128_0 = dump_amstrad_zx128k_0,
-        .rom_zx128_0_size = sizeof(dump_amstrad_zx128k_0),
-        .rom_zx128_1 = dump_amstrad_zx128k_1,
-        .rom_zx128_1_size = sizeof(dump_amstrad_zx128k_1)
+        .rom_zx48k = dump_amstrad_zx48k_bin,
+        .rom_zx48k_size = sizeof(dump_amstrad_zx48k_bin),
+        .rom_zx128_0 = dump_amstrad_zx128k_0_bin,
+        .rom_zx128_0_size = sizeof(dump_amstrad_zx128k_0_bin),
+        .rom_zx128_1 = dump_amstrad_zx128k_1_bin,
+        .rom_zx128_1_size = sizeof(dump_amstrad_zx128k_1_bin)
     };
 }
 

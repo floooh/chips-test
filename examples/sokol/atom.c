@@ -70,12 +70,12 @@ atom_desc_t atom_desc(atom_joystick_type_t joy_type) {
         .audio_sample_rate = saudio_sample_rate(),
         .pixel_buffer = gfx_framebuffer(),
         .pixel_buffer_size = gfx_framebuffer_size(),
-        .rom_abasic = dump_abasic,
-        .rom_abasic_size = sizeof(dump_abasic),
-        .rom_afloat = dump_afloat,
-        .rom_afloat_size = sizeof(dump_afloat),
-        .rom_dosrom = dump_dosrom,
-        .rom_dosrom_size = sizeof(dump_dosrom)
+        .rom_abasic = dump_abasic_ic20,
+        .rom_abasic_size = sizeof(dump_abasic_ic20),
+        .rom_afloat = dump_afloat_ic21,
+        .rom_afloat_size = sizeof(dump_afloat_ic21),
+        .rom_dosrom = dump_dosrom_u15,
+        .rom_dosrom_size = sizeof(dump_dosrom_u15)
     };
 }
 

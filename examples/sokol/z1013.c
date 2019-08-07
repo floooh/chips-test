@@ -53,12 +53,12 @@ z1013_desc_t z1013_desc(z1013_type_t type) {
         .type = type,
         .pixel_buffer = gfx_framebuffer(),
         .pixel_buffer_size = gfx_framebuffer_size(),
-        .rom_mon_a2 = dump_z1013_mon_a2,
-        .rom_mon_a2_size = sizeof(dump_z1013_mon_a2),
-        .rom_mon202 = dump_z1013_mon202,
-        .rom_mon202_size = sizeof(dump_z1013_mon202),
-        .rom_font = dump_z1013_font,
-        .rom_font_size = sizeof(dump_z1013_font)
+        .rom_mon_a2 = dump_z1013_mon_a2_bin,
+        .rom_mon_a2_size = sizeof(dump_z1013_mon_a2_bin),
+        .rom_mon202 = dump_z1013_mon202_bin,
+        .rom_mon202_size = sizeof(dump_z1013_mon202_bin),
+        .rom_font = dump_z1013_font_bin,
+        .rom_font_size = sizeof(dump_z1013_font_bin)
     };
 }
 

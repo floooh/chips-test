@@ -12,13 +12,13 @@
 UTEST(fdd, load_cpc_dsk) {
     fdd_t fdd;
     fdd_init(&fdd);
-    bool load_successful = fdd_cpc_insert_dsk(&fdd, dump_boulderdash_cpc, sizeof(dump_boulderdash_cpc));
+    bool load_successful = fdd_cpc_insert_dsk(&fdd, dump_boulderdash_cpc_dsk, sizeof(dump_boulderdash_cpc_dsk));
     T(load_successful);
     T(fdd.has_disc);
     T(fdd.disc.formatted);
     T(1 == fdd.disc.num_sides);
     T(40 == fdd.disc.num_tracks);
-    T(fdd.data_size == (int)sizeof(dump_boulderdash_cpc));
+    T(fdd.data_size == (int)sizeof(dump_boulderdash_cpc_dsk));
     for (int ti = 0; ti < fdd.disc.num_tracks; ti++) {
         const fdd_track_t* track = &fdd.disc.tracks[0][ti];
         T(track->data_offset == 0x100 + 0x1300*ti);
@@ -41,13 +41,13 @@ UTEST(fdd, load_cpc_dsk) {
 UTEST(fdd, load_cpc_extdsk) {
     fdd_t fdd;
     fdd_init(&fdd);
-    bool load_success = fdd_cpc_insert_dsk(&fdd, dump_dtc_cpc, sizeof(dump_dtc_cpc));
+    bool load_success = fdd_cpc_insert_dsk(&fdd, dump_dtc_cpc_dsk, sizeof(dump_dtc_cpc_dsk));
     T(load_success);
     T(fdd.has_disc);
     T(fdd.disc.formatted);
     T(1 == fdd.disc.num_sides);
     T(42 == fdd.disc.num_tracks);
-    T(fdd.data_size == (int)sizeof(dump_dtc_cpc));
+    T(fdd.data_size == (int)sizeof(dump_dtc_cpc_dsk));
     for (int ti = 0; ti < fdd.disc.num_tracks; ti++) {
         const fdd_track_t* track = &fdd.disc.tracks[0][ti];
         T(track->data_offset == 0x100 + 0x1300*ti);

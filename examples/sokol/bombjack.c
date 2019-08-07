@@ -14,7 +14,7 @@
 // the actual emulator is here: https://github.com/floooh/chips/blob/master/systems/bombjack.h
 #include "systems/bombjack.h"
 
-/* imports from cpc-ui.cc */
+/* imports from bombjack-ui.cc */
 #ifdef CHIPS_USE_UI
 #include "ui.h"
 void bombjackui_init(bombjack_t* bj);
@@ -70,22 +70,22 @@ static void app_init(void) {
         .audio_sample_rate = saudio_sample_rate(),
         .pixel_buffer = gfx_framebuffer(),
         .pixel_buffer_size = gfx_framebuffer_size(),
-        .rom_main_0000_1FFF = dump_09_j01b,     .rom_main_0000_1FFF_size = sizeof(dump_09_j01b),
-        .rom_main_2000_3FFF = dump_10_l01b,     .rom_main_2000_3FFF_size = sizeof(dump_10_l01b),
-        .rom_main_4000_5FFF = dump_11_m01b,     .rom_main_4000_5FFF_size = sizeof(dump_11_m01b),
-        .rom_main_6000_7FFF = dump_12_n01b,     .rom_main_6000_7FFF_size = sizeof(dump_12_n01b),
-        .rom_main_C000_DFFF = dump_13,          .rom_main_C000_DFFF_size = sizeof(dump_13),
-        .rom_sound_0000_1FFF = dump_01_h03t,    .rom_sound_0000_1FFF_size = sizeof(dump_01_h03t),
-        .rom_chars_0000_0FFF = dump_03_e08t,    .rom_chars_0000_0FFF_size = sizeof(dump_03_e08t),
-        .rom_chars_1000_1FFF = dump_04_h08t,    .rom_chars_1000_1FFF_size = sizeof(dump_04_h08t),
-        .rom_chars_2000_2FFF = dump_05_k08t,    .rom_chars_2000_2FFF_size = sizeof(dump_05_k08t),
-        .rom_tiles_0000_1FFF = dump_06_l08t,    .rom_tiles_0000_1FFF_size = sizeof(dump_06_l08t),
-        .rom_tiles_2000_3FFF = dump_07_n08t,    .rom_tiles_2000_3FFF_size = sizeof(dump_07_n08t),
-        .rom_tiles_4000_5FFF = dump_08_r08t,    .rom_tiles_4000_5FFF_size = sizeof(dump_08_r08t),
-        .rom_sprites_0000_1FFF = dump_16_m07b,  .rom_sprites_0000_1FFF_size = sizeof(dump_16_m07b),
-        .rom_sprites_2000_3FFF = dump_15_l07b,  .rom_sprites_2000_3FFF_size = sizeof(dump_15_l07b),
-        .rom_sprites_4000_5FFF = dump_14_j07b,  .rom_sprites_4000_5FFF_size = sizeof(dump_14_j07b),
-        .rom_maps_0000_0FFF = dump_02_p04t,     .rom_maps_0000_0FFF_size = sizeof(dump_02_p04t)
+        .rom_main_0000_1FFF = dump_09_j01b_bin,     .rom_main_0000_1FFF_size = sizeof(dump_09_j01b_bin),
+        .rom_main_2000_3FFF = dump_10_l01b_bin,     .rom_main_2000_3FFF_size = sizeof(dump_10_l01b_bin),
+        .rom_main_4000_5FFF = dump_11_m01b_bin,     .rom_main_4000_5FFF_size = sizeof(dump_11_m01b_bin),
+        .rom_main_6000_7FFF = dump_12_n01b_bin,     .rom_main_6000_7FFF_size = sizeof(dump_12_n01b_bin),
+        .rom_main_C000_DFFF = dump_13_1r,           .rom_main_C000_DFFF_size = sizeof(dump_13_1r),
+        .rom_sound_0000_1FFF = dump_01_h03t_bin,    .rom_sound_0000_1FFF_size = sizeof(dump_01_h03t_bin),
+        .rom_chars_0000_0FFF = dump_03_e08t_bin,    .rom_chars_0000_0FFF_size = sizeof(dump_03_e08t_bin),
+        .rom_chars_1000_1FFF = dump_04_h08t_bin,    .rom_chars_1000_1FFF_size = sizeof(dump_04_h08t_bin),
+        .rom_chars_2000_2FFF = dump_05_k08t_bin,    .rom_chars_2000_2FFF_size = sizeof(dump_05_k08t_bin),
+        .rom_tiles_0000_1FFF = dump_06_l08t_bin,    .rom_tiles_0000_1FFF_size = sizeof(dump_06_l08t_bin),
+        .rom_tiles_2000_3FFF = dump_07_n08t_bin,    .rom_tiles_2000_3FFF_size = sizeof(dump_07_n08t_bin),
+        .rom_tiles_4000_5FFF = dump_08_r08t_bin,    .rom_tiles_4000_5FFF_size = sizeof(dump_08_r08t_bin),
+        .rom_sprites_0000_1FFF = dump_16_m07b_bin,  .rom_sprites_0000_1FFF_size = sizeof(dump_16_m07b_bin),
+        .rom_sprites_2000_3FFF = dump_15_l07b_bin,  .rom_sprites_2000_3FFF_size = sizeof(dump_15_l07b_bin),
+        .rom_sprites_4000_5FFF = dump_14_j07b_bin,  .rom_sprites_4000_5FFF_size = sizeof(dump_14_j07b_bin),
+        .rom_maps_0000_0FFF = dump_02_p04t_bin,     .rom_maps_0000_0FFF_size = sizeof(dump_02_p04t_bin)
     });
     #ifdef CHIPS_USE_UI
     bombjackui_init(&bj);

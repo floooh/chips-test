@@ -62,12 +62,12 @@ c64_desc_t c64_desc(c64_joystick_type_t joy_type) {
         .audio_cb = push_audio,
         .audio_sample_rate = saudio_sample_rate(),
         .audio_tape_sound = sargs_boolean("tape_sound"),
-        .rom_char = dump_c64_char,
-        .rom_char_size = sizeof(dump_c64_char),
-        .rom_basic = dump_c64_basic,
-        .rom_basic_size = sizeof(dump_c64_basic),
-        .rom_kernal = dump_c64_kernalv3,
-        .rom_kernal_size = sizeof(dump_c64_kernalv3)
+        .rom_char = dump_c64_char_bin,
+        .rom_char_size = sizeof(dump_c64_char_bin),
+        .rom_basic = dump_c64_basic_bin,
+        .rom_basic_size = sizeof(dump_c64_basic_bin),
+        .rom_kernal = dump_c64_kernalv3_bin,
+        .rom_kernal_size = sizeof(dump_c64_kernalv3_bin)
     };
 }
 

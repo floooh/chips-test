@@ -3,7 +3,7 @@
 #   Dump binary files into C arrays.
 #-------------------------------------------------------------------------------
 
-Version = 4
+Version = 5
 
 import sys
 import os.path
@@ -20,7 +20,7 @@ def get_file_path(filename, src_dir, file_path) :
 
 #-------------------------------------------------------------------------------
 def get_file_cname(filename) :
-    return 'dump_{}'.format(os.path.splitext(filename)[0])
+    return 'dump_{}'.format(filename).replace('.','_')
 
 #-------------------------------------------------------------------------------
 def gen_header(out_hdr, src_dir, files) :

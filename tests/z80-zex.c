@@ -125,7 +125,7 @@ static bool run_test(z80_t* cpu, const char* name) {
 static bool zexdoc() {
     memset(output, 0, sizeof(output));
     memset(mem, 0, sizeof(mem));
-    memcpy(&mem[0x0100], dump_zexdoc, sizeof(dump_zexdoc));
+    memcpy(&mem[0x0100], dump_zexdoc_com, sizeof(dump_zexdoc_com));
     z80_t cpu;
     z80_init(&cpu, &(z80_desc_t){ .tick_cb=tick });
     z80_set_sp(&cpu, 0xF000);
@@ -139,7 +139,7 @@ static bool zexdoc() {
 static bool zexall() {
     memset(output, 0, sizeof(output));
     memset(mem, 0, sizeof(mem));
-    memcpy(&mem[0x0100], dump_zexall, sizeof(dump_zexall));
+    memcpy(&mem[0x0100], dump_zexall_com, sizeof(dump_zexall_com));
     z80_t cpu;
     z80_init(&cpu, &(z80_desc_t){ .tick_cb=tick });
     z80_set_sp(&cpu, 0xF000);

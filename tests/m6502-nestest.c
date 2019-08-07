@@ -52,8 +52,8 @@ int main() {
     /* map nestest rom (one 16KB bank repeated at 0x8000 and 0xC000)
        the nestest fileformat has a 16-byte header
     */
-    mem_map_rom(&mem, 0, 0x8000, 0x4000, &(dump_nestest[16]));
-    mem_map_rom(&mem, 0, 0xC000, 0x4000, &(dump_nestest[16]));
+    mem_map_rom(&mem, 0, 0x8000, 0x4000, &(dump_nestest_nes[16]));
+    mem_map_rom(&mem, 0, 0xC000, 0x4000, &(dump_nestest_nes[16]));
 
     /* initialize the CPU */
     m6502_init(&cpu, &(m6502_desc_t){
