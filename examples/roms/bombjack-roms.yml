@@ -1,4 +1,5 @@
 ---
+src_dir: bombjack
 files:
   - 01_h03t.bin
   - 02_p04t.bin

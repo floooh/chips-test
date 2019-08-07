@@ -3,7 +3,7 @@
 #   Dump binary files into C arrays.
 #-------------------------------------------------------------------------------
 
-Version = 3
+Version = 4
 
 import sys
 import os.path
@@ -11,26 +11,26 @@ import yaml
 import genutil
 
 #-------------------------------------------------------------------------------
-def get_file_path(filename, file_path) :
+def get_file_path(filename, src_dir, file_path) :
     '''
     Returns absolute path to an input file, given file name and 
     another full file path in the same directory.
     '''
-    return '{}/{}'.format(os.path.dirname(file_path), filename)
+    return '{}/{}{}'.format(os.path.dirname(file_path), src_dir, filename)
 
 #-------------------------------------------------------------------------------
 def get_file_cname(filename) :
     return 'dump_{}'.format(os.path.splitext(filename)[0])
 
 #-------------------------------------------------------------------------------
-def gen_header(out_hdr, files) :
+def gen_header(out_hdr, src_dir, files) :
     with open(out_hdr, 'w') as f:
         f.write('#pragma once\n')
         f.write('// #version:{}#\n'.format(Version))
         f.write('// machine generated, do not edit!\n')
         items = {}
         for file in files :
-            file_path = get_file_path(file, out_hdr)
+            file_path = get_file_path(file, src_dir, out_hdr)
             if os.path.isfile(file_path) :
                 with open(file_path, 'rb') as src_file:
                     file_data = src_file.read()
@@ -62,4 +62,8 @@ def generate(input, out_src, out_hdr) :
     if genutil.isDirty(Version, [input], [out_hdr]) :
         with open(input, 'r') as f :
             desc = yaml.load(f)
-        gen_header(out_hdr, desc['files'])
+        if 'src_dir' in desc:
+            src_dir = desc['src_dir'] + '/'
+        else:
+            src_dir = ''
+        gen_header(out_hdr, src_dir, desc['files'])
