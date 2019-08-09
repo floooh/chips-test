@@ -30,14 +30,15 @@ void main() {
 @fs display_fs
 layout(binding=0) uniform sampler2D tex;
 layout(binding=0) uniform display_params {
-    vec2 dim;
+    vec2 frag_coord_mask;
 };
 
 in vec2 uv;
 out vec4 frag_color;
 
 vec3 calc_mask(vec2 uv) {
-    float iy = mod(gl_FragCoord.y * 0.5, 1.0);
+    vec2 fc = gl_FragCoord.xy * frag_coord_mask;
+    float iy = mod((fc.x+fc.y) * 0.5, 1.0);
     return vec3(iy + 0.3);
 }
 
