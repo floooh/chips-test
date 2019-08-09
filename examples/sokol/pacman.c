@@ -9,6 +9,9 @@
 #include "chips/clk.h"
 #include "chips/mem.h"
 #include "pacman-roms.h"
+
+// FIXME
+#include <stdio.h> // <===========================================!!!
 #define NAMCO_PACMAN
 #include "systems/namco.h"
 
@@ -57,7 +60,7 @@ static void app_init(void) {
         .draw_extra_cb = ui_draw,
         #endif
         .top_offset = ui_extra_height,
-        .aspect_x = 4,
+        .aspect_x = 3,
         .aspect_y = 5,
         .rot90 = true
     });
@@ -85,15 +88,13 @@ static void app_init(void) {
 }
 
 static void app_frame(void) {
-    /*
     #if CHIPS_USE_UI
         pacmanui_exec(&sys, clock_frame_time());
     #else
-        ui_exec(&sys, clock_frame_time());
+        namco_exec(&sys, clock_frame_time());
     #endif
     namco_decode_video(&sys);
     gfx_draw(namco_display_width(&sys), namco_display_height(&sys));
-    */
 }
 
 static void app_input(const sapp_event* event) {
@@ -110,7 +111,7 @@ static void app_cleanup(void) {
     #ifdef CHIPS_USE_UI
     pacmanui_discard();
     #endif
-//    namco_discard(&sys);
+    namco_discard(&sys);
     saudio_shutdown();
     gfx_shutdown();
 }
