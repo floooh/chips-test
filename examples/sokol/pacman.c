@@ -60,8 +60,8 @@ static void app_init(void) {
         .draw_extra_cb = ui_draw,
         #endif
         .top_offset = ui_extra_height,
-        .aspect_x = 3,
-        .aspect_y = 5,
+        .aspect_x = 28,
+        .aspect_y = 36,
         .rot90 = true
     });
     clock_init();
