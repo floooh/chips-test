@@ -9,7 +9,7 @@ void main() {
 @end
 
 @fs upscale_fs
-layout(binding=0) uniform sampler2D tex;
+uniform sampler2D tex;
 in vec2 uv;
 out vec4 frag_color;
 void main() {
@@ -28,22 +28,18 @@ void main() {
 @end
 
 @fs display_fs
-layout(binding=0) uniform sampler2D tex;
-layout(binding=0) uniform display_params {
-    vec2 frag_coord_mask;
-};
+uniform sampler2D tex;
 
 in vec2 uv;
 out vec4 frag_color;
 
-vec3 calc_mask(vec2 uv) {
-    vec2 fc = gl_FragCoord.xy * frag_coord_mask;
-    float iy = mod((fc.x+fc.y) * 0.5, 1.0);
-    return vec3(iy + 0.3);
+vec3 calc_mask() {
+    float i = mod(gl_FragCoord.y * 0.5, 1.0);
+    return vec3(i + 0.3);
 }
 
 void main() {
-    vec3 mask = calc_mask(uv);
+    vec3 mask = calc_mask();
     vec3 c = texture(tex, uv).xyz * mask;
     frag_color = vec4(c, 1.0);
 }

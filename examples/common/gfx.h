@@ -65,7 +65,6 @@ typedef struct {
     int fb_aspect_x;
     int fb_aspect_y;
     bool rot90;
-    display_params_t display_params;
     uint32_t rgba8_buffer[GFX_MAX_FB_WIDTH * GFX_MAX_FB_HEIGHT];
     void (*draw_extra_cb)(void);
 } gfx_state;
@@ -204,16 +203,6 @@ void gfx_init(const gfx_desc_t* desc) {
         .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
         .blend.depth_format = SG_PIXELFORMAT_NONE
     });
-
-    /* horizontal or vertical scanline effect */
-    if (gfx.rot90) {
-        gfx.display_params.frag_coord_mask[0] = 1.0f;
-        gfx.display_params.frag_coord_mask[1] = 0.0f;
-    }
-    else {
-        gfx.display_params.frag_coord_mask[0] = 0.0f;
-        gfx.display_params.frag_coord_mask[1] = 1.0f;
-    }
 }
 
 /* apply a viewport rectangle to preserve the emulator's aspect ratio,
@@ -285,7 +274,6 @@ void gfx_draw(int width, int height) {
     apply_viewport(w, h);
     sg_apply_pipeline(gfx.display_pip);
     sg_apply_bindings(&gfx.display_bind);
-    sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_display_params, &gfx.display_params, sizeof(gfx.display_params));
     sg_draw(0, 4, 1);
     sg_apply_viewport(0, 0, w, h, true);
     if (gfx.draw_extra_cb) {
