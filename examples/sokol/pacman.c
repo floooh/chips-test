@@ -9,9 +9,6 @@
 #include "chips/clk.h"
 #include "chips/mem.h"
 #include "pacman-roms.h"
-
-// FIXME
-#include <stdio.h> // <===========================================!!!
 #define NAMCO_PACMAN
 #include "systems/namco.h"
 
@@ -60,8 +57,8 @@ static void app_init(void) {
         .draw_extra_cb = ui_draw,
         #endif
         .top_offset = ui_extra_height,
-        .aspect_x = 28,
-        .aspect_y = 36,
+        .aspect_x = 2,
+        .aspect_y = 3,
         .rot90 = true
     });
     clock_init();
