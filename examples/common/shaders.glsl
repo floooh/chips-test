@@ -29,13 +29,15 @@ void main() {
 
 @fs display_fs
 uniform sampler2D tex;
+uniform display_fs_params {
+    vec2 frag_dot;
+};
 
 in vec2 uv;
 out vec4 frag_color;
 
 vec3 calc_mask() {
-    float i = mod(gl_FragCoord.y * 0.5, 1.0);
-    return vec3(i + 0.3);
+    return vec3(mod(dot(gl_FragCoord.xy, frag_dot), 2.0) * 0.7);
 }
 
 void main() {
