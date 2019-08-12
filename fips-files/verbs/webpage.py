@@ -9,7 +9,17 @@ from string import Template
 
 from mod import log, util, project
 
-systems = [ 'kc85', 'kc85-ui', 'zx', 'zx-ui', 'c64', 'c64-ui', 'cpc', 'cpc-ui', 'atom', 'atom-ui', 'z1013', 'z1013-ui', 'z9001', 'z9001-ui', 'bombjack', 'bombjack-ui' ]
+systems = [
+    'kc85', 'kc85-ui',
+    'zx', 'zx-ui',
+    'c64', 'c64-ui',
+    'cpc', 'cpc-ui',
+    'atom', 'atom-ui',
+    'z1013', 'z1013-ui',
+    'z9001', 'z9001-ui',
+    'bombjack', 'bombjack-ui',
+    'pacman', 'pacman-ui'
+]
 items = [
     { 'type':'emu',  'title':'KC85/2', 'system':'kc85',             'url':'kc85.html?type=kc85_2', 'img':'kc85/kc85_2.jpg', 'note':'' },
     { 'type':'emu',  'title':'KC85/3', 'system':'kc85',             'url':'kc85.html?type=kc85_3', 'img':'kc85/kc85_3.jpg', 'note':'' },
@@ -111,6 +121,7 @@ items = [
     { 'type':'game', 'title':"Mazogs (Z1013)",     'system':'z1013', 'url':'z1013.html?file=z1013/mazog_deutsch.z80', 'img':'z1013/mazogs_z1013.jpg', 'note':'' },
     { 'type':'game', 'title':"Galactica (Z1013)",  'system':'z1013', 'url':'z1013.html?file=z1013/galactica.z80', 'img':'z1013/galactica_z1013.jpg', 'note':'' },
     { 'type':'game', 'title':"Demolation (Z1013)", 'system':'z1013', 'url':'z1013.html?file=z1013/demolation.z80', 'img':'z1013/demolation_z1013.jpg', 'note':'' },
+    { 'type':'test', 'title':"Pacman (Arcase)", 'system':'pacman', 'url':'pacman.html', 'img':'', 'note':'' }
 ]
 GitHubSamplesURL = 'https://github.com/floooh/chips-test/master/examples'
 BuildConfig = 'wasm-ninja-release'
@@ -124,6 +135,8 @@ def deploy_webpage(fips_dir, proj_dir, webpage_dir) :
     # build the thumbnail gallery
     content = ''
     for item in items :
+        if item['type'] == 'test':
+            continue
         title = item['title']
         system = item['system']
         url = item['url']
