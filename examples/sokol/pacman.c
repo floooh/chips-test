@@ -104,10 +104,10 @@ static void app_input(const sapp_event* event) {
     switch (event->type) {
         case SAPP_EVENTTYPE_KEY_DOWN:
             switch (event->key_code) {
-                case SAPP_KEYCODE_RIGHT:    namco_input_set(&sys, NAMCO_INPUT_P1_JOYSTICK_RIGHT|NAMCO_INPUT_P2_JOYSTICK_RIGHT); break;
-                case SAPP_KEYCODE_LEFT:     namco_input_set(&sys, NAMCO_INPUT_P1_JOYSTICK_LEFT|NAMCO_INPUT_P2_JOYSTICK_LEFT); break;
-                case SAPP_KEYCODE_UP:       namco_input_set(&sys, NAMCO_INPUT_P1_JOYSTICK_UP|NAMCO_INPUT_P2_JOYSTICK_UP); break;
-                case SAPP_KEYCODE_DOWN:     namco_input_set(&sys, NAMCO_INPUT_P1_JOYSTICK_DOWN|NAMCO_INPUT_P2_JOYSTICK_DOWN); break;
+                case SAPP_KEYCODE_RIGHT:    namco_input_set(&sys, NAMCO_INPUT_P1_JOYSTICK_RIGHT); break;
+                case SAPP_KEYCODE_LEFT:     namco_input_set(&sys, NAMCO_INPUT_P1_JOYSTICK_LEFT); break;
+                case SAPP_KEYCODE_UP:       namco_input_set(&sys, NAMCO_INPUT_P1_JOYSTICK_UP); break;
+                case SAPP_KEYCODE_DOWN:     namco_input_set(&sys, NAMCO_INPUT_P1_JOYSTICK_DOWN); break;
                 case SAPP_KEYCODE_1:        namco_input_set(&sys, NAMCO_INPUT_P1_COIN); break;
                 case SAPP_KEYCODE_2:        namco_input_set(&sys, NAMCO_INPUT_P2_COIN); break;
                 default:                    namco_input_set(&sys, NAMCO_INPUT_P1_START); break;
@@ -115,10 +115,10 @@ static void app_input(const sapp_event* event) {
             break;
         case SAPP_EVENTTYPE_KEY_UP:
             switch (event->key_code) {
-                case SAPP_KEYCODE_RIGHT:    namco_input_clear(&sys, NAMCO_INPUT_P1_JOYSTICK_RIGHT|NAMCO_INPUT_P2_JOYSTICK_RIGHT); break;
-                case SAPP_KEYCODE_LEFT:     namco_input_clear(&sys, NAMCO_INPUT_P1_JOYSTICK_LEFT|NAMCO_INPUT_P2_JOYSTICK_LEFT); break;
-                case SAPP_KEYCODE_UP:       namco_input_clear(&sys, NAMCO_INPUT_P1_JOYSTICK_UP|NAMCO_INPUT_P2_JOYSTICK_UP); break;
-                case SAPP_KEYCODE_DOWN:     namco_input_clear(&sys, NAMCO_INPUT_P1_JOYSTICK_DOWN|NAMCO_INPUT_P2_JOYSTICK_DOWN); break;
+                case SAPP_KEYCODE_RIGHT:    namco_input_clear(&sys, NAMCO_INPUT_P1_JOYSTICK_RIGHT); break;
+                case SAPP_KEYCODE_LEFT:     namco_input_clear(&sys, NAMCO_INPUT_P1_JOYSTICK_LEFT); break;
+                case SAPP_KEYCODE_UP:       namco_input_clear(&sys, NAMCO_INPUT_P1_JOYSTICK_UP); break;
+                case SAPP_KEYCODE_DOWN:     namco_input_clear(&sys, NAMCO_INPUT_P1_JOYSTICK_DOWN); break;
                 case SAPP_KEYCODE_1:        namco_input_clear(&sys, NAMCO_INPUT_P1_COIN); break;
                 case SAPP_KEYCODE_2:        namco_input_clear(&sys, NAMCO_INPUT_P2_COIN); break;
                 default:                    namco_input_clear(&sys, NAMCO_INPUT_P1_START); break;
