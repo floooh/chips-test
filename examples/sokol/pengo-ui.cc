@@ -35,8 +35,8 @@ void pengoui_draw(void) {
     ui_namco_draw(&ui_pengo, exec_time);
 }
 
-void pengo_init(namco_t* sys) {
-    ui_init(pengo_draw);
+void pengoui_init(namco_t* sys) {
+    ui_init(pengoui_draw);
     ui_namco_desc_t desc = {0};
     desc.sys = sys;
     desc.create_texture_cb = gfx_create_texture;
