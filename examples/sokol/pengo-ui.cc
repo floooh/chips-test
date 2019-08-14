@@ -1,5 +1,5 @@
 /*
-    UI implementation for pacman.c, this must live in its own .cc file.
+    UI implementation for pengo.c, this must live in its own .cc file.
 */
 #include "common.h"
 #include "imgui.h"
@@ -10,7 +10,7 @@
 #define CHIPS_IMPL
 #define UI_DASM_USE_Z80
 #define UI_DBG_USE_Z80
-#define NAMCO_PACMAN
+#define NAMCO_PENGO
 #include "ui.h"
 #include "util/z80dasm.h"
 #include "ui/ui_util.h"
@@ -28,15 +28,15 @@
 
 extern "C" {
 
-static ui_namco_t ui_pacman;
+static ui_namco_t ui_pengo;
 static double exec_time;
 
-void pacmanui_draw(void) {
-    ui_namco_draw(&ui_pacman, exec_time);
+void pengoui_draw(void) {
+    ui_namco_draw(&ui_pengo, exec_time);
 }
 
-void pacmanui_init(namco_t* sys) {
-    ui_init(pacmanui_draw);
+void pengo_init(namco_t* sys) {
+    ui_init(pengo_draw);
     ui_namco_desc_t desc = {0};
     desc.sys = sys;
     desc.create_texture_cb = gfx_create_texture;
@@ -52,20 +52,20 @@ void pacmanui_init(namco_t* sys) {
     desc.dbg_keys.step_into_name = "F7";
     desc.dbg_keys.toggle_breakpoint_keycode = SAPP_KEYCODE_F9;
     desc.dbg_keys.toggle_breakpoint_name = "F9";
-    ui_namco_init(&ui_pacman, &desc);
+    ui_namco_init(&ui_pengo, &desc);
 }
 
-void pacmanui_discard(void) {
-    ui_namco_discard(&ui_pacman);
+void pengoui_discard(void) {
+    ui_namco_discard(&ui_pengo);
     ui_discard();
 }
 
-void pacmanui_exec(namco_t* sys, uint32_t frame_time_us) {
-    if (ui_namco_before_exec(&ui_pacman)) {
+void pengoui_exec(namco_t* sys, uint32_t frame_time_us) {
+    if (ui_namco_before_exec(&ui_pengo)) {
         uint64_t start = stm_now();
         namco_exec(sys, frame_time_us);
         exec_time = stm_ms(stm_since(start));
-        ui_namco_after_exec(&ui_pacman);
+        ui_namco_after_exec(&ui_pengo);
     }
     else {
         exec_time = 0.0;
