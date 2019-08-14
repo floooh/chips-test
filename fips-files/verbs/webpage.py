@@ -18,7 +18,8 @@ systems = [
     'z1013', 'z1013-ui',
     'z9001', 'z9001-ui',
     'bombjack', 'bombjack-ui',
-    'pacman', 'pacman-ui'
+    'pacman', 'pacman-ui',
+    'pengo', 'pengo-ui'
 ]
 items = [
     { 'type':'emu',  'title':'KC85/2', 'system':'kc85',             'url':'kc85.html?type=kc85_2', 'img':'kc85/kc85_2.jpg', 'note':'' },
@@ -121,7 +122,8 @@ items = [
     { 'type':'game', 'title':"Mazogs (Z1013)",     'system':'z1013', 'url':'z1013.html?file=z1013/mazog_deutsch.z80', 'img':'z1013/mazogs_z1013.jpg', 'note':'' },
     { 'type':'game', 'title':"Galactica (Z1013)",  'system':'z1013', 'url':'z1013.html?file=z1013/galactica.z80', 'img':'z1013/galactica_z1013.jpg', 'note':'' },
     { 'type':'game', 'title':"Demolation (Z1013)", 'system':'z1013', 'url':'z1013.html?file=z1013/demolation.z80', 'img':'z1013/demolation_z1013.jpg', 'note':'' },
-    { 'type':'test', 'title':"Pacman (Arcase)", 'system':'pacman', 'url':'pacman.html', 'img':'', 'note':'' }
+    { 'type':'test', 'title':"Pacman (Arcade)", 'system':'pacman', 'url':'pacman.html', 'img':'', 'note':'' },
+    { 'type':'test', 'title':"Pengo (Arcade)", 'system':'pengo', 'url':'pengo.html', 'img':'', 'note':'' }
 ]
 GitHubSamplesURL = 'https://github.com/floooh/chips-test/master/examples'
 BuildConfig = 'wasm-ninja-release'
