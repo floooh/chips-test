@@ -110,7 +110,6 @@ void gfx_init_images_and_pass(void) {
         .render_target = true,
         .width = 2 * gfx.fb_width,
         .height = 2 * gfx.fb_height,
-        .pixel_format = SG_PIXELFORMAT_RGBA8,
         .min_filter = SG_FILTER_LINEAR,
         .mag_filter = SG_FILTER_LINEAR,
         .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
@@ -177,7 +176,7 @@ void gfx_init(const gfx_desc_t* desc) {
     });
     gfx.display_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
         .size = sizeof(verts),
-        .content = sg_query_feature(SG_FEATURE_ORIGIN_TOP_LEFT) ? 
+        .content = sg_query_features().origin_top_left ? 
                         (gfx.rot90 ? verts_rot : verts) :
                         (gfx.rot90 ? verts_flipped_rot : verts_flipped)
     });
