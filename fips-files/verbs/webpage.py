@@ -67,6 +67,7 @@ items = [
     { 'type':'demo', 'title':'Enterprise (KC85/4)', 'system':'kc85',    'url':'kc85.html?type=kc85_4&file=kc85/enterpri.tap', 'img':'kc85/enterprise.jpg', 'note':'' },
     { 'type':'demo', 'title':'Mad Breakin (KC85/3)', 'system':'kc85',    'url':'kc85.html?type=kc85_3&mod=m022&file=kc85/breakin.853', 'img':'kc85/breakin.jpg', 'note':'' },
     { 'type':'game', 'title':'Tetris (KC85/4)',     'system':'kc85',    'url':'kc85.html?type=kc85_4&file=kc85/tetris.kcc', 'img':'kc85/tetris.jpg', 'note':'' },
+    { 'type':'game', 'title':'Sokoban (KC85/4)',    'system':'kc85',    'url':'kc85.html?type=kc85_4&file=kc85/sokoban4.kcc', 'img':'kc85/sokoban4.jpg', 'note':'' },
     { 'type':'game', 'title':'Boulderdash (C64)',   'system':'c64',     'url':'c64.html?file=c64/boulderdash_c64.tap&joystick=digital_1&tape_sound=yes', 'img':'c64/boulderdash_c64.jpg', 'note':'press F1 on start screen'},
     { 'type':'game', 'title':'Boulderdash (CPC)',   'system':'cpc',     'url':'cpc.html?file=cpc/boulder_dash.sna&joystick=true', 'img':'cpc/boulderdash_cpc.jpg', 'note':''},
     { 'type':'game', 'title':'Boulderdash (ZX48k)',    'system':'zx',   'url':'zx.html?file=zx/boulderdash_zx.z80&joystick=kempston&type=zx48k', 'img':'zx/boulderdash_zx.jpg', 'note':'select Kempston joystick!'},
