@@ -1,10 +1,10 @@
 name: build_and_test
 
 on:
-    - push
-    - pull-request
+    push
+    pull-request
     # trigger a build once per day at 6am:
-    - schedule:
+    schedule:
         - cron: '0 6 * * *'
 
 jobs:
