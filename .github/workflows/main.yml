@@ -3,7 +3,7 @@ name: build_and_test
 on: 
     push: ~
     pull_request: ~
-    issue_comment: "Please build."
+    issue_comment: ~
     schedule:
         - cron: '0 6 * * *'
 
