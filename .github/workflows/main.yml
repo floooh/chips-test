@@ -4,8 +4,8 @@ on:
     push: ~
     pull_request: ~
     issue_comment:
-        - action: created
-        - comment: "Please build"
+        action: created
+        comment: "Please build"
     schedule:
         - cron: '0 6 * * *'
 
