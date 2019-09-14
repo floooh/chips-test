@@ -1,9 +1,6 @@
 name: build_and_test
 
-on:
-    push
-    pull-request
-    # trigger a build once per day at 6am:
+on: [push, pull-request]
     schedule:
         - cron: '0 6 * * *'
 
