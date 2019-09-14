@@ -1,6 +1,7 @@
 name: build_and_test
 
 on: [push, pull-request]
+on:
     schedule:
         - cron: '0 6 * * *'
 
