@@ -1,9 +1,6 @@
 # chips-test
 
-| Platform | Build Status |
-|-----|-----|
-|Linux+OSX: |[![Build Status](https://travis-ci.org/floooh/chips-test.svg?branch=master)](https://travis-ci.org/floooh/chips-test)|
-|Windows|[![Build status](https://ci.appveyor.com/api/projects/status/x92uvfn8l2lb4a7b?svg=true)](https://ci.appveyor.com/project/floooh/chips-test)|
+[![Build Status](https://github.com/floooh/chips-test/workflows/build_and_test/badge.svg)](https://github.com/floooh/chips-test/actions)
 
 Tests and sample emulators for https://github.com/floooh/chips
 
