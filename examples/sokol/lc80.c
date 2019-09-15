@@ -13,7 +13,6 @@
 #include "chips/beeper.h"
 #include "chips/clk.h"
 #include "chips/kbd.h"
-#include "chips/mem.h"
 #include "systems/lc80.h"
 #include "lc80-roms.h"
 
@@ -75,11 +74,15 @@ void app_init(void) {
 
     lc80_desc_t desc = lc80_desc();
     lc80_init(&sys, &desc);
+    lc80ui_init(&sys);
 }
 
 void app_frame(void) {
     lc80ui_exec(clock_frame_time());
-    lc80ui_draw();
+    sg_begin_default_pass(&(sg_pass_action){0}, sapp_width(), sapp_height());
+    ui_draw();
+    sg_end_pass();
+    sg_commit();
 }
 
 void app_input(const sapp_event* event) {

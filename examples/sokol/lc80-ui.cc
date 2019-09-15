@@ -23,11 +23,11 @@
 #include "ui/ui_dbg.h"
 #include "ui/ui_audio.h"
 #include "ui/ui_kbd.h"
+#include "ui/ui_audio.h"
 #include "ui/ui_z80.h"
 #include "ui/ui_z80pio.h"
 #include "ui/ui_z80ctc.h"
 #include "ui/ui_lc80.h"
-#include "ui/ui_audio.h"
 
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wmissing-field-initializers"
