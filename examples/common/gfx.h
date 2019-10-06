@@ -1,6 +1,10 @@
 #pragma once
 /* 
     Common graphics functions for the chips-test example emulators.
+
+    REMINDER: consider using this CRT shader?
+
+    https://github.com/mattiasgustavsson/rebasic/blob/master/source/libs/crtemu.h
 */
 #include <stdint.h>
 #include <stdbool.h>
