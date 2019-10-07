@@ -19,7 +19,8 @@ systems = [
     'z9001', 'z9001-ui',
     'bombjack', 'bombjack-ui',
     'pacman', 'pacman-ui',
-    'pengo', 'pengo-ui'
+    'pengo', 'pengo-ui',
+    'lc80'
 ]
 items = [
     { 'type':'emu',  'title':'KC85/2', 'system':'kc85',             'url':'kc85.html?type=kc85_2', 'img':'kc85/kc85_2.jpg', 'note':'' },
@@ -32,6 +33,7 @@ items = [
     { 'type':'emu',  'title':'ZX Spectrum 128', 'system':'zx',      'url':'zx.html?type=zx128', 'img':'zx/zx128.jpg', 'note':'' },
     { 'type':'emu',  'title':'Commodore C64',   'system':'c64',     'url':'c64.html',     'img':'c64/c64.jpg',       'note':'' },
     { 'type':'emu',  'title':'Acorn Atom',      'system':'atom',    'url':'atom.html',    'img':'atom/atom.jpg', 'note':'' },
+    { 'type':'emu',  'title':'LC-80',           'system':'lc80',    'url':'lc80.html',    'img':'lc80/lc80.jpg', 'note':'' },
     { 'type':'emu',  'title':'Robotron Z1013',  'system':'z1013',   'url':'z1013.html',   'img':'z1013/z1013.jpg', 'note':'' },
     { 'type':'emu',  'title':'Robotron Z9001',  'system':'z9001',   'url':'z9001.html',   'img':'z9001/z9001.jpg', 'note':'(with BASIC and RAM modules)' },
     { 'type':'emu',  'title':'Robotron KC87',   'system':'z9001',   'url':'z9001.html?type=kc87', 'img':'z9001/kc87.jpg',     'note':'BASIC[Enter]' },
