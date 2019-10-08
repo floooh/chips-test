@@ -11,36 +11,41 @@ jobs:
           run:  python fips build win64-vstudio-debug
         - name: win64-vstudio-release
           run:  python fips build win64-vstudio-release
-        - name: chips-test
+        - name: chips-test win64-vstudio-debug
           run:  python fips run chips-test win64-vstudio-debug
     mac:
         runs-on: macos-latest
         steps:
         - uses: actions/checkout@v1
-        - name: macOS
-          run: |
-            python fips build osx-make-debug
-            python fips build osx-make-release
-            python fips run chips-test osx-make-debug
+        - name: osx-make-debug
+          run:  python fips build osx-make-debug
+        - name: osx-make-release
+          run:  python fips build osx-make-release
+        - name: chips-test osx-make-debug
+          run:  python fips run chips-test osx-make-debug
     linux:
         runs-on: ubuntu-latest
         steps:
         - uses: actions/checkout@v1
-        - name: Linux
-          run: |
-            sudo apt-get install libglu1-mesa-dev mesa-common-dev xorg-dev libasound-dev
-            python fips build linux-make-debug
-            python fips build linux-make-release
-            python fips run chips-test linux-make-debug
+        - name: install packages
+          run:  sudo apt-get install libglu1-mesa-dev mesa-common-dev xorg-dev libasound-dev
+        - name: linux-make-debug
+          run:  python fips build linux-make-debug
+        - name: linux-make-release
+          run:  python fips build linux-make-release
+        - name: chips-test linux-make-debug
+          run:  python fips run chips-test linux-make-debug
     emscripten:
         runs-on: ubuntu-latest
         steps:
         - uses: actions/checkout@v1
-        - name: Emscripten
+        - name: install emsdk
           run: |
             sudo apt-get install ninja-build
             python fips emsdk install latest
-            python fips build wasm-ninja-debug
-            python fips build wasm-ninja-release
+        - name: wasm-ninja-debug
+          run:  python fips build wasm-ninja-debug
+        - name: wasm-ninja-release
+          run:  python fips build wasm-ninja-release
 
 
