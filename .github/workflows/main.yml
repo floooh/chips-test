@@ -8,6 +8,7 @@ jobs:
         steps:
         - uses: actions/checkout@v1
         - name: Windows
+          shell: pwsh
           run: |
             python fips build win64-vstudio-debug
             python fips build win64-vstudio-release
