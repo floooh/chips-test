@@ -126,7 +126,7 @@ void app_frame(void) {
             load_success = true;
             keybuf_put((const char*)fs_ptr());
         }
-        else if (fs_ext("bin")) {
+        else if (fs_ext("bin") || fs_ext("prg")) {
             load_success = c64_quickload(&c64, fs_ptr(), fs_size());
         }
         else if (fs_ext("tap")) {
