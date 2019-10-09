@@ -69,7 +69,6 @@ typedef struct {
     int fb_aspect_x;
     int fb_aspect_y;
     bool rot90;
-    display_fs_params_t fs_params;
     uint32_t rgba8_buffer[GFX_MAX_FB_WIDTH * GFX_MAX_FB_HEIGHT];
     void (*draw_extra_cb)(void);
 } gfx_state;
@@ -104,8 +103,8 @@ void gfx_init_images_and_pass(void) {
         .height = gfx.fb_height,
         .pixel_format = SG_PIXELFORMAT_RGBA8,
         .usage = SG_USAGE_STREAM,
-        .min_filter = SG_FILTER_LINEAR,
-        .mag_filter = SG_FILTER_LINEAR,
+        .min_filter = SG_FILTER_NEAREST,
+        .mag_filter = SG_FILTER_NEAREST,
         .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
         .wrap_v = SG_WRAP_CLAMP_TO_EDGE
     });
@@ -207,15 +206,6 @@ void gfx_init(const gfx_desc_t* desc) {
         .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
         .blend.depth_format = SG_PIXELFORMAT_NONE
     });
-    /* vertical or horizontal scanline effect */
-    if (desc->rot90) {
-        gfx.fs_params.frag_dot[0] = 1.0f;
-        gfx.fs_params.frag_dot[1] = 0.0f;
-    }
-    else {
-        gfx.fs_params.frag_dot[0] = 0.0f;
-        gfx.fs_params.frag_dot[1] = 1.0f;
-    }
 }
 
 /* apply a viewport rectangle to preserve the emulator's aspect ratio,
@@ -287,7 +277,6 @@ void gfx_draw(int width, int height) {
     apply_viewport(w, h);
     sg_apply_pipeline(gfx.display_pip);
     sg_apply_bindings(&gfx.display_bind);
-    sg_apply_uniforms(SG_SHADERSTAGE_FS, SLOT_display_fs_params, &gfx.fs_params, sizeof(gfx.fs_params));
     sg_draw(0, 4, 1);
     sg_apply_viewport(0, 0, w, h, true);
     if (gfx.draw_extra_cb) {

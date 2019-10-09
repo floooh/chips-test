@@ -29,21 +29,11 @@ void main() {
 
 @fs display_fs
 uniform sampler2D tex;
-uniform display_fs_params {
-    vec2 frag_dot;
-};
-
 in vec2 uv;
 out vec4 frag_color;
 
-vec3 calc_mask() {
-    return vec3(mod(dot(gl_FragCoord.xy, frag_dot), 2.0) * 0.7);
-}
-
 void main() {
-    vec3 mask = calc_mask();
-    vec3 c = texture(tex, uv).xyz * mask;
-    frag_color = vec4(c, 1.0);
+    frag_color = vec4(texture(tex, uv).xyz, 1.0);
 }
 @end
 
