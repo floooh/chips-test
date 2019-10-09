@@ -98,6 +98,9 @@ void app_init(void) {
         else if (sargs_equals("joystick", "digital_2")) {
             joy_type = C64_JOYSTICKTYPE_DIGITAL_2;
         }
+        else if (sargs_equals("joystick", "digital_12")) {
+            joy_type = C64_JOYSTICKTYPE_DIGITAL_12;
+        }
     }
     c64_desc_t desc = c64_desc(joy_type);
     c64_init(&c64, &desc);
