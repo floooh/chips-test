@@ -34,7 +34,7 @@ UTEST(m6522, rw) {
     T(values[M6522_PORT_B] == 0x55);
     M6522_SET_ADDR(pins, M6522_REG_RB);
     M6522_SET_DATA(pins, 0xF0);
-    pins = m6522_iorq(&via, pins);
+    m6522_iorq(&via, pins);
     T(via.out_b == 0xF0);
     T(values[M6522_PORT_B] == 0xF5);
 
