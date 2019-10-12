@@ -132,7 +132,7 @@ void app_frame(void) {
         else if (fs_ext("tap")) {
             load_success = c64_insert_tape(&c64, fs_ptr(), fs_size());
         }
-        else {
+        else if (fs_ext("bin") || fs_ext("prg") || fs_ext("")) {
             load_success = c64_quickload(&c64, fs_ptr(), fs_size());
         }
         if (load_success) {
