@@ -129,11 +129,11 @@ void app_frame(void) {
             load_success = true;
             keybuf_put((const char*)fs_ptr());
         }
-        else if (fs_ext("bin") || fs_ext("prg")) {
-            load_success = c64_quickload(&c64, fs_ptr(), fs_size());
-        }
         else if (fs_ext("tap")) {
             load_success = c64_insert_tape(&c64, fs_ptr(), fs_size());
+        }
+        else {
+            load_success = c64_quickload(&c64, fs_ptr(), fs_size());
         }
         if (load_success) {
             if (clock_frame_count() > (load_delay_frames + 10)) {

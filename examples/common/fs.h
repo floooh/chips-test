@@ -33,7 +33,13 @@ typedef struct {
 static fs_state fs;
 
 void fs_copy_ext(const char* path) {
-    const char* ext = strrchr(path, '.');
+    fs.ext[0] = 0;
+    const char* str = path;
+    const char* slash = strrchr(str, '/');
+    if (slash) {
+        str = slash+1;
+    }
+    const char* ext = strrchr(str, '.');
     if (ext) {
         int i = 0;
         char c = 0;
