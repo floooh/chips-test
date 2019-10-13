@@ -34,26 +34,6 @@ static struct {
     char chrs[256*1024];        // the video output converted to Sixel ASCII characters
 } state;
 
-// C64 color palette
-const uint32_t pal[16] = {
-    _M6569_RGBA8(0x00,0x00,0x00),
-    _M6569_RGBA8(0xff,0xff,0xff),
-    _M6569_RGBA8(0x81,0x33,0x38),
-    _M6569_RGBA8(0x75,0xce,0xc8),
-    _M6569_RGBA8(0x8e,0x3c,0x97),
-    _M6569_RGBA8(0x56,0xac,0x4d),
-    _M6569_RGBA8(0x2e,0x2c,0x9b),
-    _M6569_RGBA8(0xed,0xf1,0x71),
-    _M6569_RGBA8(0x8e,0x50,0x29),
-    _M6569_RGBA8(0x55,0x38,0x00),
-    _M6569_RGBA8(0xc4,0x6c,0x71),
-    _M6569_RGBA8(0x4a,0x4a,0x4a),
-    _M6569_RGBA8(0x7b,0x7b,0x7b),
-    _M6569_RGBA8(0xa9,0xff,0x9f),
-    _M6569_RGBA8(0x70,0x6d,0xeb),
-    _M6569_RGBA8(0xb2,0xb2,0xb2),
-};
-
 #define FRAME_USEC (33333)
 
 // a signal handler for Ctrl-C, for proper cleanup 
@@ -95,7 +75,8 @@ static void term_sixel_pixels(void) {
             char chr = 0;
             for (int i = 0; i < 3; i++) {
                 uint32_t p = state.pixels[(y+i)*w + x];
-                if (p == pal[6]) {
+                // FIXME: convert pixel color back to terminal color
+                if (p == _m6569_colors[6]) {
                     chr |= (3<<(i*2));
                 }
             }
