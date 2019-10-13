@@ -30,8 +30,8 @@
 
 static struct {
     c64_t c64;
-    uint32_t pixels[512*512];       // RGBA8 buffer for emulator's video output
-    char chrs[512*512];             // contains the video output converted to Sixel characters
+    uint32_t pixels[256*1024];  // RGBA8 buffer for emulator's video output
+    char chrs[256*1024];        // the video output converted to Sixel ASCII characters
 } state;
 
 // C64 color palette
