@@ -1,6 +1,8 @@
 //------------------------------------------------------------------------------
 //  c64-sixel.c
 //
+//  WIP!!!
+//
 //  A C64 emulator for the terminal, using Sixel graphics for the video 
 //  output:
 //
@@ -10,6 +12,7 @@
 //------------------------------------------------------------------------------
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <ctype.h>
 #include <curses.h>     // curses is only used for non-blocking keyboard input
 #include <unistd.h>
@@ -31,7 +34,7 @@
 static struct {
     c64_t c64;
     uint32_t pixels[256*1024];  // RGBA8 buffer for emulator's video output
-    char chrs[256*1024];        // the video output converted to Sixel ASCII characters
+    char chrs[2*1024*1024];        // the video output converted to Sixel ASCII characters
 } state;
 
 #define FRAME_USEC (33333)
@@ -49,20 +52,53 @@ static void term_home(void) {
 
 // Esc sequence to switch terminal into Sixel mode
 static void term_sixel_begin(void) {
-    const int w = 2 * c64_display_width(&state.c64);
-    const int h = 2 * c64_display_height(&state.c64);
-    printf("\033Pq\"1;1;%d;%d", w, h);
+    printf("\033Pq");
 }
 
-// TODO: define the Sixel color palette
+// set Sixel raster attributes
+static void term_sixel_raster_attrs(void) {
+    const int w = 2 * c64_display_width(&state.c64);
+    const int h = 2 * c64_display_height(&state.c64);
+    printf("\"1;1;%d;%d", w, h);
+}
+
+// the C64 palette as Sixel palette
 static void term_sixel_colors(void) {
-    printf("#0;2;0;0;0"         // black
-           "#1;2;100;100;100");   // white
+    for (int i = 0; i < 16; i++) {
+        uint32_t c = _m6569_colors[i];
+        int r = ((c & 255) * 100) / 256;
+        int g = (((c >> 8) & 255) * 100) / 256;
+        int b = (((c >> 16) & 255) * 100) / 256;
+        printf("#%d;2;%d;%d;%d", i, r, g, b);
+    }
 }
 
 // flush terminal output for current frame
 static void term_flush(void) {
     printf("\e\\\n");
+}
+
+// convert RGBA8 color to palette index
+static uint8_t pal_index(uint32_t c) {
+    switch (c) {
+        case _M6569_RGBA8(0x00,0x00,0x00): return 0;
+        case _M6569_RGBA8(0xff,0xff,0xff): return 1;
+        case _M6569_RGBA8(0x81,0x33,0x38): return 2;
+        case _M6569_RGBA8(0x75,0xce,0xc8): return 3;
+        case _M6569_RGBA8(0x8e,0x3c,0x97): return 4;
+        case _M6569_RGBA8(0x56,0xac,0x4d): return 5;
+        case _M6569_RGBA8(0x2e,0x2c,0x9b): return 6;
+        case _M6569_RGBA8(0xed,0xf1,0x71): return 7;
+        case _M6569_RGBA8(0x8e,0x50,0x29): return 8;
+        case _M6569_RGBA8(0x55,0x38,0x00): return 9;
+        case _M6569_RGBA8(0xc4,0x6c,0x71): return 10;
+        case _M6569_RGBA8(0x4a,0x4a,0x4a): return 11;
+        case _M6569_RGBA8(0x7b,0x7b,0x7b): return 12;
+        case _M6569_RGBA8(0xa9,0xff,0x9f): return 13;
+        case _M6569_RGBA8(0x70,0x6d,0xeb): return 14;
+        case _M6569_RGBA8(0xb2,0xb2,0xb2): return 15;
+        default: return 0;
+    }
 }
 
 // decode the pixel buffer into a sixel character sequence and send to terminal
@@ -71,17 +107,51 @@ static void term_sixel_pixels(void) {
     const int h = c64_display_height(&state.c64);
     int chr_pos = 0;
     for (int y = 0; y < h; y += 3) {
-        for (int x = 0; x < w; x++) {
-            char chr = 0;
-            for (int i = 0; i < 3; i++) {
-                uint32_t p = state.pixels[(y+i)*w + x];
-                // FIXME: convert pixel color back to terminal color
-                if (p == _m6569_colors[6]) {
-                    chr |= (3<<(i*2));
+        for (int color = 0; color < 16; color++) {
+            state.chrs[chr_pos++] = '#';
+            if (color > 9) {
+                state.chrs[chr_pos++] = '1';
+                state.chrs[chr_pos++] = "0123456789"[color - 10];
+            }
+            else {
+                state.chrs[chr_pos++] = "0123456789"[color];
+            }
+            int rle = 0;
+            int cur_chr = -1;
+            for (int x = 0; x < w; x++) {
+                int new_chr = 0;
+                for (int i = 0; i < 3; i++) {
+                    uint32_t p = state.pixels[(y+i)*w + x];
+                    uint8_t idx = pal_index(p);
+                    if (idx == color) {
+                        new_chr |= (3<<(i*2));
+                    }
+                }
+                if (cur_chr == -1) {
+                    cur_chr = new_chr;
+                }
+                if ((new_chr == cur_chr) && (x < (w-1))) {
+                    rle++;
+                }
+                else {
+                    if (rle == 1) {
+                        state.chrs[chr_pos++] = cur_chr + 0x3F;
+                        state.chrs[chr_pos++] = cur_chr + 0x3F;
+                    }
+                    else if (rle == 2) {
+                        state.chrs[chr_pos++] = cur_chr + 0x3F;
+                        state.chrs[chr_pos++] = cur_chr + 0x3F;
+                        state.chrs[chr_pos++] = cur_chr + 0x3F;
+                        state.chrs[chr_pos++] = cur_chr + 0x3F;
+                    }
+                    else {
+                        chr_pos += snprintf(&state.chrs[chr_pos], 128, "!%d%c", 2*rle, cur_chr+0x3F);
+                    }
+                    rle = 0;
+                    cur_chr = new_chr;
                 }
             }
-            state.chrs[chr_pos++] = chr + 0x3F;
-            state.chrs[chr_pos++] = chr + 0x3F;
+            state.chrs[chr_pos++] = '$';
         }
         state.chrs[chr_pos++] = '$';
         state.chrs[chr_pos++] = '-';
@@ -153,6 +223,7 @@ int main() {
         // render the frame in the terminal
         term_home();
         term_sixel_begin();
+        term_sixel_raster_attrs();
         term_sixel_colors();
         term_sixel_pixels();
         term_flush();
