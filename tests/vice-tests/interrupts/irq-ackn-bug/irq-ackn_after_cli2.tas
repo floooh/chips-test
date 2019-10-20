@@ -1,0 +1,218 @@
+  processor 6502
+
+; Select the video timing (processor clock cycles per raster line)
+;CYCLES = 65     ; 6567R8 and above, NTSC-M
+;CYCLES = 64    ; 6567R5 6A, NTSC-M
+CYCLES = 63    ; 6569 (all revisions), PAL-B
+
+cinv = $314
+cnmi = $318
+raster = 44     ; start of raster interrupt
+m = $fb         ; zero page variable
+
+  .org $801
+basic:
+  .word 0$      ; link to next line
+  .word 1995    ; line number
+  .byte $9E     ; SYS token
+
+; SYS digits
+
+  .if (* + 8) / 10000
+  .byte $30 + (* + 8) / 10000
+  .endif
+  .if (* + 7) / 1000
+  .byte $30 + (* + 7) % 10000 / 1000
+  .endif
+  .if (* + 6) / 100
+  .byte $30 + (* + 6) % 1000 / 100
+  .endif
+  .if (* + 5) / 10
+  .byte $30 + (* + 5) % 100 / 10
+  .endif
+  .byte $30 + (* + 4) % 10
+
+0$:
+  .byte 0,0,0   ; end of BASIC program
+
+start:
+  jmp install
+  jmp deinstall
+
+install:        ; install the raster routine
+  jsr initscreen
+  jsr restore   ; Disable the Restore key (disable NMI interrupts)
+checkirq:
+  lda cinv      ; check the original IRQ vector
+  ldx cinv+1    ; (to avoid multiple installation)
+  cmp #<irq1
+  bne irqinit
+  cpx #>irq1
+  beq skipinit
+irqinit:
+  sei
+  sta oldirq    ; store the old IRQ vector
+  stx oldirq+1
+  lda #<irq1
+  ldx #>irq1
+  sta cinv      ; set the new interrupt vector
+  stx cinv+1
+skipinit:
+  lda #$1b
+  sta $d011     ; set the raster interrupt location
+  lda #raster
+  sta $d012
+  lda #$7f
+  sta $dc0d     ; disable timer interrupts
+  sta $dd0d
+  ldx #1
+  stx $d01a     ; enable raster interrupt
+  lda $dc0d     ; acknowledge CIA interrupts
+  lsr $d019     ; and video interrupts
+  cli
+  rts
+
+deinstall:
+  sei           ; disable interrupts
+  lda #$1b
+  sta $d011     ; restore text screen mode
+  lda #$81
+  sta $dc0d     ; enable Timer A interrupts on CIA 1
+  lda #0
+  sta $d01a     ; disable video interrupts
+  lda oldirq
+  sta cinv      ; restore old IRQ vector
+  lda oldirq+1
+  sta cinv+1
+  bit $dd0d     ; re-enable NMI interrupts
+  cli
+  rts
+
+; Auxiliary raster interrupt (for syncronization)
+irq1:
+; irq (event)   ; > 7 + at least 2 cycles of last instruction (9 to 16 total)
+; pha           ; 3
+; txa           ; 2
+; pha           ; 3
+; tya           ; 2
+; pha           ; 3
+; tsx           ; 2
+; lda $0104,x   ; 4
+; and #xx       ; 2
+; beq           ; 3
+; jmp ($314)    ; 5
+                ; ---
+                ; 38 to 45 cycles delay at this stage
+  lda #<irq2
+  sta cinv
+  lda #>irq2
+  sta cinv+1
+  nop           ; waste at least 12 cycles
+  nop           ; (up to 64 cycles delay allowed here)
+  nop
+  nop
+  nop
+  nop
+  inc $d012     ; At this stage, $d012 has already been incremented by one.
+  lda #1
+  sta $d019     ; acknowledge the first raster interrupt
+  cli           ; enable interrupts (the second interrupt can now occur)
+  ldy #9
+  dey
+  bne *-1       ; delay
+  nop           ; The second interrupt will occur while executing these
+  nop           ; two-cycle instructions.
+  nop
+  nop
+  nop
+oldirq = * + 1  ; Placeholder for self-modifying code
+  jmp *         ; Return to the original interrupt
+
+; Main raster interrupt
+irq2:
+; irq (event)   ; 7 + 2 or 3 cycles of last instruction (9 or 10 total)
+; pha           ; 3
+; txa           ; 2
+; pha           ; 3
+; tya           ; 2
+; pha           ; 3
+; tsx           ; 2
+; lda $0104,x   ; 4
+; and #xx       ; 2
+; beq           ; 3
+; jmp (cinv)    ; 5
+                ; ---
+                ; 38 or 39 cycles delay at this stage
+  lda #<irq1
+  sta cinv
+  lda #>irq1
+  sta cinv+1
+
+  lda #1
+  cli
+  inc $d019     
+  dec $d019     
+
+;  jmp endirq
+
+  inc $d020
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  dec $d020
+  lda #raster
+  sta $d012
+
+
+
+
+
+endirq:
+  jmp $ea81     ; return to the auxiliary raster interrupt
+
+restore:        ; disable the Restore key
+  lda cnmi
+  ldy cnmi+1
+  pha
+  lda #<nmi     ; Set the NMI vector
+  sta cnmi
+  lda #>nmi
+  sta cnmi+1
+  ldx #$81
+  stx $dd0d     ; Enable CIA 2 Timer A interrupt
+  ldx #0
+  stx $dd05
+  inx
+  stx $dd04     ; Prepare Timer A to count from 1 to 0.
+  ldx #$dd
+  stx $dd0e     ; Cause an interrupt.
+nmi = * + 1
+  lda #$40      ; RTI placeholder
+  pla
+  sta cnmi
+  sty cnmi+1    ; restore original NMI vector (although it won't be used)
+  rts
+
+initscreen:
+    ldx #0
+slp:
+    lda screen,x
+    sta $0400,x
+    lda #1
+    sta $d800,x
+    inx
+    cpx #80
+    bne slp
+    rts
+screen:
+        ;1234567890123456789012345678901234567890
+  .byte "bee                          #          "
+  .byte "1234567890123456789012345678901234567890"

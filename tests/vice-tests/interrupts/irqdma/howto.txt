@@ -1,0 +1,18 @@
+LOAD"TESTx.PRG",8,1
+RUN
+
+When the test is run the border color changes to violet to indicate the test
+is running.
+After some minutes the border changes to green (success) or flashes (failure).
+
+Test number/address is shown, as is reference and measured value in case
+of failure. Detected CIA type (old/new) is also shown.
+
+test*.prg use reference data measured with a real C64 (irqX.dump).
+
+irqX_dtv.dump are measured with a PAL DTV3 (detected as old CIA);
+tests 3 and 3b give the same results as C64.
+
+Use record*.prg to measure your own data (stored at $2000-$A000).
+
+TODO: automatically compile DTV tests as well

@@ -1,0 +1,64 @@
+Enable IRQ mit CLI und Ack. 4 Zyklen später
+.08A7 046 052   94253470  58         CLI       A=$01 X=$E6 Y=$00 SP=$E6
+.08A8 046 054   94253472  8D 19 D0   STA $D019 A=$01 X=$E6 Y=$00 SP=$E6
+
++/- 2 Cycle ist normal
+
+VICE, HOXS-1.0.5.15:  flackert nicht, Strick drei über Rand
+*** IRQ VICII 94253420
+.FF48 046 009   94253427  48         PHA       A=$01 X=$EC Y=$00 SP=$E9
+.FF49 046 012   94253430  8A         TXA       A=$01 X=$EC Y=$00 SP=$E8
+.FF4A 046 014   94253432  48         PHA       A=$EC X=$EC Y=$00 SP=$E8
+.FF4B 046 017   94253435  98         TYA       A=$EC X=$EC Y=$00 SP=$E7
+.FF4C 046 019   94253437  48         PHA       A=$00 X=$EC Y=$00 SP=$E7
+.FF4D 046 022   94253440  BA         TSX       A=$00 X=$EC Y=$00 SP=$E6
+.FF4E 046 024   94253442  BD 04 01   LDA $0104,X A=$00 X=$E6 Y=$00 SP=$E6
+.FF51 046 028   94253446  29 10      AND #$10  A=$22 X=$E6 Y=$00 SP=$E6
+.FF53 046 030   94253448  F0 03      BEQ $FF58 A=$00 X=$E6 Y=$00 SP=$E6
+.FF58 046 033   94253451  6C 14 03   JMP ($0314) A=$00 X=$E6 Y=$00 SP=$E6
+.089B 046 038   94253456  A9 75      LDA #$75  A=$00 X=$E6 Y=$00 SP=$E6
+.089D 046 040   94253458  8D 14 03   STA $0314 A=$75 X=$E6 Y=$00 SP=$E6
+.08A0 046 044   94253462  A9 08      LDA #$08  A=$75 X=$E6 Y=$00 SP=$E6
+.08A2 046 046   94253464  8D 15 03   STA $0315 A=$08 X=$E6 Y=$00 SP=$E6
+.08A5 046 050   94253468  A9 01      LDA #$01  A=$08 X=$E6 Y=$00 SP=$E6
+.08A7 046 052   94253470  58         CLI       A=$01 X=$E6 Y=$00 SP=$E6
+.08A8 046 054   94253472  8D 19 D0   STA $D019 A=$01 X=$E6 Y=$00 SP=$E6
+.08AB 046 058   94253476  EE 20 D0   INC $D020 A=$01 X=$E6 Y=$00 SP=$E6
+.08AE 047 001   94253482  CE 20 D0   DEC $D020 A=$01 X=$E6 Y=$00 SP=$E6
+.08B1 047 007   94253488  A9 2C      LDA #$2C  A=$01 X=$E6 Y=$00 SP=$E6
+.08B3 047 009   94253490  8D 12 D0   STA $D012 A=$2C X=$E6 Y=$00 SP=$E6
+.08B6 047 013   94253494  4C 81 EA   JMP $EA81 A=$2C X=$E6 Y=$00 SP=$E6
+
+
+C64, HOXS-1.0.5.25 und CCS64: flackert links in der ersten rasterzeile über Screen und im rechten Rand zwei tiefer
+*** IRQ VICII 94253420
+.FF48 046 009   94253427  48         PHA       A=$01 X=$EC Y=$00 SP=$E9
+.FF49 046 012   94253430  8A         TXA       A=$01 X=$EC Y=$00 SP=$E8
+.FF4A 046 014   94253432  48         PHA       A=$EC X=$EC Y=$00 SP=$E8
+.FF4B 046 017   94253435  98         TYA       A=$EC X=$EC Y=$00 SP=$E7
+.FF4C 046 019   94253437  48         PHA       A=$00 X=$EC Y=$00 SP=$E7
+.FF4D 046 022   94253440  BA         TSX       A=$00 X=$EC Y=$00 SP=$E6
+.FF4E 046 024   94253442  BD 04 01   LDA $0104,X A=$00 X=$E6 Y=$00 SP=$E6
+.FF51 046 028   94253446  29 10      AND #$10  A=$22 X=$E6 Y=$00 SP=$E6
+.FF53 046 030   94253448  F0 03      BEQ $FF58 A=$00 X=$E6 Y=$00 SP=$E6
+.FF58 046 033   94253451  6C 14 03   JMP ($0314) A=$00 X=$E6 Y=$00 SP=$E6
+.089B 046 038   94253456  A9 75      LDA #$75  A=$00 X=$E6 Y=$00 SP=$E6
+.089D 046 040   94253458  8D 14 03   STA $0314 A=$75 X=$E6 Y=$00 SP=$E6
+.08A0 046 044   94253462  A9 08      LDA #$08  A=$75 X=$E6 Y=$00 SP=$E6
+.08A2 046 046   94253464  8D 15 03   STA $0315 A=$08 X=$E6 Y=$00 SP=$E6
+.08A5 046 050   94253468  A9 01      LDA #$01  A=$08 X=$E6 Y=$00 SP=$E6
+.08A7 046 052   94253470  58         CLI       A=$01 X=$E6 Y=$00 SP=$E6
+.08A8 046 054   94253472  8D 19 D0   STA $D019 A=$01 X=$E6 Y=$00 SP=$E6
+*** IRQ VICII xxxxxxxx
+.FF48 xxx xxx   xxxxxxxx  48         PHA       A=$01 X=$EC Y=$00 SP=$E9
+.FF49 xxx xxx   xxxxxxxx  8A         TXA       A=$01 X=$EC Y=$00 SP=$E8
+.FF4A xxx xxx   xxxxxxxx  48         PHA       A=$EC X=$EC Y=$00 SP=$E8
+.FF4B xxx xxx   xxxxxxxx  98         TYA       A=$EC X=$EC Y=$00 SP=$E7
+...
+      050 010  (CCS-VICII-Status bei Break 08ab)
+.08AB xxx xxx   xxxxxxxx  EE 20 D0   INC $D020 A=$01 X=$E6 Y=$00 SP=$E6
+.08AE xxx xxx   xxxxxxxx  CE 20 D0   DEC $D020 A=$01 X=$E6 Y=$00 SP=$E6
+.08B1 xxx xxx   xxxxxxxx  A9 2C      LDA #$2C  A=$01 X=$E6 Y=$00 SP=$E6
+.08B3 xxx xxx   xxxxxxxx  8D 12 D0   STA $D012 A=$2C X=$E6 Y=$00 SP=$E6
+.08B6 xxx xxx   xxxxxxxx  4C 81 EA   JMP $EA81 A=$2C X=$E6 Y=$00 SP=$E6
+

@@ -1,0 +1,220 @@
+
+        .word $0801
+        *=$0801
+
+        .word link, 10
+        .byt $9e, "2080", 0
+link    .word 0
+        .dsb 2080-*, 0
+
+;-------------------------------------------------------------------------------
+
+        jsr $e518       ; init I/O
+        lda #0
+        sta $d020
+        sta $d021
+        lda #5
+        sta ERRBUF+$ff
+
+        ; do all tests once
+        ldx #0
+clp1b
+        txa
+        sta tmp
+        pha
+        jsr $e518       ; init I/O
+        jsr dotest
+        pla
+        tax
+        inx
+        cpx #NUMTESTS
+        bne clp1b
+
+        ; main loop
+loop    
+
+        ldx #0
+clp1a
+        txa
+        clc
+        adc #"A"
+        and #$3f
+        sta $0400+(24*40),x
+        lda ERRBUF,x
+        sta $d800+(24*40),x
+        inx
+        cpx #NUMTESTS
+        bne clp1a
+
+        lda ERRBUF+$ff
+        sta $d020
+
+        ; return either 0 (success) or $ff (fail) in $d7ff for automatic testing
+        ldx #$ff ; error
+        cmp #5
+        bne failed
+        ldx #0 ; ok
+failed
+        stx $d7ff
+
+        lda #0
+        sta $d021
+wkey
+        jsr $ffe4
+        cmp #"A"
+        bcc wkey
+        cmp #"A"+NUMTESTS
+        bcs wkey
+        tax
+        sec
+        sbc #"A"
+        sta tmp
+        txa
+        and #$3f
+        sta $0400+(24*40)+39
+
+        jsr $e518       ; init I/O
+        jsr dotest
+        jmp loop
+
+        ; do a single test
+dotest
+        lda #$20
+        ldx #0
+clp1    sta $0400,x
+        inx
+        bne clp1
+
+        lda #0
+        sta addr+1
+        lda tmp
+        asl
+        rol addr+1
+        asl
+        rol addr+1
+        asl
+        rol addr+1
+        asl
+        rol addr+1
+        asl
+        rol addr+1
+#if TESTLEN >= $40
+        asl
+        rol addr+1
+#endif
+        sta addr
+        lda #$0a
+        clc
+        adc addr+1
+        sta addr+1
+
+        sei
+        lda $d011
+        bmi *-3
+        lda $d011
+        bpl *-3
+        lda $d011
+        bmi *-3
+
+        lda #$0b
+        sta $d011
+
+        lda $d011
+        bmi *-3
+        lda $d011
+        bpl *-3
+        lda $d011
+        bmi *-3
+
+lp1     lda $d012
+        bne lp1
+lp2     lda $d012
+        beq lp2
+lp3     lda $d012
+        bne lp3
+
+        ; TOD 60Hz, set clock
+        ; serial port: input
+        ; timer A count clk, stop, continuous, output to PB6 disabled, output to PB6 pulse
+        ; timer B count clk, stop, continuous, output to PB7 disabled, output to PB7 pulse
+        lda #0
+        sta $dc0e
+        sta $dc0f
+
+        ; disable all interrupts
+#if TESTID >= 3
+        lda #$7f
+        sta $dc0d
+#endif
+        ; acknowledge interrupts / clear flags
+#if TESTID > 3
+        lda $dc0d
+        lda $dc0d
+#endif
+
+        ; init timers
+        ; after this all timer values will be = $0000
+        ldy #0
+        tya
+t1a     sta $dc04
+        sta $dc05
+        sta $dc06
+        sta $dc07
+        dey
+        bne t1a
+
+#if TESTID = 15
+        lda $dc0e
+        ora #$80
+        sta $dc0e
+        lda $dc0f
+        and #$7f
+        sta $dc0f
+        lda $dc08
+#endif
+        jsr dojump
+
+        lda #$1b
+        sta $d011
+        jsr $fda3
+        cli
+
+        lda #5
+        ldx tmp
+        sta ERRBUF,x
+
+        ldy #0
+lla     sta $d800,y
+        iny
+        bne lla
+
+        lda tmp
+        clc
+        adc #>TMP
+        sta addr+1
+        lda #<TMP
+        sta addr
+
+        lda tmp
+        clc
+        adc #>DATA
+        sta add2+1
+        lda #<DATA
+        sta add2
+
+        ldy #0
+ll      lda (addr),y
+        sta $0400,y
+        cmp (add2),y
+        beq rot
+        lda #10
+        sta $d800,y
+        sta ERRBUF,x
+        sta ERRBUF+$ff
+rot
+        iny
+        bne ll
+
+        rts
+
+dojump  jmp (addr)

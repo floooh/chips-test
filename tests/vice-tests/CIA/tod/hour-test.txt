@@ -1,0 +1,101 @@
+from http://groups.yahoo.com/neo/groups/chameleon_64/conversations/messages/3580
+
+The program outputs a table with four columns:
+
+ 1. column ("24hr"): hour to be tested (decimal)
+ 2. column ("Wr"): hour written to TOD register (BCD)
+ 3. column ("Rd"): hour read from TOD register (BCD) immediately after writing 
+                   the value in column 2 to see the conversion between AM/PM, 
+                   if any.
+ 4. column ("Nx"): next hour (BCD) after the hour switch
+
+Important: All values except the hour in the first column of the table are BCD!
+
+Note: You may select the CIA (1 or 2) to be checked in line 10. You may also 
+play with the hour range (0..23) to be printed in line 140 or "rem out" or 
+delete the line completely to see the full 24 hour range. 
+
+Values in the table having bit 7 set (i.e. starting with digits 8 or 9) have the 
+PM bit set, all other values are AM!
+
+ Now some things which especially people in 24-hour land consider oddities:
+
+ 1. When writing 12 to get 12 PM (noon!) to the hour, the PM flag will be set, 
+ making it effectively 92 immediately and the next hour should consequently be 
+ 81!
+
+ 2. When writing 92 to get 12 AM (midnight!) to the hour, the PM flag will be 
+ cleared, making it effectively 12 immediately and the next hour should 
+ consequently be 01!
+
+ Both points are not a bug, but instead documented behavior of the real C64's 
+ CIA chips! So, the following output from a real C64 is correct!
+
+ Output on a real C64:
+ 
+ CIA# 1
+ 24hr: Wr => Rd => Nx
+ --------------------
+  0 : 92 => 12 => 01 <= Switch from 00 to 01 (24-hour notation)
+  1 : 01 => 01 => 02
+  2 : 02 => 02 => 03
+ 11 : 11 => 11 => 92
+ 12 : 12 => 92 => 81 <= Switch from 12 to 13 (24-hour notation)
+ 13 : 81 => 81 => 82
+ 14 : 82 => 82 => 83
+ 23 : 91 => 91 => 12
+
+ The oddity of flipping the AM/PM bit if 12 or 92 are written to the hour 
+ appears to be due to how the British and Americans use it in everyday language. 
+ As it turns out, they speak of AM for a range from 1 to 12 (noon!) and PM for 
+ that same number range, but 12 being midnight here. The oddity now is, that 12 
+ AM is actually midnight and 12 PM is actually noon. The English speaking 
+ friends consider 12 to be (intuitively) at the *END* of that 1-12 range in 
+ everyday life, which seems quite logical. In fact, adhering to the definition, 
+ the 12th hour is actually the *beginning* of the 12 hour cycle, effectively 
+ turning the cycle from 1-12 to 12-11.
+
+ See for example Wikipedia: http://en.wikipedia.org/wiki/12_hour_clock Look at 
+ the table on the right. It says that 12 AM corresponds to 00:00 and 12 PM 
+ corresponds to 12:00. There's also a big section about confusing AM and PM 
+ there.
+
+ So the hour range das not go from 1-12 as in everyday language but rather from 
+ 12-11 according to definition which in turn makes 12 the *first* hour of the 
+ AM/PM cycle and not the last. 
+ 
+ However, Commodore flips the bit if the hour is 
+ set to 12 apparently to allow people to handle the 1-12 cycle intuitively and 
+ not forcing them to think in 12-11 hour ranges but still return the true flag 
+ according to definition. 
+ 
+ The result is an oddity seen from a technical point of view as the 12 (or 92 
+ respectively) has to be treated specially when setting the clock with an hour 
+ source in the 24 clock range, i.e. 00-23. In fact for 00, a 12 has to be added 
+ as there is no 24 to just subtract 12 from as with the other hours between 13 
+ and 23. In both cases, the AM/PM bit has to be flipped *before* writing the 
+ value to the TOD as it will flip it back, unless you want to teleport yourself 
+ to the other side of the globe immediately.
+
+ To make things easier to understand: Bottom line, to accommodate for the 
+ Americans and British, they just need to set 01-12 for AM and 81-92 for PM. 
+ Still, the CIA will get things straight this way which makes it even harder for 
+ us "24 hour people" to understand because we're not only used to the 24 hours 
+ clock but also think in terms of the definition according to Wikipedia for 
+ example if it comes to the 12 hour AM/PM clock. ;-) 
+
+ The code of the test is all in BASIC except this small routine which calculates 
+ the correct 12 hour BCD number including AM/PM flag from a 00-23 hour BCD 
+ number:
+
+ 2000 a9 00  lda #$00    ; input hour (range 00..23)
+ 2002 d0 04  bne $2008
+ 2004 a9 92  lda #$92
+ 2006 d0 0a  bne $2012
+ 2008 f8     sed
+ 2009 c9 13  cmp #$13
+ 200b 90 05  bcc $2012
+ 200d 38     sec
+ 200e e9 12  sbc #$12
+ 2010 09 80  ora #$80
+ 2012 d8     cld ; A=hour (range 01..12 with AM/PM bit)

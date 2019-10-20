@@ -1,0 +1,100 @@
+  processor 6502
+
+
+cinv = $314
+cnmi = $318
+
+  .org $1001
+basic:
+  .word 0$      ; link to next line
+  .word 1995    ; line number
+  .byte $9E     ; SYS token
+
+; SYS digits
+
+  .if (* + 8) / 10000
+  .byte $30 + (* + 8) / 10000
+  .endif
+  .if (* + 7) / 1000
+  .byte $30 + (* + 7) % 10000 / 1000
+  .endif
+  .if (* + 6) / 100
+  .byte $30 + (* + 6) % 1000 / 100
+  .endif
+  .if (* + 5) / 10
+  .byte $30 + (* + 5) % 100 / 10
+  .endif
+  .byte $30 + (* + 4) % 10
+
+0$:
+  .byte 0,0,0   ; end of BASIC program
+
+start:
+
+  sei
+  lda #$7f
+  sta $912e ; disable and acknowledge interrupts 
+  sta $912d
+  sta $911e ; disable NMIs (Restore key) 
+
+  lda #<irq
+  ldy #>irq
+  sta cinv      ; set the new interrupt vector
+  sty cinv+1
+
+  lda #$c0
+  sta $912e ; enable Timer A underflow interrupts 
+  cli
+
+  ldx #$00
+
+loop1:
+  ldy #$00
+  sty $911b
+  sty $912b
+
+timer:
+  ldy #$0c
+  sty $9126
+  ldy #$ff
+  sty $9116
+  sty $9115
+  ldy #$00
+  sty $9125
+
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  ldy $9124
+  nop
+  nop
+  lda $9114
+  sta $1e00,x
+  tya
+  sta $1e01,x
+  inc timer + 1
+  inx
+  inx
+  cpx #$18
+endloop:
+  beq startagain
+
+  jmp loop1  
+
+startagain:
+  ldx #$0c
+  stx timer + 1
+  ldx #$00
+  jmp loop1  
+
+irq:
+  lda $9124
+  jmp $eb18
+
+
+

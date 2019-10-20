@@ -1,0 +1,310 @@
+
+LHS: Vice output
+
+RHS: Bytes seen with a logic analyzer
+     rxx = read value xx
+     wxx = write value xx
+
+================================================================================
+test_zp = 04, cnt_zp = 05
+
+** Monitor 273 042
+.C:0a44   84 C2      STY $C2
+(C:$0a44) 
+
+** Monitor 273 045
+.C:0a46   A9 FF      LDA #$FF
+(C:$0a46) 
+
+** Monitor 273 047
+.C:0a48   8D 04 DC   STA $DC04
+(C:$0a48) 
+
+** Monitor 273 051
+.C:0a4b   A2 00      LDX #$00
+(C:$0a4b) 
+
+** Monitor 273 053
+.C:0a4d   8E 05 DC   STX $DC05
+(C:$0a4d) 
+
+** Monitor 273 057
+.C:0a50   8C 06 DD   STY $DD06
+(C:$0a50) 
+
+** Monitor 273 061
+.C:0a53   8E 07 DD   STX $DD07
+(C:$0a53) 
+
+** Monitor 274 002
+.C:0a56   86 C4      STX $C4
+(C:$0a56) 
+
+** Monitor 274 005
+.C:0a58   86 C5      STX $C5
+(C:$0a58) 
+
+** Monitor 274 008
+.C:0a5a   2C 0D DD   BIT $DD0D
+(C:$0a5a) 
+
+** Monitor 274 012
+.C:0a5d   A9 82      LDA #$82
+(C:$0a5d) 
+
+** Monitor 274 014
+.C:0a5f   8D 0D DD   STA $DD0D
+(C:$0a5f) 
+
+** Monitor 274 018
+.C:0a62   8A         TXA
+(C:$0a62) 
+
+** Monitor 274 020
+.C:0a63   A0 19      LDY #$19
+(C:$0a63) 
+
+** Monitor 274 022
+.C:0a65   58         CLI            ; r58 r8c
+(C:$0a65) 
+
+** Monitor 274 024
+.C:0a66   8C 0E DC   STY $DC0E      ; r8c r0e rdc w19
+(C:$0a66) 
+
+** Monitor 274 028
+.C:0a69   8C 0F DD   STY $DD0F      ; r8c r0f rdd w19
+(C:$0a69) 
+
+** Monitor 274 032
+.C:0a6c   20 0C DD   JSR $DD0C      ; r20 r0c r0a(unused) w0a w6c rdd
+(C:$0a6c) 
+
+** Monitor 274 038
+.C:dd0c   AC 00 A9   LDY $A900      ; rac r82(*) ra9 r82
+(C:$dd0c) 
+       _____________                ; NMI is asserted about 80 ns after rising edge of 
+PHI2 _/             \____________   ; Phi2 (*) above
+     ____                  _______  ; NMI is released about 160 ns after falling edge
+ NMI     \________________/         ; of Phi2 after (*) above
+
+~~~~~~~~~~~~~~~~~~~~                ; r08(internal) r08(internal)
+                                    ; wdd(push) w0f(push) wa0(push)
+                                    ; r9d(vector) r0a(vector)
+
+** Monitor 274 049
+.C:0a9d   AE 04 DC   LDX $DC04      ; rae r04 rdc r9e
+(C:$0a9d) 
+
+** Monitor 274 053
+.C:0aa0   2C 0D DD   BIT $DD0D      ; r2c r0d rdd r00
+(C:$0aa0) 
+
+** Monitor 274 057
+.C:0aa3   86 C5      STX $C5        ; r86 rc5 we9
+(C:$0aa3) 
+
+** Monitor 274 060
+.C:0aa5   E6 C4      INC $C4        ; re6 rc4 r00 w00 w01
+(C:$0aa5) 
+
+** Monitor 275 002
+.C:0aa7   40         RTI            ; r40 r00 r22 
+                                    ; ra0(pop) r0f(pop) rdd(pop)
+(C:$0aa7)
+~~~~~~~~~~~~~~~~~~~~
+** Monitor 275 008
+.C:dd0f   08         PHP            ; r08 r28 wb0
+(C:$dd0f) 
+
+** Monitor 275 011
+.C:dd10   68         PLA            ; r68 r60 r0f rb0
+(C:$dd10) 
+
+** Monitor 275 015
+.C:dd11   60         RTS            ; r60....
+(C:$dd11) 
+
+0a44  84 C2      STY $C2             :A$85 X$01 Y$05 SP$f2 N -  I  
+0a46  A9 FF      LDA #$FF            :A$85 X$01 Y$05 SP$f2 N -  I  
+0a48  8D 04 DC   STA $DC04           :A$ff X$01 Y$05 SP$f2 N -  I  
+0a4b  A2 00      LDX #$00            :A$ff X$01 Y$05 SP$f2 N -  I  
+0a4d  8E 05 DC   STX $DC05           :A$ff X$00 Y$05 SP$f2   -  IZ 
+0a50  8C 06 DD   STY $DD06           :A$ff X$00 Y$05 SP$f2   -  IZ 
+0a53  8E 07 DD   STX $DD07           :A$ff X$00 Y$05 SP$f2   -  IZ 
+0a56  86 C4      STX $C4             :A$ff X$00 Y$05 SP$f2   -  IZ 
+0a58  86 C5      STX $C5             :A$ff X$00 Y$05 SP$f2   -  IZ 
+0a5a  2C 0D DD   BIT $DD0D           :A$ff X$00 Y$05 SP$f2   -  IZ 
+0a5d  A9 82      LDA #$82            :A$ff X$00 Y$05 SP$f2   -  IZ 
+0a5f  8D 0D DD   STA $DD0D           :A$82 X$00 Y$05 SP$f2 N -  I  
+0a62  8A         TXA                 :A$82 X$00 Y$05 SP$f2 N -  I  
+0a63  A0 19      LDY #$19            :A$00 X$00 Y$05 SP$f2   -  IZ 
+0a65  58         CLI                 :A$00 X$00 Y$19 SP$f2   -  I  
+0a66  8C 0E DC   STY $DC0E           :A$00 X$00 Y$19 SP$f2   -     
+0a69  8C 0F DD   STY $DD0F           :A$00 X$00 Y$19 SP$f2   -     
+0a6c  20 0C DD   JSR $DD0C           :A$00 X$00 Y$19 SP$f2   -     
+dd0c  AC 82 A9   LDY $A982           :A$00 X$00 Y$19 SP$f0   -     
+~~~~~~~~~~~~~~~~~~~~
+0a9d  AE 04 DC   LDX $DC04           :A$00 X$00 Y$82 SP$ed N -  I  
+0aa0  2C 0D DD   BIT $DD0D           :A$00 X$e9 Y$82 SP$ed N -  I  
+0aa3  86 C5      STX $C5             :A$00 X$e9 Y$82 SP$ed   -  IZ 
+0aa5  E6 C4      INC $C4             :A$00 X$e9 Y$82 SP$ed   -  IZ 
+0aa7  40         RTI                 :A$00 X$e9 Y$82 SP$ed   -  I  
+~~~~~~~~~~~~~~~~~~~~
+dd0f  08         PHP                 :A$00 X$e9 Y$82 SP$f0 N -     
+dd10  68         PLA                 :A$00 X$e9 Y$82 SP$ef N -     
+dd11  60         RTS                 :A$b0 X$e9 Y$82 SP$f0 N -     
+
+================================================================================
+test_zp = 04, cnt_zp = 06
+
+** Monitor 276 027
+.C:0a44   84 C2      STY $C2
+(C:$0a44) 
+
+** Monitor 276 030
+.C:0a46   A9 FF      LDA #$FF
+(C:$0a46) 
+
+** Monitor 276 032
+.C:0a48   8D 04 DC   STA $DC04
+(C:$0a48) 
+
+** Monitor 276 036
+.C:0a4b   A2 00      LDX #$00
+(C:$0a4b) 
+
+** Monitor 276 038
+.C:0a4d   8E 05 DC   STX $DC05
+(C:$0a4d) 
+
+** Monitor 276 042
+.C:0a50   8C 06 DD   STY $DD06
+(C:$0a50) 
+
+** Monitor 276 046
+.C:0a53   8E 07 DD   STX $DD07
+(C:$0a53) 
+
+** Monitor 276 050
+.C:0a56   86 C4      STX $C4
+(C:$0a56) 
+
+** Monitor 276 053
+.C:0a58   86 C5      STX $C5
+(C:$0a58) 
+
+** Monitor 276 056
+.C:0a5a   2C 0D DD   BIT $DD0D
+(C:$0a5a) 
+
+** Monitor 276 060
+.C:0a5d   A9 82      LDA #$82
+(C:$0a5d) 
+
+** Monitor 276 062
+.C:0a5f   8D 0D DD   STA $DD0D
+(C:$0a5f) 
+
+** Monitor 277 003
+.C:0a62   8A         TXA
+(C:$0a62) 
+
+** Monitor 277 005
+.C:0a63   A0 19      LDY #$19
+(C:$0a63) 
+
+** Monitor 277 007
+.C:0a65   58         CLI            ; r58 r8c
+(C:$0a65) 
+
+** Monitor 277 009
+.C:0a66   8C 0E DC   STY $DC0E      ; r8c r0e rdc w19
+(C:$0a66) 
+
+** Monitor 277 013
+.C:0a69   8C 0F DD   STY $DD0F      ; r8c r0f rdd w19
+(C:$0a69) 
+
+** Monitor 277 017
+.C:0a6c   20 0C DD   JSR $DD0C      ; r20 r0c r0a(unused) w0a w6c rdd
+(C:$0a6c) 
+
+** Monitor 277 023
+.C:dd0c   AC 00 A9   LDY $A900      ; rac r00 ra9(*) r00
+(C:$dd0c) 
+       _____________                ; NMI is asserted about 80 ns after falling edge of 
+PHI2 _/             \____________   ; Phi2 (*) above
+     __________________          
+ NMI                   \_________
+
+                                    ; r08 r28 w32 - PHP, see below 
+
+~~~~~~~~~~~~~~~~~~~~                ; r28(internal) r28(internal)
+                                    ; wdd(push) w10(push) w22(push)
+                                    ; r9d(vector) r0a(vector)
+** Monitor 277 034
+.C:0a9d   AE 04 DC   LDX $DC04      ; rae r04 rdc re6
+(C:$0a9d) 
+
+** Monitor 277 038
+.C:0aa0   2C 0D DD   BIT $DD0D      ; r2c r0d rdd r82(*) 
+(C:$0aa0)                           ; NMI is released about 160 ns after falling edge
+                                    ; of Phi2 after (*) above
+** Monitor 277 042
+.C:0aa3   86 C5      STX $C5        ; r86 rc5 we6
+(C:$0aa3) 
+
+** Monitor 277 045
+.C:0aa5   E6 C4      INC $C4        ; re6 rc4 r00 w00 w01
+(C:$0aa5) 
+
+** Monitor 277 050
+.C:0aa7   40         RTI            ; r40 r00 r0d
+                                    ; r22(pop) r10(pop) rdd(pop)
+(C:$0aa7) 
+~~~~~~~~~~~~~~~~~~~~
+** Monitor 277 056
+.C:dd0f   08         PHP            ; (PHP has been executed already!)
+(C:$dd0f) 
+
+** Monitor 277 059
+.C:dd10   68         PLA            ; r68 r60 rdd r32
+(C:$dd10) 
+
+** Monitor 278 000
+.C:dd11   60         RTS            ; r60...
+(C:$dd11) 
+
+0a44  84 C2      STY $C2             :A$85 X$01 Y$06 SP$f2 N -  I  
+0a46  A9 FF      LDA #$FF            :A$85 X$01 Y$06 SP$f2 N -  I  
+0a48  8D 04 DC   STA $DC04           :A$ff X$01 Y$06 SP$f2 N -  I  
+0a4b  A2 00      LDX #$00            :A$ff X$01 Y$06 SP$f2 N -  I  
+0a4d  8E 05 DC   STX $DC05           :A$ff X$00 Y$06 SP$f2   -  IZ 
+0a50  8C 06 DD   STY $DD06           :A$ff X$00 Y$06 SP$f2   -  IZ 
+0a53  8E 07 DD   STX $DD07           :A$ff X$00 Y$06 SP$f2   -  IZ 
+0a56  86 C4      STX $C4             :A$ff X$00 Y$06 SP$f2   -  IZ 
+0a58  86 C5      STX $C5             :A$ff X$00 Y$06 SP$f2   -  IZ 
+0a5a  2C 0D DD   BIT $DD0D           :A$ff X$00 Y$06 SP$f2   -  IZ 
+0a5d  A9 82      LDA #$82            :A$ff X$00 Y$06 SP$f2   -  IZ 
+0a5f  8D 0D DD   STA $DD0D           :A$82 X$00 Y$06 SP$f2 N -  I  
+0a62  8A         TXA                 :A$82 X$00 Y$06 SP$f2 N -  I  
+0a63  A0 19      LDY #$19            :A$00 X$00 Y$06 SP$f2   -  IZ 
+0a65  58         CLI                 :A$00 X$00 Y$19 SP$f2   -  I  
+0a66  8C 0E DC   STY $DC0E           :A$00 X$00 Y$19 SP$f2   -     
+0a69  8C 0F DD   STY $DD0F           :A$00 X$00 Y$19 SP$f2   -     
+0a6c  20 0C DD   JSR $DD0C           :A$00 X$00 Y$19 SP$f2   -     
+dd0c  AC 00 A9   LDY $A900           :A$00 X$00 Y$19 SP$f0   -     
+~~~~~~~~~~~~~~~~~~~~
+0a9d  AE 04 DC   LDX $DC04           :A$00 X$00 Y$00 SP$ed   -  IZ 
+0aa0  2C 0D DD   BIT $DD0D           :A$00 X$e9 Y$00 SP$ed N -  I  
+0aa3  86 C5      STX $C5             :A$00 X$e9 Y$00 SP$ed N -  IZ 
+0aa5  E6 C4      INC $C4             :A$00 X$e9 Y$00 SP$ed N -  IZ 
+0aa7  40         RTI                 :A$00 X$e9 Y$00 SP$ed   -  I  
+~~~~~~~~~~~~~~~~~~~~
+dd0f  08         PHP                 :A$00 X$e9 Y$00 SP$f0   -   Z 
+dd10  68         PLA                 :A$00 X$e9 Y$00 SP$ef   -   Z 
+dd11  60         RTS                 :A$32 X$e9 Y$00 SP$f0   -     
+
+
+

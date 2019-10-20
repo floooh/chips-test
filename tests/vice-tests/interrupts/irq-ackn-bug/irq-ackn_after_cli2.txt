@@ -1,0 +1,32 @@
+Enable IRQ mit CLI und Ack. 5 Zyklen später
+.08A7 046 052    7039798  58         CLI       A=$01 X=$E6 Y=$00 SP=$E6
+.08A8 046 054    7039800  EE 19 D0   INC $D019 A=$01 X=$E6 Y=$00 SP=$E6
+.08AB 046 060    7039806  CE 19 D0   DEC $D019 A=$01 X=$E6 Y=$00 SP=$E6
+
+
+C64, CCS, HOxs: Wildes Flackern direkt über display und im Rand ca. 3. und 8. Zeile
+C64C zusätzlich einen Punkt vor dem ersten Rahmenwechsel (grey dot?)
+
+VICE: drei Zeilen über display (falsch)
+
+*** IRQ VICII 7039748
+.FF48 046 009    7039755  48         PHA       A=$01 X=$EC Y=$00 SP=$E9
+.FF49 046 012    7039758  8A         TXA       A=$01 X=$EC Y=$00 SP=$E8
+.FF4A 046 014    7039760  48         PHA       A=$EC X=$EC Y=$00 SP=$E8
+.FF4B 046 017    7039763  98         TYA       A=$EC X=$EC Y=$00 SP=$E7
+.FF4C 046 019    7039765  48         PHA       A=$00 X=$EC Y=$00 SP=$E7
+.FF4D 046 022    7039768  BA         TSX       A=$00 X=$EC Y=$00 SP=$E6
+.FF4E 046 024    7039770  BD 04 01   LDA $0104,X A=$00 X=$E6 Y=$00 SP=$E6
+.FF51 046 028    7039774  29 10      AND #$10  A=$22 X=$E6 Y=$00 SP=$E6
+.FF53 046 030    7039776  F0 03      BEQ $FF58 A=$00 X=$E6 Y=$00 SP=$E6
+.FF58 046 033    7039779  6C 14 03   JMP ($0314) A=$00 X=$E6 Y=$00 SP=$E6
+.089B 046 038    7039784  A9 75      LDA #$75  A=$00 X=$E6 Y=$00 SP=$E6
+.089D 046 040    7039786  8D 14 03   STA $0314 A=$75 X=$E6 Y=$00 SP=$E6
+.08A0 046 044    7039790  A9 08      LDA #$08  A=$75 X=$E6 Y=$00 SP=$E6
+.08A2 046 046    7039792  8D 15 03   STA $0315 A=$08 X=$E6 Y=$00 SP=$E6
+.08A5 046 050    7039796  A9 01      LDA #$01  A=$08 X=$E6 Y=$00 SP=$E6
+.08A7 046 052    7039798  58         CLI       A=$01 X=$E6 Y=$00 SP=$E6
+.08A8 046 054    7039800  EE 19 D0   INC $D019 A=$01 X=$E6 Y=$00 SP=$E6
+.08AB 046 060    7039806  CE 19 D0   DEC $D019 A=$01 X=$E6 Y=$00 SP=$E6
+.08AE 047 003    7039812  EE 20 D0   INC $D020 A=$01 X=$E6 Y=$00 SP=$E6
+.08B1 047 009    7039818  EA         NOP       A=$01 X=$E6 Y=$00 SP=$E6

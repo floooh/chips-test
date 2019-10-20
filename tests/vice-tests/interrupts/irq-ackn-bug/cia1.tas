@@ -1,0 +1,150 @@
+  processor 6502
+
+
+cinv = $314
+cnmi = $318
+
+  .org $801
+basic:
+  .word 0$      ; link to next line
+  .word 1995    ; line number
+  .byte $9E     ; SYS token
+
+; SYS digits
+
+  .if (* + 8) / 10000
+  .byte $30 + (* + 8) / 10000
+  .endif
+  .if (* + 7) / 1000
+  .byte $30 + (* + 7) % 10000 / 1000
+  .endif
+  .if (* + 6) / 100
+  .byte $30 + (* + 6) % 1000 / 100
+  .endif
+  .if (* + 5) / 10
+  .byte $30 + (* + 5) % 100 / 10
+  .endif
+  .byte $30 + (* + 4) % 10
+
+0$:
+  .byte 0,0,0   ; end of BASIC program
+
+start:
+    jsr init
+  sei
+  ldy #$7f
+  sty $dc0d
+  lda $dc0d
+  lda #<irq
+  ldy #>irq
+  sta cinv      ; set the new interrupt vector
+  sty cinv+1
+  cli
+  ldx #$00
+
+loop1:
+  lda $d011
+  bpl loop1
+loop2:
+  lda $d011
+  bmi loop2
+  lda #44
+loop3:
+  cmp $d012
+  bne loop3
+
+; now we're on rasterline 44 and avoid VICII DMA
+  ldy #$ff
+  sty $dc06
+  sty $dc07
+timer:
+  ldy #$10
+  sty $dc04
+  ldy #$00
+  sty $dc05
+  ldy #$1d
+  sty $dc0f
+  ldy #$dd
+  sty $dc0e
+  ldy #$81
+  sty $dc0d
+
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  nop
+  ldy $dc0d
+  nop
+  nop
+  lda $dc06
+  sta $0400,x
+  tya
+  sta $0401,x
+  inc timer + 1
+  inx
+  inx
+  cpx #$14
+  beq endloop
+
+  jmp loop1  
+
+endloop:
+    ldy #10
+    ldx #25
+lp3:
+    lda $0400,x
+    cmp $0428,x
+    bne sk3
+    dex
+    bpl lp3
+    ldy #5
+sk3:
+    sty $d020
+
+    lda $d020
+    and #$0f
+    ldx #0 ; success
+    cmp #5
+    beq nofail
+    ldx #$ff ; failure
+nofail:
+    stx $d7ff
+
+    jmp *
+
+irq:
+  lda $dc0d
+  jmp $ea81
+
+init:
+    lda #$20
+    ldx #0
+lp1:
+    sta $0400,x
+    inx
+    bne lp1
+
+    ldx #$27
+lp2:
+    lda refdata,x
+    sta $0428,x
+    dex
+    bpl lp2
+    rts
+
+refdata:
+    .if NEWCIA = 0
+    .byte $99, $00, $99, $00, $99, $81, $99, $81, $99, $81, $99, $81, $da, $81, $da, $01
+    .byte $99, $00, $99, $00
+    .byte $20, $20, $20, $20, $20, $20, $3c, $12, $05, $06, $3a, $03, $09, $01, $20, $31, $20, $0f, $0c, $04
+    .endif
+    .if NEWCIA = 1
+    .byte $99, $00, $99, $00, $99, $00, $99, $81, $99, $81, $99, $81, $99, $81, $da, $81
+    .byte $99, $00, $99, $00
+    .byte $20, $20, $20, $20, $20, $20, $3c, $12, $05, $06, $3a, $03, $09, $01, $20, $31, $20, $0e, $05, $17
+    .endif
+  

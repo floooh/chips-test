@@ -1,0 +1,110 @@
+#define TESTID          14
+
+tmp=$fc
+addr=$fd
+add2=$f9
+
+ERRBUF=$5f00
+TMP=$6000
+DATA=$8000
+
+#define	TESTLEN $40
+
+#define NUMTESTS        4
+
+#include "common.a65"
+
+
+	.dsb $0a00-*,0
+
+;------------------------------------------
+	.(		; A
+test 	lda #$00
+	sta $dc0f
+	lda #1
+	sta $dc07
+	lda #$51	; cascade mode
+	sta $dc0f
+	lda #1
+	sta $dc04
+	lda #$11
+	sta $dc0e
+	ldx #0
+t1b	lda $dc06
+	sta TMP,x
+	inx
+	bne t1b
+	rts
+	.dsb test+TESTLEN-*,0
+-TMP 	+=$100
+	.)
+
+	.(		; B
+test 	lda #$20
+	sta $dc0f
+	lda #1
+	sta $dc07
+	lda #$51	; cascade mode
+	sta $dc0f
+	lda #1
+	sta $dc04
+	lda #$11
+	sta $dc0e
+	ldx #0
+t1b	lda $dc06
+	sta TMP,x
+	inx
+	bne t1b
+	rts
+	.dsb test+TESTLEN-*,0
+-TMP 	+=$100
+	.)
+
+	.(		; C
+test 	lda #$40
+	sta $dc0f
+	lda #1
+	sta $dc07
+	lda #$51	; cascade mode
+	sta $dc0f
+	lda #1
+	sta $dc04
+	lda #$11
+	sta $dc0e
+	ldx #0
+t1b	lda $dc06
+	sta TMP,x
+	inx
+	bne t1b
+	rts
+	.dsb test+TESTLEN-*,0
+-TMP 	+=$100
+	.)
+
+	.(		; D
+test 	lda #$60
+	sta $dc0f
+	lda #1
+	sta $dc07
+	lda #$51	; cascade mode
+	sta $dc0f
+	lda #1
+	sta $dc04
+	lda #$11
+	sta $dc0e
+	ldx #0
+t1b	lda $dc06
+	sta TMP,x
+	inx
+	bne t1b
+	rts
+	.dsb test+TESTLEN-*,0
+-TMP 	+=$100
+	.)
+
+
+        .(
+            sei
+            inc $d020
+            jmp *-3
+        .)

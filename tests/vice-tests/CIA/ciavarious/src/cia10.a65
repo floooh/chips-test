@@ -1,0 +1,71 @@
+#define TESTID          10
+
+tmp=$fc
+addr=$fd
+add2=$f9
+
+ERRBUF=$5f00
+TMP=$6000
+DATA=$8000
+
+#define	TESTLEN $40
+
+#define NUMTESTS        16
+
+#include "common.a65"
+
+
+	.dsb $0a00-*,0
+
+;------------------------------------------
+; output timer(s) at PB6/PB7 and read back PB
+
+#define	TEST(DDRB,PRB,CR,TIMER,THIFL)				\
+	.(							:\
+test 								:\
+	lda #0							:\
+	sta $dc02						:\
+	lda #DDRB						:\
+	sta $dc03	; ddr input				:\
+	lda #PRB						:\
+	sta $dc01	; port register 0			:\
+	lda #1							:\
+	sta $dc04+TIMER+TIMER+THIFL				:\
+	lda #CR		; control reg				:\
+	sta $dc0e+TIMER						:\
+	ldx #0							:\
+t1b	lda $dc01						:\
+	sta TMP,x						:\
+	inx							:\
+	bne t1b							:\
+	rts							:\
+	.dsb test+TESTLEN-*,0					:\
+-TMP 	+=$100							:\
+	.)
+
+TEST($00,$00,$11,0,0)
+TEST($00,$00,$11,0,1)
+TEST($00,$00,$11,1,0)
+TEST($00,$00,$11,1,1)
+
+TEST($00,$00,$13,0,0)
+TEST($00,$00,$13,0,1)
+TEST($00,$00,$13,1,0)
+TEST($00,$00,$13,1,1)
+
+TEST($00,$00,$15,0,0)
+TEST($00,$00,$15,0,1)
+TEST($00,$00,$15,1,0)
+TEST($00,$00,$15,1,1)
+
+TEST($00,$00,$17,0,0)
+TEST($00,$00,$17,0,1)
+TEST($00,$00,$17,1,0)
+TEST($00,$00,$17,1,1)
+
+        .(
+            sei
+            inc $d020
+            jmp *-3
+        .)
+

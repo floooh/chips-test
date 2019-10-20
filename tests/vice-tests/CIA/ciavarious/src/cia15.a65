@@ -1,0 +1,95 @@
+#define TESTID          15
+
+tmp=$fc
+addr=$fd
+add2=$f9
+
+ERRBUF=$5f00
+TMP=$6000
+DATA=$8000
+
+#define	TESTLEN $40
+
+#define NUMTESTS        3
+
+#include "common.a65"
+
+
+	/* wait for TOD .1 sec change */
+waitchange .(
+	cmp $dc08 ; .1 sec
+	beq waitchange
+	rts
+	.)
+
+	.dsb $0a00-*,0
+
+;------------------------------------------
+	.(		; A
+test
+	ldx #0
+t1b	stx $dc0b ; hour
+	lda #$59
+	sta $dc0a ; min
+	sta $dc09 ; sec
+	lda #$08
+	sta $dc08 ; .1 sec
+	jsr waitchange
+	lda $dc0b ; hour
+	sta TMP,x
+	inx
+	bne t1b
+	rts
+	.dsb test+TESTLEN-*,0
+-TMP 	+=$100
+	.)
+
+	.(		; B
+test
+	ldx #0
+t1b	stx $dc0b ; hour
+	lda #$59
+	sta $dc0a ; min
+	sta $dc09 ; sec
+	lda #$08
+	sta $dc08 ; .1 sec
+	jsr waitchange
+	lda #$09
+	jsr waitchange
+	lda $dc0b ; hour
+	sta TMP,x
+	inx
+	bne t1b
+	rts
+	.dsb test+TESTLEN-*,0
+-TMP 	+=$100
+	.)
+
+	.(		; C
+test
+	ldx #0
+t1b	stx $dc0b ; hour
+	lda #$59
+	sta $dc0a ; min
+	sta $dc09 ; sec
+	lda #$08
+	sta $dc08 ; .1 sec
+	jsr waitchange
+	lda #$09
+	jsr waitchange
+	lda #$00
+	jsr waitchange
+	lda $dc0b ; hour
+	sta TMP,x
+	inx
+	bne t1b
+	rts
+	.dsb test+TESTLEN-*,0
+-TMP 	+=$100
+	.)
+
+        .(
+            sei
+            inc $d020
+            jmp *-3
+        .)

@@ -1,0 +1,266 @@
+#define TESTID          3
+
+tmp=$fc
+addr=$fd
+add2=$f9
+
+ERRBUF=$5f00
+TMP=$8000
+DATA=$9000
+
+#define TESTLEN         $20
+
+#define NUMTESTS        16
+
+#include "common.a65"
+
+
+	.dsb $0a00-*,0
+
+
+	.(
+test 	lda #1
+	sta $dc04
+	lda #$1
+	sta $dc0e
+	ldx #0
+t1b	lda $dc0d
+	sta TMP,x
+	inx
+	bne t1b
+	rts
+	.dsb test+$20-*,0
+-TMP 	+=$100
+	.)
+
+	.(
+test 	lda #1
+	sta $dc04
+	lda #$1
+	sta $dc0e
+	ldx #0
+t1b	lda $dc0d
+	sta TMP,x
+	inx
+	bne t1b
+	rts
+	.dsb test+$20-*,0
+-TMP 	+=$100
+	.)
+
+	.(
+test 	lda #1
+	sta $dc06
+	lda #$1
+	sta $dc0f
+	ldx #0
+t1b	lda $dc0d
+	sta TMP,x
+	inx
+	bne t1b
+	rts
+	.dsb test+$20-*,0
+-TMP 	+=$100
+	.)
+
+	.(
+test	lda #1
+	sta $dc06
+	lda #$1
+	sta $dc0f
+	ldx #0
+t1b	lda $dc0d
+	sta TMP,x
+	inx
+	bne t1b
+	rts
+	.dsb test+$20-*,0
+-TMP 	+=$100
+	.)
+
+	.(
+test	lda #1
+	sta $dc04
+	lda #$11
+	sta $dc0e
+	ldx #0
+t1b	lda $dc0d
+	sta TMP,x
+	inx
+	bne t1b
+	rts
+	.dsb test+$20-*,0
+-TMP 	+=$100
+	.)
+
+	.(
+test	lda #1
+	sta $dc04
+	lda #$11
+	sta $dc0e
+	ldx #0
+t1b	lda $dc0d
+	sta TMP,x
+	inx
+	bne t1b
+	rts
+	.dsb test+$20-*,0
+-TMP 	+=$100
+	.)
+
+	.(
+test	lda #1
+	sta $dc06
+	lda #$11
+	sta $dc0f
+	ldx #0
+t1b	lda $dc0d
+	sta TMP,x
+	inx
+	bne t1b
+	rts
+	.dsb test+$20-*,0
+-TMP 	+=$100
+	.)
+
+	.(
+test	lda #1
+	sta $dc06
+	lda #$11
+	sta $dc0f
+	ldx #0
+t1b	lda $dc0d
+	sta TMP,x
+	inx
+	bne t1b
+	rts
+	.dsb test+$20-*,0
+-TMP 	+=$100
+	.)
+
+	.(
+test 	lda #1
+	sta $dc05
+	lda #$1
+	sta $dc0e
+	ldx #0
+t1b	lda $dc0d
+	sta TMP,x
+	inx
+	bne t1b
+	rts
+	.dsb test+$20-*,0
+-TMP 	+=$100
+	.)
+
+	.(
+test 	lda #1
+	sta $dc05
+	lda #$1
+	sta $dc0e
+	ldx #0
+t1b	lda $dc0d
+	sta TMP,x
+	inx
+	bne t1b
+	rts
+	.dsb test+$20-*,0
+-TMP 	+=$100
+	.)
+
+	.(
+test 	lda #1
+	sta $dc07
+	lda #$1
+	sta $dc0f
+	ldx #0
+t1b	lda $dc0d
+	sta TMP,x
+	inx
+	bne t1b
+	rts
+	.dsb test+$20-*,0
+-TMP 	+=$100
+	.)
+
+	.(
+test	lda #1
+	sta $dc07
+	lda #$1
+	sta $dc0f
+	ldx #0
+t1b	lda $dc0d
+	sta TMP,x
+	inx
+	bne t1b
+	rts
+	.dsb test+$20-*,0
+-TMP 	+=$100
+	.)
+
+	.(
+test	lda #1
+	sta $dc05
+	lda #$11
+	sta $dc0e
+	ldx #0
+t1b	lda $dc0d
+	sta TMP,x
+	inx
+	bne t1b
+	rts
+	.dsb test+$20-*,0
+-TMP 	+=$100
+	.)
+
+	.(
+test	lda #1
+	sta $dc05
+	lda #$11
+	sta $dc0e
+	ldx #0
+t1b	lda $dc0d
+	sta TMP,x
+	inx
+	bne t1b
+	rts
+	.dsb test+$20-*,0
+-TMP 	+=$100
+	.)
+
+	.(
+test	lda #1
+	sta $dc06
+	lda #$11
+	sta $dc0f
+	ldx #0
+t1b	lda $dc0d
+	sta TMP,x
+	inx
+	bne t1b
+	rts
+	.dsb test+$20-*,0
+-TMP 	+=$100
+	.)
+
+	.(
+test	lda #1
+	sta $dc06
+	lda #$11
+	sta $dc0f
+	ldx #0
+t1b	lda $dc0d
+	sta TMP,x
+	inx
+	bne t1b
+	rts
+	.dsb test+$20-*,0
+-TMP 	+=$100
+	.)
+
+        .(
+            sei
+            inc $d020
+            jmp *-3
+        .)
+

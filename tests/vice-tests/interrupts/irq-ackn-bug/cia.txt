@@ -1,0 +1,16 @@
+CIA1:
+Timer A is started with IRQ mask enabled and is acknowledged "near" the IRQ.
+Timer B is used to measure if the IRQ took place or not.
+Timer B values and the ICR data register are displayed on the screen for eight
+different start values of Timer A.
+
+Result pattern for 6526 (old):
+
+CIA1:
+Y@Y@YAYAYAYA<A<A    where < denotes the <> symbol
+^ ^ ^^^^^^^^^^^     where ^ indicates that the above character is inverted.
+
+CIA2: similar for CIA2 and NMI
+
+-@-@-,-,-,-,-,<A    where - denotes an overscore, < denotes the <> symbol
+^ ^ ^ ^ ^ ^ ^ ^     where ^ indicates that the above character is inverted.
