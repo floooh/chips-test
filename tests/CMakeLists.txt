@@ -22,6 +22,7 @@ fips_begin_app(chips-test cmdline)
         z80-int.c
         z80-test.c
         m6502-test.c
+        m6502x-test.c
     )
     fips_dir(disks)
     fips_generate(FROM fdd-test.yml TYPE dump HEADER fdd-test.h)
