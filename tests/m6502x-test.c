@@ -30,13 +30,12 @@ static uint16_t r16(uint16_t addr) {
 static void init() {
     memset(mem, 0, sizeof(mem));
     m6502x_init(&cpu, &(m6502x_desc_t){0});
-    pins = 0;
-    // FIXME!!!
-    cpu.PC = 0x0200;
 }
 
-static void prefetch() {
-    cpu.IR = mem[cpu.PC++]<<3;
+static void prefetch(uint16_t pc) {
+    pins = 0;
+    cpu.IR = mem[pc]<<3;
+    cpu.PC = pc+1;
 }
 
 static void copy(uint16_t addr, uint8_t* bytes, size_t num) {
@@ -70,17 +69,16 @@ static bool tf(uint8_t expected) {
     return (R(P) & expected) == expected;
 }
 
-UTEST(m6502, INIT) {
+UTEST(m6502x, INIT) {
     init();
     T(0 == R(A));
     T(0 == R(X));
     T(0 == R(Y));
     T(0xFD == R(S));
-    T(0x0200 == R(PC));
     T(tf(0));
 }
 
-UTEST(m6502, RESET) {
+UTEST(m6502x, RESET) {
     // FIXME
     /*
     init();
@@ -92,7 +90,7 @@ UTEST(m6502, RESET) {
     */
 }
 
-UTEST(m6502, LDA) {
+UTEST(m6502x, LDA) {
     init();
     uint8_t prog[] = {
         // immediate
@@ -141,7 +139,7 @@ UTEST(m6502, LDA) {
     w8(0x1000, 0x12); w8(0xFFFF, 0x34); w8(0x0021, 0x56);
     w8(0x001F, 0xAA); w8(0x0007, 0x33); w8(0x0087, 0x22);
     copy(0x0200, prog, sizeof(prog));
-    prefetch();
+    prefetch(0x0200);
 
     // immediate
     T(2 == step()); T(R(A) == 0x00); T(tf(M6502X_ZF));
@@ -189,7 +187,7 @@ UTEST(m6502, LDA) {
     T(6 == step()); T(R(A) == 0xA8); T(tf(M6502X_NF));
 }
 
-UTEST(m6502, LDX) {
+UTEST(m6502x, LDX) {
     init();
     uint8_t prog[] = {
         // immediate
@@ -225,7 +223,7 @@ UTEST(m6502, LDX) {
     w8(0x1000, 0x12); w8(0xFFFF, 0x34); w8(0x0021, 0x56);
     w8(0x001F, 0xAA); w8(0x0007, 0x33); w8(0x0087, 0x22);
     copy(0x0200, prog, sizeof(prog));
-    prefetch();
+    prefetch(0x0200);
 
     // immediate
     T(2 == step()); T(R(X) == 0x00); (tf(M6502X_ZF));
@@ -257,7 +255,7 @@ UTEST(m6502, LDX) {
     T(5 == step()); T(R(X) == 0x56); T(tf(0));
 }
 
-UTEST(m6502, LDY) {
+UTEST(m6502x, LDY) {
     init();
     uint8_t prog[] = {
         // immediate
@@ -293,7 +291,7 @@ UTEST(m6502, LDY) {
     w8(0x1000, 0x12); w8(0xFFFF, 0x34); w8(0x0021, 0x56);
     w8(0x001F, 0xAA); w8(0x0007, 0x33); w8(0x0087, 0x22);
     copy(0x0200, prog, sizeof(prog));
-    prefetch();
+    prefetch(0x0200);
 
     // immediate
     T(2 == step()); T(R(Y) == 0x00); T(tf(M6502X_ZF));
@@ -325,7 +323,7 @@ UTEST(m6502, LDY) {
     T(5 == step()); T(R(Y) == 0x56); T(tf(0));
 }
 
-UTEST(m6502, STA) {
+UTEST(m6502x, STA) {
     init();
     uint8_t prog[] = {
         0xA9, 0x23,             // LDA #$23
@@ -340,7 +338,7 @@ UTEST(m6502, STA) {
         0x91, 0x20,             // STA ($20),Y
     };
     copy(0x0200, prog, sizeof(prog));
-    prefetch();
+    prefetch(0x0200);
 
     T(2 == step()); T(R(A) == 0x23);
     T(2 == step()); T(R(X) == 0x10);
@@ -355,7 +353,7 @@ UTEST(m6502, STA) {
     T(6 == step()); T(mem[0x43E1] == 0x23);
 }
 
-UTEST(m6502, STX) {
+UTEST(m6502x, STX) {
     init();
     uint8_t prog[] = {
         0xA2, 0x23,             // LDX #$23
@@ -366,7 +364,7 @@ UTEST(m6502, STX) {
         0x96, 0x10,             // STX $10,Y
     };
     copy(0x0200, prog, sizeof(prog));
-    prefetch();
+    prefetch(0x0200);
 
     T(2 == step()); T(R(X) == 0x23);
     T(2 == step()); T(R(Y) == 0x10);
@@ -375,7 +373,7 @@ UTEST(m6502, STX) {
     T(4 == step()); T(mem[0x0020] == 0x23);
 }
 
-UTEST(m6502, STY) {
+UTEST(m6502x, STY) {
     init();
     uint8_t prog[] = {
         0xA0, 0x23,             // LDY #$23
@@ -386,7 +384,7 @@ UTEST(m6502, STY) {
         0x94, 0x10,             // STX $10,Y
     };
     copy(0x0200, prog, sizeof(prog));
-    prefetch();
+    prefetch(0x0200);
 
     T(2 == step()); T(R(Y) == 0x23);
     T(2 == step()); T(R(X) == 0x10);
@@ -395,7 +393,7 @@ UTEST(m6502, STY) {
     T(4 == step()); T(mem[0x0020] == 0x23);
 }
 
-UTEST(m6502, TAX_TXA) {
+UTEST(m6502x, TAX_TXA) {
     init();
     uint8_t prog[] = {
         0xA9, 0x00,     // LDA #$00
@@ -410,6 +408,7 @@ UTEST(m6502, TAX_TXA) {
         0x8A,           // TXA
     };
     copy(0x0200, prog, sizeof(prog));
+    prefetch(0x0200);
 
     T(2 == step()); T(R(A) == 0x00); T(tf(M6502X_ZF));
     T(2 == step()); T(R(X) == 0x10); T(tf(0));
@@ -423,7 +422,7 @@ UTEST(m6502, TAX_TXA) {
     T(2 == step()); T(R(A) == 0xF0); T(tf(M6502X_NF));
 }
 
-UTEST(m6502, TAY_TYA) {
+UTEST(m6502x, TAY_TYA) {
     init();
     uint8_t prog[] = {
         0xA9, 0x00,     // LDA #$00
@@ -438,6 +437,7 @@ UTEST(m6502, TAY_TYA) {
         0x98,           // TYA
     };
     copy(0x0200, prog, sizeof(prog));
+    prefetch(0x0200);
 
     T(2 == step()); T(R(A) == 0x00); T(tf(M6502X_ZF));
     T(2 == step()); T(R(Y) == 0x10); T(tf(0));
@@ -451,7 +451,7 @@ UTEST(m6502, TAY_TYA) {
     T(2 == step()); T(R(A) == 0xF0); T(tf(M6502X_NF));
 }
 
-UTEST(m6502, DEX_INX_DEY_INY) {
+UTEST(m6502x, DEX_INX_DEY_INY) {
     init();
     uint8_t prog[] = {
         0xA2, 0x01,     // LDX #$01
@@ -466,6 +466,7 @@ UTEST(m6502, DEX_INX_DEY_INY) {
         0xC8,           // INY
     };
     copy(0x0200, prog, sizeof(prog));
+    prefetch(0x0200);
 
     T(2 == step()); T(R(X) == 0x01); T(tf(0));
     T(2 == step()); T(R(X) == 0x00); T(tf(M6502X_ZF));
@@ -479,7 +480,7 @@ UTEST(m6502, DEX_INX_DEY_INY) {
     T(2 == step()); T(R(Y) == 0x01); T(tf(0));
 }
 
-UTEST(m6502, TXS_TSX) {
+UTEST(m6502x, TXS_TSX) {
     init();
     uint8_t prog[] = {
         0xA2, 0xAA,     // LDX #$AA
@@ -489,6 +490,7 @@ UTEST(m6502, TXS_TSX) {
         0xBA,           // TSX
     };
     copy(0x0200, prog, sizeof(prog));
+    prefetch(0x0200);
 
     T(2 == step()); T(R(X) == 0xAA); T(tf(M6502X_NF));
     T(2 == step()); T(R(A) == 0x00); T(tf(M6502X_ZF));
@@ -497,7 +499,7 @@ UTEST(m6502, TXS_TSX) {
     T(2 == step()); T(R(X) == 0xAA); T(tf(M6502X_NF));
 }
 
-UTEST(m6502, ORA) {
+UTEST(m6502x, ORA) {
     init();
     uint8_t prog[] = {
         0xA9, 0x00,         // LDA #$00
@@ -522,6 +524,7 @@ UTEST(m6502, ORA) {
     w8(0x1002, (1<<4));
     w8(0x1003, (1<<5));
     w8(0x1004, (1<<6));
+    prefetch(0x0200);
 
     T(2 == step()); T(R(A) == 0x00); T(tf(M6502X_ZF));
     T(2 == step()); T(R(X) == 0x01); T(tf(0));
@@ -536,7 +539,7 @@ UTEST(m6502, ORA) {
     T(5 == step()); T(R(A) == 0x7F); T(tf(0));
 }
 
-UTEST(m6502, AND) {
+UTEST(m6502x, AND) {
     init();
     uint8_t prog[] = {
         0xA9, 0xFF,         // LDA #$FF
@@ -561,6 +564,7 @@ UTEST(m6502, AND) {
     w8(0x1002, 0x07);
     w8(0x1003, 0x03);
     w8(0x1004, 0x01);
+    prefetch(0x0200);
 
     T(2 == step()); T(R(A) == 0xFF); T(tf(M6502X_NF));
     T(2 == step()); T(R(X) == 0x01); T(tf(0));
@@ -575,7 +579,7 @@ UTEST(m6502, AND) {
     T(5 == step()); T(R(A) == 0x01); T(tf(0));
 }
 
-UTEST(m6502, EOR) {
+UTEST(m6502x, EOR) {
     init();
     uint8_t prog[] = {
         0xA9, 0xFF,         // LDA #$FF
@@ -600,6 +604,7 @@ UTEST(m6502, EOR) {
     w8(0x1002, 0x07);
     w8(0x1003, 0x03);
     w8(0x1004, 0x01);
+    prefetch(0x0200);
 
     T(2 == step()); T(R(A) == 0xFF); T(tf(M6502X_NF));
     T(2 == step()); T(R(X) == 0x01); T(tf(0));
@@ -614,16 +619,17 @@ UTEST(m6502, EOR) {
     T(5 == step()); T(R(A) == 0x55); T(tf(0));
 }
 
-UTEST(m6502, NOP) {
+UTEST(m6502x, NOP) {
     init();
     uint8_t prog[] = {
         0xEA,       // NOP
     };
     copy(0x0200, prog, sizeof(prog));
+    prefetch(0x0200);
     T(2 == step());
 }
 
-UTEST(m6502, PHA_PLA_PHP_PLP) {
+UTEST(m6502x, PHA_PLA_PHP_PLP) {
     init();
     uint8_t prog[] = {
         0xA9, 0x23,     // LDA #$23
@@ -635,6 +641,7 @@ UTEST(m6502, PHA_PLA_PHP_PLP) {
         0x28,           // PLP
     };
     copy(0x0200, prog, sizeof(prog));
+    prefetch(0x0200);
 
     T(2 == step()); T(R(A) == 0x23); T(R(S) == 0xFD);
     T(3 == step()); T(R(S) == 0xFC); T(mem[0x01FD] == 0x23);
@@ -645,7 +652,7 @@ UTEST(m6502, PHA_PLA_PHP_PLP) {
     T(4 == step()); T(R(S) == 0xFD); T(tf(0));
 }
 
-UTEST(m6502, CLC_SEC_CLI_SEI_CLV_CLD_SED) {
+UTEST(m6502x, CLC_SEC_CLI_SEI_CLV_CLD_SED) {
     init();
     uint8_t prog[] = {
         0xB8,       // CLV
@@ -658,6 +665,7 @@ UTEST(m6502, CLC_SEC_CLI_SEI_CLV_CLD_SED) {
     };
     copy(0x0200, prog, sizeof(prog));
     R(P) |= M6502X_VF;
+    prefetch(0x0200);
 
     T(2 == step()); T(tf(0));
     T(2 == step()); T(tf(M6502X_IF));
@@ -668,7 +676,7 @@ UTEST(m6502, CLC_SEC_CLI_SEI_CLV_CLD_SED) {
     T(2 == step()); T(tf(0));
 }
 
-UTEST(m6502, INC_DEC) {
+UTEST(m6502x, INC_DEC) {
     init();
     uint8_t prog[] = {
         0xA2, 0x10,         // LDX #$10
@@ -682,6 +690,7 @@ UTEST(m6502, INC_DEC) {
         0xDE, 0x00, 0x10,   // DEC $1000,X
     };
     copy(0x0200, prog, sizeof(prog));
+    prefetch(0x0200);
 
     T(2 == step()); T(0x10 == R(X));
     T(5 == step()); T(0x01 == mem[0x0033]); T(tf(0));
@@ -694,7 +703,7 @@ UTEST(m6502, INC_DEC) {
     T(7 == step()); T(0x00 == mem[0x1010]); T(tf(M6502X_ZF));
 }
 
-UTEST(m6502, ADC_SBC) {
+UTEST(m6502x, ADC_SBC) {
     init();
     uint8_t prog[] = {
         0xA9, 0x01,         // LDA #$01
@@ -719,6 +728,7 @@ UTEST(m6502, ADC_SBC) {
         0xE9, 0x01,         // SBC #$10
     };
     copy(0x0200, prog, sizeof(prog));
+    prefetch(0x0200);
 
     T(2 == step()); T(0x01 == R(A));
     T(3 == step()); T(0x01 == mem[0x0010]);
@@ -743,7 +753,7 @@ UTEST(m6502, ADC_SBC) {
     T(2 == step()); T(0xFB == R(A)); T(tf(M6502X_NF|M6502X_CF));
 }
 
-UTEST(m6502, CMP_CPX_CPY) {
+UTEST(m6502x, CMP_CPX_CPY) {
     init();
     // FIXME: non-immediate addressing modes
     uint8_t prog[] = {
@@ -761,6 +771,7 @@ UTEST(m6502, CMP_CPX_CPY) {
         0xC0, 0x03,     // CPY #$04
     };
     copy(0x0200, prog, sizeof(prog));
+    prefetch(0x0200);
 
     T(2 == step()); T(0x01 == R(A));
     T(2 == step()); T(0x02 == R(X));
@@ -773,7 +784,7 @@ UTEST(m6502, CMP_CPX_CPY) {
     T(2 == step()); T(tf(M6502X_NF));
 }
 
-UTEST(m6502, ASL) {
+UTEST(m6502x, ASL) {
     init();
     // FIXME: more addressing modes
     uint8_t prog[] = {
@@ -786,6 +797,7 @@ UTEST(m6502, ASL) {
         0x0A,           // ASL
     };
     copy(0x0200, prog, sizeof(prog));
+    prefetch(0x0200);
 
     T(2 == step()); T(0x81 == R(A));
     T(2 == step()); T(0x01 == R(X));
@@ -796,7 +808,7 @@ UTEST(m6502, ASL) {
     T(2 == step()); T(0x04 == R(A)); T(tf(0));
 }
 
-UTEST(m6502, LSR) {
+UTEST(m6502x, LSR) {
     init();
     // FIXME: more addressing modes
     uint8_t prog[] = {
@@ -809,6 +821,7 @@ UTEST(m6502, LSR) {
         0x4A,           // LSR
     };
     copy(0x0200, prog, sizeof(prog));
+    prefetch(0x0200);
 
     T(2 == step()); T(0x81 == R(A));
     T(2 == step()); T(0x01 == R(X));
@@ -819,7 +832,7 @@ UTEST(m6502, LSR) {
     T(2 == step()); T(0x20 == R(A)); T(tf(0));
 }
 
-UTEST(m6502, ROR_ROL) {
+UTEST(m6502x, ROR_ROL) {
     init();
     // FIXME: more adressing modes
     uint8_t prog[] = {
@@ -836,6 +849,7 @@ UTEST(m6502, ROR_ROL) {
         0x2A,           // ROL
     };
     copy(0x0200, prog, sizeof(prog));
+    prefetch(0x0200);
 
     T(2 == step()); T(0x81 == R(A));
     T(2 == step()); T(0x01 == R(X));
@@ -850,7 +864,7 @@ UTEST(m6502, ROR_ROL) {
     T(2 == step()); T(0x81 == R(A)); T(tf(M6502X_NF));
 }
 
-UTEST(m6502, BIT) {
+UTEST(m6502x, BIT) {
     init();
     uint8_t prog[] = {
         0xA9, 0x00,         // LDA #$00
@@ -864,6 +878,7 @@ UTEST(m6502, BIT) {
         0x2C, 0x00, 0x10    // BIT $1000
     };
     copy(0x0200, prog, sizeof(prog));
+    prefetch(0x0200);
 
     T(2 == step()); T(0x00 == R(A));
     T(3 == step()); T(0x00 == mem[0x001F]);
@@ -876,7 +891,7 @@ UTEST(m6502, BIT) {
     T(4 == step()); T(tf(M6502X_NF|M6502X_VF));
 }
 
-UTEST(m6502, BNE_BEQ) {
+UTEST(m6502x, BNE_BEQ) {
     init();
     uint8_t prog[] = {
         0xA9, 0x10,         // LDA #$10
@@ -888,36 +903,38 @@ UTEST(m6502, BNE_BEQ) {
         0xEA,
     };
     copy(0x0200, prog, sizeof(prog));
+    prefetch(0x0200);
 
     T(2 == step()); T(0x10 == R(A));
     T(2 == step()); T(tf(M6502X_ZF|M6502X_CF));
-    T(3 == step()); T(R(PC) == 0x0208);
+    T(3 == step()); T(R(PC) == 0x0209); // NOTE: target op has already been fetched
     T(2 == step()); T(tf(M6502X_CF));
-    T(3 == step()); T(R(PC) == 0x0206);
+    T(3 == step()); T(R(PC) == 0x0207);
     T(2 == step()); T(0x0F == R(A));
     T(2 == step()); T(tf(M6502X_ZF|M6502X_CF));
-    T(2 == step()); T(R(PC) == 0x020C);
+    T(2 == step()); T(R(PC) == 0x020D);
 
     // patch jump target, and test jumping across 256 bytes page
-    R(PC) = 0x0200;
+    prefetch(0x0200);
     w8(0x0205, 0xC0);
     T(2 == step()); T(0x10 == R(A));
     T(2 == step()); T(tf(M6502X_ZF|M6502X_CF));
-    T(4 == step()); T(R(PC) == 0x01C6);
+    T(4 == step()); T(R(PC) == 0x01C7);
 
     // FIXME: test the other branches
 }
 
-UTEST(m6502, JMP) {
+UTEST(m6502x, JMP) {
     init();
     uint8_t prog[] = {
         0x4C, 0x00, 0x10,   // JMP $1000
     };
     copy(0x0200, prog, sizeof(prog));
-    T(3 == step()); T(R(PC) == 0x1000);
+    prefetch(0x0200);
+    T(3 == step()); T(R(PC) == 0x1001);
 }
 
-UTEST(m6502, JMP_indirect_samepage) {
+UTEST(m6502x, JMP_indirect_samepage) {
     init();
     uint8_t prog[] = {
         0xA9, 0x33,         // LDA #$33
@@ -927,14 +944,15 @@ UTEST(m6502, JMP_indirect_samepage) {
         0x6C, 0x10, 0x21,   // JMP ($2110)
     };
     copy(0x0200, prog, sizeof(prog));
+    prefetch(0x0200);
     T(2 == step()); T(R(A) == 0x33);
     T(4 == step()); T(mem[0x2110] == 0x33);
     T(2 == step()); T(R(A) == 0x22);
     T(4 == step()); T(mem[0x2111] == 0x22);
-    T(5 == step()); T(R(PC) == 0x2233);
+    T(5 == step()); T(R(PC) == 0x2234);
 }
 
-UTEST(m6502, JMP_indirect_wrap) {
+UTEST(m6502x, JMP_indirect_wrap) {
     init();
     uint8_t prog[] = {
         0xA9, 0x33,         // LDA #$33
@@ -944,15 +962,16 @@ UTEST(m6502, JMP_indirect_wrap) {
         0x6C, 0xFF, 0x21,   // JMP ($21FF)
     };
     copy(0x0200, prog, sizeof(prog));
+    prefetch(0x0200);
 
     T(2 == step()); T(R(A) == 0x33);
     T(4 == step()); T(mem[0x21FF] == 0x33);
     T(2 == step()); T(R(A) == 0x22);
     T(4 == step()); T(mem[0x2100] == 0x22);
-    T(5 == step()); T(R(PC) == 0x2233);
+    T(5 == step()); T(R(PC) == 0x2234);
 }
 
-UTEST(m6502, JSR_RTS) {
+UTEST(m6502x, JSR_RTS) {
     init();
     uint8_t prog[] = {
         0x20, 0x05, 0x03,   // JSR fun
@@ -961,15 +980,15 @@ UTEST(m6502, JSR_RTS) {
         0x60,               // RTS
     };
     copy(0x0300, prog, sizeof(prog));
-    R(PC) = 0x0300;
+    prefetch(0x0300);
 
     T(R(S) == 0xFD);
-    T(6 == step()); T(R(PC) == 0x0305); T(R(S) == 0xFB); T(r16(0x01FC)==0x0302);
+    T(6 == step()); T(R(PC) == 0x0306); T(R(S) == 0xFB); T(r16(0x01FC)==0x0302);
     T(2 == step());
-    T(6 == step()); T(R(PC) == 0x0303); T(R(S) == 0xFD);
+    T(6 == step()); T(R(PC) == 0x0304); T(R(S) == 0xFD);
 }
 
-UTEST(m6502, RTI) {
+UTEST(m6502x, RTI) {
     init();
     uint8_t prog[] = {
         0xA9, 0x11,     // LDA #$11
@@ -981,7 +1000,7 @@ UTEST(m6502, RTI) {
         0x40,           // RTI
     };
     copy(0x0200, prog, sizeof(prog));
-    R(PC) = 0x0200;
+    prefetch(0x0200);
 
     T(R(S) == 0xFD);
     T(2 == step()); T(R(A) == 0x11);
@@ -990,5 +1009,5 @@ UTEST(m6502, RTI) {
     T(3 == step()); T(R(S) == 0xFB);
     T(2 == step()); T(R(A) == 0x33);
     T(3 == step()); T(R(S) == 0xFA);
-    T(6 == step()); T(R(S) == 0xFD); T(R(PC) == 0x1122); T(tf(M6502X_ZF|M6502X_CF));
+    T(6 == step()); T(R(S) == 0xFD); T(R(PC) == 0x1123); T(tf(M6502X_ZF|M6502X_CF));
 }
