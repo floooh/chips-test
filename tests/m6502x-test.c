@@ -27,7 +27,7 @@ static uint16_t r16(uint16_t addr) {
     return (h<<8)|l;
 }
 
-static void init() {
+static void init(void) {
     memset(mem, 0, sizeof(mem));
     m6502x_init(&cpu, &(m6502x_desc_t){0});
 }
@@ -43,7 +43,7 @@ static void copy(uint16_t addr, uint8_t* bytes, size_t num) {
     memcpy(&mem[addr], bytes, num);
 }
 
-static uint32_t step() {
+static uint32_t step(void) {
     uint32_t ticks = 0;
     do {
         pins = m6502x_tick(&cpu, pins);
@@ -64,9 +64,7 @@ static uint32_t step() {
 }
 
 static bool tf(uint8_t expected) {
-    /* XF is always set */
-    expected |= M6502X_XF;
-    return (R(P) & expected) == expected;
+    return (R(P)&~(M6502X_XF|M6502X_IF|M6502X_BF)) == expected;
 }
 
 UTEST(m6502x, INIT) {
@@ -75,7 +73,7 @@ UTEST(m6502x, INIT) {
     T(0 == R(X));
     T(0 == R(Y));
     T(0xFD == R(S));
-    T(tf(0));
+    T(tf(M6502X_ZF));
 }
 
 UTEST(m6502x, RESET) {
@@ -170,7 +168,7 @@ UTEST(m6502x, LDA) {
     T(4 == step()); T(R(A) == 0x56); T(tf(0));
 
     // absolute,Y
-    T(2 == step()); T(R(Y) == 0xF0); T(tf(0));
+    T(2 == step()); T(R(Y) == 0xF0); T(tf(M6502X_NF));
     T(5 == step()); T(R(A) == 0x12); T(tf(0));
     T(4 == step()); T(R(A) == 0x34); T(tf(0));
     T(5 == step()); T(R(A) == 0x56); T(tf(0));
@@ -249,7 +247,7 @@ UTEST(m6502x, LDX) {
     T(4 == step()); T(R(X) == 0x22); T(tf(0));
 
     // absolute,X
-    T(2 == step()); T(R(Y) == 0xF0); T(tf(0));
+    T(2 == step()); T(R(Y) == 0xF0); T(tf(M6502X_NF));
     T(5 == step()); T(R(X) == 0x12); T(tf(0));
     T(4 == step()); T(R(X) == 0x34); T(tf(0));
     T(5 == step()); T(R(X) == 0x56); T(tf(0));
@@ -317,7 +315,7 @@ UTEST(m6502x, LDY) {
     T(4 == step()); T(R(Y) == 0x22); T(tf(0));
 
     // absolute,X
-    T(2 == step()); T(R(X) == 0xF0); T(tf(0));
+    T(2 == step()); T(R(X) == 0xF0); T(tf(M6502X_NF));
     T(5 == step()); T(R(Y) == 0x12); T(tf(0));
     T(4 == step()); T(R(Y) == 0x34); T(tf(0));
     T(5 == step()); T(R(Y) == 0x56); T(tf(0));
@@ -667,13 +665,13 @@ UTEST(m6502x, CLC_SEC_CLI_SEI_CLV_CLD_SED) {
     R(P) |= M6502X_VF;
     prefetch(0x0200);
 
-    T(2 == step()); T(tf(0));
-    T(2 == step()); T(tf(M6502X_IF));
-    T(2 == step()); T(tf(0));
-    T(2 == step()); T(tf(M6502X_CF));
-    T(2 == step()); T(tf(0));
-    T(2 == step()); T(tf(M6502X_DF));
-    T(2 == step()); T(tf(0));
+    T(2 == step()); T(tf(M6502X_ZF));
+    T(2 == step()); //T(tf(M6502X_ZF|M6502X_IF));   // FIXME: interrupt bit is ignored in tf()
+    T(2 == step()); T(tf(M6502X_ZF));
+    T(2 == step()); T(tf(M6502X_ZF|M6502X_CF));
+    T(2 == step()); T(tf(M6502X_ZF));
+    T(2 == step()); T(tf(M6502X_ZF|M6502X_DF));
+    T(2 == step()); T(tf(M6502X_ZF));
 }
 
 UTEST(m6502x, INC_DEC) {

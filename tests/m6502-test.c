@@ -39,7 +39,7 @@ static uint16_t r16(uint16_t addr) {
     return (h<<8)|l;
 }
 
-static void init() {
+static void init(void) {
     memset(mem, 0, sizeof(mem));
     m6502_init(&cpu, &(m6502_desc_t){
         .tick_cb = tick,
@@ -53,7 +53,7 @@ static void copy(uint16_t addr, uint8_t* bytes, size_t num) {
     memcpy(&mem[addr], bytes, num);
 }
 
-static uint32_t step() {
+static uint32_t step(void) {
     return m6502_exec(&cpu, 0);
 }
 

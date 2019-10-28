@@ -23,6 +23,14 @@ fips_begin_app(chips-test cmdline)
         z80-test.c
         m6502-test.c
         m6502x-test.c
+        m6502-perfect.c
+    )
+    fips_dir(perfect6502)
+    fips_files(
+        netlist_6502.h
+        netlist_sim.c netlist_sim.h
+        perfect6502.c perfect6502.h
+        types.h
     )
     fips_dir(disks)
     fips_generate(FROM fdd-test.yml TYPE dump HEADER fdd-test.h)
