@@ -23,9 +23,9 @@
 #include <assert.h>
 
 #define T(b) ASSERT_TRUE(b)
-#define STEP(x) step_until_sync(x)
 
-#define OP(c) T(step_until_sync(c))
+#define OP(c) T(step_until_sync(c, false))
+#define OPIRQ(c) T(step_until_sync(c, true))
 #define TA(v) T(ra(v))
 #define TX(v) T(rx(v))
 #define TY(v) T(ry(v))
@@ -144,7 +144,7 @@ static uint64_t mem_access(uint64_t pins) {
 // step both emulators through the current instruction,
 // compare the relevant pin state after each tick, and finally
 // check for expected number of ticks
-static bool step_until_sync(uint32_t expected_ticks) {
+static bool step_until_sync(uint32_t expected_ticks, bool irq) {
     uint32_t tick = 0;
     do {
         // step our own emu
@@ -179,6 +179,10 @@ static bool step_until_sync(uint32_t expected_ticks) {
         }
         tick++;
     } while (!isNodeHigh(p6502_state, 539)); // 539 is SYNC pin, next instruction about to begin
+    if (irq) {
+        pins |= M6502X_IRQ;
+        setNode(p6502_state, 103, 0);
+    }
     // run one half tick into next instruction so that overlapped operations can finish
     step(p6502_state);
     return (tick == expected_ticks);
@@ -1157,3 +1161,19 @@ UTEST(m6502_perfect, BRK) {
 
     OP(7); TS(0xBA); TPC(0x0101); TM8(0x1BB, 0x36); TM8(0x1BC,0x02); TM8(0x1BD,0x03);
 }
+
+/* FIXME FIXME FIXME
+UTEST(m6502_perfect, IRQ) {
+    init();
+    uint8_t prog[] = {
+        0x58, 0xEA, 0xEA, 0xEA, 0xEA,   // CLI + 4 nops
+        0xA9, 0x33,                     // IRQ service routine
+    };
+    copy(0x0200, prog, sizeof(prog));
+    start(0x0200);
+    w16(0xFFFE, 0x0205);
+
+    OPIRQ(2);  // enable interrupt
+    OP(2)
+}
+*/
