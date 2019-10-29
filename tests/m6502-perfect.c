@@ -102,7 +102,7 @@ static void init() {
 }
 
 // reset both emulators through their reset sequence to a starting address
-static void prefetch(uint16_t start_addr) {
+static void start(uint16_t start_addr) {
     // write starting address to the 6502's reset vector location
     w16(0xFFFC, start_addr);
 
@@ -269,7 +269,7 @@ UTEST(m6502_perfect, LDA) {
     w8(0x1000, 0x12); w8(0xFFFF, 0x34); w8(0x0021, 0x56);
     w8(0x001F, 0xAA); w8(0x0007, 0x33); w8(0x0087, 0x22);
     copy(0x0200, prog, sizeof(prog));
-    prefetch(0x0200);
+    start(0x0200);
 
     // immediate
     OP(2); TA(0x00); TF(M6502X_ZF);
@@ -353,7 +353,7 @@ UTEST(m6502_perfect, LDX) {
     w8(0x1000, 0x12); w8(0xFFFF, 0x34); w8(0x0021, 0x56);
     w8(0x001F, 0xAA); w8(0x0007, 0x33); w8(0x0087, 0x22);
     copy(0x0200, prog, sizeof(prog));
-    prefetch(0x0200);
+    start(0x0200);
 
     // immediate
     OP(2); TX(0x00); TF(M6502X_ZF);
@@ -421,7 +421,7 @@ UTEST(m6502_perfect, LDY) {
     w8(0x1000, 0x12); w8(0xFFFF, 0x34); w8(0x0021, 0x56);
     w8(0x001F, 0xAA); w8(0x0007, 0x33); w8(0x0087, 0x22);
     copy(0x0200, prog, sizeof(prog));
-    prefetch(0x0200);
+    start(0x0200);
 
     // immediate
     OP(2); TY(0x00); TF(M6502X_ZF);
@@ -468,7 +468,7 @@ UTEST(m6502_perfect, STA) {
         0x91, 0x20,             // STA ($20),Y
     };
     copy(0x0200, prog, sizeof(prog));
-    prefetch(0x0200);
+    start(0x0200);
 
     OP(2); TA(0x23);
     OP(2); TX(0x10);
@@ -494,7 +494,7 @@ UTEST(m6502_perfect, STX) {
         0x96, 0x10,             // STX $10,Y
     };
     copy(0x0200, prog, sizeof(prog));
-    prefetch(0x0200);
+    start(0x0200);
 
     OP(2); TX(0x23);
     OP(2); TY(0x10);
@@ -514,7 +514,7 @@ UTEST(m6502_perfect, STY) {
         0x94, 0x10,             // STX $10,Y
     };
     copy(0x0200, prog, sizeof(prog));
-    prefetch(0x0200);
+    start(0x0200);
 
     OP(2); TY(0x23);
     OP(2); TX(0x10);
@@ -538,7 +538,7 @@ UTEST(m6502_perfect, TAX_TXA) {
         0x8A,           // TXA
     };
     copy(0x0200, prog, sizeof(prog));
-    prefetch(0x0200);
+    start(0x0200);
 
     OP(2); TA(0x00); TF(M6502X_ZF);
     OP(2); TX(0x10); TF(0);
@@ -567,7 +567,7 @@ UTEST(m6502_perfect, TAY_TYA) {
         0x98,           // TYA
     };
     copy(0x0200, prog, sizeof(prog));
-    prefetch(0x0200);
+    start(0x0200);
 
     OP(2); TA(0x00); TF(M6502X_ZF);
     OP(2); TY(0x10); TF(0);
@@ -596,7 +596,7 @@ UTEST(m6502_perfect, DEX_INX_DEY_INY) {
         0xC8,           // INY
     };
     copy(0x0200, prog, sizeof(prog));
-    prefetch(0x0200);
+    start(0x0200);
 
     OP(2); TX(0x01); TF(0);
     OP(2); TX(0x00); TF(M6502X_ZF);
@@ -620,7 +620,7 @@ UTEST(m6502_perfect, TXS_TSX) {
         0xBA,           // TSX
     };
     copy(0x0200, prog, sizeof(prog));
-    prefetch(0x0200);
+    start(0x0200);
 
     OP(2); TX(0xAA); TF(M6502X_NF);
     OP(2); TA(0x00); TF(M6502X_ZF);
@@ -654,7 +654,7 @@ UTEST(m6502_perfect, ORA) {
     w8(0x1002, (1<<4));
     w8(0x1003, (1<<5));
     w8(0x1004, (1<<6));
-    prefetch(0x0200);
+    start(0x0200);
 
     OP(2); TA(0x00); TF(M6502X_ZF);
     OP(2); TX(0x01); TF(0);
@@ -694,7 +694,7 @@ UTEST(m6502_perfect, AND) {
     w8(0x1002, 0x07);
     w8(0x1003, 0x03);
     w8(0x1004, 0x01);
-    prefetch(0x0200);
+    start(0x0200);
 
     OP(2); TA(0xFF); TF(M6502X_NF);
     OP(2); TX(0x01); TF(0);
@@ -734,7 +734,7 @@ UTEST(m6502_perfect, EOR) {
     w8(0x1002, 0x07);
     w8(0x1003, 0x03);
     w8(0x1004, 0x01);
-    prefetch(0x0200);
+    start(0x0200);
 
     OP(2); TA(0xFF); TF(M6502X_NF);
     OP(2); TX(0x01); TF(0);
@@ -755,7 +755,7 @@ UTEST(m6502_perfect, NOP) {
         0xEA,       // NOP
     };
     copy(0x0200, prog, sizeof(prog));
-    prefetch(0x0200);
+    start(0x0200);
     OP(2);
 }
 
@@ -771,7 +771,7 @@ UTEST(m6502_perfect, PHA_PLA_PHP_PLP) {
         0x28,           // PLP
     };
     copy(0x0200, prog, sizeof(prog));
-    prefetch(0x0200);
+    start(0x0200);
 
     OP(2); TA(0x23); TS(0xBD);
     OP(3); TS(0xBC); TM8(0x01BD, 0x23);
@@ -794,7 +794,7 @@ UTEST(m6502_perfect, CLC_SEC_CLI_SEI_CLV_CLD_SED) {
         0xD8,       // CLD
     };
     copy(0x0200, prog, sizeof(prog));
-    prefetch(0x0200);
+    start(0x0200);
 
     OP(2); TF(M6502X_ZF);
     OP(2); //TF(M6502X_ZF|M6502X_IF);   // FIXME: interrupt bit is ignored in tf()
@@ -819,7 +819,7 @@ UTEST(m6502_perfect, INC_DEC) {
         0xDE, 0x00, 0x10,   // DEC $1000,X
     };
     copy(0x0200, prog, sizeof(prog));
-    prefetch(0x0200);
+    start(0x0200);
 
     OP(2); TX(0x10);
     OP(5); TM8(0x0033,1); TF(0);
@@ -857,7 +857,7 @@ UTEST(m6502_perfect, ADC_SBC) {
         0xE9, 0x01,         // SBC #$10
     };
     copy(0x0200, prog, sizeof(prog));
-    prefetch(0x0200);
+    start(0x0200);
 
     OP(2); TA(0x01);
     OP(3); TM8(0x0010, 0x01);
@@ -900,7 +900,7 @@ UTEST(m6502_perfect, CMP_CPX_CPY) {
         0xC0, 0x03,     // CPY #$04
     };
     copy(0x0200, prog, sizeof(prog));
-    prefetch(0x0200);
+    start(0x0200);
 
     OP(2); TA(0x01);
     OP(2); TX(0x02);
@@ -926,7 +926,7 @@ UTEST(m6502_perfect, ASL) {
         0x0A,           // ASL
     };
     copy(0x0200, prog, sizeof(prog));
-    prefetch(0x0200);
+    start(0x0200);
 
     OP(2); TA(0x81);
     OP(2); TX(0x01);
@@ -950,7 +950,7 @@ UTEST(m6502_perfect, LSR) {
         0x4A,           // LSR
     };
     copy(0x0200, prog, sizeof(prog));
-    prefetch(0x0200);
+    start(0x0200);
 
     OP(2); TA(0x81);
     OP(2); TX(0x01);
@@ -978,7 +978,7 @@ UTEST(m6502_prefetch, ROR_ROL) {
         0x2A,           // ROL
     };
     copy(0x0200, prog, sizeof(prog));
-    prefetch(0x0200);
+    start(0x0200);
 
     OP(2); TA(0x81);
     OP(2); TX(0x01);
@@ -1008,7 +1008,7 @@ UTEST(m6502_perfect, BIT) {
         0x2C, 0x00, 0x10    // BIT $1000
     };
     copy(0x0200, prog, sizeof(prog));
-    prefetch(0x0200);
+    start(0x0200);
 
     OP(2); TA(0x00);
     OP(3); TM8(0x001F, 0x00);
@@ -1033,7 +1033,7 @@ UTEST(m6502_perfect, BNE_BEQ) {
         0xEA,
     };
     copy(0x0200, prog, sizeof(prog));
-    prefetch(0x0200);
+    start(0x0200);
 
     OP(2); TA(0x10);
     OP(2); TF(M6502X_ZF|M6502X_CF);
@@ -1047,7 +1047,7 @@ UTEST(m6502_perfect, BNE_BEQ) {
     // patch jump target, and test jumping across 256 bytes page
     init();
     copy(0x0200, prog, sizeof(prog));
-    prefetch(0x0200);
+    start(0x0200);
     w8(0x0205, 0xC0);
     OP(2); TA(0x10);
     OP(2); TF(M6502X_ZF|M6502X_CF);
@@ -1062,7 +1062,7 @@ UTEST(m6502_perfect, JMP) {
         0x4C, 0x00, 0x10,   // JMP $1000
     };
     copy(0x0200, prog, sizeof(prog));
-    prefetch(0x0200);
+    start(0x0200);
     OP(3); TPC(0x1001);
 }
 
@@ -1076,7 +1076,7 @@ UTEST(m6502_perfect, JMP_indirect_samepage) {
         0x6C, 0x10, 0x21,   // JMP ($2110)
     };
     copy(0x0200, prog, sizeof(prog));
-    prefetch(0x0200);
+    start(0x0200);
     OP(2); TA(0x33);
     OP(4); TM8(0x2110, 0x33);
     OP(2); TA(0x22);
@@ -1094,7 +1094,7 @@ UTEST(m6502_perfect, JMP_indirect_wrap) {
         0x6C, 0xFF, 0x21,   // JMP ($21FF)
     };
     copy(0x0200, prog, sizeof(prog));
-    prefetch(0x0200);
+    start(0x0200);
     OP(2); TA(0x33);
     OP(4); TM8(0x21FF, 0x33);
     OP(2); TA(0x22);
@@ -1111,7 +1111,7 @@ UTEST(m6502_perfect, JSR_RTS) {
         0x60,               // RTS
     };
     copy(0x0300, prog, sizeof(prog));
-    prefetch(0x0300);
+    start(0x0300);
 
     TS(0xBD);
     OP(6); TPC(0x0306); TS(0xBB); TM16(0x01BC, 0x0302);
@@ -1131,7 +1131,7 @@ UTEST(m6502_perfect, RTI) {
         0x40,           // RTI
     };
     copy(0x0200, prog, sizeof(prog));
-    prefetch(0x0200);
+    start(0x0200);
 
     TS(0xBD);
     OP(2); TA(0x11);
@@ -1142,3 +1142,4 @@ UTEST(m6502_perfect, RTI) {
     OP(3); TS(0xBA);
     OP(6); TS(0xBD); TPC(0x1123); TF(M6502X_ZF|M6502X_CF);
 }
+
