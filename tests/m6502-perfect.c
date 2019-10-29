@@ -62,7 +62,9 @@ static void w8(uint16_t addr, uint8_t data) {
 
 // read a byte from both memories, and check against expected value
 static bool r8(uint16_t addr, uint8_t expected) {
-    return (mem[addr] == expected) && (memory[addr] == expected);
+    uint8_t v0 = mem[addr];
+    uint8_t v1 = memory[addr];
+    return (v0 == expected) && (v1 == expected);
 }
 
 // write a 16-bit value into both memories
@@ -1143,3 +1145,15 @@ UTEST(m6502_perfect, RTI) {
     OP(6); TS(0xBD); TPC(0x1123); TF(M6502X_ZF|M6502X_CF);
 }
 
+UTEST(m6502_perfect, BRK) {
+    init();
+    uint8_t prog[] = {
+        0x00,       // BRK
+        0x00,
+    };
+    copy(0x0300, prog, sizeof(prog));
+    start(0x0300);
+    w16(0xFFFE, 0x0100);
+
+    OP(7); TS(0xBA); TPC(0x0101); TM8(0x1BB, 0x36); TM8(0x1BC,0x02); TM8(0x1BD,0x03);
+}
