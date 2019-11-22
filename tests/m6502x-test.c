@@ -43,21 +43,25 @@ static void copy(uint16_t addr, uint8_t* bytes, size_t num) {
     memcpy(&mem[addr], bytes, num);
 }
 
+static void tick(void) {
+    pins = m6502x_tick(&cpu, pins);
+    const uint16_t addr = M6502X_GET_ADDR(pins);
+    if (pins & M6502X_RW) {
+        /* memory read */
+        uint8_t val = mem[addr];
+        M6502X_SET_DATA(pins, val);
+    }
+    else {
+        /* memory write */
+        uint8_t val = M6502X_GET_DATA(pins);
+        mem[addr] = val;
+    }
+}
+
 static uint32_t step(void) {
     uint32_t ticks = 0;
     do {
-        pins = m6502x_tick(&cpu, pins);
-        const uint16_t addr = M6502X_GET_ADDR(pins);
-        if (pins & M6502X_RW) {
-            /* memory read */
-            uint8_t val = mem[addr];
-            M6502X_SET_DATA(pins, val);
-        }
-        else {
-            /* memory write */
-            uint8_t val = M6502X_GET_DATA(pins);
-            mem[addr] = val;
-        }
+        tick();
         ticks++;
     } while (0 == (pins & M6502X_SYNC));
     return ticks;
@@ -72,7 +76,7 @@ UTEST(m6502x, INIT) {
     T(0 == R(A));
     T(0 == R(X));
     T(0 == R(Y));
-    T(0xFD == R(S));
+    T(0xBD == R(S));
     T(tf(M6502X_ZF));
 }
 
@@ -86,6 +90,25 @@ UTEST(m6502x, RESET) {
     T(0x1234 == R(PC));
     T(tf(M6502X_IF));
     */
+}
+
+UTEST(m6502x, BRK) {
+    init();
+    uint8_t prog[] = {
+        0xA9, 0xAA,     // LDA #$AA
+        0x00,           // BRK
+        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        0xA9, 0xBB,     // LDA #$BB
+    };
+    copy(0x0000, prog, sizeof(prog));
+    // set BRK/IRQ vector
+    w16(0xFFFE, 0x0010);
+    prefetch(0x0000);
+
+    T(2 == step()); T(R(A) == 0xAA);
+    T(7 == step()); T(R(PC) == 0x0011); T(R(S)==0xBA); T(mem[0x01BB] == 0xB4); T(r16(0x01BC) == 0x0004);
+    T(2 == step()); T(R(A) == 0xBB);
 }
 
 UTEST(m6502x, LDA) {
@@ -641,13 +664,13 @@ UTEST(m6502x, PHA_PLA_PHP_PLP) {
     copy(0x0200, prog, sizeof(prog));
     prefetch(0x0200);
 
-    T(2 == step()); T(R(A) == 0x23); T(R(S) == 0xFD);
-    T(3 == step()); T(R(S) == 0xFC); T(mem[0x01FD] == 0x23);
+    T(2 == step()); T(R(A) == 0x23); T(R(S) == 0xBD);
+    T(3 == step()); T(R(S) == 0xBC); T(mem[0x01BD] == 0x23);
     T(2 == step()); T(R(A) == 0x32);
-    T(4 == step()); T(R(A) == 0x23); T(R(S) == 0xFD); T(tf(0));
-    T(3 == step()); T(R(S) == 0xFC); T(mem[0x01FD] == (M6502X_XF|M6502X_IF|M6502X_BF));
+    T(4 == step()); T(R(A) == 0x23); T(R(S) == 0xBD); T(tf(0));
+    T(3 == step()); T(R(S) == 0xBC); T(mem[0x01BD] == (M6502X_XF|M6502X_IF|M6502X_BF));
     T(2 == step()); T(tf(M6502X_ZF));
-    T(4 == step()); T(R(S) == 0xFD); T(tf(0));
+    T(4 == step()); T(R(S) == 0xBD); T(tf(0));
 }
 
 UTEST(m6502x, CLC_SEC_CLI_SEI_CLV_CLD_SED) {
@@ -980,10 +1003,10 @@ UTEST(m6502x, JSR_RTS) {
     copy(0x0300, prog, sizeof(prog));
     prefetch(0x0300);
 
-    T(R(S) == 0xFD);
-    T(6 == step()); T(R(PC) == 0x0306); T(R(S) == 0xFB); T(r16(0x01FC)==0x0302);
+    T(R(S) == 0xBD);
+    T(6 == step()); T(R(PC) == 0x0306); T(R(S) == 0xBB); T(r16(0x01BC)==0x0302);
     T(2 == step());
-    T(6 == step()); T(R(PC) == 0x0304); T(R(S) == 0xFD);
+    T(6 == step()); T(R(PC) == 0x0304); T(R(S) == 0xBD);
 }
 
 UTEST(m6502x, RTI) {
@@ -1000,12 +1023,12 @@ UTEST(m6502x, RTI) {
     copy(0x0200, prog, sizeof(prog));
     prefetch(0x0200);
 
-    T(R(S) == 0xFD);
+    T(R(S) == 0xBD);
     T(2 == step()); T(R(A) == 0x11);
-    T(3 == step()); T(R(S) == 0xFC);
+    T(3 == step()); T(R(S) == 0xBC);
     T(2 == step()); T(R(A) == 0x22);
-    T(3 == step()); T(R(S) == 0xFB);
+    T(3 == step()); T(R(S) == 0xBB);
     T(2 == step()); T(R(A) == 0x33);
-    T(3 == step()); T(R(S) == 0xFA);
-    T(6 == step()); T(R(S) == 0xFD); T(R(PC) == 0x1123); T(tf(M6502X_ZF|M6502X_CF));
+    T(3 == step()); T(R(S) == 0xBA);
+    T(6 == step()); T(R(S) == 0xBD); T(R(PC) == 0x1123); T(tf(M6502X_ZF|M6502X_CF));
 }

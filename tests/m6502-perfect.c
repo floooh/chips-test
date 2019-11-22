@@ -112,7 +112,6 @@ static void start(uint16_t start_addr) {
     pins = 0;
     cpu.IR = mem[start_addr]<<3;
     cpu.PC = start_addr+1;
-    cpu.S = 0xBD;
 
     // run through the perfect6502 9-cycle reset sequence
     // here, the SP starts as 0xC0 and is reduced to 0xBD after the reset routine
@@ -1152,14 +1151,19 @@ UTEST(m6502_perfect, RTI) {
 UTEST(m6502_perfect, BRK) {
     init();
     uint8_t prog[] = {
-        0x00,       // BRK
-        0x00,
+        0xA9, 0xAA,     // LDA #$AA
+        0x00,           // BRK
+        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        0xA9, 0xBB,     // LDA #$BB
     };
-    copy(0x0300, prog, sizeof(prog));
-    start(0x0300);
-    w16(0xFFFE, 0x0100);
+    copy(0x0, prog, sizeof(prog));
+    start(0x0);
+    w16(0xFFFE, 0x0010);
 
-    OP(7); TS(0xBA); TPC(0x0101); TM8(0x1BB, 0x36); TM8(0x1BC,0x02); TM8(0x1BD,0x03);
+    OP(2); TA(0xAA);
+    OP(7); TS(0xBA); TPC(0x0011); TS(0xBA); TM8(0x1BB, 0xB4); TM8(0x1BC,0x04); TM8(0x1BD,0x00);
+    OP(2); TA(0xBB);
 }
 
 /* FIXME FIXME FIXME
