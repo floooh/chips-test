@@ -24,8 +24,8 @@
 
 #define T(b) ASSERT_TRUE(b)
 
-#define OP(c) T(step_until_sync(c, false))
-#define OPIRQ(c) T(step_until_sync(c, true))
+#define OP(c) T(step_until_sync(c,false))
+#define OPIRQ(c) T(step_until_sync(c,true))
 #define TA(v) T(ra(v))
 #define TX(v) T(rx(v))
 #define TY(v) T(ry(v))
@@ -122,6 +122,8 @@ static void start(uint16_t start_addr) {
     assert(readPC(p6502_state) == start_addr);
     // run one half-tick ahead into the next instruction
     step(p6502_state);
+    // make sure both memories have the same content
+    assert(0 == memcmp(mem, memory, (1<<16)));
 }
 
 // perform memory access for our own emulator
@@ -140,43 +142,50 @@ static uint64_t mem_access(uint64_t pins) {
     return pins;
 }
 
+// do a single tick (two half-ticks) and check if both emulators agree
+static bool step_cycle(uint32_t cur_tick) {
+    // step our own emu
+    pins = m6502x_tick(&cpu, pins);
+    pins = mem_access(pins);
+    // step perfect6502 simulation (in half-steps)
+    if (cur_tick > 0) {
+        // skip the first half tick which was executed in the last invocation
+        step(p6502_state);
+    }
+    step(p6502_state);
+    // check whether both emulators agree on the observable pin state after each tick
+    bool m6502_rw = (pins & M6502X_RW);
+    bool p6502_rw = readRW(p6502_state);
+    if (m6502_rw != p6502_rw) {
+        return false;
+    }
+    uint16_t m6502_addr = M6502X_GET_ADDR(pins);
+    uint16_t p6502_addr  = readAddressBus(p6502_state);
+    if (m6502_addr != p6502_addr) {
+        return false;
+    }
+    uint8_t m6502_data = M6502X_GET_DATA(pins);
+    uint8_t p6502_data  = readDataBus(p6502_state);
+    if (m6502_data != p6502_data) {
+        return false;
+    }
+    bool m6502_sync = (pins & M6502X_SYNC);
+    bool p6502_sync = isNodeHigh(p6502_state, 539); // 539 is SYNC pin
+    if (m6502_sync != p6502_sync) {
+        return false;
+    }
+    return true;
+}
+
 // step both emulators through the current instruction,
 // compare the relevant pin state after each tick, and finally
 // check for expected number of ticks
 static bool step_until_sync(uint32_t expected_ticks, bool irq) {
     uint32_t tick = 0;
     do {
-        // step our own emu
-        pins = m6502x_tick(&cpu, pins);
-        pins = mem_access(pins);
-        // step perfect6502 simulation (in half-steps)
-        if (tick > 0) {
-            // skip the first half tick which was executed in the last invocation
-            step(p6502_state);
-        }
-        step(p6502_state);
-        // check whether both emulators agree on the observable pin state after each tick
-        uint16_t m6502_addr = M6502X_GET_ADDR(pins);
-        uint16_t p6502_addr  = readAddressBus(p6502_state);
-        if (m6502_addr != p6502_addr) {
+        if (!step_cycle(tick++)) {
             return false;
         }
-        uint8_t m6502_data = M6502X_GET_DATA(pins);
-        uint8_t p6502_data  = readDataBus(p6502_state);
-        if (m6502_data != p6502_data) {
-            return false;
-        }
-        bool m6502_sync = (pins & M6502X_SYNC);
-        bool p6502_sync = isNodeHigh(p6502_state, 539); // 539 is SYNC pin
-        if (m6502_sync != p6502_sync) {
-            return false;
-        }
-        bool m6502_rw = (pins & M6502X_RW);
-        bool p6502_rw = readRW(p6502_state);
-        if (m6502_rw != p6502_rw) {
-            return false;
-        }
-        tick++;
     } while (!isNodeHigh(p6502_state, 539)); // 539 is SYNC pin, next instruction about to begin
     if (irq) {
         pins |= M6502X_IRQ;
@@ -1042,7 +1051,7 @@ UTEST(m6502_perfect, BNE_BEQ) {
 
     OP(2); TA(0x10);
     OP(2); TF(M6502X_ZF|M6502X_CF);
-    OP(3); TPC(0x0209); // NOTE: target op has already been fetched
+    OP(3); TPC(0x0209);
     OP(2); TF(M6502X_CF);
     OP(3); T(rpc(0x0207));
     OP(2); TA(0x0F);
@@ -1166,18 +1175,20 @@ UTEST(m6502_perfect, BRK) {
     OP(2); TA(0xBB);
 }
 
-/* FIXME FIXME FIXME
 UTEST(m6502_perfect, IRQ) {
     init();
     uint8_t prog[] = {
         0x58, 0xEA, 0xEA, 0xEA, 0xEA,   // CLI + 4 nops
         0xA9, 0x33,                     // IRQ service routine
     };
-    copy(0x0200, prog, sizeof(prog));
-    start(0x0200);
-    w16(0xFFFE, 0x0205);
+    copy(0x0, prog, sizeof(prog));
+    start(0x0);
+    w16(0xFFFE, 0x5);
 
-    OPIRQ(2);  // enable interrupt
-    OP(2)
+    OP(2);      // enable interrupt
+    OPIRQ(2);   // run NOP, and set IRQ before next op starts
+    OP(2);      // next NOP runs as usual...
+    OP(7);      // IRQ running
+    OP(2);      // LDA is running
+    OP(7);      // normal BRK running (since IRQ is disabled)
 }
-*/
