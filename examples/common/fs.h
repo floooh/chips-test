@@ -54,7 +54,7 @@ void fs_copy_ext(const char* path) {
 // http://web.mit.edu/freebsd/head/contrib/wpa/src/utils/base64.c
 static const unsigned char fs_base64_table[65] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 bool fs_base64_decode(const char* src) {
-    int len = strlen(src);
+    int len = (int)strlen(src);
 
     uint8_t dtable[256];
     memset(dtable, 0x80, sizeof(dtable));
