@@ -24,8 +24,9 @@
 
 #define T(b) ASSERT_TRUE(b)
 
-#define OP(c) T(step_until_sync(c,false))
-#define OPIRQ(c) T(step_until_sync(c,true))
+#define OP(c) T(step_until_sync(c,false,false))
+#define OPIRQ(c) T(step_until_sync(c,true,false))
+#define OPNMI(c) T(step_until_sync(c,false,true))
 #define TA(v) T(ra(v))
 #define TX(v) T(rx(v))
 #define TY(v) T(ry(v))
@@ -180,7 +181,7 @@ static bool step_cycle(uint32_t cur_tick) {
 // step both emulators through the current instruction,
 // compare the relevant pin state after each tick, and finally
 // check for expected number of ticks
-static bool step_until_sync(uint32_t expected_ticks, bool irq) {
+static bool step_until_sync(uint32_t expected_ticks, bool irq, bool nmi) {
     uint32_t tick = 0;
     do {
         if (!step_cycle(tick++)) {
@@ -189,7 +190,11 @@ static bool step_until_sync(uint32_t expected_ticks, bool irq) {
     } while (!isNodeHigh(p6502_state, 539)); // 539 is SYNC pin, next instruction about to begin
     if (irq) {
         pins |= M6502X_IRQ;
-        setNode(p6502_state, 103, 0);
+        setNode(p6502_state, 103, 0);   // 103 is IRQ pin
+    }
+    if (nmi) {
+        pins |= M6502X_NMI;
+        setNode(p6502_state, 1297, 0);  // 1297 is NMI pin
     }
     // run one half tick into next instruction so that overlapped operations can finish
     step(p6502_state);
@@ -1180,15 +1185,35 @@ UTEST(m6502_perfect, IRQ) {
     uint8_t prog[] = {
         0x58, 0xEA, 0xEA, 0xEA, 0xEA,   // CLI + 4 nops
         0xA9, 0x33,                     // IRQ service routine
+        0xA9, 0x22,
     };
     copy(0x0, prog, sizeof(prog));
     start(0x0);
     w16(0xFFFE, 0x5);
 
-    OP(2);      // enable interrupt
-    OPIRQ(2);   // run NOP, and set IRQ before next op starts
-    OP(2);      // next NOP runs as usual...
-    OP(7);      // IRQ running
-    OP(2);      // LDA is running
-    OP(7);      // normal BRK running (since IRQ is disabled)
+    OP(2);          // enable interrupt
+    OPIRQ(2);       // run NOP, and set IRQ before next op starts
+    OP(2);          // next NOP runs as usual...
+    OP(7);          // IRQ running
+    OP(2); TA(0x33) // first LDA
+    OP(2); TA(0x22) // second LDA
+}
+
+UTEST(m6502_perfect, NMI) {
+    init();
+    uint8_t prog[] = {
+        0xEA, 0xEA, 0xEA, 0xEA, 0xEA,   // no CLI
+        0xA9, 0x33,                     // interrupt service routine
+        0xA9, 0x22,
+    };
+    copy(0x0, prog, sizeof(prog));
+    start(0x0);
+    w16(0xFFFA, 0x5);
+
+    OP(2);          // enable interrupt
+    OPNMI(2);       // run NOP, and set NMI before next op starts
+    OP(2);          // next NOP runs as usual...
+    OP(7);          // NMI running
+    OP(2); TA(0x33) // first LDA
+    OP(2); TA(0x22) // second LDA
 }
