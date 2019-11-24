@@ -96,7 +96,8 @@ static bool r16(uint16_t addr, uint16_t expected) {
 static void init() {
     memset(mem, 0, sizeof(mem));
     memset(memory, 0, sizeof(memory));
-    m6502x_init(&cpu, &(m6502x_desc_t){0});
+    pins = m6502x_init(&cpu, &(m6502x_desc_t){0});
+    cpu.S = 0xC0;
     if (p6502_state) {
         destroyChip(p6502_state);
         p6502_state = 0;
@@ -104,15 +105,31 @@ static void init() {
     p6502_state = initAndResetChip();
 }
 
+// perform memory access for our own emulator
+static uint64_t mem_access(uint64_t pin_mask) {
+    const uint16_t addr = M6502X_GET_ADDR(pin_mask);
+    if (pin_mask & M6502X_RW) {
+        /* read */
+        uint8_t val = mem[addr];
+        M6502X_SET_DATA(pin_mask, val);
+    }
+    else {
+        /* write */
+        uint8_t val = M6502X_GET_DATA(pin_mask);
+        mem[addr] = val;
+    }
+    return pin_mask;
+}
+
 // reset both emulators through their reset sequence to a starting address
 static void start(uint16_t start_addr) {
     // write starting address to the 6502's reset vector location
     w16(0xFFFC, start_addr);
 
-    // FIXME: implement proper reset start sequence!
-    pins = 0;
-    cpu.IR = mem[start_addr]<<3;
-    cpu.PC = start_addr+1;
+    // reset our own emulation
+    for (int i = 0; i < 7; i++) {
+        pins = mem_access(m6502x_tick(&cpu, pins));
+    }
 
     // run through the perfect6502 9-cycle reset sequence
     // here, the SP starts as 0xC0 and is reduced to 0xBD after the reset routine
@@ -127,27 +144,10 @@ static void start(uint16_t start_addr) {
     assert(0 == memcmp(mem, memory, (1<<16)));
 }
 
-// perform memory access for our own emulator
-static uint64_t mem_access(uint64_t pins) {
-    const uint16_t addr = M6502X_GET_ADDR(pins);
-    if (pins & M6502X_RW) {
-        /* read */
-        uint8_t val = mem[addr];
-        M6502X_SET_DATA(pins, val);
-    }
-    else {
-        /* write */
-        uint8_t val = M6502X_GET_DATA(pins);
-        mem[addr] = val;
-    }
-    return pins;
-}
-
 // do a single tick (two half-ticks) and check if both emulators agree
 static bool step_cycle(uint32_t cur_tick) {
     // step our own emu
-    pins = m6502x_tick(&cpu, pins);
-    pins = mem_access(pins);
+    pins = mem_access(m6502x_tick(&cpu, pins));
     // step perfect6502 simulation (in half-steps)
     if (cur_tick > 0) {
         // skip the first half tick which was executed in the last invocation

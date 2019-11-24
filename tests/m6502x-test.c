@@ -30,6 +30,8 @@ static uint16_t r16(uint16_t addr) {
 static void init(void) {
     memset(mem, 0, sizeof(mem));
     m6502x_init(&cpu, &(m6502x_desc_t){0});
+    cpu.S = 0xBD;   // perfect6502 starts with S at C0 for some reason
+    cpu.P = M6502X_ZF|M6502X_BF|M6502X_IF;
 }
 
 static void prefetch(uint16_t pc) {
