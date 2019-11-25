@@ -66,6 +66,13 @@ fips_begin_app(m6502-wltest cmdline)
     fips_generate(FROM dump.yml TYPE dump HEADER dump.h)
 fips_end_app()
 
+fips_begin_app(m6502x-wltest cmdline)
+    fips_vs_warning_level(3)
+    fips_files(m6502x-wltest.c)
+    fips_dir(testsuite-2.15/bin)
+    fips_generate(FROM dump.yml TYPE dump HEADER dump.h)
+fips_end_app()
+
 fips_begin_app(z80-wait cmdline)
     fips_vs_warning_level(3)
     fips_files(z80-wait.c)
