@@ -4,6 +4,7 @@
 */
 extern void fs_init(void);
 extern bool fs_load_file(const char* path);
+extern bool fs_load_base64(const char* name, const char* payload);
 extern void fs_load_mem(const char* path, const uint8_t* ptr, uint32_t size);
 extern uint32_t fs_size(void);
 extern const uint8_t* fs_ptr(void);
@@ -24,13 +25,12 @@ extern bool fs_ext(const char* str);
 
 #define FS_EXT_SIZE (16)
 #define FS_MAX_SIZE (1024 * 1024)
-typedef struct {
+static struct {
     char ext[FS_EXT_SIZE];
     uint8_t* ptr;
     uint32_t size;
     uint8_t buf[FS_MAX_SIZE + 1];
-} fs_state;
-static fs_state fs;
+} fs;
 
 void fs_copy_ext(const char* path) {
     fs.ext[0] = 0;
@@ -51,6 +51,70 @@ void fs_copy_ext(const char* path) {
     }
 }
 
+// http://web.mit.edu/freebsd/head/contrib/wpa/src/utils/base64.c
+static const unsigned char fs_base64_table[65] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+bool fs_base64_decode(const char* src) {
+    int len = (int)strlen(src);
+
+    uint8_t dtable[256];
+    memset(dtable, 0x80, sizeof(dtable));
+    for (int i = 0; i < (int)sizeof(fs_base64_table)-1; i++) {
+        dtable[fs_base64_table[i]] = (uint8_t)i;
+    }
+    dtable['='] = 0;
+
+    int count = 0;
+    for (int i = 0; i < len; i++) {
+        if (dtable[(int)src[i]] != 0x80) {
+            count++;
+        }
+    }
+
+    // input length must be multiple of 4
+    if ((count == 0) || (count & 3)) {
+        return false;
+    }
+
+    // output length
+    int olen = (count / 4) * 3;
+    if (olen >= (int)sizeof(fs.buf)) {
+        return false;
+    }
+
+    // decode loop
+    count = 0;
+    int pad = 0;
+    uint8_t block[4];
+    for (int i = 0; i < len; i++) {
+        uint8_t tmp = dtable[(int)src[i]];
+        if (tmp == 0x80) {
+            continue;
+        }
+        if (src[i] == '=') {
+            pad++;
+        }
+        block[count] = tmp;
+        count++;
+        if (count == 4) {
+            count = 0;
+            fs.buf[fs.size++] = (block[0] << 2) | (block[1] >> 4);
+            fs.buf[fs.size++] = (block[1] << 4) | (block[2] >> 2);
+            fs.buf[fs.size++] = (block[2] << 6) | block[3];
+            if (pad > 0) {
+                if (pad <= 2) {
+                    fs.size -= pad;
+                }
+                else {
+                    // invalid padding
+                    return false;
+                }
+                break;
+            }
+        }
+    }
+    return true;
+}
+
 bool fs_ext(const char* ext) {
     return 0 == strcmp(ext, fs.ext);
 }
@@ -68,6 +132,18 @@ void fs_load_mem(const char* path, const uint8_t* ptr, uint32_t size) {
         memcpy(fs.ptr, ptr, size);
         /* zero-terminate in case this is a text file */
         fs.ptr[fs.size] = 0;
+    }
+}
+
+bool fs_load_base64(const char* name, const char* payload) {
+    fs_free();
+    fs_copy_ext(name);
+    if (fs_base64_decode(payload)) {
+        fs.ptr = fs.buf;
+        return true;
+    }
+    else {
+        return false;
     }
 }
 

@@ -35,7 +35,11 @@ void app_input(const sapp_event*);
 void app_cleanup(void);
 
 sapp_desc sokol_main(int argc, char* argv[]) {
-    sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
+    sargs_setup(&(sargs_desc){
+        .argc=argc,
+        .argv=argv,
+        .buf_size = 512 * 1024,
+    });
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,
@@ -87,6 +91,11 @@ void app_init(void) {
     if (sargs_exists("file")) {
         delay_input = true;
         if (!fs_load_file(sargs_value("file"))) {
+            gfx_flash_error();
+        }
+    }
+    if (sargs_exists("prg")) {
+        if (!fs_load_base64("url.prg", sargs_value("prg"))) {
             gfx_flash_error();
         }
     }
@@ -147,6 +156,9 @@ void app_frame(void) {
             }
             else if (fs_ext("tap")) {
                 keybuf_put("LOAD\n");
+            }
+            else if (fs_ext("prg")) {
+                keybuf_put("RUN\n");
             }
         }
         else {

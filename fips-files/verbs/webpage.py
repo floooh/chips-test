@@ -20,9 +20,11 @@ systems = [
     'bombjack', 'bombjack-ui',
     'pacman', 'pacman-ui',
     'pengo', 'pengo-ui',
-    'lc80'
+    'lc80',
+    'ext'
 ]
 items = [
+    { 'type':'ext',  'title':'Visual6502 Remix', 'system':'none',   'url':'https://floooh.github.io/visual6502remix', 'img':'ext/visual6502remix.jpg', 'note':''},
     { 'type':'emu',  'title':'KC85/2', 'system':'kc85',             'url':'kc85.html?type=kc85_2', 'img':'kc85/kc85_2.jpg', 'note':'' },
     { 'type':'emu',  'title':'KC85/3', 'system':'kc85',             'url':'kc85.html?type=kc85_3', 'img':'kc85/kc85_3.jpg', 'note':'' },
     { 'type':'emu',  'title':'KC85/4', 'system':'kc85',             'url':'kc85.html?type=kc85_4', 'img':'kc85/kc85_4.jpg', 'note':'' },
