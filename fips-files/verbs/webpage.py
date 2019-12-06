@@ -176,12 +176,12 @@ def deploy_webpage(fips_dir, proj_dir, webpage_dir) :
         note = item['note']
         log.info('> adding thumbnail for {}'.format(url))
         content += '<div class="thumb-frame">\n'
-        content += '  <span class="thumb-title">{}</span>\n'.format(title)
+        content += '  <div class="thumb-title">{}</div>\n'.format(title)
         if os.path.exists(emsc_deploy_dir + '/' + system + '-ui.js'):
-            content += '<a class="img-btn-link" href="{}"><div class="img-btn">UI</div></a>'.format(ui_url)
-        content += '  <a href="{}"><img class="image" src="{}"></img></a>\n'.format(url,image)
+            content += '<a class="ui-btn-link" href="{}"><div class="ui-btn">UI</div></a>'.format(ui_url)
+        content += '  <a class="image-frame" href="{}"><img class="image" src="{}"></img></a>\n'.format(url,image)
         if note != '':
-            content += '  <span class="thumb-footer">{}</span>\n'.format(note)
+            content += '  <div class="thumb-footer">{}</div>\n'.format(note)
         content += '</div>\n'
 
     # populate the html template, and write to the build directory
