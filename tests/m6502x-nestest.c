@@ -75,7 +75,7 @@ int main() {
         cpu_state* state = &state_table[i];
         test(state->desc);
         /* m6502x has the PC already incrmented at the end of an instruction */
-        T((cpu.PC-1) == state->PC);
+        T(cpu.PC == state->PC);
         T(cpu.A  == state->A);
         T(cpu.X  == state->X);
         T(cpu.Y  == state->Y);

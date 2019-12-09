@@ -233,7 +233,7 @@ static bool rs(uint8_t expected) {
 }
 
 static bool rpc(uint16_t expected) {
-    uint16_t p6502_pc = readPC(p6502_state);
+    uint16_t p6502_pc = readPC(p6502_state) - 1;
     uint16_t m6502_pc = cpu.PC;
     return (p6502_pc == expected) && (m6502_pc == expected);
 }
@@ -1056,12 +1056,12 @@ UTEST(m6502_perfect, BNE_BEQ) {
 
     OP(2); TA(0x10);
     OP(2); TF(M6502X_ZF|M6502X_CF);
-    OP(3); TPC(0x0209);
+    OP(3); TPC(0x0208);
     OP(2); TF(M6502X_CF);
-    OP(3); T(rpc(0x0207));
+    OP(3); T(rpc(0x0206));
     OP(2); TA(0x0F);
     OP(2); TF(M6502X_ZF|M6502X_CF);
-    OP(2); TPC(0x020D);
+    OP(2); TPC(0x020C);
 
     // patch jump target, and test jumping across 256 bytes page
     init();
@@ -1070,7 +1070,7 @@ UTEST(m6502_perfect, BNE_BEQ) {
     w8(0x0205, 0xC0);
     OP(2); TA(0x10);
     OP(2); TF(M6502X_ZF|M6502X_CF);
-    OP(4); TPC(0x01C7);
+    OP(4); TPC(0x01C6);
 
     // FIXME: test the other branches
 }
@@ -1082,7 +1082,7 @@ UTEST(m6502_perfect, JMP) {
     };
     copy(0x0200, prog, sizeof(prog));
     start(0x0200);
-    OP(3); TPC(0x1001);
+    OP(3); TPC(0x1000);
 }
 
 UTEST(m6502_perfect, JMP_indirect_samepage) {
@@ -1100,7 +1100,7 @@ UTEST(m6502_perfect, JMP_indirect_samepage) {
     OP(4); TM8(0x2110, 0x33);
     OP(2); TA(0x22);
     OP(4); TM8(0x2111, 0x22);
-    OP(5); TPC(0x2234);
+    OP(5); TPC(0x2233);
 }
 
 UTEST(m6502_perfect, JMP_indirect_wrap) {
@@ -1118,7 +1118,7 @@ UTEST(m6502_perfect, JMP_indirect_wrap) {
     OP(4); TM8(0x21FF, 0x33);
     OP(2); TA(0x22);
     OP(4); TM8(0x2100, 0x22);
-    OP(5); TPC(0x2234);
+    OP(5); TPC(0x2233);
 }
 
 UTEST(m6502_perfect, JSR_RTS) {
@@ -1133,9 +1133,9 @@ UTEST(m6502_perfect, JSR_RTS) {
     start(0x0300);
 
     TS(0xBD);
-    OP(6); TPC(0x0306); TS(0xBB); TM16(0x01BC, 0x0302);
+    OP(6); TPC(0x0305); TS(0xBB); TM16(0x01BC, 0x0302);
     OP(2);
-    OP(6); TPC(0x0304); TS(0xBD);
+    OP(6); TPC(0x0303); TS(0xBD);
 }
 
 UTEST(m6502_perfect, RTI) {
@@ -1159,7 +1159,7 @@ UTEST(m6502_perfect, RTI) {
     OP(3); TS(0xBB);
     OP(2); TA(0x33);
     OP(3); TS(0xBA);
-    OP(6); TS(0xBD); TPC(0x1123); TF(M6502X_ZF|M6502X_CF);
+    OP(6); TS(0xBD); TPC(0x1122); TF(M6502X_ZF|M6502X_CF);
 }
 
 UTEST(m6502_perfect, BRK) {
@@ -1176,7 +1176,7 @@ UTEST(m6502_perfect, BRK) {
     w16(0xFFFE, 0x0010);
 
     OP(2); TA(0xAA);
-    OP(7); TS(0xBA); TPC(0x0011); TS(0xBA); TM8(0x1BB, 0xB4); TM8(0x1BC,0x04); TM8(0x1BD,0x00);
+    OP(7); TS(0xBA); TPC(0x0010); TS(0xBA); TM8(0x1BB, 0xB4); TM8(0x1BC,0x04); TM8(0x1BD,0x00);
     OP(2); TA(0xBB);
 }
 

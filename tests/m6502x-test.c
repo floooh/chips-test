@@ -35,9 +35,10 @@ static void init(void) {
 }
 
 static void prefetch(uint16_t pc) {
-    pins = 0;
-    cpu.IR = mem[pc]<<3;
-    cpu.PC = pc+1;
+    pins = M6502X_SYNC;
+    M6502X_SET_ADDR(pins, pc);
+    M6502X_SET_DATA(pins, mem[pc]);
+    cpu.PC = pc;
 }
 
 static void copy(uint16_t addr, uint8_t* bytes, size_t num) {
@@ -109,7 +110,7 @@ UTEST(m6502x, BRK) {
     prefetch(0x0000);
 
     T(2 == step()); T(R(A) == 0xAA);
-    T(7 == step()); T(R(PC) == 0x0011); T(R(S)==0xBA); T(mem[0x01BB] == 0xB4); T(r16(0x01BC) == 0x0004);
+    T(7 == step()); T(R(PC) == 0x0010); T(R(S)==0xBA); T(mem[0x01BB] == 0xB4); T(r16(0x01BC) == 0x0004);
     T(2 == step()); T(R(A) == 0xBB);
 }
 
@@ -930,19 +931,19 @@ UTEST(m6502x, BNE_BEQ) {
 
     T(2 == step()); T(0x10 == R(A));
     T(2 == step()); T(tf(M6502X_ZF|M6502X_CF));
-    T(3 == step()); T(R(PC) == 0x0209); // NOTE: target op has already been fetched
+    T(3 == step()); T(R(PC) == 0x0208);
     T(2 == step()); T(tf(M6502X_CF));
-    T(3 == step()); T(R(PC) == 0x0207);
+    T(3 == step()); T(R(PC) == 0x0206);
     T(2 == step()); T(0x0F == R(A));
     T(2 == step()); T(tf(M6502X_ZF|M6502X_CF));
-    T(2 == step()); T(R(PC) == 0x020D);
+    T(2 == step()); T(R(PC) == 0x020C);
 
     // patch jump target, and test jumping across 256 bytes page
     prefetch(0x0200);
     w8(0x0205, 0xC0);
     T(2 == step()); T(0x10 == R(A));
     T(2 == step()); T(tf(M6502X_ZF|M6502X_CF));
-    T(4 == step()); T(R(PC) == 0x01C7);
+    T(4 == step()); T(R(PC) == 0x01C6);
 
     // FIXME: test the other branches
 }
@@ -954,7 +955,7 @@ UTEST(m6502x, JMP) {
     };
     copy(0x0200, prog, sizeof(prog));
     prefetch(0x0200);
-    T(3 == step()); T(R(PC) == 0x1001);
+    T(3 == step()); T(R(PC) == 0x1000);
 }
 
 UTEST(m6502x, JMP_indirect_samepage) {
@@ -972,7 +973,7 @@ UTEST(m6502x, JMP_indirect_samepage) {
     T(4 == step()); T(mem[0x2110] == 0x33);
     T(2 == step()); T(R(A) == 0x22);
     T(4 == step()); T(mem[0x2111] == 0x22);
-    T(5 == step()); T(R(PC) == 0x2234);
+    T(5 == step()); T(R(PC) == 0x2233);
 }
 
 UTEST(m6502x, JMP_indirect_wrap) {
@@ -991,7 +992,7 @@ UTEST(m6502x, JMP_indirect_wrap) {
     T(4 == step()); T(mem[0x21FF] == 0x33);
     T(2 == step()); T(R(A) == 0x22);
     T(4 == step()); T(mem[0x2100] == 0x22);
-    T(5 == step()); T(R(PC) == 0x2234);
+    T(5 == step()); T(R(PC) == 0x2233);
 }
 
 UTEST(m6502x, JSR_RTS) {
@@ -1006,9 +1007,9 @@ UTEST(m6502x, JSR_RTS) {
     prefetch(0x0300);
 
     T(R(S) == 0xBD);
-    T(6 == step()); T(R(PC) == 0x0306); T(R(S) == 0xBB); T(r16(0x01BC)==0x0302);
+    T(6 == step()); T(R(PC) == 0x0305); T(R(S) == 0xBB); T(r16(0x01BC)==0x0302);
     T(2 == step());
-    T(6 == step()); T(R(PC) == 0x0304); T(R(S) == 0xBD);
+    T(6 == step()); T(R(PC) == 0x0303); T(R(S) == 0xBD);
 }
 
 UTEST(m6502x, RTI) {
@@ -1032,5 +1033,5 @@ UTEST(m6502x, RTI) {
     T(3 == step()); T(R(S) == 0xBB);
     T(2 == step()); T(R(A) == 0x33);
     T(3 == step()); T(R(S) == 0xBA);
-    T(6 == step()); T(R(S) == 0xBD); T(R(PC) == 0x1123); T(tf(M6502X_ZF|M6502X_CF));
+    T(6 == step()); T(R(S) == 0xBD); T(R(PC) == 0x1122); T(tf(M6502X_ZF|M6502X_CF));
 }

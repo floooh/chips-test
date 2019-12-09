@@ -24,7 +24,7 @@ void cpu_goto(uint16_t addr) {
     M6502X_SET_ADDR(cpu_pins, addr);
     M6502X_SET_DATA(cpu_pins, mem_rd(&mem, addr));
     cpu_pins |= M6502X_SYNC|M6502X_RW;
-    cpu.PC = addr + 1;
+    cpu.PC = addr;
 }
 
 /* load a test dump into memory, return false if last test is reached ('trap17') */
