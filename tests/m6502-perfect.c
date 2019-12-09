@@ -40,7 +40,7 @@
 static void* p6502_state;
 
 // our own emulator state and memory
-static m6502x_t cpu;
+static m6502_t cpu;
 static uint64_t pins;
 static uint8_t mem[1<<16] = { 0 };
 
@@ -96,7 +96,7 @@ static bool r16(uint16_t addr, uint16_t expected) {
 static void init() {
     memset(mem, 0, sizeof(mem));
     memset(memory, 0, sizeof(memory));
-    pins = m6502x_init(&cpu, &(m6502x_desc_t){0});
+    pins = m6502_init(&cpu, &(m6502_desc_t){0});
     cpu.S = 0xC0;
     if (p6502_state) {
         destroyChip(p6502_state);
@@ -107,15 +107,15 @@ static void init() {
 
 // perform memory access for our own emulator
 static uint64_t mem_access(uint64_t pin_mask) {
-    const uint16_t addr = M6502X_GET_ADDR(pin_mask);
-    if (pin_mask & M6502X_RW) {
+    const uint16_t addr = M6502_GET_ADDR(pin_mask);
+    if (pin_mask & M6502_RW) {
         /* read */
         uint8_t val = mem[addr];
-        M6502X_SET_DATA(pin_mask, val);
+        M6502_SET_DATA(pin_mask, val);
     }
     else {
         /* write */
-        uint8_t val = M6502X_GET_DATA(pin_mask);
+        uint8_t val = M6502_GET_DATA(pin_mask);
         mem[addr] = val;
     }
     return pin_mask;
@@ -128,7 +128,7 @@ static void start(uint16_t start_addr) {
 
     // reset our own emulation
     for (int i = 0; i < 7; i++) {
-        pins = mem_access(m6502x_tick(&cpu, pins));
+        pins = mem_access(m6502_tick(&cpu, pins));
     }
 
     // run through the perfect6502 9-cycle reset sequence
@@ -147,7 +147,7 @@ static void start(uint16_t start_addr) {
 // do a single tick (two half-ticks) and check if both emulators agree
 static bool step_cycle(uint32_t cur_tick) {
     // step our own emu
-    pins = mem_access(m6502x_tick(&cpu, pins));
+    pins = mem_access(m6502_tick(&cpu, pins));
     // step perfect6502 simulation (in half-steps)
     if (cur_tick > 0) {
         // skip the first half tick which was executed in the last invocation
@@ -155,22 +155,22 @@ static bool step_cycle(uint32_t cur_tick) {
     }
     step(p6502_state);
     // check whether both emulators agree on the observable pin state after each tick
-    bool m6502_rw = (pins & M6502X_RW);
+    bool m6502_rw = (pins & M6502_RW);
     bool p6502_rw = readRW(p6502_state);
     if (m6502_rw != p6502_rw) {
         return false;
     }
-    uint16_t m6502_addr = M6502X_GET_ADDR(pins);
+    uint16_t m6502_addr = M6502_GET_ADDR(pins);
     uint16_t p6502_addr  = readAddressBus(p6502_state);
     if (m6502_addr != p6502_addr) {
         return false;
     }
-    uint8_t m6502_data = M6502X_GET_DATA(pins);
+    uint8_t m6502_data = M6502_GET_DATA(pins);
     uint8_t p6502_data  = readDataBus(p6502_state);
     if (m6502_data != p6502_data) {
         return false;
     }
-    bool m6502_sync = (pins & M6502X_SYNC);
+    bool m6502_sync = (pins & M6502_SYNC);
     bool p6502_sync = isNodeHigh(p6502_state, 539); // 539 is SYNC pin
     if (m6502_sync != p6502_sync) {
         return false;
@@ -189,11 +189,11 @@ static bool step_until_sync(uint32_t expected_ticks, bool irq, bool nmi) {
         }
     } while (!isNodeHigh(p6502_state, 539)); // 539 is SYNC pin, next instruction about to begin
     if (irq) {
-        pins |= M6502X_IRQ;
+        pins |= M6502_IRQ;
         setNode(p6502_state, 103, 0);   // 103 is IRQ pin
     }
     if (nmi) {
-        pins |= M6502X_NMI;
+        pins |= M6502_NMI;
         setNode(p6502_state, 1297, 0);  // 1297 is NMI pin
     }
     // run one half tick into next instruction so that overlapped operations can finish
@@ -203,8 +203,8 @@ static bool step_until_sync(uint32_t expected_ticks, bool irq, bool nmi) {
 
 // check the flag bits and registers in both emulators against expected value
 static bool tf(uint8_t expected) {
-    uint8_t p6502_p = readP(p6502_state) & ~(M6502X_XF|M6502X_IF|M6502X_BF);
-    uint8_t m6502_p = cpu.P & ~(M6502X_XF|M6502X_IF|M6502X_BF);
+    uint8_t p6502_p = readP(p6502_state) & ~(M6502_XF|M6502_IF|M6502_BF);
+    uint8_t m6502_p = cpu.P & ~(M6502_XF|M6502_IF|M6502_BF);
     return (p6502_p == expected) && (m6502_p == expected);
 }
 
@@ -291,15 +291,15 @@ UTEST(m6502_perfect, LDA) {
     start(0x0200);
 
     // immediate
-    OP(2); TA(0x00); TF(M6502X_ZF);
+    OP(2); TA(0x00); TF(M6502_ZF);
     OP(2); TA(0x01); TF(0);
-    OP(2); TA(0x00); TF(M6502X_ZF);
-    OP(2); TA(0x80); TF(M6502X_NF);
+    OP(2); TA(0x00); TF(M6502_ZF);
+    OP(2); TA(0x80); TF(M6502_NF);
 
     // zero page
     OP(3); TA(0x01); TF(0);
-    OP(3); TA(0x00); TF(M6502X_ZF);
-    OP(3); TA(0x80); TF(M6502X_NF);
+    OP(3); TA(0x00); TF(M6502_ZF);
+    OP(3); TA(0x80); TF(M6502_NF);
     OP(3); TA(0x03); TF(0);
 
     // absolute
@@ -309,7 +309,7 @@ UTEST(m6502_perfect, LDA) {
 
     // zero page,X
     OP(2); TX(0x0F); TF(0);
-    OP(4); TA(0xAA); TF(M6502X_NF);
+    OP(4); TA(0xAA); TF(M6502_NF);
     OP(4); TA(0x33); TF(0);
     OP(4); TA(0x22); TF(0);
 
@@ -319,7 +319,7 @@ UTEST(m6502_perfect, LDA) {
     OP(4); TA(0x56); TF(0);
 
     // absolute,Y
-    OP(2); TY(0xF0); TF(M6502X_NF);
+    OP(2); TY(0xF0); TF(M6502_NF);
     OP(5); TA(0x12); TF(0);
     OP(4); TA(0x34); TF(0);
     OP(5); TA(0x56); TF(0);
@@ -327,13 +327,13 @@ UTEST(m6502_perfect, LDA) {
     // indirect,X
     w8(0x00FF, 0x34); w8(0x0000, 0x12); w16(0x007f, 0x4321);
     w8(0x1234, 0x89); w8(0x4321, 0x8A);
-    OP(6); TA(0x89); TF(M6502X_NF);
-    OP(6); TA(0x8A); TF(M6502X_NF);
+    OP(6); TA(0x89); TF(M6502_NF);
+    OP(6); TA(0x8A); TF(M6502_NF);
 
     // indirect,Y (both 6 cycles because page boundary crossed)
     w8(0x1324, 0x98); w8(0x4411, 0xA8);
-    OP(6); TA(0x98); TF(M6502X_NF);
-    OP(6); TA(0xA8); TF(M6502X_NF);
+    OP(6); TA(0x98); TF(M6502_NF);
+    OP(6); TA(0xA8); TF(M6502_NF);
 }
 
 UTEST(m6502_perfect, LDX) {
@@ -375,15 +375,15 @@ UTEST(m6502_perfect, LDX) {
     start(0x0200);
 
     // immediate
-    OP(2); TX(0x00); TF(M6502X_ZF);
+    OP(2); TX(0x00); TF(M6502_ZF);
     OP(2); TX(0x01); TF(0);
-    OP(2); TX(0x00); TF(M6502X_ZF);
-    OP(2); TX(0x80); TF(M6502X_NF);
+    OP(2); TX(0x00); TF(M6502_ZF);
+    OP(2); TX(0x80); TF(M6502_NF);
 
     // zero page
     OP(3); TX(0x01); TF(0);
-    OP(3); TX(0x00); TF(M6502X_ZF);
-    OP(3); TX(0x80); TF(M6502X_NF);
+    OP(3); TX(0x00); TF(M6502_ZF);
+    OP(3); TX(0x80); TF(M6502_NF);
     OP(3); TX(0x03); TF(0);
 
     // absolute
@@ -393,12 +393,12 @@ UTEST(m6502_perfect, LDX) {
 
     // zero page,Y
     OP(2); TY(0x0F); TF(0);
-    OP(4); TX(0xAA); TF(M6502X_NF);
+    OP(4); TX(0xAA); TF(M6502_NF);
     OP(4); TX(0x33); TF(0);
     OP(4); TX(0x22); TF(0);
 
     // absolute,X
-    OP(2); TY(0xF0); TF(M6502X_NF);
+    OP(2); TY(0xF0); TF(M6502_NF);
     OP(5); TX(0x12); TF(0);
     OP(4); TX(0x34); TF(0);
     OP(5); TX(0x56); TF(0);
@@ -443,15 +443,15 @@ UTEST(m6502_perfect, LDY) {
     start(0x0200);
 
     // immediate
-    OP(2); TY(0x00); TF(M6502X_ZF);
+    OP(2); TY(0x00); TF(M6502_ZF);
     OP(2); TY(0x01); TF(0);
-    OP(2); TY(0x00); TF(M6502X_ZF);
-    OP(2); TY(0x80); TF(M6502X_NF);
+    OP(2); TY(0x00); TF(M6502_ZF);
+    OP(2); TY(0x80); TF(M6502_NF);
 
     // zero page
     OP(3); TY(0x01); TF(0);
-    OP(3); TY(0x00); TF(M6502X_ZF);
-    OP(3); TY(0x80); TF(M6502X_NF);
+    OP(3); TY(0x00); TF(M6502_ZF);
+    OP(3); TY(0x80); TF(M6502_NF);
     OP(3); TY(0x03); TF(0);
 
     // absolute
@@ -461,12 +461,12 @@ UTEST(m6502_perfect, LDY) {
 
     // zero page,Y
     OP(2); TX(0x0F); TF(0);
-    OP(4); TY(0xAA); TF(M6502X_NF);
+    OP(4); TY(0xAA); TF(M6502_NF);
     OP(4); TY(0x33); TF(0);
     OP(4); TY(0x22); TF(0);
 
     // absolute,X
-    OP(2); TX(0xF0); TF(M6502X_NF);
+    OP(2); TX(0xF0); TF(M6502_NF);
     OP(5); TY(0x12); TF(0);
     OP(4); TY(0x34); TF(0);
     OP(5); TY(0x56); TF(0);
@@ -559,16 +559,16 @@ UTEST(m6502_perfect, TAX_TXA) {
     copy(0x0200, prog, sizeof(prog));
     start(0x0200);
 
-    OP(2); TA(0x00); TF(M6502X_ZF);
+    OP(2); TA(0x00); TF(M6502_ZF);
     OP(2); TX(0x10); TF(0);
-    OP(2); TX(0x00); TF(M6502X_ZF);
-    OP(2); TA(0xF0); TF(M6502X_NF);
-    OP(2); TA(0x00); TF(M6502X_ZF);
-    OP(2); TA(0xF0); TF(M6502X_NF);
-    OP(2); TX(0x00); TF(M6502X_ZF);
-    OP(2); TX(0xF0); TF(M6502X_NF);
+    OP(2); TX(0x00); TF(M6502_ZF);
+    OP(2); TA(0xF0); TF(M6502_NF);
+    OP(2); TA(0x00); TF(M6502_ZF);
+    OP(2); TA(0xF0); TF(M6502_NF);
+    OP(2); TX(0x00); TF(M6502_ZF);
+    OP(2); TX(0xF0); TF(M6502_NF);
     OP(2); TA(0x01); TF(0);
-    OP(2); TA(0xF0); TF(M6502X_NF);
+    OP(2); TA(0xF0); TF(M6502_NF);
 }
 
 UTEST(m6502_perfect, TAY_TYA) {
@@ -588,16 +588,16 @@ UTEST(m6502_perfect, TAY_TYA) {
     copy(0x0200, prog, sizeof(prog));
     start(0x0200);
 
-    OP(2); TA(0x00); TF(M6502X_ZF);
+    OP(2); TA(0x00); TF(M6502_ZF);
     OP(2); TY(0x10); TF(0);
-    OP(2); TY(0x00); TF(M6502X_ZF);
-    OP(2); TA(0xF0); TF(M6502X_NF);
-    OP(2); TA(0x00); TF(M6502X_ZF);
-    OP(2); TA(0xF0); TF(M6502X_NF);
-    OP(2); TY(0x00); TF(M6502X_ZF);
-    OP(2); TY(0xF0); TF(M6502X_NF);
+    OP(2); TY(0x00); TF(M6502_ZF);
+    OP(2); TA(0xF0); TF(M6502_NF);
+    OP(2); TA(0x00); TF(M6502_ZF);
+    OP(2); TA(0xF0); TF(M6502_NF);
+    OP(2); TY(0x00); TF(M6502_ZF);
+    OP(2); TY(0xF0); TF(M6502_NF);
     OP(2); TA(0x01); TF(0);
-    OP(2); TA(0xF0); TF(M6502X_NF);
+    OP(2); TA(0xF0); TF(M6502_NF);
 }
 
 UTEST(m6502_perfect, DEX_INX_DEY_INY) {
@@ -618,14 +618,14 @@ UTEST(m6502_perfect, DEX_INX_DEY_INY) {
     start(0x0200);
 
     OP(2); TX(0x01); TF(0);
-    OP(2); TX(0x00); TF(M6502X_ZF);
-    OP(2); TX(0xFF); TF(M6502X_NF);
-    OP(2); TX(0x00); TF(M6502X_ZF);
+    OP(2); TX(0x00); TF(M6502_ZF);
+    OP(2); TX(0xFF); TF(M6502_NF);
+    OP(2); TX(0x00); TF(M6502_ZF);
     OP(2); TX(0x01); TF(0);
     OP(2); TY(0x01); TF(0);
-    OP(2); TY(0x00); TF(M6502X_ZF);
-    OP(2); TY(0xFF); TF(M6502X_NF);
-    OP(2); TY(0x00); TF(M6502X_ZF);
+    OP(2); TY(0x00); TF(M6502_ZF);
+    OP(2); TY(0xFF); TF(M6502_NF);
+    OP(2); TY(0x00); TF(M6502_ZF);
     OP(2); TY(0x01); TF(0);
 }
 
@@ -641,11 +641,11 @@ UTEST(m6502_perfect, TXS_TSX) {
     copy(0x0200, prog, sizeof(prog));
     start(0x0200);
 
-    OP(2); TX(0xAA); TF(M6502X_NF);
-    OP(2); TA(0x00); TF(M6502X_ZF);
-    OP(2); TS(0xAA); TF(M6502X_ZF);
-    OP(2); TX(0x00); TF(M6502X_ZF);
-    OP(2); TX(0xAA); TF(M6502X_NF);
+    OP(2); TX(0xAA); TF(M6502_NF);
+    OP(2); TA(0x00); TF(M6502_ZF);
+    OP(2); TS(0xAA); TF(M6502_ZF);
+    OP(2); TX(0x00); TF(M6502_ZF);
+    OP(2); TX(0xAA); TF(M6502_NF);
 }
 
 UTEST(m6502_perfect, ORA) {
@@ -675,10 +675,10 @@ UTEST(m6502_perfect, ORA) {
     w8(0x1004, (1<<6));
     start(0x0200);
 
-    OP(2); TA(0x00); TF(M6502X_ZF);
+    OP(2); TA(0x00); TF(M6502_ZF);
     OP(2); TX(0x01); TF(0);
     OP(2); TY(0x02); TF(0);
-    OP(2); TA(0x00); TF(M6502X_ZF);
+    OP(2); TA(0x00); TF(M6502_ZF);
     OP(3); TA(0x01); TF(0);
     OP(4); TA(0x03); TF(0);
     OP(4); TA(0x07); TF(0);
@@ -715,10 +715,10 @@ UTEST(m6502_perfect, AND) {
     w8(0x1004, 0x01);
     start(0x0200);
 
-    OP(2); TA(0xFF); TF(M6502X_NF);
+    OP(2); TA(0xFF); TF(M6502_NF);
     OP(2); TX(0x01); TF(0);
     OP(2); TY(0x02); TF(0);
-    OP(2); TA(0xFF); TF(M6502X_NF);
+    OP(2); TA(0xFF); TF(M6502_NF);
     OP(3); TA(0x7F); TF(0);
     OP(4); TA(0x3F); TF(0);
     OP(4); TA(0x1F); TF(0);
@@ -755,10 +755,10 @@ UTEST(m6502_perfect, EOR) {
     w8(0x1004, 0x01);
     start(0x0200);
 
-    OP(2); TA(0xFF); TF(M6502X_NF);
+    OP(2); TA(0xFF); TF(M6502_NF);
     OP(2); TX(0x01); TF(0);
     OP(2); TY(0x02); TF(0);
-    OP(2); TA(0x00); TF(M6502X_ZF);
+    OP(2); TA(0x00); TF(M6502_ZF);
     OP(3); TA(0x7F); TF(0);
     OP(4); TA(0x40); TF(0);
     OP(4); TA(0x5F); TF(0);
@@ -796,8 +796,8 @@ UTEST(m6502_perfect, PHA_PLA_PHP_PLP) {
     OP(3); TS(0xBC); TM8(0x01BD, 0x23);
     OP(2); TA(0x32);
     OP(4); TA(0x23); TS(0xBD); TF(0);
-    OP(3); TS(0xBC); TM8(0x01BD, M6502X_XF|M6502X_IF|M6502X_BF);
-    OP(2); TF(M6502X_ZF);
+    OP(3); TS(0xBC); TM8(0x01BD, M6502_XF|M6502_IF|M6502_BF);
+    OP(2); TF(M6502_ZF);
     OP(4); TS(0xBD); TF(0);
 }
 
@@ -815,13 +815,13 @@ UTEST(m6502_perfect, CLC_SEC_CLI_SEI_CLV_CLD_SED) {
     copy(0x0200, prog, sizeof(prog));
     start(0x0200);
 
-    OP(2); TF(M6502X_ZF);
-    OP(2); //TF(M6502X_ZF|M6502X_IF);   // FIXME: interrupt bit is ignored in tf()
-    OP(2); TF(M6502X_ZF);
-    OP(2); TF(M6502X_ZF|M6502X_CF);
-    OP(2); TF(M6502X_ZF);
-    OP(2); TF(M6502X_ZF|M6502X_DF);
-    OP(2); TF(M6502X_ZF);
+    OP(2); TF(M6502_ZF);
+    OP(2); //TF(M6502_ZF|M6502_IF);   // FIXME: interrupt bit is ignored in tf()
+    OP(2); TF(M6502_ZF);
+    OP(2); TF(M6502_ZF|M6502_CF);
+    OP(2); TF(M6502_ZF);
+    OP(2); TF(M6502_ZF|M6502_DF);
+    OP(2); TF(M6502_ZF);
 }
 
 UTEST(m6502_perfect, INC_DEC) {
@@ -845,10 +845,10 @@ UTEST(m6502_perfect, INC_DEC) {
     OP(6); TM8(0x0043,1); TF(0);
     OP(6); TM8(0x1000,1); TF(0);
     OP(7); TM8(0x1010,1); TF(0);
-    OP(5); TM8(0x0033,0); TF(M6502X_ZF);
-    OP(6); TM8(0x0043,0); TF(M6502X_ZF);
-    OP(6); TM8(0x1000,0); TF(M6502X_ZF);
-    OP(7); TM8(0x1010,0); TF(M6502X_ZF);
+    OP(5); TM8(0x0033,0); TF(M6502_ZF);
+    OP(6); TM8(0x0043,0); TF(M6502_ZF);
+    OP(6); TM8(0x1000,0); TF(M6502_ZF);
+    OP(7); TM8(0x1010,0); TF(M6502_ZF);
 }
 
 UTEST(m6502_perfect, ADC_SBC) {
@@ -886,19 +886,19 @@ UTEST(m6502_perfect, ADC_SBC) {
     OP(2); TY(0x04)
     OP(2);  // CLC
     // ADC
-    OP(2); TA(0xFD); TF(M6502X_NF);
-    OP(3); TA(0xFE); TF(M6502X_NF);
-    OP(4); TA(0xFF); TF(M6502X_NF);
-    OP(4); TA(0x00); TF(M6502X_ZF|M6502X_CF);
+    OP(2); TA(0xFD); TF(M6502_NF);
+    OP(3); TA(0xFE); TF(M6502_NF);
+    OP(4); TA(0xFF); TF(M6502_NF);
+    OP(4); TA(0x00); TF(M6502_ZF|M6502_CF);
     OP(5); TA(0x02); TF(0);
     OP(5); TA(0x03); TF(0);
     // SBC
-    OP(5); TA(0x01); TF(M6502X_CF);
-    OP(5); TA(0x00); TF(M6502X_ZF|M6502X_CF);
-    OP(4); TA(0xFF); TF(M6502X_NF);
-    OP(4); TA(0xFD); TF(M6502X_NF|M6502X_CF);
-    OP(3); TA(0xFC); TF(M6502X_NF|M6502X_CF);
-    OP(2); TA(0xFB); TF(M6502X_NF|M6502X_CF);
+    OP(5); TA(0x01); TF(M6502_CF);
+    OP(5); TA(0x00); TF(M6502_ZF|M6502_CF);
+    OP(4); TA(0xFF); TF(M6502_NF);
+    OP(4); TA(0xFD); TF(M6502_NF|M6502_CF);
+    OP(3); TA(0xFC); TF(M6502_NF|M6502_CF);
+    OP(2); TA(0xFB); TF(M6502_NF|M6502_CF);
 }
 
 UTEST(m6502_perfect, CMP_CPX_CPY) {
@@ -924,12 +924,12 @@ UTEST(m6502_perfect, CMP_CPX_CPY) {
     OP(2); TA(0x01);
     OP(2); TX(0x02);
     OP(2); TY(0x03);
-    OP(2); TF(M6502X_CF);
-    OP(2); TF(M6502X_ZF|M6502X_CF);
-    OP(2); TF(M6502X_NF);
-    OP(2); TF(M6502X_CF);
-    OP(2); TF(M6502X_ZF|M6502X_CF);
-    OP(2); TF(M6502X_NF);
+    OP(2); TF(M6502_CF);
+    OP(2); TF(M6502_ZF|M6502_CF);
+    OP(2); TF(M6502_NF);
+    OP(2); TF(M6502_CF);
+    OP(2); TF(M6502_ZF|M6502_CF);
+    OP(2); TF(M6502_NF);
 }
 
 UTEST(m6502_perfect, ASL) {
@@ -950,9 +950,9 @@ UTEST(m6502_perfect, ASL) {
     OP(2); TA(0x81);
     OP(2); TX(0x01);
     OP(3); TM8(0x0010, 0x81);
-    OP(5); TM8(0x0010, 0x02); TF(M6502X_CF);
+    OP(5); TM8(0x0010, 0x02); TF(M6502_CF);
     OP(6); TM8(0x0010, 0x04); TF(0);
-    OP(2); TA(0x02); TF(M6502X_CF);
+    OP(2); TA(0x02); TF(M6502_CF);
     OP(2); TA(0x04); TF(0);
 }
 
@@ -974,13 +974,13 @@ UTEST(m6502_perfect, LSR) {
     OP(2); TA(0x81);
     OP(2); TX(0x01);
     OP(3); TM8(0x0010, 0x81);
-    OP(5); TM8(0x0010, 0x40); TF(M6502X_CF);
+    OP(5); TM8(0x0010, 0x40); TF(M6502_CF);
     OP(6); TM8(0x0010, 0x20); TF(0);
-    OP(2); TA(0x40); TF(M6502X_CF);
+    OP(2); TA(0x40); TF(M6502_CF);
     OP(2); TA(0x20); TF(0);
 }
 
-UTEST(m6502_prefetch, ROR_ROL) {
+UTEST(m6502_perfect, ROR_ROL) {
     init();
     // FIXME: more adressing modes
     uint8_t prog[] = {
@@ -1002,14 +1002,14 @@ UTEST(m6502_prefetch, ROR_ROL) {
     OP(2); TA(0x81);
     OP(2); TX(0x01);
     OP(3); TM8(0x0010, 0x81);
-    OP(5); TM8(0x0010, 0x02); TF(M6502X_CF);
+    OP(5); TM8(0x0010, 0x02); TF(M6502_CF);
     OP(6); TM8(0x0010, 0x05); TF(0);
-    OP(6); TM8(0x0010, 0x02); TF(M6502X_CF);
-    OP(5); TM8(0x0010, 0x81); TF(M6502X_NF);
-    OP(2); TA(0x40); TF(M6502X_CF);
-    OP(2); TA(0xA0); TF(M6502X_NF);
-    OP(2); TA(0x40); TF(M6502X_CF);
-    OP(2); TA(0x81); TF(M6502X_NF);
+    OP(6); TM8(0x0010, 0x02); TF(M6502_CF);
+    OP(5); TM8(0x0010, 0x81); TF(M6502_NF);
+    OP(2); TA(0x40); TF(M6502_CF);
+    OP(2); TA(0xA0); TF(M6502_NF);
+    OP(2); TA(0x40); TF(M6502_CF);
+    OP(2); TA(0x81); TF(M6502_NF);
 }
 
 
@@ -1035,9 +1035,9 @@ UTEST(m6502_perfect, BIT) {
     OP(3); TM8(0x0020, 0x80);
     OP(2); TA(0xC0);
     OP(4); TM8(0x1000, 0xC0);
-    OP(3); TF(M6502X_ZF);
-    OP(3); TF(M6502X_NF);
-    OP(4); TF(M6502X_NF|M6502X_VF);
+    OP(3); TF(M6502_ZF);
+    OP(3); TF(M6502_NF);
+    OP(4); TF(M6502_NF|M6502_VF);
 }
 
 UTEST(m6502_perfect, BNE_BEQ) {
@@ -1055,12 +1055,12 @@ UTEST(m6502_perfect, BNE_BEQ) {
     start(0x0200);
 
     OP(2); TA(0x10);
-    OP(2); TF(M6502X_ZF|M6502X_CF);
+    OP(2); TF(M6502_ZF|M6502_CF);
     OP(3); TPC(0x0208);
-    OP(2); TF(M6502X_CF);
+    OP(2); TF(M6502_CF);
     OP(3); T(rpc(0x0206));
     OP(2); TA(0x0F);
-    OP(2); TF(M6502X_ZF|M6502X_CF);
+    OP(2); TF(M6502_ZF|M6502_CF);
     OP(2); TPC(0x020C);
 
     // patch jump target, and test jumping across 256 bytes page
@@ -1069,7 +1069,7 @@ UTEST(m6502_perfect, BNE_BEQ) {
     start(0x0200);
     w8(0x0205, 0xC0);
     OP(2); TA(0x10);
-    OP(2); TF(M6502X_ZF|M6502X_CF);
+    OP(2); TF(M6502_ZF|M6502_CF);
     OP(4); TPC(0x01C6);
 
     // FIXME: test the other branches
@@ -1159,7 +1159,7 @@ UTEST(m6502_perfect, RTI) {
     OP(3); TS(0xBB);
     OP(2); TA(0x33);
     OP(3); TS(0xBA);
-    OP(6); TS(0xBD); TPC(0x1122); TF(M6502X_ZF|M6502X_CF);
+    OP(6); TS(0xBD); TPC(0x1122); TF(M6502_ZF|M6502_CF);
 }
 
 UTEST(m6502_perfect, BRK) {

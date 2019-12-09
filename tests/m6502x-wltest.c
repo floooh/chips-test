@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-//  m6502x-wltest.c
+//  m6502-wltest.c
 //  Runs the CPU-parts of the Wolfgang Lorenz C64 test suite
 //  (see: http://6502.org/tools/emu/)
 //------------------------------------------------------------------------------
@@ -14,16 +14,16 @@
 #include "testsuite-2.15/bin/dump.h"
 
 uint64_t cpu_pins;
-m6502x_t cpu;
+m6502_t cpu;
 mem_t mem;
 uint8_t ram[1<<16];
 bool text_enabled = true;
 
 /* set CPU state to continue running at a specific address */
 void cpu_goto(uint16_t addr) {
-    M6502X_SET_ADDR(cpu_pins, addr);
-    M6502X_SET_DATA(cpu_pins, mem_rd(&mem, addr));
-    cpu_pins |= M6502X_SYNC|M6502X_RW;
+    M6502_SET_ADDR(cpu_pins, addr);
+    M6502_SET_DATA(cpu_pins, mem_rd(&mem, addr));
+    cpu_pins |= M6502_SYNC|M6502_RW;
     cpu.PC = addr;
 }
 
@@ -81,7 +81,7 @@ bool load_test(const char* name) {
 
     /* continue execution at start address */
     cpu.S = 0xFD;
-    cpu.P = M6502X_BF|M6502X_IF;
+    cpu.P = M6502_BF|M6502_IF;
     cpu_goto(0x801);
     return true;
 }
@@ -167,11 +167,11 @@ bool handle_trap(int trap_id) {
 }
 
 static bool test_trap(uint16_t pc) {
-    return ((cpu_pins & (M6502X_SYNC|0xFFFF)) == (M6502X_SYNC|pc));
+    return ((cpu_pins & (M6502_SYNC|0xFFFF)) == (M6502_SYNC|pc));
 }
 
 int test_traps(void) {
-    if (cpu_pins & M6502X_SYNC) {
+    if (cpu_pins & M6502_SYNC) {
         static const uint16_t traps[] = { 0xFFD2, 0xE16F, 0xFFE4, 0x8000, 0xA474 };
         for (int i = 0; i < (int)(sizeof(traps)/sizeof(uint16_t)); i++) {
             if (test_trap(traps[i])) {
@@ -183,15 +183,15 @@ int test_traps(void) {
 }
 
 void tick(void) {
-    cpu_pins = m6502x_tick(&cpu, cpu_pins);
-    const uint16_t addr = M6502X_GET_ADDR(cpu_pins);
-    if (cpu_pins & M6502X_RW) {
+    cpu_pins = m6502_tick(&cpu, cpu_pins);
+    const uint16_t addr = M6502_GET_ADDR(cpu_pins);
+    if (cpu_pins & M6502_RW) {
         /* memory read */
-        M6502X_SET_DATA(cpu_pins, mem_rd(&mem, addr));
+        M6502_SET_DATA(cpu_pins, mem_rd(&mem, addr));
     }
     else {
         /* memory write */
-        mem_wr(&mem, addr, M6502X_GET_DATA(cpu_pins));
+        mem_wr(&mem, addr, M6502_GET_DATA(cpu_pins));
     }
 }
 
@@ -203,7 +203,7 @@ int main() {
     mem_map_ram(&mem, 0, 0x0000, sizeof(ram), ram);
 
     /* init CPU and run through the reset sequence */
-    cpu_pins = m6502x_init(&cpu, &(m6502x_desc_t) { });
+    cpu_pins = m6502_init(&cpu, &(m6502_desc_t) { });
     for (int i = 0; i < 7; i++) {
         tick();
     }

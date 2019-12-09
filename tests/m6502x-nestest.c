@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-//  m6502x-nestest.c
+//  m6502-nestest.c
 //------------------------------------------------------------------------------
 #define CHIPS_IMPL
 #include "chips/m6502x.h"
@@ -9,32 +9,32 @@
 #include "nestest/nestestlog.h"
 #include "test.h"
 
-m6502x_t cpu;
+m6502_t cpu;
 mem_t mem;
 uint8_t ram[0x0800];
 uint8_t sram[0x2000];
 
 uint64_t tick(uint64_t pins) {
-    pins = m6502x_tick(&cpu, pins);
-    const uint16_t addr = M6502X_GET_ADDR(pins);
+    pins = m6502_tick(&cpu, pins);
+    const uint16_t addr = M6502_GET_ADDR(pins);
     /* memory-mapped IO range from 2000..401F is ignored */
     /* ignore memory-mapped-io requests */
     if ((addr >= 0x2000) && (addr < 0x4020)) {
         return pins;
     }
-    else if (pins & M6502X_RW) {
+    else if (pins & M6502_RW) {
         /* memory read */
-        M6502X_SET_DATA(pins, mem_rd(&mem, addr));
+        M6502_SET_DATA(pins, mem_rd(&mem, addr));
     }
     else {
         /* memory write */
-        mem_wr(&mem, addr, M6502X_GET_DATA(pins));
+        mem_wr(&mem, addr, M6502_GET_DATA(pins));
     }
     return pins;
 }
 
 int main() {
-    test_begin("NES TEST (m6502x)");
+    test_begin("NES TEST (m6502)");
     test_no_verbose();
 
     /* need to implement a minimal NES emulation */
@@ -60,33 +60,32 @@ int main() {
     mem_map_rom(&mem, 0, 0xC000, 0x4000, &(dump_nestest_nes[16]));
 
     /* initialize the CPU */
-    uint64_t pins = m6502x_init(&cpu, &(m6502x_desc_t){
+    uint64_t pins = m6502_init(&cpu, &(m6502_desc_t){
         .bcd_disabled = true,
     });
     /* set RESET vector and run through RESET sequence */
     for (int i = 0; i < 7; i++) {
         pins = tick(pins);
     }
-    cpu.P &= ~M6502X_ZF;
+    cpu.P &= ~M6502_ZF;
 
     /* run the test */
     int num_tests = sizeof(state_table) / sizeof(cpu_state);
     for (int i = 0; i < num_tests; i++) {
         cpu_state* state = &state_table[i];
         test(state->desc);
-        /* m6502x has the PC already incrmented at the end of an instruction */
         T(cpu.PC == state->PC);
         T(cpu.A  == state->A);
         T(cpu.X  == state->X);
         T(cpu.Y  == state->Y);
-        T((cpu.P & ~(M6502X_XF|M6502X_BF)) == (state->P & ~(M6502X_XF|M6502X_BF)));
+        T((cpu.P & ~(M6502_XF|M6502_BF)) == (state->P & ~(M6502_XF|M6502_BF)));
         T(cpu.S == state->S);
         if (test_failed()) {
             printf("### NESTEST failed at pos %d, PC=0x%04X: %s\n", i, cpu.PC, state->desc);
         }
         do {
             pins = tick(pins);
-        } while (0 == (pins & M6502X_SYNC));
+        } while (0 == (pins & M6502_SYNC));
     }
     return test_end();
 }

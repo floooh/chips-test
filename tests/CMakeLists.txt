@@ -22,7 +22,6 @@ fips_begin_app(chips-test cmdline)
         z80-int.c
         z80-test.c
         m6502-test.c
-        m6502x-test.c
         m6502-perfect.c
     )
     fips_dir(perfect6502)
