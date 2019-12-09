@@ -35,7 +35,11 @@ void app_input(const sapp_event*);
 void app_cleanup(void);
 
 sapp_desc sokol_main(int argc, char* argv[]) {
-    sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
+    sargs_setup(&(sargs_desc){
+        .argc=argc,
+        .argv=argv,
+        .buf_size = 512 * 1024,
+    });
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,
