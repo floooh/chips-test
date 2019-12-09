@@ -90,6 +90,11 @@ void app_init(void) {
             gfx_flash_error();
         }
     }
+    if (sargs_exists("prg")) {
+        if (!fs_load_base64("url.prg", sargs_value("prg"))) {
+            gfx_flash_error();
+        }
+    }
     c64_joystick_type_t joy_type = C64_JOYSTICKTYPE_NONE;
     if (sargs_exists("joystick")) {
         if (sargs_equals("joystick", "digital_1")) {
@@ -147,6 +152,9 @@ void app_frame(void) {
             }
             else if (fs_ext("tap")) {
                 keybuf_put("LOAD\n");
+            }
+            else if (fs_ext("prg")) {
+                keybuf_put("RUN\n");
             }
         }
         else {
