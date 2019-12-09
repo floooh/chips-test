@@ -51,27 +51,34 @@ p {
     height: auto;
 }
 .thumb-frame {
+    background: black;
     position: relative;
     width: 270px;
     height: 220px;
+    line-height: 220px;
     margin-left: 10px;
     margin-right: 10px;
     margin-top: 20px;
-    padding: 0px;
     float: left;
     border: 2px solid black;
     border-radius: 10px;
     overflow: hidden;
 }
 
+.thumb-frame:hover > .thumb-title, .thumb-frame:hover > .thumb-footer, .thumb-frame:hover > .ui-btn-link {
+    visibility: visible;
+}
+
 .thumb-title {
-    background-color: rgba(84, 110, 122, 0.8);
-    position: relative;
+    visibility: hidden;
     display: block;
-    margin: auto;
     z-index: 1;
-    text-align: center;
+    line-height: normal;
+    position: absolute;
+    width: 100%;
     height: 21px;
+    background-color: rgba(0, 0, 0, 0.5);
+    text-align: center;
     color: white;
     font-size: 18px;
     font-family: monospace;
@@ -80,14 +87,16 @@ p {
 }
 
 .thumb-footer {
-    background-color: rgba(84, 110, 122, 0.8);
-    position: relative;
+    visibility: hidden;
     display: block;
-    margin: auto;
     z-index: 1;
-    top: -42px;
-    text-align: center;
+    line-height: normal;
+    position: absolute;
+    width: 100%;
     height: 21px;
+    background-color: rgba(0, 0, 0, 0.5);
+    bottom: 0;
+    text-align: center;
     color: white;
     font-size: 15px;
     font-family: monospace;
@@ -95,7 +104,8 @@ p {
     text-shadow: 2px 2px 0px black;
 }
 
-.img-btn {
+.ui-btn {
+    line-height: normal;
     position: absolute;
     z-index: 2;
     top: 4px;
@@ -113,11 +123,12 @@ p {
     transition: transform 0.07s ease-in-out;
 }
 
-.img-btn:hover {
+.ui-btn:hover {
     transform:scale(1.2);
 }
 
-.img-btn-link {
+.ui-btn-link {
+    visibility: hidden;
     text-decoration: none;
     font-weight: bold;
     font-family: monospace;
@@ -126,13 +137,16 @@ p {
     border-radius: 10px;
 }
 
+.image-frame {
+    margin: 5%;
+}
+
 .image {
-    position: relative;
-    top: -21px;
-    display: block;
-    height: 100%;
-    width: 100%;
+    border-radius: 10px;
+    width: 90%;
+    height: auto;
     transition: transform 0.07s ease-in-out;
+    vertical-align: middle;
 }
 
 .image:hover {

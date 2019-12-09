@@ -61,19 +61,22 @@ items = [
     { 'type':'demo', 'title':'Gloire a Piou! (CPC)','system':'cpc',     'url':'cpc.html?file=cpc/piou.dsk&input=run%22gap%0A', 'img':'cpc/piou.jpg', 'note':'by Overlanders'},
     { 'type':'demo', 'title':'phX / Condense (CPC)','system':'cpc',     'url':'cpc.html?file=cpc/phx.dsk&input=run%22phx%0A', 'img':'cpc/phx.jpg', 'note':'gfx glitches'},
     { 'type':'demo', 'title':'Wunderbar (CPC)',     'system':'cpc',     'url':'cpc.html?file=cpc/wunderbar.dsk&input=run%22wunder.bar%0A', 'img':'cpc/wunderbar.jpg', 'note':'by Arkos/Benediction'},
-    { 'type':'demo', 'title':'Rebels 1989 (C64)',   'system':'c64',     'url':'c64.html?file=c64/rebels1989_c64.prg&input=RUN%0A', 'img':'c64/rebels1989_c64.jpg', 'note':'by Rebels'},
-    { 'type':'demo', 'title':'$777 (C64)',          'system':'c64',     'url':'c64.html?file=c64/s777_c64.prg&input=RUN%0A', 'img':'c64/s777_c64.jpg', 'note':'by Razor 1911' },
-    { 'type':'demo', 'title':'The Wobbler (C64)',   'system':'c64',     'url':'c64.html?file=c64/wobbler_c64.prg&input=RUN%0A', 'img':'c64/wobbler_c64.jpg', 'note':'by Abyss Connection' },
-    { 'type':'demo', 'title':'Dawnfall (C64)',      'system':'c64',     'url':'c64.html?file=c64/dawnfall_c64.prg&input=RUN%0A', 'img':'c64/dawnfall_c64.jpg', 'note':'by Oxyron'},
-    { 'type':'demo', 'title':'+H4K (C64)',          'system':'c64',     'url':'c64.html?file=c64/h4k_c64.prg&input=RUN%0A', 'img':'c64/h4k_c64.jpg', 'note':'by Plush' },
-    { 'type':'demo', 'title':'Crapman (C64)',       'system':'c64',     'url':'c64.html?file=c64/crapman_c64.prg&input=RUN%0A', 'img':'c64/crapman_c64.jpg', 'note':'by Latex' },
-    { 'type':'demo', 'title':'Kongo2 (C64)',        'system':'c64',     'url':'c64.html?file=c64/kongo2_c64.prg&input=RUN%0A', 'img':'c64/kongo2_c64.jpg', 'note': 'by Cruel Soldiers' },
-    { 'type':'demo', 'title':'C.Intentional (C64)', 'system':'c64',     'url':'c64.html?file=c64/cintentional_c64.prg&input=RUN%0A', 'img':'c64/cintentional_c64.jpg', 'note':'by Vision' },
-    { 'type':'demo', 'title':'Sour & Salty (C64)',  'system':'c64',     'url':'c64.html?file=c64/soursalty_c64.prg&input=RUN%0A', 'img':'c64/soursalty_c64.jpg', 'note':'by Artline Designs' },
-    { 'type':'demo', 'title':'Nightcrawler (C64)',  'system':'c64',     'url':'c64.html?file=c64/nightcrawler_c64.prg&input=RUN%0A', 'img':'c64/nightcrawler_c64.jpg', 'note':'by Almagest' },
-    { 'type':'demo', 'title':'Arcade Intro (C64)',  'system':'c64',     'url':'c64.html?file=c64/arcade02_c64.prg&input=RUN%0A', 'img':'c64/arcade02_c64.jpg', 'note':'by Arcade' },
-    { 'type':'demo', 'title':'In A Loop 1K (C64)',  'system':'c64',     'url':'c64.html?file=c64/inaloop_c64.prg&input=RUN%0A', 'img':'c64/inaloop_c64.jpg', 'note':'by Ate Bit'},
-    { 'type':'demo', 'title':'Dubious 4K (C64)',    'system':'c64',     'url':'c64.html?file=c64/dubious_c64.prg&input=RUN%0A', 'img':'c64/dubious_c64.jpg', 'note':'by Fairlight'},
+    { 'type':'demo', 'title':'Rebels 1989 (C64)',   'system':'c64',     'url':'c64.html?file=c64/rebels1989_c64.prg', 'img':'c64/rebels1989_c64.jpg', 'note':'by Rebels'},
+    { 'type':'demo', 'title':'$777 (C64)',          'system':'c64',     'url':'c64.html?file=c64/s777_c64.prg', 'img':'c64/s777_c64.jpg', 'note':'by Razor 1911' },
+    { 'type':'demo', 'title':'The Wobbler (C64)',   'system':'c64',     'url':'c64.html?file=c64/wobbler_c64.prg', 'img':'c64/wobbler_c64.jpg', 'note':'by Abyss Connection' },
+    { 'type':'demo', 'title':'Dawnfall (C64)',      'system':'c64',     'url':'c64.html?file=c64/dawnfall_c64.prg', 'img':'c64/dawnfall_c64.jpg', 'note':'by Oxyron'},
+    { 'type':'demo', 'title':'+H4K (C64)',          'system':'c64',     'url':'c64.html?file=c64/h4k_c64.prg', 'img':'c64/h4k_c64.jpg', 'note':'by Plush' },
+    { 'type':'demo', 'title':'Crapman (C64)',       'system':'c64',     'url':'c64.html?file=c64/crapman_c64.prg', 'img':'c64/crapman_c64.jpg', 'note':'by Latex' },
+    { 'type':'demo', 'title':'Kongo2 (C64)',        'system':'c64',     'url':'c64.html?file=c64/kongo2_c64.prg', 'img':'c64/kongo2_c64.jpg', 'note': 'by Cruel Soldiers' },
+    { 'type':'demo', 'title':'C.Intentional (C64)', 'system':'c64',     'url':'c64.html?file=c64/cintentional_c64.prg', 'img':'c64/cintentional_c64.jpg', 'note':'by Vision' },
+    { 'type':'demo', 'title':'Sour & Salty (C64)',  'system':'c64',     'url':'c64.html?file=c64/soursalty_c64.prg', 'img':'c64/soursalty_c64.jpg', 'note':'by Artline Designs' },
+    { 'type':'demo', 'title':'Nightcrawler (C64)',  'system':'c64',     'url':'c64.html?file=c64/nightcrawler_c64.prg', 'img':'c64/nightcrawler_c64.jpg', 'note':'by Almagest' },
+    { 'type':'demo', 'title':'Arcade Intro (C64)',  'system':'c64',     'url':'c64.html?file=c64/arcade02_c64.prg', 'img':'c64/arcade02_c64.jpg', 'note':'by Arcade' },
+    { 'type':'demo', 'title':'In A Loop 1K (C64)',  'system':'c64',     'url':'c64.html?file=c64/inaloop_c64.prg', 'img':'c64/inaloop_c64.jpg', 'note':'by Ate Bit'},
+    { 'type':'demo', 'title':'Dubious 4K (C64)',    'system':'c64',     'url':'c64.html?file=c64/dubious_c64.prg', 'img':'c64/dubious_c64.jpg', 'note':'by Fairlight'},
+    { 'type':'demo', 'title':'Space Invaders (C64)','system':'c64',     'url':'c64.html?file=c64/space_invaders_demo.prg', 'img':'c64/space_invaders_demo.jpg', 'note':'by Hokuto Force'},
+    { 'type':'demo', 'title':'Rewind (C64)',        'system':'c64',     'url':'c64.html?file=c64/rewind_tempest.prg', 'img':'c64/rewind_tempest.jpg', 'note':'by TempesT'},
+    { 'type':'demo', 'title':'Tunnel Vision (C64)', 'system':'c64',     'url':'c64.html?file=c64/tunnelvision_omg.prg', 'img':'c64/tunnelvision_omg.jpg', 'note':'by OMG'},
     { 'type':'demo', 'title':'Serious (KC85/4)',    'system':'kc85',    'url':'kc85.html?type=kc85_4&file=kc85/serious.kcc', 'img':'kc85/serious.jpg', 'note':'by Moods Plateau'},
     { 'type':'game', 'title':'Digger (KC85/3)',     'system':'kc85',    'url':'kc85.html?type=kc85_3&mod=m022&file=kc85/digger3.tap', 'img':'kc85/digger_3.jpg', 'note':'' },
     { 'type':'demo', 'title':'Jungle (KC85/3)',     'system':'kc85',    'url':'kc85.html?type=kc85_3&mod=m022&file=kc85/jungle.kcc', 'img':'kc85/jungle.jpg', 'note':'' },
@@ -173,12 +176,12 @@ def deploy_webpage(fips_dir, proj_dir, webpage_dir) :
         note = item['note']
         log.info('> adding thumbnail for {}'.format(url))
         content += '<div class="thumb-frame">\n'
-        content += '  <span class="thumb-title">{}</span>\n'.format(title)
+        content += '  <div class="thumb-title">{}</div>\n'.format(title)
         if os.path.exists(emsc_deploy_dir + '/' + system + '-ui.js'):
-            content += '<a class="img-btn-link" href="{}"><div class="img-btn">UI</div></a>'.format(ui_url)
-        content += '  <a href="{}"><img class="image" src="{}"></img></a>\n'.format(url,image)
+            content += '<a class="ui-btn-link" href="{}"><div class="ui-btn">UI</div></a>'.format(ui_url)
+        content += '  <a class="image-frame" href="{}"><img class="image" src="{}"></img></a>\n'.format(url,image)
         if note != '':
-            content += '  <span class="thumb-footer">{}</span>\n'.format(note)
+            content += '  <div class="thumb-footer">{}</div>\n'.format(note)
         content += '</div>\n'
 
     # populate the html template, and write to the build directory
