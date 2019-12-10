@@ -2,7 +2,7 @@
 //  m6502-test.c
 //------------------------------------------------------------------------------
 #define CHIPS_IMPL
-#include "chips/m6502x.h"
+#include "chips/m6502.h"
 #include "utest.h"
 
 #define T(b) ASSERT_TRUE(b)

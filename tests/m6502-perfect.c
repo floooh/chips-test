@@ -18,7 +18,7 @@
 #include "perfect6502/types.h"
 #include "perfect6502/netlist_sim.h"
 #include "perfect6502/perfect6502.h"
-#include "chips/m6502x.h"
+#include "chips/m6502.h"
 #include "utest.h"
 #include <assert.h>
 

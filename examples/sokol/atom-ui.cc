@@ -78,15 +78,9 @@ void atomui_discard(void) {
 }
 
 void atomui_exec(atom_t* atom, uint32_t frame_time_us) {
-    if (ui_atom_before_exec(&ui_atom)) {
-        uint64_t start = stm_now();
-        atom_exec(atom, frame_time_us);
-        exec_time = stm_ms(stm_since(start));
-        ui_atom_after_exec(&ui_atom);
-    }
-    else {
-        exec_time = 0.0;
-    }
+    uint64_t start = stm_now();
+    ui_atom_exec(&ui_atom, frame_time_us);
+    exec_time = ui_atom.dbg.dbg.stopped ? 0.0 : stm_ms(stm_since(start));
 }
 
 } /* extern "C" */
