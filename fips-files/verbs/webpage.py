@@ -89,6 +89,7 @@ items = [
     { 'type':'demo', 'title':'F600 (C64)',          'system':'c64',     'url':'c64.html?file=c64/f600.prg', 'img':'c64/f600.jpg', 'note':'by Hokuto Force & PVM'},
     { 'type':'demo', 'title':'Reflections (C64)',   'system':'c64',     'url':'c64.html?file=c64/reflections.prg', 'img':'c64/reflections.jpg', 'note':'by Plush'},
     { 'type':'demo', 'title':'Summer of 64 (C64)',  'system':'c64',     'url':'c64.html?file=c64/summerof64.prg', 'img':'c64/summerof64.jpg', 'note':'by Offence'},
+    { 'type':'demo', 'title':'One-Der (C64)',       'system':'c64',     'url':'c64.html?file=c64/oneder_oxyron.prg', 'img':'c64/oneder_oxyron.jpg', 'note':'by Oxyron'},
     { 'type':'demo', 'title':'Serious (KC85/4)',    'system':'kc85',    'url':'kc85.html?type=kc85_4&file=kc85/serious.kcc', 'img':'kc85/serious.jpg', 'note':'by Moods Plateau'},
     { 'type':'game', 'title':'Digger (KC85/3)',     'system':'kc85',    'url':'kc85.html?type=kc85_3&mod=m022&file=kc85/digger3.tap', 'img':'kc85/digger_3.jpg', 'note':'' },
     { 'type':'demo', 'title':'Jungle (KC85/3)',     'system':'kc85',    'url':'kc85.html?type=kc85_3&mod=m022&file=kc85/jungle.kcc', 'img':'kc85/jungle.jpg', 'note':'' },
