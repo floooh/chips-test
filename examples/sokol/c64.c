@@ -151,14 +151,16 @@ void app_frame(void) {
             if (fs_ext("tap")) {
                 c64_start_tape(&c64);
             }
-            if (sargs_exists("input")) {
-                keybuf_put(sargs_value("input"));
-            }
-            else if (fs_ext("tap")) {
-                keybuf_put("LOAD\n");
-            }
-            else if (fs_ext("prg")) {
-                keybuf_put("RUN\n");
+            if (!sargs_exists("debug")) {
+                if (sargs_exists("input")) {
+                    keybuf_put(sargs_value("input"));
+                }
+                else if (fs_ext("tap")) {
+                    keybuf_put("LOAD\n");
+                }
+                else if (fs_ext("prg")) {
+                    keybuf_put("RUN\n");
+                }
             }
         }
         else {
