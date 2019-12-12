@@ -4,14 +4,17 @@
 //  (see: http://6502.org/tools/emu/)
 //------------------------------------------------------------------------------
 // force assert() enabled
-#ifdef NDEBUG
-#undef NDEBUG
-#endif
+#define SOKOL_IMPL
+#include "sokol_time.h"
 #define CHIPS_IMPL
 #include "chips/m6502.h"
 #include "chips/mem.h"
 #include <stdio.h>
+#include <inttypes.h>
 #include "testsuite-2.15/bin/dump.h"
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 
 uint64_t cpu_pins;
 m6502_t cpu;
@@ -197,6 +200,7 @@ void tick(void) {
 
 int main() {
     puts(">>> Running Wolfgang Lorenz C64 test suite...");
+    stm_setup();
 
     /* prepare environment (see http://www.softwolves.com/arkiv/cbm-hackers/7/7114.html) */
     memset(ram, 0, sizeof(ram));
@@ -211,12 +215,15 @@ int main() {
     /* run the tests */
     load_test("_start");
     bool done = false;
+    uint64_t start_time = stm_now();
     while (!done) {
         tick();
         if (!handle_trap(test_traps())) {
             done = true;
         }
     }
+    double dur = stm_sec(stm_since(start_time));
+    printf("\n%"PRIu64" cycles in %.3fsecs (%.2f MHz)\n", cpu.ticks, dur, (cpu.ticks/dur)/1000000.0);
     putchar('\n');
     return 0;
 }
