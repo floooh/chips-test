@@ -174,12 +174,10 @@ static bool test_trap(uint16_t pc) {
 }
 
 int test_traps(void) {
-    if (cpu_pins & M6502_SYNC) {
-        static const uint16_t traps[] = { 0xFFD2, 0xE16F, 0xFFE4, 0x8000, 0xA474 };
-        for (int i = 0; i < (int)(sizeof(traps)/sizeof(uint16_t)); i++) {
-            if (test_trap(traps[i])) {
-                return i + 1;
-            }
+    static const uint16_t traps[] = { 0xFFD2, 0xE16F, 0xFFE4, 0x8000, 0xA474 };
+    for (int i = 0; i < (int)(sizeof(traps)/sizeof(uint16_t)); i++) {
+        if (test_trap(traps[i])) {
+            return i + 1;
         }
     }
     return 0;
@@ -218,8 +216,13 @@ int main() {
     uint64_t start_time = stm_now();
     while (!done) {
         tick();
-        if (!handle_trap(test_traps())) {
-            done = true;
+        if (cpu_pins & M6502_SYNC) {
+            int trap_id = test_traps();
+            if (0 != trap_id) {
+                if (!handle_trap(trap_id)) {
+                    done = true;
+                }
+            }
         }
     }
     double dur = stm_sec(stm_since(start_time));
