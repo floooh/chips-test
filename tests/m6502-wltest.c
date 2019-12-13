@@ -205,7 +205,9 @@ int main() {
     mem_map_ram(&mem, 0, 0x0000, sizeof(ram), ram);
 
     /* init CPU and run through the reset sequence */
-    cpu_pins = m6502_init(&cpu, &(m6502_desc_t) { });
+    m6502_desc_t desc;
+    memset(&desc, 0, sizeof(desc));
+    cpu_pins = m6502_init(&cpu, &desc);
     for (int i = 0; i < 7; i++) {
         tick();
     }

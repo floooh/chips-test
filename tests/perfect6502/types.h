@@ -1,6 +1,10 @@
 #ifndef _TYPES_H_
 #define _TYPES_H_
 
+#if defined(_MSC_VER)
+#pragma warning(disable:4142)   // redefinition of BOOL (clash with Windows system header)
+#endif
+
 typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
 typedef unsigned int BOOL;
