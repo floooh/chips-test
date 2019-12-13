@@ -4,19 +4,31 @@
 //  (see: http://6502.org/tools/emu/)
 //------------------------------------------------------------------------------
 // force assert() enabled
-#ifdef NDEBUG
-#undef NDEBUG
-#endif
+#define SOKOL_IMPL
+#include "sokol_time.h"
 #define CHIPS_IMPL
 #include "chips/m6502.h"
 #include "chips/mem.h"
 #include <stdio.h>
+#include <inttypes.h>
 #include "testsuite-2.15/bin/dump.h"
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 
+uint64_t cpu_pins;
 m6502_t cpu;
 mem_t mem;
 uint8_t ram[1<<16];
 bool text_enabled = true;
+
+/* set CPU state to continue running at a specific address */
+void cpu_goto(uint16_t addr) {
+    M6502_SET_ADDR(cpu_pins, addr);
+    M6502_SET_DATA(cpu_pins, mem_rd(&mem, addr));
+    cpu_pins |= M6502_SYNC|M6502_RW;
+    cpu.PC = addr;
+}
 
 /* load a test dump into memory, return false if last test is reached ('trap17') */
 bool load_test(const char* name) {
@@ -70,19 +82,18 @@ bool load_test(const char* name) {
     };
     mem_write_range(&mem, 0xFF48, irq_handler, sizeof(irq_handler));
 
-    /* init CPU registers */
-    cpu.state.S = 0xFD;
-    cpu.state.P = 0x04;
-    cpu.state.PC = 0x0801;
-
+    /* continue execution at start address */
+    cpu.S = 0xFD;
+    cpu.P = M6502_BF|M6502_IF;
+    cpu_goto(0x801);
     return true;
 }
 
 /* pop return address from CPU stack */
 uint16_t pop() {
-    cpu.state.S++;
-    uint8_t l = mem_rd(&mem, 0x0100|cpu.state.S++);
-    uint8_t h = mem_rd(&mem, 0x0100|cpu.state.S);
+    cpu.S++;
+    uint8_t l = mem_rd(&mem, 0x0100|cpu.S++);
+    uint8_t h = mem_rd(&mem, 0x0100|cpu.S);
     uint16_t addr = (h<<8)|l;
     return addr;
 }
@@ -112,17 +123,16 @@ char petscii2ascii(uint8_t p) {
 }
 
 /* check for special trap addresses, and perform OS functions, return false to exit */
-bool handle_trap() {
-    if (cpu.trap_id == 1) {
+bool handle_trap(int trap_id) {
+    if (trap_id == 1) {
         /* print character */
         mem_wr(&mem, 0x030C, 0x00);
         if (text_enabled) {
-            putchar(petscii2ascii(cpu.state.A));
+            putchar(petscii2ascii(cpu.A));
         }
-        cpu.state.PC = pop();
-        cpu.state.PC++;
+        cpu_goto(pop() + 1);
     }
-    else if (cpu.trap_id == 2) {
+    else if (trap_id == 2) {
         /* load dump */
         uint8_t l = mem_rd(&mem, 0x00BB);   // petscii filename address, low byte
         uint8_t h = mem_rd(&mem, 0x00BC);   // petscii filename address, high byte
@@ -138,10 +148,10 @@ bool handle_trap() {
             return false;
         }
         pop();
-        cpu.state.PC = 0x0816;
+        cpu_goto(0x0816);
         text_enabled = true;
     }
-    else if (cpu.trap_id == 3) {
+    else if (trap_id == 3) {
         /* scan keyboard, this is called when an error was encountered,
            we'll continue, but disable text output until the next test is loaded
         */
@@ -149,62 +159,75 @@ bool handle_trap() {
             puts("\nSKIP TEXT OUTPUT UNTIL NEXT TEST\n");
         }
         text_enabled = false;
-        cpu.state.A = 0x02;
-        cpu.state.PC = pop();
-        cpu.state.PC++;
+        cpu.A = 0x02;
+        cpu_goto(pop() + 1);
     }
-    else if ((cpu.state.PC == 0x8000) || (cpu.state.PC == 0xA474)) {
+    else if ((cpu.PC == 0x8001) || (cpu.PC == 0xA475)) {
         /* done */
         return false;
     }
     return true;
 }
 
-uint64_t tick(uint64_t pins, void* user_data) {
-    const uint16_t addr = M6502_GET_ADDR(pins);
-    if (pins & M6502_RW) {
+static bool test_trap(uint16_t pc) {
+    return ((cpu_pins & (M6502_SYNC|0xFFFF)) == (M6502_SYNC|pc));
+}
+
+int test_traps(void) {
+    static const uint16_t traps[] = { 0xFFD2, 0xE16F, 0xFFE4, 0x8000, 0xA474 };
+    for (int i = 0; i < (int)(sizeof(traps)/sizeof(uint16_t)); i++) {
+        if (test_trap(traps[i])) {
+            return i + 1;
+        }
+    }
+    return 0;
+}
+
+void tick(void) {
+    cpu_pins = m6502_tick(&cpu, cpu_pins);
+    const uint16_t addr = M6502_GET_ADDR(cpu_pins);
+    if (cpu_pins & M6502_RW) {
         /* memory read */
-        M6502_SET_DATA(pins, mem_rd(&mem, addr));
+        M6502_SET_DATA(cpu_pins, mem_rd(&mem, addr));
     }
     else {
         /* memory write */
-        mem_wr(&mem, addr, M6502_GET_DATA(pins));
-    }
-    return pins;
-}
-
-int trap(uint16_t pc, int ticks, uint64_t pins, void* user_data) {
-    switch (pc) {
-        case 0xFFD2: return 1; /* trap for print character function */
-        case 0xE16F: return 2; /* trap for load dump function */
-        case 0xFFE4: return 3; /* trap for 'scan keyboard' function */
-        case 0x8000: return 4; /* traps for error and finished */
-        case 0xA474: return 5;
-        default: return 0;
+        mem_wr(&mem, addr, M6502_GET_DATA(cpu_pins));
     }
 }
 
 int main() {
     puts(">>> Running Wolfgang Lorenz C64 test suite...");
+    stm_setup();
 
     /* prepare environment (see http://www.softwolves.com/arkiv/cbm-hackers/7/7114.html) */
     memset(ram, 0, sizeof(ram));
     mem_map_ram(&mem, 0, 0x0000, sizeof(ram), ram);
 
-    m6502_init(&cpu, &(m6502_desc_t){
-        .tick_cb = tick
-    });
-    m6502_reset(&cpu);
-    m6502_trap_cb(&cpu, trap, 0);
+    /* init CPU and run through the reset sequence */
+    cpu_pins = m6502_init(&cpu, &(m6502_desc_t) { });
+    for (int i = 0; i < 7; i++) {
+        tick();
+    }
 
+    /* run the tests */
     load_test("_start");
     bool done = false;
+    uint64_t start_time = stm_now();
     while (!done) {
-        m6502_exec(&cpu, (1<<30));
-        if (!handle_trap()) {
-            done = true;
+        tick();
+        if (cpu_pins & M6502_SYNC) {
+            int trap_id = test_traps();
+            if (0 != trap_id) {
+                if (!handle_trap(trap_id)) {
+                    done = true;
+                }
+            }
         }
     }
+    double dur = stm_sec(stm_since(start_time));
+    printf("\n%"PRIu64" cycles in %.3fsecs (%.2f MHz)\n", cpu.ticks, dur, (cpu.ticks/dur)/1000000.0);
+    putchar('\n');
     return 0;
 }
 

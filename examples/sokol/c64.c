@@ -9,8 +9,8 @@
 #include "chips/m6581.h"
 #include "chips/beeper.h"
 #include "chips/kbd.h"
-#include "chips/mem.h"
 #include "chips/clk.h"
+#include "chips/mem.h"
 #include "systems/c64.h"
 #include "c64-roms.h"
 
@@ -114,7 +114,7 @@ void app_init(void) {
     c64_desc_t desc = c64_desc(joy_type);
     c64_init(&c64, &desc);
     #ifdef CHIPS_USE_UI
-        c64ui_init(&c64);
+    c64ui_init(&c64);
     #endif
     if (!delay_input) {
         if (sargs_exists("input")) {
@@ -126,9 +126,9 @@ void app_init(void) {
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
 void app_frame(void) {
     #ifdef CHIPS_USE_UI
-        c64ui_exec(&c64, clock_frame_time());
+    c64ui_exec(&c64, clock_frame_time());
     #else
-        c64_exec(&c64, clock_frame_time());
+    c64_exec(&c64, clock_frame_time());
     #endif
     gfx_draw(c64_display_width(&c64), c64_display_height(&c64));
     const uint32_t load_delay_frames = 180;
@@ -151,14 +151,16 @@ void app_frame(void) {
             if (fs_ext("tap")) {
                 c64_start_tape(&c64);
             }
-            if (sargs_exists("input")) {
-                keybuf_put(sargs_value("input"));
-            }
-            else if (fs_ext("tap")) {
-                keybuf_put("LOAD\n");
-            }
-            else if (fs_ext("prg")) {
-                keybuf_put("RUN\n");
+            if (!sargs_exists("debug")) {
+                if (sargs_exists("input")) {
+                    keybuf_put(sargs_value("input"));
+                }
+                else if (fs_ext("tap")) {
+                    keybuf_put("LOAD\n");
+                }
+                else if (fs_ext("prg")) {
+                    keybuf_put("RUN\n");
+                }
             }
         }
         else {
@@ -243,7 +245,7 @@ void app_input(const sapp_event* event) {
 /* application cleanup callback */
 void app_cleanup(void) {
     #ifdef CHIPS_USE_UI
-        c64ui_discard();
+    c64ui_discard();
     #endif
     c64_discard(&c64);
     saudio_shutdown();

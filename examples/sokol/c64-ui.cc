@@ -77,15 +77,9 @@ void c64ui_discard(void) {
 }
 
 void c64ui_exec(c64_t* c64, uint32_t frame_time_us) {
-    if (ui_c64_before_exec(&ui_c64)) {
-        uint64_t start = stm_now();
-        c64_exec(c64, frame_time_us);
-        exec_time = stm_ms(stm_since(start));
-        ui_c64_after_exec(&ui_c64);
-    }
-    else {
-        exec_time = 0.0;
-    }
+    uint64_t start = stm_now();
+    ui_c64_exec(&ui_c64, frame_time_us);
+    exec_time = ui_c64.dbg.dbg.stopped ? 0.0 : stm_ms(stm_since(start));
 }
 
 } /* extern "C" */

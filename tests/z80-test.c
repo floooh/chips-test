@@ -64,7 +64,7 @@ static uint64_t tick(int num, uint64_t pins, void* user_data) {
     return pins;
 }
 
-static void init() {
+static void init(void) {
     z80_init(&cpu, &(z80_desc_t) { .tick_cb = tick, });
     z80_set_f(&cpu, 0);
     z80_set_fa_(&cpu, 0x00FF);
@@ -76,7 +76,7 @@ static void copy(uint16_t addr, uint8_t* bytes, size_t num) {
     }
 }
 
-static uint32_t step() {
+static uint32_t step(void) {
     uint32_t ticks = z80_exec(&cpu,0);
     while (!z80_opdone(&cpu)) {
         ticks += z80_exec(&cpu,0);
