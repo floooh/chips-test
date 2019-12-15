@@ -1,5 +1,5 @@
 #pragma once
-// #version:5#
+// #version:7#
 // machine generated, do not edit!
 unsigned char dump_cp4_basic_318006_01_bin[16384] = {
 0x4c, 0x19, 0x80, 0x4c, 0xa, 0x80, 0x0, 0x43, 0x42, 0x4d, 0x20, 0xcc, 0xff, 0x20, 0xd8, 0x8a, 
@@ -8207,13 +8207,4 @@ unsigned char dump_cp4_pla_251641_02_bin[65536] = {
 0xde, 0xde, 0xde, 0xde, 0xde, 0xde, 0xfe, 0xde, 0xde, 0xde, 0xde, 0xde, 0xde, 0xde, 0xfe, 0xde, 
 0xde, 0xde, 0xde, 0xde, 0xde, 0xde, 0xfe, 0xde, 0xde, 0xde, 0xde, 0xde, 0xde, 0xde, 0xfe, 0xde, 
 
-};
-typedef struct { const char* name; const uint8_t* ptr; int size; } dump_item;
-#define DUMP_NUM_ITEMS (5)
-dump_item dump_items[DUMP_NUM_ITEMS] = {
-{ "cp4_3_plus_1_317053_01_bin", dump_cp4_3_plus_1_317053_01_bin, 16384 },
-{ "cp4_3_plus_1_317054_01_bin", dump_cp4_3_plus_1_317054_01_bin, 16384 },
-{ "cp4_basic_318006_01_bin", dump_cp4_basic_318006_01_bin, 16384 },
-{ "cp4_kernal_318004_05_bin", dump_cp4_kernal_318004_05_bin, 16384 },
-{ "cp4_pla_251641_02_bin", dump_cp4_pla_251641_02_bin, 65536 },
 };

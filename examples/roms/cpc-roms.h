@@ -1,5 +1,5 @@
 #pragma once
-// #version:5#
+// #version:7#
 // machine generated, do not edit!
 unsigned char dump_cpc464_os_bin[16384] = {
 0x1, 0x89, 0x7f, 0xed, 0x49, 0xc3, 0x80, 0x5, 0xc3, 0x82, 0xb9, 0xc3, 0x7c, 0xb9, 0xc5, 0xc9, 
@@ -7189,15 +7189,4 @@ unsigned char dump_kcc_bas_bin[16384] = {
 0xc0, 0x7d, 0x91, 0xc9, 0xe5, 0xb7, 0xed, 0x52, 0x44, 0x4d, 0xe1, 0xc9, 0x4f, 0x6, 0x0, 0x78, 
 0xb1, 0xc8, 0xed, 0xb0, 0xc9, 0x78, 0xb1, 0xc8, 0xed, 0xb8, 0xc9, 0xe9, 0xc5, 0xc9, 0xd5, 0xc9, 
 
-};
-typedef struct { const char* name; const uint8_t* ptr; int size; } dump_item;
-#define DUMP_NUM_ITEMS (7)
-dump_item dump_items[DUMP_NUM_ITEMS] = {
-{ "cpc464_basic_bin", dump_cpc464_basic_bin, 16384 },
-{ "cpc464_os_bin", dump_cpc464_os_bin, 16384 },
-{ "cpc6128_amsdos_bin", dump_cpc6128_amsdos_bin, 16384 },
-{ "cpc6128_basic_bin", dump_cpc6128_basic_bin, 16384 },
-{ "cpc6128_os_bin", dump_cpc6128_os_bin, 16384 },
-{ "kcc_bas_bin", dump_kcc_bas_bin, 16384 },
-{ "kcc_os_bin", dump_kcc_os_bin, 16384 },
 };

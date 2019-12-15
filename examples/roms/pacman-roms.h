@@ -1,5 +1,5 @@
 #pragma once
-// #version:5#
+// #version:7#
 // machine generated, do not edit!
 unsigned char dump_82s123_7f[32] = {
 0x0, 0x7, 0x66, 0xef, 0x0, 0xf8, 0xea, 0x6f, 0x0, 0x3f, 0x0, 0xc9, 0x38, 0xaa, 0xaf, 0xf6, 
@@ -1616,18 +1616,4 @@ unsigned char dump_pacman_6j[4096] = {
 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x30, 0x8d, 0x0, 0x75, 0x73, 
 
-};
-typedef struct { const char* name; const uint8_t* ptr; int size; } dump_item;
-#define DUMP_NUM_ITEMS (10)
-dump_item dump_items[DUMP_NUM_ITEMS] = {
-{ "82s123_7f", dump_82s123_7f, 32 },
-{ "82s126_1m", dump_82s126_1m, 256 },
-{ "82s126_3m", dump_82s126_3m, 256 },
-{ "82s126_4a", dump_82s126_4a, 256 },
-{ "pacman_5e", dump_pacman_5e, 4096 },
-{ "pacman_5f", dump_pacman_5f, 4096 },
-{ "pacman_6e", dump_pacman_6e, 4096 },
-{ "pacman_6f", dump_pacman_6f, 4096 },
-{ "pacman_6h", dump_pacman_6h, 4096 },
-{ "pacman_6j", dump_pacman_6j, 4096 },
 };

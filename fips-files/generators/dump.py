@@ -3,7 +3,7 @@
 #   Dump binary files into C arrays.
 #-------------------------------------------------------------------------------
 
-Version = 5
+Version = 7
 
 import sys
 import os.path
@@ -23,7 +23,7 @@ def get_file_cname(filename) :
     return 'dump_{}'.format(filename).replace('.','_')
 
 #-------------------------------------------------------------------------------
-def gen_header(out_hdr, src_dir, files) :
+def gen_header(out_hdr, src_dir, files, dump_items) :
     with open(out_hdr, 'w') as f:
         f.write('#pragma once\n')
         f.write('// #version:{}#\n'.format(Version))
@@ -50,12 +50,13 @@ def gen_header(out_hdr, src_dir, files) :
                     f.write('\n};\n')
             else :
                 genutil.fmtError("Input file not found: '{}'".format(file_path))
-        f.write('typedef struct { const char* name; const uint8_t* ptr; int size; } dump_item;\n')
-        f.write('#define DUMP_NUM_ITEMS ({})\n'.format(len(items)))
-        f.write('dump_item dump_items[DUMP_NUM_ITEMS] = {\n')
-        for name,size in sorted(items.items()):
-            f.write('{{ "{}", {}, {} }},\n'.format(name[5:], name, size))
-        f.write('};\n')
+        if dump_items:
+            f.write('typedef struct { const char* name; const uint8_t* ptr; int size; } dump_item;\n')
+            f.write('#define DUMP_NUM_ITEMS ({})\n'.format(len(items)))
+            f.write('dump_item dump_items[DUMP_NUM_ITEMS] = {\n')
+            for name,size in sorted(items.items()):
+                f.write('{{ "{}", {}, {} }},\n'.format(name[5:], name, size))
+            f.write('};\n')
 
 #-------------------------------------------------------------------------------
 def generate(input, out_src, out_hdr) :
@@ -66,4 +67,7 @@ def generate(input, out_src, out_hdr) :
             src_dir = desc['src_dir'] + '/'
         else:
             src_dir = ''
-        gen_header(out_hdr, src_dir, desc['files'])
+        dump_items = False;
+        if 'dump_items' in desc:
+            dump_items = desc['dump_items']
+        gen_header(out_hdr, src_dir, desc['files'], dump_items)

@@ -1,5 +1,5 @@
 #pragma once
-// #version:5#
+// #version:7#
 // machine generated, do not edit!
 unsigned char dump_kc87_os_2_bin[8192] = {
 0xff, 0xff, 0xff, 0xc3, 0xd2, 0xe0, 0xc3, 0xf3, 0xe0, 0xc3, 0x57, 0xe1, 0x11, 0xe0, 0xc3, 0x0, 
@@ -2197,15 +2197,4 @@ unsigned char dump_z9001_basic_507_511_bin[10240] = {
 0xff, 0x32, 0x5e, 0x3, 0x18, 0xf0, 0xc3, 0x82, 0xdc, 0xf5, 0xe, 0x19, 0xcd, 0x5, 0x0, 0xf1, 
 0xc9, 0xc5, 0xe, 0xb, 0x18, 0x3, 0xc5, 0xe, 0x1, 0xcd, 0x5, 0x0, 0xc1, 0xc9, 0xff, 0xff, 
 
-};
-typedef struct { const char* name; const uint8_t* ptr; int size; } dump_item;
-#define DUMP_NUM_ITEMS (7)
-dump_item dump_items[DUMP_NUM_ITEMS] = {
-{ "kc87_font_2_bin", dump_kc87_font_2_bin, 2048 },
-{ "kc87_os_2_bin", dump_kc87_os_2_bin, 8192 },
-{ "z9001_basic_507_511_bin", dump_z9001_basic_507_511_bin, 10240 },
-{ "z9001_basic_bin", dump_z9001_basic_bin, 8192 },
-{ "z9001_font_bin", dump_z9001_font_bin, 2048 },
-{ "z9001_os12_1_bin", dump_z9001_os12_1_bin, 2048 },
-{ "z9001_os12_2_bin", dump_z9001_os12_2_bin, 2048 },
 };

@@ -1,5 +1,5 @@
 #pragma once
-// #version:5#
+// #version:7#
 // machine generated, do not edit!
 unsigned char dump_ep1640_92[8192] = {
 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
@@ -3212,22 +3212,4 @@ unsigned char dump_pr1636_70[256] = {
 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
 
-};
-typedef struct { const char* name; const uint8_t* ptr; int size; } dump_item;
-#define DUMP_NUM_ITEMS (14)
-dump_item dump_items[DUMP_NUM_ITEMS] = {
-{ "ep1640_92", dump_ep1640_92, 8192 },
-{ "ep1695_105", dump_ep1695_105, 8192 },
-{ "ep5120_8", dump_ep5120_8, 4096 },
-{ "ep5121_7", dump_ep5121_7, 4096 },
-{ "ep5122_15", dump_ep5122_15, 4096 },
-{ "ep5123_14", dump_ep5123_14, 4096 },
-{ "ep5124_21", dump_ep5124_21, 4096 },
-{ "ep5125_20", dump_ep5125_20, 4096 },
-{ "ep5126_32", dump_ep5126_32, 4096 },
-{ "ep5127_31", dump_ep5127_31, 4096 },
-{ "pr1633_78", dump_pr1633_78, 32 },
-{ "pr1634_88", dump_pr1634_88, 1024 },
-{ "pr1635_51", dump_pr1635_51, 256 },
-{ "pr1636_70", dump_pr1636_70, 256 },
 };
