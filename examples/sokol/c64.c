@@ -12,12 +12,13 @@
 #include "chips/clk.h"
 #include "chips/mem.h"
 #include "systems/c64.h"
+#include "systems/c1530.h"
 #include "c64-roms.h"
 
 /* imports from cpc-ui.cc */
 #ifdef CHIPS_USE_UI
 #include "ui.h"
-void c64ui_init(c64_t* c64);
+void c64ui_init(c64_t* c64, c1530_t* c1530);
 void c64ui_discard(void);
 void c64ui_draw(void);
 void c64ui_exec(c64_t* c64, uint32_t frame_time_us);
@@ -27,6 +28,7 @@ static const int ui_extra_height = 0;
 #endif
 
 c64_t c64;
+c1530_t c1530;
 
 /* sokol-app entry, configure application callbacks and window */
 void app_init(void);
@@ -65,7 +67,6 @@ c64_desc_t c64_desc(c64_joystick_type_t joy_type) {
         .pixel_buffer_size = gfx_framebuffer_size(),
         .audio_cb = push_audio,
         .audio_sample_rate = saudio_sample_rate(),
-        .audio_tape_sound = sargs_boolean("tape_sound"),
         .rom_char = dump_c64_char_bin,
         .rom_char_size = sizeof(dump_c64_char_bin),
         .rom_basic = dump_c64_basic_bin,
@@ -113,8 +114,14 @@ void app_init(void) {
     }
     c64_desc_t desc = c64_desc(joy_type);
     c64_init(&c64, &desc);
+    /* setup and connect datasette? */
+    if (sargs_exists("c1530")) {
+        c1530_init(&c1530, &(c1530_desc_t){
+            .cas_port = &c64.cas_port
+        });
+    }
     #ifdef CHIPS_USE_UI
-    c64ui_init(&c64);
+    c64ui_init(&c64, &c1530);
     #endif
     if (!delay_input) {
         if (sargs_exists("input")) {
@@ -126,9 +133,21 @@ void app_init(void) {
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
 void app_frame(void) {
     #ifdef CHIPS_USE_UI
-    c64ui_exec(&c64, clock_frame_time());
+        c64ui_exec(&c64, clock_frame_time());
     #else
-    c64_exec(&c64, clock_frame_time());
+        uint32_t num_ticks = clk_us_to_ticks(C64_FREQUENCY, clock_frame_time());
+        if (c1530.valid) {
+            for (uint32_t ticks = 0; ticks < num_ticks; ticks++) {
+                c64_tick(&c64);
+                c1530_tick(&c1530);
+            }
+        }
+        else {
+            for (uint32_t ticks = 0; ticks < num_ticks; ticks++) {
+                c64_tick(&c64);
+            }
+        }
+        kbd_update(&c64.kbd);
     #endif
     gfx_draw(c64_display_width(&c64), c64_display_height(&c64));
     const uint32_t load_delay_frames = 180;
@@ -139,7 +158,7 @@ void app_frame(void) {
             keybuf_put((const char*)fs_ptr());
         }
         else if (fs_ext("tap")) {
-            load_success = c64_insert_tape(&c64, fs_ptr(), fs_size());
+            load_success = c1530_insert_tape(&c1530, fs_ptr(), fs_size());
         }
         else if (fs_ext("bin") || fs_ext("prg") || fs_ext("")) {
             load_success = c64_quickload(&c64, fs_ptr(), fs_size());
@@ -149,7 +168,7 @@ void app_frame(void) {
                 gfx_flash_success();
             }
             if (fs_ext("tap")) {
-                c64_start_tape(&c64);
+                c1530_start_tape(&c1530);
             }
             if (!sargs_exists("debug")) {
                 if (sargs_exists("input")) {

@@ -12,6 +12,7 @@
 #include "chips/mem.h"
 #include "chips/clk.h"
 #include "systems/c64.h"
+#include "systems/c1530.h"
 #define CHIPS_IMPL
 #define UI_DASM_USE_M6502
 #define UI_DBG_USE_M6502
@@ -51,10 +52,13 @@ void c64ui_draw(void) {
     ui_c64_draw(&ui_c64, exec_time);
 }
 
-void c64ui_init(c64_t* c64) {
+void c64ui_init(c64_t* c64, c1530_t* c1530) {
     ui_init(c64ui_draw);
     ui_c64_desc_t desc = {0};
     desc.c64 = c64;
+    if (c1530->valid) {
+        desc.c1530 = c1530;
+    }
     desc.boot_cb = boot_cb;
     desc.create_texture_cb = gfx_create_texture;
     desc.update_texture_cb = gfx_update_texture;
