@@ -11,7 +11,6 @@ fips_begin_app(chips-test cmdline)
         ay38910-test.c
         i8255-test.c 
         mc6847-test.c 
-        m6522-test.c 
         mc6845-test.c
         m6569-test.c
         m6581-test.c
