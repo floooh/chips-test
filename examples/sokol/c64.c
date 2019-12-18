@@ -7,7 +7,6 @@
 #include "chips/m6526.h"
 #include "chips/m6569.h"
 #include "chips/m6581.h"
-#include "chips/beeper.h"
 #include "chips/kbd.h"
 #include "chips/clk.h"
 #include "chips/mem.h"
