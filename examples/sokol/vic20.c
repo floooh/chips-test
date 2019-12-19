@@ -78,7 +78,9 @@ void app_init(void) {
         #ifdef CHIPS_USE_UI
         .draw_extra_cb = ui_draw,
         #endif
-        .top_offset = ui_extra_height
+        .top_offset = ui_extra_height,
+        /* VIC20 pixels are double-wide */
+        .aspect_x = 2.0f
     });
     keybuf_init(5);
     clock_init();

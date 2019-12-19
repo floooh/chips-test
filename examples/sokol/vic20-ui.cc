@@ -23,7 +23,7 @@
 #include "ui/ui_dbg.h"
 #include "ui/ui_m6502.h"
 #include "ui/ui_m6522.h"
-//#include "ui/ui_m6561.h"
+#include "ui/ui_m6561.h"
 #include "ui/ui_audio.h"
 #include "ui/ui_kbd.h"
 #include "ui/ui_vic20.h"
