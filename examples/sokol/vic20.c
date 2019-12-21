@@ -56,9 +56,10 @@ static void push_audio(const float* samples, int num_samples, void* user_data) {
 }
 
 /* get c64_desc_t struct based on joystick type */
-vic20_desc_t vic20_desc(vic20_joystick_type_t joy_type) {
+vic20_desc_t vic20_desc(vic20_joystick_type_t joy_type, vic20_memory_config_t mem_config) {
     return (vic20_desc_t) {
         .joystick_type = joy_type,
+        .mem_config = mem_config,
         .pixel_buffer = gfx_framebuffer(),
         .pixel_buffer_size = gfx_framebuffer_size(),
         .audio_cb = push_audio,
@@ -110,7 +111,22 @@ void app_init(void) {
             joy_type = VIC20_JOYSTICKTYPE_DIGITAL_12;
         }
     }
-    vic20_desc_t desc = vic20_desc(joy_type);
+    vic20_memory_config_t mem_config = VIC20_MEMCONFIG_STANDARD;
+    if (sargs_exists("exp")) {
+        if (sargs_equals("exp", "ram8k")) {
+            mem_config = VIC20_MEMCONFIG_8K;
+        }
+        else if (sargs_equals("exp", "ram16k")) {
+            mem_config = VIC20_MEMCONFIG_16K;
+        }
+        else if (sargs_equals("exp", "ram24k")) {
+            mem_config = VIC20_MEMCONFIG_24K;
+        }
+        else if (sargs_equals("exp", "ram32k")) {
+            mem_config = VIC20_MEMCONFIG_32K;
+        }
+    }
+    vic20_desc_t desc = vic20_desc(joy_type, mem_config);
     vic20_init(&vic20, &desc);
     #ifdef CHIPS_USE_UI
     vic20ui_init(&vic20);
