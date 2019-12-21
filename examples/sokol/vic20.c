@@ -43,7 +43,7 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .frame_cb = app_frame,
         .event_cb = app_input,
         .cleanup_cb = app_cleanup,
-        .width = 2 * vic20_std_display_width(),
+        .width = 3 * vic20_std_display_width(),
         .height = 2 * vic20_std_display_height() + ui_extra_height,
         .window_title = "VIC-20",
         .ios_keyboard_resizes_canvas = true
@@ -79,8 +79,8 @@ void app_init(void) {
         .draw_extra_cb = ui_draw,
         #endif
         .top_offset = ui_extra_height,
-        /* VIC20 pixels are double-wide */
-        .aspect_x = 2.0f
+        .aspect_x = 3.0f,
+        .aspect_y = 2.0f
     });
     keybuf_init(5);
     clock_init();
