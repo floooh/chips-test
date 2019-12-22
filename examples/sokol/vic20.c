@@ -101,15 +101,7 @@ void app_init(void) {
     }
     vic20_joystick_type_t joy_type = VIC20_JOYSTICKTYPE_NONE;
     if (sargs_exists("joystick")) {
-        if (sargs_equals("joystick", "digital_1")) {
-            joy_type = VIC20_JOYSTICKTYPE_DIGITAL_1;
-        }
-        else if (sargs_equals("joystick", "digital_2")) {
-            joy_type = VIC20_JOYSTICKTYPE_DIGITAL_2;
-        }
-        else if (sargs_equals("joystick", "digital_12")) {
-            joy_type = VIC20_JOYSTICKTYPE_DIGITAL_12;
-        }
+        joy_type = VIC20_JOYSTICKTYPE_DIGITAL;
     }
     vic20_memory_config_t mem_config = VIC20_MEMCONFIG_STANDARD;
     if (sargs_exists("exp")) {
