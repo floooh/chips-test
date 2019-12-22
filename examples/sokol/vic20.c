@@ -64,6 +64,7 @@ vic20_desc_t vic20_desc(vic20_joystick_type_t joy_type, vic20_memory_config_t me
         .pixel_buffer_size = gfx_framebuffer_size(),
         .audio_cb = push_audio,
         .audio_sample_rate = saudio_sample_rate(),
+        .audio_volume = 0.3f,
         .rom_char = dump_vic20_characters_901460_03_bin,
         .rom_char_size = sizeof(dump_vic20_characters_901460_03_bin),
         .rom_basic = dump_vic20_basic_901486_01_bin,
