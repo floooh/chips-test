@@ -95,6 +95,11 @@ void app_init(void) {
             gfx_flash_error();
         }
     }
+    if (sargs_exists("rom")) {
+        if (!fs_load_file(sargs_value("rom"))) {
+            gfx_flash_error();
+        }
+    }
     if (sargs_exists("prg")) {
         if (!fs_load_base64("url.prg", sargs_value("prg"))) {
             gfx_flash_error();
@@ -147,7 +152,12 @@ void app_frame(void) {
             keybuf_put((const char*)fs_ptr());
         }
         else if (fs_ext("bin") || fs_ext("prg") || fs_ext("")) {
-            load_success = vic20_quickload(&vic20, fs_ptr(), fs_size());
+            if (sargs_exists("rom")) {
+                load_success = vic20_insert_rom_cartridge(&vic20, fs_ptr(), fs_size());
+            }
+            else {
+                load_success = vic20_quickload(&vic20, fs_ptr(), fs_size());
+            }
         }
         if (load_success) {
             if (clock_frame_count() > (load_delay_frames + 10)) {
