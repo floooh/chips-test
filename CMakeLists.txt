@@ -21,6 +21,8 @@ if (NOT FIPS_EMSCRIPTEN AND NOT FIPS_ANDROID)
 endif()
 fips_ide_group(examples)
 add_subdirectory(examples)
+fips_ide_group(tools)
+add_subdirectory(tools)
 fips_finish()
 
 
