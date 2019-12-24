@@ -33,14 +33,14 @@
 
 extern "C" {
 
-vic20_desc_t vic20_desc(vic20_joystick_type_t joy_type);
+vic20_desc_t vic20_desc(vic20_joystick_type_t joy_type, vic20_memory_config_t mem_config);
 
 static ui_vic20_t ui_vic20;
 static double exec_time;
 
 /* reboot callback */
 static void boot_cb(vic20_t* sys) {
-    vic20_desc_t desc = vic20_desc(sys->joystick_type);
+    vic20_desc_t desc = vic20_desc(sys->joystick_type, sys->mem_config);
     vic20_init(sys, &desc);
 }
 
