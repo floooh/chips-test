@@ -1,5 +1,5 @@
 #pragma once
-// #version:5#
+// #version:7#
 // machine generated, do not edit!
 unsigned char dump_01_h03t_bin[8192] = {
 0xc3, 0x77, 0x0, 0xff, 0xff, 0xff, 0xff, 0xff, 0x87, 0x5f, 0x16, 0x0, 0x19, 0xc9, 0xff, 0xff, 
@@ -7216,24 +7216,4 @@ unsigned char dump_16_m07b_bin[8192] = {
 0x0, 0x81, 0x0, 0x10, 0x0, 0x0, 0x80, 0x0, 0x10, 0x0, 0x0, 0x0, 0x90, 0x0, 0x0, 0x10, 
 0x1, 0x10, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
 
-};
-typedef struct { const char* name; const uint8_t* ptr; int size; } dump_item;
-#define DUMP_NUM_ITEMS (16)
-dump_item dump_items[DUMP_NUM_ITEMS] = {
-{ "01_h03t_bin", dump_01_h03t_bin, 8192 },
-{ "02_p04t_bin", dump_02_p04t_bin, 4096 },
-{ "03_e08t_bin", dump_03_e08t_bin, 4096 },
-{ "04_h08t_bin", dump_04_h08t_bin, 4096 },
-{ "05_k08t_bin", dump_05_k08t_bin, 4096 },
-{ "06_l08t_bin", dump_06_l08t_bin, 8192 },
-{ "07_n08t_bin", dump_07_n08t_bin, 8192 },
-{ "08_r08t_bin", dump_08_r08t_bin, 8192 },
-{ "09_j01b_bin", dump_09_j01b_bin, 8192 },
-{ "10_l01b_bin", dump_10_l01b_bin, 8192 },
-{ "11_m01b_bin", dump_11_m01b_bin, 8192 },
-{ "12_n01b_bin", dump_12_n01b_bin, 8192 },
-{ "13_1r", dump_13_1r, 8192 },
-{ "14_j07b_bin", dump_14_j07b_bin, 8192 },
-{ "15_l07b_bin", dump_15_l07b_bin, 8192 },
-{ "16_m07b_bin", dump_16_m07b_bin, 8192 },
 };

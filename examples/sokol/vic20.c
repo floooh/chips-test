@@ -1,37 +1,30 @@
 /*
-    c64.c
+    vic20.c
 */
 #include "common.h"
 #define CHIPS_IMPL
 #include "chips/m6502.h"
-#include "chips/m6526.h"
-#include "chips/m6569.h"
-#include "chips/m6581.h"
-#include "chips/kbd.h"
-#include "chips/clk.h"
-#include "chips/mem.h"
-#include "systems/c64.h"
-#include "systems/c1530.h"
 #include "chips/m6522.h"
-#include "systems/c1541.h"
-#include "c64-roms.h"
-#include "c1541-roms.h"
+#include "chips/m6561.h"
+#include "chips/kbd.h"
+#include "chips/mem.h"
+#include "chips/clk.h"
+#include "systems/vic20.h"
+#include "vic20-roms.h"
 
 /* imports from cpc-ui.cc */
 #ifdef CHIPS_USE_UI
 #include "ui.h"
-void c64ui_init(c64_t* c64, c1530_t* c1530, c1541_t* c1541);
-void c64ui_discard(void);
-void c64ui_draw(void);
-void c64ui_exec(c64_t* c64, uint32_t frame_time_us);
+void vic20ui_init(vic20_t* vic20);
+void vic20ui_discard(void);
+void vic20ui_draw(void);
+void vic20ui_exec(vic20_t* vic20, uint32_t frame_time_us);
 static const int ui_extra_height = 16;
 #else
 static const int ui_extra_height = 0;
 #endif
 
-c64_t c64;
-c1530_t c1530;
-c1541_t c1541;
+vic20_t vic20;
 
 /* sokol-app entry, configure application callbacks and window */
 void app_init(void);
@@ -50,9 +43,9 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .frame_cb = app_frame,
         .event_cb = app_input,
         .cleanup_cb = app_cleanup,
-        .width = 2 * c64_std_display_width(),
-        .height = 2 * c64_std_display_height() + ui_extra_height,
-        .window_title = "C64",
+        .width = 3 * vic20_std_display_width(),
+        .height = 2 * vic20_std_display_height() + ui_extra_height,
+        .window_title = "VIC-20",
         .ios_keyboard_resizes_canvas = true
     };
 }
@@ -63,19 +56,21 @@ static void push_audio(const float* samples, int num_samples, void* user_data) {
 }
 
 /* get c64_desc_t struct based on joystick type */
-c64_desc_t c64_desc(c64_joystick_type_t joy_type) {
-    return (c64_desc_t) {
+vic20_desc_t vic20_desc(vic20_joystick_type_t joy_type, vic20_memory_config_t mem_config) {
+    return (vic20_desc_t) {
         .joystick_type = joy_type,
+        .mem_config = mem_config,
         .pixel_buffer = gfx_framebuffer(),
         .pixel_buffer_size = gfx_framebuffer_size(),
         .audio_cb = push_audio,
         .audio_sample_rate = saudio_sample_rate(),
-        .rom_char = dump_c64_char_bin,
-        .rom_char_size = sizeof(dump_c64_char_bin),
-        .rom_basic = dump_c64_basic_bin,
-        .rom_basic_size = sizeof(dump_c64_basic_bin),
-        .rom_kernal = dump_c64_kernalv3_bin,
-        .rom_kernal_size = sizeof(dump_c64_kernalv3_bin)
+        .audio_volume = 0.3f,
+        .rom_char = dump_vic20_characters_901460_03_bin,
+        .rom_char_size = sizeof(dump_vic20_characters_901460_03_bin),
+        .rom_basic = dump_vic20_basic_901486_01_bin,
+        .rom_basic_size = sizeof(dump_vic20_basic_901486_01_bin),
+        .rom_kernal = dump_vic20_kernal_901486_07_bin,
+        .rom_kernal_size = sizeof(dump_vic20_kernal_901486_07_bin)
     };
 }
 
@@ -85,7 +80,9 @@ void app_init(void) {
         #ifdef CHIPS_USE_UI
         .draw_extra_cb = ui_draw,
         #endif
-        .top_offset = ui_extra_height
+        .top_offset = ui_extra_height,
+        .aspect_x = 3,
+        .aspect_y = 2
     });
     keybuf_init(5);
     clock_init();
@@ -98,42 +95,39 @@ void app_init(void) {
             gfx_flash_error();
         }
     }
+    if (sargs_exists("rom")) {
+        if (!fs_load_file(sargs_value("rom"))) {
+            gfx_flash_error();
+        }
+    }
     if (sargs_exists("prg")) {
         if (!fs_load_base64("url.prg", sargs_value("prg"))) {
             gfx_flash_error();
         }
     }
-    c64_joystick_type_t joy_type = C64_JOYSTICKTYPE_NONE;
+    vic20_joystick_type_t joy_type = VIC20_JOYSTICKTYPE_NONE;
     if (sargs_exists("joystick")) {
-        if (sargs_equals("joystick", "digital_1")) {
-            joy_type = C64_JOYSTICKTYPE_DIGITAL_1;
+        joy_type = VIC20_JOYSTICKTYPE_DIGITAL;
+    }
+    vic20_memory_config_t mem_config = VIC20_MEMCONFIG_STANDARD;
+    if (sargs_exists("exp")) {
+        if (sargs_equals("exp", "ram8k")) {
+            mem_config = VIC20_MEMCONFIG_8K;
         }
-        else if (sargs_equals("joystick", "digital_2")) {
-            joy_type = C64_JOYSTICKTYPE_DIGITAL_2;
+        else if (sargs_equals("exp", "ram16k")) {
+            mem_config = VIC20_MEMCONFIG_16K;
         }
-        else if (sargs_equals("joystick", "digital_12")) {
-            joy_type = C64_JOYSTICKTYPE_DIGITAL_12;
+        else if (sargs_equals("exp", "ram24k")) {
+            mem_config = VIC20_MEMCONFIG_24K;
+        }
+        else if (sargs_equals("exp", "ram32k")) {
+            mem_config = VIC20_MEMCONFIG_32K;
         }
     }
-    c64_desc_t desc = c64_desc(joy_type);
-    c64_init(&c64, &desc);
-    /* setup and connect peripherals? */
-    if (sargs_exists("c1530")) {
-        c1530_init(&c1530, &(c1530_desc_t){
-            .cas_port = &c64.cas_port
-        });
-    }
-    else if (sargs_exists("c1541")) {
-        c1541_init(&c1541, &(c1541_desc_t) {
-            .iec_port = &c64.iec_port,
-            .rom_c000_dfff = dump_1541_c000_325302_01_bin,
-            .rom_c000_dfff_size = sizeof(dump_1541_c000_325302_01_bin),
-            .rom_e000_ffff = dump_1541_e000_901229_06aa_bin,
-            .rom_e000_ffff_size = sizeof(dump_1541_e000_901229_06aa_bin)
-        });
-    }
+    vic20_desc_t desc = vic20_desc(joy_type, mem_config);
+    vic20_init(&vic20, &desc);
     #ifdef CHIPS_USE_UI
-    c64ui_init(&c64, &c1530, &c1541);
+    vic20ui_init(&vic20);
     #endif
     if (!delay_input) {
         if (sargs_exists("input")) {
@@ -145,31 +139,11 @@ void app_init(void) {
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
 void app_frame(void) {
     #ifdef CHIPS_USE_UI
-        c64ui_exec(&c64, clock_frame_time());
+        vic20ui_exec(&vic20, clock_frame_time());
     #else
-        uint32_t num_ticks = clk_us_to_ticks(C64_FREQUENCY, clock_frame_time());
-        if (c1530.valid) {
-            for (uint32_t ticks = 0; ticks < num_ticks; ticks++) {
-                c64_tick(&c64);
-                c1530_tick(&c1530);
-            }
-        }
-        else if (c1541.valid) {
-            // FIXME: is it ok to run the 1541 at exactly the same speed
-            // as the PAL C64, even though it's marginally faster?
-            for (uint32_t ticks = 0; ticks < num_ticks; ticks++) {
-                c64_tick(&c64);
-                c1541_tick(&c1541);
-            }
-        }
-        else {
-            for (uint32_t ticks = 0; ticks < num_ticks; ticks++) {
-                c64_tick(&c64);
-            }
-        }
-        kbd_update(&c64.kbd);
+        vic20_exec(&vic20, clock_frame_time());
     #endif
-    gfx_draw(c64_display_width(&c64), c64_display_height(&c64));
+    gfx_draw(vic20_display_width(&vic20), vic20_display_height(&vic20));
     const uint32_t load_delay_frames = 180;
     if (fs_ptr() && clock_frame_count() > load_delay_frames) {
         bool load_success = false;
@@ -177,18 +151,17 @@ void app_frame(void) {
             load_success = true;
             keybuf_put((const char*)fs_ptr());
         }
-        else if (fs_ext("tap")) {
-            load_success = c1530_insert_tape(&c1530, fs_ptr(), fs_size());
-        }
         else if (fs_ext("bin") || fs_ext("prg") || fs_ext("")) {
-            load_success = c64_quickload(&c64, fs_ptr(), fs_size());
+            if (sargs_exists("rom")) {
+                load_success = vic20_insert_rom_cartridge(&vic20, fs_ptr(), fs_size());
+            }
+            else {
+                load_success = vic20_quickload(&vic20, fs_ptr(), fs_size());
+            }
         }
         if (load_success) {
             if (clock_frame_count() > (load_delay_frames + 10)) {
                 gfx_flash_success();
-            }
-            if (fs_ext("tap")) {
-                c1530_start_tape(&c1530);
             }
             if (!sargs_exists("debug")) {
                 if (sargs_exists("input")) {
@@ -210,11 +183,11 @@ void app_frame(void) {
     uint8_t key_code;
     if (0 != (key_code = keybuf_get())) {
         /* FIXME: this is ugly */
-        c64_joystick_type_t joy_type = c64.joystick_type;
-        c64.joystick_type = C64_JOYSTICKTYPE_NONE;
-        c64_key_down(&c64, key_code);
-        c64_key_up(&c64, key_code);
-        c64.joystick_type = joy_type;
+        vic20_joystick_type_t joy_type = vic20.joystick_type;
+        vic20.joystick_type = VIC20_JOYSTICKTYPE_NONE;
+        vic20_key_down(&vic20, key_code);
+        vic20_key_up(&vic20, key_code);
+        vic20.joystick_type = joy_type;
     }
 }
 
@@ -239,8 +212,8 @@ void app_input(const sapp_event* event) {
                 else if (islower(c)) {
                     c = toupper(c);
                 }
-                c64_key_down(&c64, c);
-                c64_key_up(&c64, c);
+                vic20_key_down(&vic20, c);
+                vic20_key_up(&vic20, c);
             }
             break;
         case SAPP_EVENTTYPE_KEY_DOWN:
@@ -266,10 +239,10 @@ void app_input(const sapp_event* event) {
             }
             if (c) {
                 if (event->type == SAPP_EVENTTYPE_KEY_DOWN) {
-                    c64_key_down(&c64, c);
+                    vic20_key_down(&vic20, c);
                 }
                 else {
-                    c64_key_up(&c64, c);
+                    vic20_key_up(&vic20, c);
                 }
             }
             break;
@@ -284,9 +257,9 @@ void app_input(const sapp_event* event) {
 /* application cleanup callback */
 void app_cleanup(void) {
     #ifdef CHIPS_USE_UI
-    c64ui_discard();
+    vic20ui_discard();
     #endif
-    c64_discard(&c64);
+    vic20_discard(&vic20);
     saudio_shutdown();
     gfx_shutdown();
 }

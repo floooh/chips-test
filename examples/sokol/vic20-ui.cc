@@ -1,19 +1,15 @@
 /*
-    UI implementation for c64.c, this must live in a .cc file.
+    UI implementaion for vic20.c
 */
 #include "common.h"
 #include "imgui.h"
 #include "chips/m6502.h"
-#include "chips/m6526.h"
-#include "chips/m6569.h"
-#include "chips/m6581.h"
+#include "chips/m6522.h"
+#include "chips/m6561.h"
 #include "chips/kbd.h"
 #include "chips/mem.h"
 #include "chips/clk.h"
-#include "systems/c64.h"
-#include "systems/c1530.h"
-#include "chips/m6522.h"
-#include "systems/c1541.h"
+#include "systems/vic20.h"
 #define CHIPS_IMPL
 #define UI_DASM_USE_M6502
 #define UI_DBG_USE_M6502
@@ -26,43 +22,36 @@
 #include "ui/ui_dasm.h"
 #include "ui/ui_dbg.h"
 #include "ui/ui_m6502.h"
-#include "ui/ui_m6526.h"
-#include "ui/ui_m6581.h"
-#include "ui/ui_m6569.h"
+#include "ui/ui_m6522.h"
+#include "ui/ui_m6561.h"
 #include "ui/ui_audio.h"
 #include "ui/ui_kbd.h"
-#include "ui/ui_c64.h"
+#include "ui/ui_vic20.h"
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wmissing-field-initializers"
 #endif
 
 extern "C" {
 
-c64_desc_t c64_desc(c64_joystick_type_t joy_type);
+vic20_desc_t vic20_desc(vic20_joystick_type_t joy_type, vic20_memory_config_t mem_config);
 
-static ui_c64_t ui_c64;
+static ui_vic20_t ui_vic20;
 static double exec_time;
 
 /* reboot callback */
-static void boot_cb(c64_t* sys) {
-    c64_desc_t desc = c64_desc(sys->joystick_type);
-    c64_init(sys, &desc);
+static void boot_cb(vic20_t* sys) {
+    vic20_desc_t desc = vic20_desc(sys->joystick_type, sys->mem_config);
+    vic20_init(sys, &desc);
 }
 
-void c64ui_draw(void) {
-    ui_c64_draw(&ui_c64, exec_time);
+void vic20ui_draw(void) {
+    ui_vic20_draw(&ui_vic20, exec_time);
 }
 
-void c64ui_init(c64_t* c64, c1530_t* c1530, c1541_t* c1541) {
-    ui_init(c64ui_draw);
-    ui_c64_desc_t desc = {0};
-    desc.c64 = c64;
-    if (c1530->valid) {
-        desc.c1530 = c1530;
-    }
-    if (c1541->valid) {
-        desc.c1541 = c1541;
-    }
+void vic20ui_init(vic20_t* vic20) {
+    ui_init(vic20ui_draw);
+    ui_vic20_desc_t desc = {0};
+    desc.vic20 = vic20;
     desc.boot_cb = boot_cb;
     desc.create_texture_cb = gfx_create_texture;
     desc.update_texture_cb = gfx_update_texture;
@@ -77,17 +66,17 @@ void c64ui_init(c64_t* c64, c1530_t* c1530, c1541_t* c1541) {
     desc.dbg_keys.step_into_name = "F7";
     desc.dbg_keys.toggle_breakpoint_keycode = SAPP_KEYCODE_F9;
     desc.dbg_keys.toggle_breakpoint_name = "F9";
-    ui_c64_init(&ui_c64, &desc);
+    ui_vic20_init(&ui_vic20, &desc);
 }
 
-void c64ui_discard(void) {
-    ui_c64_discard(&ui_c64);
+void vic20ui_discard(void) {
+    ui_vic20_discard(&ui_vic20);
 }
 
-void c64ui_exec(c64_t* c64, uint32_t frame_time_us) {
+void vic20ui_exec(vic20_t* vic20, uint32_t frame_time_us) {
     uint64_t start = stm_now();
-    ui_c64_exec(&ui_c64, frame_time_us);
-    exec_time = ui_c64.dbg.dbg.stopped ? 0.0 : stm_ms(stm_since(start));
+    ui_vic20_exec(&ui_vic20, frame_time_us);
+    exec_time = ui_vic20.dbg.dbg.stopped ? 0.0 : stm_ms(stm_since(start));
 }
 
 } /* extern "C" */
