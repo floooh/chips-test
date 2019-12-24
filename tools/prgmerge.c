@@ -138,8 +138,16 @@ int main(int argc, const char** argv) {
     }
     inp0.buf = malloc(inp0.len);
     inp1.buf = malloc(inp1.len);
-    fread(inp0.buf, 1, inp0.len, inp0.fp);
-    fread(inp1.buf, 1, inp1.len, inp1.fp);
+    int res0 = (int) fread(inp0.buf, 1, inp0.len, inp0.fp);
+    int res1 = (int) fread(inp1.buf, 1, inp1.len, inp1.fp);
+    if (res0 != inp0.len) {
+        fprintf(stderr, "failed reading content of input file %s\n", inp0.path);
+        return 10;
+    }
+    if (res1 != inp1.len) {
+        fprintf(stderr, "failed reading content of inpue file %s\n", inp1.path);
+        return 10;
+    }
 
     memset(mem, 0xFF, sizeof(mem));
     inp0.range = copy_prg(inp0.buf, inp0.len);
