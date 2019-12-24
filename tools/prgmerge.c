@@ -43,7 +43,7 @@ typedef struct {
     range_t range;
 } file_t;
 
-file_t inp0, inp1, outp;
+file_t inp0, inp1, output;
 uint8_t mem[1<<16];
 
 int file_length(FILE* fp);
@@ -79,7 +79,7 @@ int main(int argc, const char** argv) {
                 inp1.path = ctx.current_opt_arg;
                 break;
             case 'o':
-                outp.path = ctx.current_opt_arg;
+                output.path = ctx.current_opt_arg;
                 break;
             default:
                 break;
@@ -93,14 +93,14 @@ int main(int argc, const char** argv) {
         fprintf(stderr, "second input .prg file path expected (--second, -s)\n");
         return 10;
     }
-    if (!outp.path) {
+    if (!output.path) {
         fprintf(stderr, "output file path expected (--output, -o)\n");
         return 10;
     }
 
     inp0.fp = fopen(inp0.path, "rb");
     inp1.fp = fopen(inp1.path, "rb");
-    outp.fp = fopen(outp.path, "wb");
+    output.fp = fopen(output.path, "wb");
     if (!inp0.fp) {
         fprintf(stderr, "failed to open input file '%s'\n", inp0.path);
         return 10;
@@ -109,8 +109,8 @@ int main(int argc, const char** argv) {
         fprintf(stderr, "failed to open input file '%s'\n", inp1.path);
         return 10;
     }
-    if (!outp.fp) {
-        fprintf(stderr, "failed to open output file '%s'\n", outp.path);
+    if (!output.fp) {
+        fprintf(stderr, "failed to open output file '%s'\n", output.path);
         return 10;
     }
 
@@ -144,17 +144,17 @@ int main(int argc, const char** argv) {
     memset(mem, 0xFF, sizeof(mem));
     inp0.range = copy_prg(inp0.buf, inp0.len);
     inp1.range = copy_prg(inp1.buf, inp1.len);
-    outp.range = (range_t) {
+    output.range = (range_t) {
         .start = inp0.range.start < inp1.range.start ? inp0.range.start : inp1.range.start,
         .end   = inp0.range.end   > inp1.range.end   ? inp0.range.end   : inp1.range.end
     };
-    assert(outp.range.start < outp.range.end);
+    assert(output.range.start < output.range.end);
 
-    uint8_t lo = outp.range.start & 0xFF;
-    uint8_t hi = (outp.range.start>>8) & 0xFF;
-    fwrite(&lo, 1, 1, outp.fp);
-    fwrite(&hi, 1, 1, outp.fp);
-    fwrite(&mem[outp.range.start], outp.range.end - outp.range.start, 1, outp.fp);
+    uint8_t lo = output.range.start & 0xFF;
+    uint8_t hi = (output.range.start>>8) & 0xFF;
+    fwrite(&lo, 1, 1, output.fp);
+    fwrite(&hi, 1, 1, output.fp);
+    fwrite(&mem[output.range.start], output.range.end - output.range.start, 1, output.fp);
 
     return 0;
 }

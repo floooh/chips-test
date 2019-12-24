@@ -81,8 +81,8 @@ void app_init(void) {
         .draw_extra_cb = ui_draw,
         #endif
         .top_offset = ui_extra_height,
-        .aspect_x = 3.0f,
-        .aspect_y = 2.0f
+        .aspect_x = 3,
+        .aspect_y = 2
     });
     keybuf_init(5);
     clock_init();
