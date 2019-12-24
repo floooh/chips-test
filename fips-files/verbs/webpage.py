@@ -164,6 +164,7 @@ items = [
     { 'type':'game', 'title':"Sir Fred (ZX48K)",  'system':'zx', 'url':'zx.html?type=zx48k&file=zx/sir_fred.z80&joystick=kempston', 'img':'zx/sir_fred.jpg', 'note':'select Kempston joystick!' },
     { 'type':'game', 'title':"Chucky Egg (Atom)",  'system':'atom', 'url':'atom.html?file=atom/cchuck.tap&joystick=mmc&input=%2ALOAD%0A', 'img':'atom/cchuck.jpg', 'note':'press SPACE to start!' },
     { 'type':'game', 'title':"Jet Set Willy (Atom)", 'system':'atom', 'url':'atom.html?file=atom/jsw.tap&joystick=mmc&input=%2ALOAD%0A', 'img':'atom/jsw.jpg', 'note':'select JOYMMC!'},
+    { 'type':'game', 'title':"Alien Blitz (VIC-20)", 'system':'vic20', 'url':'vic20.html?file=vic20/alienblitz_vic20.prg&joystick=true', 'img':'vic20/alienblitz_vic20.jpg', 'note':''}, 
     { 'type':'game', 'title':"Mazogs (Z1013)",     'system':'z1013', 'url':'z1013.html?file=z1013/mazog_deutsch.z80', 'img':'z1013/mazogs_z1013.jpg', 'note':'' },
     { 'type':'game', 'title':"Galactica (Z1013)",  'system':'z1013', 'url':'z1013.html?file=z1013/galactica.z80', 'img':'z1013/galactica_z1013.jpg', 'note':'' },
     { 'type':'game', 'title':"Demolation (Z1013)", 'system':'z1013', 'url':'z1013.html?file=z1013/demolation.z80', 'img':'z1013/demolation_z1013.jpg', 'note':'' },

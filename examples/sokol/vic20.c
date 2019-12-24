@@ -163,6 +163,17 @@ void app_frame(void) {
             if (clock_frame_count() > (load_delay_frames + 10)) {
                 gfx_flash_success();
             }
+            if (!sargs_exists("debug")) {
+                if (sargs_exists("input")) {
+                    keybuf_put(sargs_value("input"));
+                }
+                else if (fs_ext("tap")) {
+                    keybuf_put("LOAD\n");
+                }
+                else if (fs_ext("prg")) {
+                    keybuf_put("RUN\n");
+                }
+            }
         }
         else {
             gfx_flash_error();
