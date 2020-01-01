@@ -27,6 +27,7 @@
 #include "ui/ui_m6561.h"
 #include "ui/ui_audio.h"
 #include "ui/ui_kbd.h"
+#include "ui/ui_c1530.h"
 #include "ui/ui_vic20.h"
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wmissing-field-initializers"

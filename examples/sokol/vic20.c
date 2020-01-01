@@ -125,6 +125,9 @@ void app_init(void) {
         else if (sargs_equals("exp", "ram32k")) {
             mem_config = VIC20_MEMCONFIG_32K;
         }
+        else if (sargs_equals("exp", "maxram")) {
+            mem_config = VIC20_MEMCONFIG_MAX;
+        }
     }
     vic20_desc_t desc = vic20_desc(joy_type, mem_config);
     vic20_init(&vic20, &desc);
