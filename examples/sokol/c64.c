@@ -188,7 +188,7 @@ void app_frame(void) {
                 gfx_flash_success();
             }
             if (fs_ext("tap")) {
-                c1530_start_tape(&c1530);
+                c1530_play(&c1530);
             }
             if (!sargs_exists("debug")) {
                 if (sargs_exists("input")) {
