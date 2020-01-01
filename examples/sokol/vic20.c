@@ -161,7 +161,7 @@ void app_frame(void) {
                 vic20_tick(&vic20);
             }
         }
-        kbd_update(vic20.kbd);
+        kbd_update(&vic20.kbd);
     #endif
     gfx_draw(vic20_display_width(&vic20), vic20_display_height(&vic20));
     const uint32_t load_delay_frames = 180;
