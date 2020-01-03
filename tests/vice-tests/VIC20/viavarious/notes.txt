@@ -1,0 +1,33 @@
+via1:
+    1482: dotest2 (set VIA-1 to defaults)
+
+    148B: actual test called:
+
+    1493: .setdefaults
+
+    2000: measured data
+    3000: reference data
+            
+            for X=0 to 256:
+                load VIA register
+                store in $1000 + X
+
+    test registers:
+            $9114       fail
+            $9115       fail
+            $9116       pass
+            $9117       pass
+            $9118       pass
+            $9119       pass
+
+    next two tests are different:
+
+        fail:
+            #$00 => $911B
+            for X=0 to 256:
+                $9118 => $1000 + X
+        pass:
+            #$00 => $911B
+            for X=0 to 256:
+                $9119 => $1000 + X
+

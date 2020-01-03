@@ -10,6 +10,7 @@
 #include "chips/mem.h"
 #include "chips/clk.h"
 #include "systems/vic20.h"
+#include "systems/c1530.h"
 #define CHIPS_IMPL
 #define UI_DASM_USE_M6502
 #define UI_DBG_USE_M6502
@@ -26,6 +27,7 @@
 #include "ui/ui_m6561.h"
 #include "ui/ui_audio.h"
 #include "ui/ui_kbd.h"
+#include "ui/ui_c1530.h"
 #include "ui/ui_vic20.h"
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wmissing-field-initializers"
@@ -48,10 +50,13 @@ void vic20ui_draw(void) {
     ui_vic20_draw(&ui_vic20, exec_time);
 }
 
-void vic20ui_init(vic20_t* vic20) {
+void vic20ui_init(vic20_t* vic20, c1530_t* c1530) {
     ui_init(vic20ui_draw);
     ui_vic20_desc_t desc = {0};
     desc.vic20 = vic20;
+    if (c1530->valid) {
+        desc.c1530 = c1530;
+    }
     desc.boot_cb = boot_cb;
     desc.create_texture_cb = gfx_create_texture;
     desc.update_texture_cb = gfx_update_texture;
