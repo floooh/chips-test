@@ -25,6 +25,9 @@
 #include "chips/kbd.h"
 #include "chips/mem.h"
 #include "chips/clk.h"
+#include "systems/c1530.h"
+#include "chips/m6522.h"
+#include "systems/c1541.h"
 #include "systems/c64.h"
 #include "c64-roms.h"
 
