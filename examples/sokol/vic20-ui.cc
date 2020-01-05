@@ -9,8 +9,8 @@
 #include "chips/kbd.h"
 #include "chips/mem.h"
 #include "chips/clk.h"
-#include "systems/vic20.h"
 #include "systems/c1530.h"
+#include "systems/vic20.h"
 #define CHIPS_IMPL
 #define UI_DASM_USE_M6502
 #define UI_DBG_USE_M6502
@@ -35,14 +35,14 @@
 
 extern "C" {
 
-vic20_desc_t vic20_desc(vic20_joystick_type_t joy_type, vic20_memory_config_t mem_config);
+vic20_desc_t vic20_desc(vic20_joystick_type_t joy_type, vic20_memory_config_t mem_config, bool c1530_enabled);
 
 static ui_vic20_t ui_vic20;
 static double exec_time;
 
 /* reboot callback */
 static void boot_cb(vic20_t* sys) {
-    vic20_desc_t desc = vic20_desc(sys->joystick_type, sys->mem_config);
+    vic20_desc_t desc = vic20_desc(sys->joystick_type, sys->mem_config, sys->c1530.valid);
     vic20_init(sys, &desc);
 }
 
@@ -50,13 +50,10 @@ void vic20ui_draw(void) {
     ui_vic20_draw(&ui_vic20, exec_time);
 }
 
-void vic20ui_init(vic20_t* vic20, c1530_t* c1530) {
+void vic20ui_init(vic20_t* vic20) {
     ui_init(vic20ui_draw);
     ui_vic20_desc_t desc = {0};
     desc.vic20 = vic20;
-    if (c1530->valid) {
-        desc.c1530 = c1530;
-    }
     desc.boot_cb = boot_cb;
     desc.create_texture_cb = gfx_create_texture;
     desc.update_texture_cb = gfx_update_texture;
