@@ -69,6 +69,8 @@ void c64ui_init(c64_t* c64, c1530_t* c1530, c1541_t* c1541) {
     desc.dbg_keys.step_over_name = "F6";
     desc.dbg_keys.step_into_keycode = SAPP_KEYCODE_F7;
     desc.dbg_keys.step_into_name = "F7";
+    desc.dbg_keys.step_tick_keycode = SAPP_KEYCODE_F8;
+    desc.dbg_keys.step_tick_name = "F8";
     desc.dbg_keys.toggle_breakpoint_keycode = SAPP_KEYCODE_F9;
     desc.dbg_keys.toggle_breakpoint_name = "F9";
     ui_c64_init(&ui_c64, &desc);

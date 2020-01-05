@@ -216,8 +216,10 @@ int main() {
     load_test("_start");
     bool done = false;
     uint64_t start_time = stm_now();
+    uint64_t ticks = 0;
     while (!done) {
         tick();
+        ticks++;
         if (cpu_pins & M6502_SYNC) {
             int trap_id = test_traps();
             if (0 != trap_id) {
@@ -228,7 +230,7 @@ int main() {
         }
     }
     double dur = stm_sec(stm_since(start_time));
-    printf("\n%"PRIu64" cycles in %.3fsecs (%.2f MHz)\n", cpu.ticks, dur, (cpu.ticks/dur)/1000000.0);
+    printf("\n%"PRIu64" cycles in %.3fsecs (%.2f MHz)\n", ticks, dur, (ticks/dur)/1000000.0);
     putchar('\n');
     return 0;
 }
