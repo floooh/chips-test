@@ -10,10 +10,10 @@
 #include "chips/kbd.h"
 #include "chips/mem.h"
 #include "chips/clk.h"
-#include "systems/c64.h"
 #include "systems/c1530.h"
 #include "chips/m6522.h"
 #include "systems/c1541.h"
+#include "systems/c64.h"
 #define CHIPS_IMPL
 #define UI_DASM_USE_M6502
 #define UI_DBG_USE_M6502
@@ -38,14 +38,14 @@
 
 extern "C" {
 
-c64_desc_t c64_desc(c64_joystick_type_t joy_type);
+c64_desc_t c64_desc(c64_joystick_type_t joy_type, bool c1530_enabled, bool c1541_enabled);
 
 static ui_c64_t ui_c64;
 static double exec_time;
 
 /* reboot callback */
 static void boot_cb(c64_t* sys) {
-    c64_desc_t desc = c64_desc(sys->joystick_type);
+    c64_desc_t desc = c64_desc(sys->joystick_type, sys->c1530.valid, sys->c1541.valid);
     c64_init(sys, &desc);
 }
 
@@ -57,12 +57,6 @@ void c64ui_init(c64_t* c64, c1530_t* c1530, c1541_t* c1541) {
     ui_init(c64ui_draw);
     ui_c64_desc_t desc = {0};
     desc.c64 = c64;
-    if (c1530->valid) {
-        desc.c1530 = c1530;
-    }
-    if (c1541->valid) {
-        desc.c1541 = c1541;
-    }
     desc.boot_cb = boot_cb;
     desc.create_texture_cb = gfx_create_texture;
     desc.update_texture_cb = gfx_update_texture;
@@ -75,6 +69,8 @@ void c64ui_init(c64_t* c64, c1530_t* c1530, c1541_t* c1541) {
     desc.dbg_keys.step_over_name = "F6";
     desc.dbg_keys.step_into_keycode = SAPP_KEYCODE_F7;
     desc.dbg_keys.step_into_name = "F7";
+    desc.dbg_keys.step_tick_keycode = SAPP_KEYCODE_F8;
+    desc.dbg_keys.step_tick_name = "F8";
     desc.dbg_keys.toggle_breakpoint_keycode = SAPP_KEYCODE_F9;
     desc.dbg_keys.toggle_breakpoint_name = "F9";
     ui_c64_init(&ui_c64, &desc);

@@ -10,17 +10,17 @@
 #include "chips/kbd.h"
 #include "chips/clk.h"
 #include "chips/mem.h"
-#include "systems/c64.h"
 #include "systems/c1530.h"
 #include "chips/m6522.h"
 #include "systems/c1541.h"
+#include "systems/c64.h"
 #include "c64-roms.h"
 #include "c1541-roms.h"
 
 /* imports from cpc-ui.cc */
 #ifdef CHIPS_USE_UI
 #include "ui.h"
-void c64ui_init(c64_t* c64, c1530_t* c1530, c1541_t* c1541);
+void c64ui_init(c64_t* c64);
 void c64ui_discard(void);
 void c64ui_draw(void);
 void c64ui_exec(c64_t* c64, uint32_t frame_time_us);
@@ -30,8 +30,6 @@ static const int ui_extra_height = 0;
 #endif
 
 c64_t c64;
-c1530_t c1530;
-c1541_t c1541;
 
 /* sokol-app entry, configure application callbacks and window */
 void app_init(void);
@@ -63,8 +61,10 @@ static void push_audio(const float* samples, int num_samples, void* user_data) {
 }
 
 /* get c64_desc_t struct based on joystick type */
-c64_desc_t c64_desc(c64_joystick_type_t joy_type) {
+c64_desc_t c64_desc(c64_joystick_type_t joy_type, bool c1530_enabled, bool c1541_enabled) {
     return (c64_desc_t) {
+        .c1530_enabled = c1530_enabled,
+        .c1541_enabled = c1541_enabled,
         .joystick_type = joy_type,
         .pixel_buffer = gfx_framebuffer(),
         .pixel_buffer_size = gfx_framebuffer_size(),
@@ -75,7 +75,11 @@ c64_desc_t c64_desc(c64_joystick_type_t joy_type) {
         .rom_basic = dump_c64_basic_bin,
         .rom_basic_size = sizeof(dump_c64_basic_bin),
         .rom_kernal = dump_c64_kernalv3_bin,
-        .rom_kernal_size = sizeof(dump_c64_kernalv3_bin)
+        .rom_kernal_size = sizeof(dump_c64_kernalv3_bin),
+        .c1541_rom_c000_dfff = dump_1541_c000_325302_01_bin,
+        .c1541_rom_c000_dfff_size = sizeof(dump_1541_c000_325302_01_bin),
+        .c1541_rom_e000_ffff = dump_1541_e000_901229_06aa_bin,
+        .c1541_rom_e000_ffff_size = sizeof(dump_1541_e000_901229_06aa_bin)
     };
 }
 
@@ -115,25 +119,12 @@ void app_init(void) {
             joy_type = C64_JOYSTICKTYPE_DIGITAL_12;
         }
     }
-    c64_desc_t desc = c64_desc(joy_type);
+    bool c1530_enabled = sargs_exists("c1530");
+    bool c1541_enabled = sargs_exists("c1541");
+    c64_desc_t desc = c64_desc(joy_type, c1530_enabled, c1541_enabled);
     c64_init(&c64, &desc);
-    /* setup and connect peripherals? */
-    if (sargs_exists("c1530")) {
-        c1530_init(&c1530, &(c1530_desc_t){
-            .cas_port = &c64.cas_port
-        });
-    }
-    else if (sargs_exists("c1541")) {
-        c1541_init(&c1541, &(c1541_desc_t) {
-            .iec_port = &c64.iec_port,
-            .rom_c000_dfff = dump_1541_c000_325302_01_bin,
-            .rom_c000_dfff_size = sizeof(dump_1541_c000_325302_01_bin),
-            .rom_e000_ffff = dump_1541_e000_901229_06aa_bin,
-            .rom_e000_ffff_size = sizeof(dump_1541_e000_901229_06aa_bin)
-        });
-    }
     #ifdef CHIPS_USE_UI
-    c64ui_init(&c64, &c1530, &c1541);
+    c64ui_init(&c64);
     #endif
     if (!delay_input) {
         if (sargs_exists("input")) {
@@ -147,27 +138,7 @@ void app_frame(void) {
     #ifdef CHIPS_USE_UI
         c64ui_exec(&c64, clock_frame_time());
     #else
-        uint32_t num_ticks = clk_us_to_ticks(C64_FREQUENCY, clock_frame_time());
-        if (c1530.valid) {
-            for (uint32_t ticks = 0; ticks < num_ticks; ticks++) {
-                c64_tick(&c64);
-                c1530_tick(&c1530);
-            }
-        }
-        else if (c1541.valid) {
-            // FIXME: is it ok to run the 1541 at exactly the same speed
-            // as the PAL C64, even though it's marginally faster?
-            for (uint32_t ticks = 0; ticks < num_ticks; ticks++) {
-                c64_tick(&c64);
-                c1541_tick(&c1541);
-            }
-        }
-        else {
-            for (uint32_t ticks = 0; ticks < num_ticks; ticks++) {
-                c64_tick(&c64);
-            }
-        }
-        kbd_update(&c64.kbd);
+        c64_exec(&c64, clock_frame_time());
     #endif
     gfx_draw(c64_display_width(&c64), c64_display_height(&c64));
     const uint32_t load_delay_frames = 180;
@@ -178,7 +149,7 @@ void app_frame(void) {
             keybuf_put((const char*)fs_ptr());
         }
         else if (fs_ext("tap")) {
-            load_success = c1530_insert_tape(&c1530, fs_ptr(), fs_size());
+            load_success = c64_insert_tape(&c64, fs_ptr(), fs_size());
         }
         else if (fs_ext("bin") || fs_ext("prg") || fs_ext("")) {
             load_success = c64_quickload(&c64, fs_ptr(), fs_size());
@@ -188,7 +159,7 @@ void app_frame(void) {
                 gfx_flash_success();
             }
             if (fs_ext("tap")) {
-                c1530_play(&c1530);
+                c64_tape_play(&c64);
             }
             if (!sargs_exists("debug")) {
                 if (sargs_exists("input")) {

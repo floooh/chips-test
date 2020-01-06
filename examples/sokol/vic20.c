@@ -9,14 +9,14 @@
 #include "chips/kbd.h"
 #include "chips/mem.h"
 #include "chips/clk.h"
-#include "systems/vic20.h"
 #include "systems/c1530.h"
+#include "systems/vic20.h"
 #include "vic20-roms.h"
 
 /* imports from cpc-ui.cc */
 #ifdef CHIPS_USE_UI
 #include "ui.h"
-void vic20ui_init(vic20_t* vic20, c1530_t* c1530);
+void vic20ui_init(vic20_t* vic20);
 void vic20ui_discard(void);
 void vic20ui_draw(void);
 void vic20ui_exec(vic20_t* vic20, uint32_t frame_time_us);
@@ -26,7 +26,6 @@ static const int ui_extra_height = 0;
 #endif
 
 vic20_t vic20;
-c1530_t c1530;
 
 /* sokol-app entry, configure application callbacks and window */
 void app_init(void);
@@ -58,8 +57,9 @@ static void push_audio(const float* samples, int num_samples, void* user_data) {
 }
 
 /* get c64_desc_t struct based on joystick type */
-vic20_desc_t vic20_desc(vic20_joystick_type_t joy_type, vic20_memory_config_t mem_config) {
+vic20_desc_t vic20_desc(vic20_joystick_type_t joy_type, vic20_memory_config_t mem_config, bool c1530_enabled) {
     return (vic20_desc_t) {
+        .c1530_enabled = c1530_enabled,
         .joystick_type = joy_type,
         .mem_config = mem_config,
         .pixel_buffer = gfx_framebuffer(),
@@ -129,16 +129,11 @@ void app_init(void) {
             mem_config = VIC20_MEMCONFIG_MAX;
         }
     }
-    vic20_desc_t desc = vic20_desc(joy_type, mem_config);
+    bool c1530_enabled = sargs_exists("c1530");
+    vic20_desc_t desc = vic20_desc(joy_type, mem_config, c1530_enabled);
     vic20_init(&vic20, &desc);
-    /* setup and connect peripherals? */
-    if (sargs_exists("c1530")) {
-        c1530_init(&c1530, &(c1530_desc_t){
-            .cas_port = &vic20.cas_port
-        });
-    }
     #ifdef CHIPS_USE_UI
-    vic20ui_init(&vic20, &c1530);
+    vic20ui_init(&vic20);
     #endif
     if (!delay_input) {
         if (sargs_exists("input")) {
@@ -152,19 +147,7 @@ void app_frame(void) {
     #ifdef CHIPS_USE_UI
         vic20ui_exec(&vic20, clock_frame_time());
     #else
-        uint32_t num_ticks = clk_us_to_ticks(VIC20_FREQUENCY, clock_frame_time());
-        if (c1530.valid) {
-            for (uint32_t ticks = 0; ticks < num_ticks; ticks++) {
-                vic20_tick(&vic20);
-                c1530_tick(&c1530);
-            }
-        }
-        else {
-            for (uint32_t ticks = 0; ticks < num_ticks; ticks++) {
-                vic20_tick(&vic20);
-            }
-        }
-        kbd_update(&vic20.kbd);
+        vic20_exec(&vic20, clock_frame_time());
     #endif
     gfx_draw(vic20_display_width(&vic20), vic20_display_height(&vic20));
     const uint32_t load_delay_frames = 180;
@@ -175,7 +158,7 @@ void app_frame(void) {
             keybuf_put((const char*)fs_ptr());
         }
         else if (fs_ext("tap")) {
-            load_success = c1530_insert_tape(&c1530, fs_ptr(), fs_size());
+            load_success = vic20_insert_tape(&vic20, fs_ptr(), fs_size());
         }
         else if (fs_ext("bin") || fs_ext("prg") || fs_ext("")) {
             if (sargs_exists("rom")) {
@@ -190,7 +173,7 @@ void app_frame(void) {
                 gfx_flash_success();
             }
             if (fs_ext("tap")) {
-                c1530_play(&c1530);
+                vic20_tape_play(&vic20);
             }
             if (!sargs_exists("debug")) {
                 if (sargs_exists("input")) {
