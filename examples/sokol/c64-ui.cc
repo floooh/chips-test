@@ -53,7 +53,7 @@ void c64ui_draw(void) {
     ui_c64_draw(&ui_c64, exec_time);
 }
 
-void c64ui_init(c64_t* c64, c1530_t* c1530, c1541_t* c1541) {
+void c64ui_init(c64_t* c64) {
     ui_init(c64ui_draw);
     ui_c64_desc_t desc = {0};
     desc.c64 = c64;
