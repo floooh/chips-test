@@ -1,6 +1,8 @@
 ---
+options:
+    prefix: dump_
 files:
-  - boulderdash_cpc.dsk
-  - dtc_cpc.dsk
+    - boulderdash_cpc.dsk
+    - dtc_cpc.dsk
 
 

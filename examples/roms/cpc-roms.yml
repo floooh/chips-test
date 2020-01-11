@@ -1,4 +1,6 @@
 ---
+options:
+    prefix: dump_
 files:
   - cpc464_os.bin
   - cpc464_basic.bin

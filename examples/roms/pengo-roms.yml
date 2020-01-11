@@ -1,5 +1,7 @@
 ---
-src_dir: pengo
+options:
+    src_dir: pengo
+    prefix: dump_
 files:
   - ep1640.92
   - ep1695.105

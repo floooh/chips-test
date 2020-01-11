@@ -1,4 +1,6 @@
 ---
+options:
+    prefix: dump_
 files:
   - caos22.852
   - caos31.853

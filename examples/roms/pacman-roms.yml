@@ -1,5 +1,7 @@
 ---
-src_dir: pacman
+options:
+    src_dir: pacman
+    prefix: dump_
 files:
   - 82s123.7f
   - 82s126.1m

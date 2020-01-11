@@ -1,4 +1,6 @@
 ---
+options:
+    prefix: dump_
 files:
     # KC87 ROMs
     - kc87_os_2.bin

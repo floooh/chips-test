@@ -1,5 +1,5 @@
 #pragma once
-// #version:7#
+// #version:5#
 // machine generated, do not edit!
 unsigned char dump__start[3438] = {
 0x1, 0x8, 0x4c, 0x16, 0x8, 0x0, 0x97, 0x32, 0x2c, 0x30, 0x3a, 0x9e, 0x32, 0x30, 0x37, 0x30, 
@@ -16634,9 +16634,9 @@ unsigned char dump_tyan[616] = {
 0xd2, 0xff, 0xe8, 0xd0, 0xf5, 0x38, 0x8a, 0x6d, 0x4a, 0xa, 0x8d, 0x65, 0xa, 0xa9, 0x0, 0x6d, 
 0x4b, 0xa, 0x8d, 0x66, 0xa, 0x4c, 0x64, 0xa, 
 };
-typedef struct { const char* name; const uint8_t* ptr; int size; } dump_item;
+typedef struct { const char* name; const uint8_t* ptr; int size; } dump_item_t;
 #define DUMP_NUM_ITEMS (265)
-dump_item dump_items[DUMP_NUM_ITEMS] = {
+dump_item_t dump_items[DUMP_NUM_ITEMS] = {
 { "_start", dump__start, 3438 },
 { "adca", dump_adca, 842 },
 { "adcax", dump_adcax, 865 },

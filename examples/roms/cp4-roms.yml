@@ -1,4 +1,6 @@
 ---
+options:
+    prefix: dump_
 files:
     - cp4_basic.318006_01.bin
     - cp4_kernal.318004_05.bin

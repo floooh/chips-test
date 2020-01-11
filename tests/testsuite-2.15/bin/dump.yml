@@ -1,5 +1,7 @@
 ---
-dump_items: true
+options:
+    prefix: dump_
+    list_items: true
 files:
     - _start
     - adca

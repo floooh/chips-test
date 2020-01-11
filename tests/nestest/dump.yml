@@ -1,3 +1,5 @@
 ---
+options:
+    prefix: dump_
 files:
     - nestest.nes

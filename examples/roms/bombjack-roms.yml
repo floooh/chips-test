@@ -1,5 +1,7 @@
 ---
-src_dir: bombjack
+options:
+    src_dir: bombjack
+    prefix: dump_
 files:
   - 01_h03t.bin
   - 02_p04t.bin
