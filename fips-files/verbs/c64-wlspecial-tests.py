@@ -2,22 +2,47 @@ import os
 
 from mod import log, util, project, config
 
-TestDir = '/tests/vice-tests/VIC20/'
+TestDir = '/tests/testsuite-2.15/bin/'
 
 Tests = [
-    'viavarious/via1.prg',
-    'viavarious/via2.prg',
-    'viavarious/via3.prg',
-    'viavarious/via3a.prg',
-    'viavarious/via4.prg',
-    'viavarious/via4a.prg',
-    'viavarious/via5.prg',
-    'viavarious/via5a.prg',
-    'viavarious/via9.prg',
-    'viavarious/via10.prg',
-    'viavarious/via11.prg',
-    'viavarious/via12.prg',
-    'viavarious/via13.prg',
+    'branchwrap',
+    'cia1pb6',
+    'cia1pb7',
+    'cia1tab',
+    'cia1tb123',
+    'cia2pb6',
+    'cia2pb7',
+    'cia2tb123',
+    'cntdef',
+    'cnto2',
+    'cpuport',
+    'cputiming',
+    'flipos',
+    'icr01',
+    'imr',
+    'irq',
+    'loadth',
+    'mmu',
+    'mmufetch',
+    'nmi',
+    'oneshot',
+    'trap1',
+    'trap2',
+    'trap3',
+    'trap4',
+    'trap5',
+    'trap6',
+    'trap7',
+    'trap8',
+    'trap9',
+    'trap10',
+    'trap11',
+    'trap12',
+    'trap13',
+    'trap14',
+    'trap15',
+    'trap16',
+    'trap17',
 ]
 
 #-------------------------------------------------------------------------------
@@ -38,13 +63,13 @@ def run(fips_dir, proj_dir, args) :
         if match_test(test, args):
             path = proj_dir + TestDir + test
             print("> running test '{}':".format(test))
-            project.run(fips_dir, proj_dir, cfg, 'vic20-ui', ['exp=ram8k', 'file={}'.format(path)], None)
+            project.run(fips_dir, proj_dir, cfg, 'c64-ui', ['file={}'.format(path), 'input=RUN\r'], None)
 
 #-------------------------------------------------------------------------------
 def help() :
     log.info(log.YELLOW +
-        'fips vic20-via-tests\n' +
-        'fips vic20-via-tests via1 via2 ...\n' +
+        'fips c64-wlspecial-tests\n' +
+        'fips c64-wlspecial-tests irq imr ...\n' +
         log.DEF +
-        '    run all or selected VIC-20 VIA tests from the VICE test bench')
+        '    run all or selected C64 tests')
 
