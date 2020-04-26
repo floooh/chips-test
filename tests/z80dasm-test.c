@@ -2036,9 +2036,9 @@ UTEST(z80dasm, JP_JR) {
     TOP("JP 0214H");
     TOP("JR 0218H");
     TOP("JR 0212H");
-    TOP("JP IX");
-    TOP("JP HL");
-    TOP("JP IY");
+    TOP("JP (IX)");
+    TOP("JP (HL)");
+    TOP("JP (IY)");
     TOP("JR 0223H");
     TOP("NOP");
     TOP("NOP");
