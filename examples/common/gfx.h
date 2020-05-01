@@ -45,22 +45,19 @@ void gfx_flash_error(void);
 #include "sokol_gfx.h"
 #include "sokol_app.h"
 #include "sokol_time.h"
+#include "sokol_glue.h"
 #include "shaders.glsl.h"
 
 #define _GFX_DEF(v,def) (v?v:def)
 
-static const sg_pass_action gfx_upscale_pass_action = {
-    .colors[0] = { .action = SG_ACTION_DONTCARE }
-};
-static sg_pass_action gfx_draw_pass_action = {
-    .colors[0] = { .action = SG_ACTION_CLEAR, .val = { 0.05f, 0.05f, 0.05f, 1.0f } }
-};
-typedef struct {
+static struct {
     sg_pipeline upscale_pip;
     sg_bindings upscale_bind;
     sg_pass upscale_pass;
     sg_pipeline display_pip;
     sg_bindings display_bind;
+    sg_pass_action upscale_pass_action;
+    sg_pass_action draw_pass_action;
     int flash_success_count;
     int flash_error_count;
     int top_offset;
@@ -71,8 +68,10 @@ typedef struct {
     bool rot90;
     uint32_t rgba8_buffer[GFX_MAX_FB_WIDTH * GFX_MAX_FB_HEIGHT];
     void (*draw_extra_cb)(void);
-} gfx_state;
-static gfx_state gfx;
+} gfx = {
+    .upscale_pass_action =  { .colors[0] = { .action = SG_ACTION_DONTCARE } },
+    .draw_pass_action = { .colors[0] = { .action = SG_ACTION_CLEAR, .val = { 0.05f, 0.05f, 0.05f, 1.0f } } }
+};
 
 void gfx_flash_success(void) {
     gfx.flash_success_count = 20;
@@ -139,13 +138,7 @@ void gfx_init(const gfx_desc_t* desc) {
         .shader_pool_size = 4,
         .pipeline_pool_size = 4,
         .context_pool_size = 2,
-        .mtl_device = sapp_metal_get_device(),
-        .mtl_renderpass_descriptor_cb = sapp_metal_get_renderpass_descriptor,
-        .mtl_drawable_cb = sapp_metal_get_drawable,
-        .d3d11_device = sapp_d3d11_get_device(),
-        .d3d11_device_context = sapp_d3d11_get_device_context(),
-        .d3d11_render_target_view_cb = sapp_d3d11_get_render_target_view,
-        .d3d11_depth_stencil_view_cb = sapp_d3d11_get_depth_stencil_view
+        .context = sapp_sgcontext()
     });
 
     /* quad vertex buffers with and without flipped UVs */
@@ -250,7 +243,7 @@ void gfx_draw(int width, int height) {
     });
 
     /* upscale the original framebuffer 2x with nearest filtering */
-    sg_begin_pass(gfx.upscale_pass, &gfx_upscale_pass_action);
+    sg_begin_pass(gfx.upscale_pass, &gfx.upscale_pass_action);
     sg_apply_pipeline(gfx.upscale_pip);
     sg_apply_bindings(&gfx.upscale_bind);
     sg_draw(0, 4, 1);
@@ -259,21 +252,21 @@ void gfx_draw(int width, int height) {
     /* tint the clear color red or green if flash feedback is requested */
     if (gfx.flash_error_count > 0) {
         gfx.flash_error_count--;
-        gfx_draw_pass_action.colors[0].val[0] = 0.7f;
+        gfx.draw_pass_action.colors[0].val[0] = 0.7f;
     }
     else if (gfx.flash_success_count > 0) {
         gfx.flash_success_count--;
-        gfx_draw_pass_action.colors[0].val[1] = 0.7f;
+        gfx.draw_pass_action.colors[0].val[1] = 0.7f;
     }
     else {
-        gfx_draw_pass_action.colors[0].val[0] = 0.05f;
-        gfx_draw_pass_action.colors[0].val[1] = 0.05f;
+        gfx.draw_pass_action.colors[0].val[0] = 0.05f;
+        gfx.draw_pass_action.colors[0].val[1] = 0.05f;
     }
 
     /* draw the final pass with linear filtering */
     int w = (int) sapp_width();
     int h = (int) sapp_height();
-    sg_begin_default_pass(&gfx_draw_pass_action, w, h);
+    sg_begin_default_pass(&gfx.draw_pass_action, w, h);
     apply_viewport(w, h);
     sg_apply_pipeline(gfx.display_pip);
     sg_apply_bindings(&gfx.display_bind);
