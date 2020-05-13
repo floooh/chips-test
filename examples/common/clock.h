@@ -24,12 +24,11 @@ void clock_init(void) {
 
 uint32_t clock_frame_time(void) {
     clck.frame_count++;
-    uint32_t frame_time_us = (uint32_t) stm_us(stm_laptime(&clck.last_time_stamp));
-    if (frame_time_us < 24000) {   /* 24 ms */
-        frame_time_us = 16667;
-    }
-    else {
-        frame_time_us = 33333;
+    uint32_t frame_time_us = (uint32_t) stm_us(stm_round_to_common_refresh_rate(stm_laptime(&clck.last_time_stamp)));
+    // prevent death-spiral on host systems that are too slow to emulate
+    // in real time, or during long frames (e.g. debugging)
+    if (frame_time_us > 24000) {
+        frame_time_us = 24000;
     }
     return frame_time_us;
 }
