@@ -121,13 +121,14 @@ void app_init() {
 
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
 void app_frame() {
+    const uint32_t frame_time = clock_frame_time();
     #if CHIPS_USE_UI
-        z9001ui_exec(&z9001, clock_frame_time());
+        z9001ui_exec(&z9001, frame_time);
     #else
-        z9001_exec(&z9001, clock_frame_time());
+        z9001_exec(&z9001, frame_time);
     #endif
     gfx_draw(z9001_display_width(&z9001), z9001_display_height(&z9001));
-    if (fs_ptr() && clock_frame_count() > 20) {
+    if (fs_ptr() && clock_frame_count_60hz() > 20) {
         bool load_success = false;
         if (fs_ext("txt") || (fs_ext("bas"))) {
             load_success = true;
@@ -148,7 +149,7 @@ void app_frame() {
         fs_free();
     }
     uint8_t key_code;
-    if (0 != (key_code = keybuf_get())) {
+    if (0 != (key_code = keybuf_get(frame_time))) {
         z9001_key_down(&z9001, key_code);
         z9001_key_up(&z9001, key_code);
     }

@@ -119,14 +119,15 @@ void app_init(void) {
 
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
 void app_frame() {
+    const uint32_t frame_time = clock_frame_time();
     #if CHIPS_USE_UI
-        atomui_exec(&atom, clock_frame_time());
+        atomui_exec(&atom, frame_time);
     #else
-        atom_exec(&atom, clock_frame_time());
+        atom_exec(&atom, frame_time);
     #endif
     gfx_draw(atom_display_width(&atom), atom_display_height(&atom));
     const uint32_t load_delay_frames = 48;
-    if (fs_ptr() && clock_frame_count() > load_delay_frames) {
+    if (fs_ptr() && clock_frame_count_60hz() > load_delay_frames) {
         bool load_success = false;
         if (fs_ext("txt") || fs_ext("bas")) {
             load_success = true;
@@ -136,7 +137,7 @@ void app_frame() {
             load_success = atom_insert_tape(&atom, fs_ptr(), fs_size());
         }
         if (load_success) {
-            if (clock_frame_count() > (load_delay_frames + 10)) {
+            if (clock_frame_count_60hz() > (load_delay_frames + 10)) {
                 gfx_flash_success();
             }
             if (sargs_exists("input")) {
@@ -149,7 +150,7 @@ void app_frame() {
         fs_free();
     }
     uint8_t key_code;
-    if (0 != (key_code = keybuf_get())) {
+    if (0 != (key_code = keybuf_get(frame_time))) {
         atom_key_down(&atom, key_code);
         atom_key_up(&atom, key_code);
     }

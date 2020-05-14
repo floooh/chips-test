@@ -177,14 +177,15 @@ void app_init(void) {
 }
 
 void app_frame(void) {
+    const uint32_t frame_time = clock_frame_time();
     #if CHIPS_USE_UI
-        kc85ui_exec(&kc85, clock_frame_time());
+        kc85ui_exec(&kc85, frame_time);
     #else
-        kc85_exec(&kc85, clock_frame_time());
+        kc85_exec(&kc85, frame_time);
     #endif
     gfx_draw(kc85_display_width(&kc85), kc85_display_height(&kc85));
     const uint32_t load_delay_frames = kc85.type == KC85_TYPE_4 ? 180 : 480;
-    if (fs_ptr() && clock_frame_count() > load_delay_frames) {
+    if (fs_ptr() && clock_frame_count_60hz() > load_delay_frames) {
         bool load_success = false;
         if (sargs_exists("mod_image")) {
             /* insert the rom module */
@@ -200,7 +201,7 @@ void app_frame(void) {
             load_success = kc85_quickload(&kc85, fs_ptr(), fs_size());
         }
         if (load_success) {
-            if (clock_frame_count() > (load_delay_frames + 10)) {
+            if (clock_frame_count_60hz() > (load_delay_frames + 10)) {
                 gfx_flash_success();
             }
             if (sargs_exists("input")) {
@@ -213,7 +214,7 @@ void app_frame(void) {
         fs_free();
     }
     uint8_t key_code;
-    if (0 != (key_code = keybuf_get())) {
+    if (0 != (key_code = keybuf_get(frame_time))) {
         kc85_key_down(&kc85, key_code);
         kc85_key_up(&kc85, key_code);
     }

@@ -124,14 +124,15 @@ void app_init() {
 
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
 void app_frame() {
+    uint32_t frame_time = clock_frame_time();
     #if CHIPS_USE_UI
-        zxui_exec(&zx, clock_frame_time());
+        zxui_exec(&zx, frame_time);
     #else
-        zx_exec(&zx, clock_frame_time());
+        zx_exec(&zx, frame_time);
     #endif
     gfx_draw(zx_display_width(&zx), zx_display_height(&zx));
     const uint32_t load_delay_frames = 120;
-    if (fs_ptr() && clock_frame_count() > load_delay_frames) {
+    if (fs_ptr() && clock_frame_count_60hz() > load_delay_frames) {
         bool load_success = false;
         if (fs_ext("txt") || fs_ext("bas")) {
             load_success = true;
@@ -141,7 +142,7 @@ void app_frame() {
             load_success = zx_quickload(&zx, fs_ptr(), fs_size());
         }
         if (load_success) {
-            if (clock_frame_count() > (load_delay_frames + 10)) {
+            if (clock_frame_count_60hz() > (load_delay_frames + 10)) {
                 gfx_flash_success();
             }
             if (sargs_exists("input")) {
@@ -154,7 +155,7 @@ void app_frame() {
         fs_free();
     }
     uint8_t key_code;
-    if (0 != (key_code = keybuf_get())) {
+    if (0 != (key_code = keybuf_get(frame_time))) {
         zx_key_down(&zx, key_code);
         zx_key_up(&zx, key_code);
     }

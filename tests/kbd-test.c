@@ -24,22 +24,18 @@ UTEST(kbd, kbd) {
     T(0 == kbd_test_lines(&kbd, 0));
     T((1<<3) == kbd_test_lines(&kbd, (1<<2)));
     for (int i = 0; i < 10; i++) {
-        kbd_update(&kbd);
+        kbd_update(&kbd, 16667);
         T((1<<3) == kbd_test_lines(&kbd, 0xFFFF));
     }
     kbd_key_up(&kbd, 'a');
-    kbd_update(&kbd);
+    kbd_update(&kbd, 16667);
     T(0 == kbd_test_lines(&kbd, 0xFFFF));
 
     /* unshifted key, short pressed */
     kbd_key_down(&kbd, 'b');
     kbd_key_up(&kbd, 'b');
     T((1<<3) == kbd_test_lines(&kbd, 0xFFFF));
-    for (int i = 0; i < kbd.sticky_count; i++) {
-        kbd_update(&kbd);
-        T((1<<3) == kbd_test_lines(&kbd, 0xFFFF));
-    }
-    kbd_update(&kbd);
+    kbd_update(&kbd, 16667);
     T(0 == kbd_test_lines(&kbd, 0xFFFF));
 
     /* shifted key */
@@ -47,7 +43,7 @@ UTEST(kbd, kbd) {
     T(((1<<3)|(1<<0)) == kbd_test_lines(&kbd, 0xFFFF));
     kbd_key_up(&kbd, 'A');
     for (int i = 0; i < 5; i++) {
-        kbd_update(&kbd);
+        kbd_update(&kbd, 16667);
     }
     T(0 == kbd_test_lines(&kbd, 0xFFFF));
 
@@ -57,12 +53,12 @@ UTEST(kbd, kbd) {
     T((1<<3) == kbd_test_lines(&kbd, 0xFFFF));
     kbd_key_up(&kbd, 'a');
     for (int i = 0; i < 5; i++) {
-        kbd_update(&kbd);
+        kbd_update(&kbd, 16667);
     }
     T((1<<3) == kbd_test_lines(&kbd, 0xFFFF));
     kbd_key_up(&kbd, 'b');
     for (int i = 0; i < 5; i++) {
-        kbd_update(&kbd);
+        kbd_update(&kbd, 16667);
     }
     T(0 == kbd_test_lines(&kbd, 0xFFFF));
 }

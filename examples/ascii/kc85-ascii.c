@@ -256,7 +256,7 @@ int main(int argc, char* argv[]) {
             fs_free();
         }
         uint8_t key_code;
-        if (0 != (key_code = keybuf_get())) {
+        if (0 != (key_code = keybuf_get(FRAME_USEC))) {
             kc85_key_down(&kc85, key_code);
             kc85_key_up(&kc85, key_code);
         }

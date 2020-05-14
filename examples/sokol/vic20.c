@@ -144,14 +144,15 @@ void app_init(void) {
 
 /* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
 void app_frame(void) {
+    const uint32_t frame_time = clock_frame_time();
     #ifdef CHIPS_USE_UI
-        vic20ui_exec(&vic20, clock_frame_time());
+        vic20ui_exec(&vic20, frame_time);
     #else
-        vic20_exec(&vic20, clock_frame_time());
+        vic20_exec(&vic20, frame_time);
     #endif
     gfx_draw(vic20_display_width(&vic20), vic20_display_height(&vic20));
     const uint32_t load_delay_frames = 180;
-    if (fs_ptr() && clock_frame_count() > load_delay_frames) {
+    if (fs_ptr() && clock_frame_count_60hz() > load_delay_frames) {
         bool load_success = false;
         if (fs_ext("txt") || fs_ext("bas")) {
             load_success = true;
@@ -169,7 +170,7 @@ void app_frame(void) {
             }
         }
         if (load_success) {
-            if (clock_frame_count() > (load_delay_frames + 10)) {
+            if (clock_frame_count_60hz() > (load_delay_frames + 10)) {
                 gfx_flash_success();
             }
             if (fs_ext("tap")) {
@@ -193,7 +194,7 @@ void app_frame(void) {
         fs_free();
     }
     uint8_t key_code;
-    if (0 != (key_code = keybuf_get())) {
+    if (0 != (key_code = keybuf_get(frame_time))) {
         /* FIXME: this is ugly */
         vic20_joystick_type_t joy_type = vic20.joystick_type;
         vic20.joystick_type = VIC20_JOYSTICKTYPE_NONE;

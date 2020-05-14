@@ -103,14 +103,15 @@ void app_init(void) {
 
 /* per frame stuff: tick the emulator, render the framebuffer, delay-load game files */
 void app_frame(void) {
+    const uint32_t frame_time = clock_frame_time();
     #if CHIPS_USE_UI
-        z1013ui_exec(&z1013, clock_frame_time());
+        z1013ui_exec(&z1013, frame_time);
     #else
-        z1013_exec(&z1013, clock_frame_time());
+        z1013_exec(&z1013, frame_time);
     #endif
     gfx_draw(z1013_display_width(&z1013), z1013_display_height(&z1013));
     const uint32_t load_delay_frames = 20;
-    if (fs_ptr() && clock_frame_count() > load_delay_frames) {
+    if (fs_ptr() && clock_frame_count_60hz() > load_delay_frames) {
         bool load_success = false;
         if (fs_ext("txt") || fs_ext("bas")) {
             load_success = true;
@@ -120,7 +121,7 @@ void app_frame(void) {
             load_success = z1013_quickload(&z1013, fs_ptr(), fs_size());
         }
         if (load_success) {
-            if (clock_frame_count() > (load_delay_frames + 10)) {
+            if (clock_frame_count_60hz() > (load_delay_frames + 10)) {
                 gfx_flash_success();
             }
             if (sargs_exists("input")) {
@@ -133,7 +134,7 @@ void app_frame(void) {
         fs_free();
     }
     uint8_t key_code;
-    if (0 != (key_code = keybuf_get())) {
+    if (0 != (key_code = keybuf_get(frame_time))) {
         z1013_key_down(&z1013, key_code);
         z1013_key_up(&z1013, key_code);
     }
