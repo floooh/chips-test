@@ -34,6 +34,6 @@ uint32_t clock_frame_time(void) {
 }
 
 uint32_t clock_frame_count_60hz(void) {
-    return clck.cur_time / 16667;
+    return (uint32_t) (clck.cur_time / 16667);
 }
 #endif /* COMMON_IMPL */
