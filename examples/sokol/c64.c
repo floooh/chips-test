@@ -23,7 +23,7 @@
 void c64ui_init(c64_t* c64);
 void c64ui_discard(void);
 void c64ui_draw(void);
-void c64ui_exec(c64_t* c64, uint32_t frame_time_us);
+void c64ui_exec(uint32_t frame_time_us);
 static const int ui_extra_height = 16;
 #else
 static const int ui_extra_height = 0;
@@ -57,6 +57,7 @@ sapp_desc sokol_main(int argc, char* argv[]) {
 
 /* audio-streaming callback */
 static void push_audio(const float* samples, int num_samples, void* user_data) {
+    (void)user_data;
     saudio_push(samples, num_samples);
 }
 
@@ -137,7 +138,7 @@ void app_init(void) {
 void app_frame(void) {
     const uint32_t frame_time = clock_frame_time();
     #ifdef CHIPS_USE_UI
-        c64ui_exec(&c64, frame_time);
+        c64ui_exec(frame_time);
     #else
         c64_exec(&c64, frame_time);
     #endif

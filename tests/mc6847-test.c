@@ -8,10 +8,12 @@
 static uint32_t rgba8_buffer[MC6847_DISPLAY_WIDTH * MC6847_DISPLAY_HEIGHT];
 
 static uint64_t fetch(uint64_t pins, void* user_data) {
+    (void)user_data;
     return pins;
 }
 
 UTEST(mc6847, setup) {
+    (void)utest_result;
     mc6847_t vdg;
     mc6847_desc_t desc = {
         .tick_hz = 1000000,

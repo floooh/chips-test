@@ -8,6 +8,7 @@
 #define T(b) ASSERT_TRUE(b)
 
 UTEST(m6581, rw) {
+    (void)utest_result;
     m6581_t sid;
     m6581_init(&sid, &(m6581_desc_t){
         .tick_hz = 10000000,

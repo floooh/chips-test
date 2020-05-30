@@ -35,6 +35,7 @@ static c64_t c64;
 // a signal handler for Ctrl-C, for proper cleanup 
 static int quit_requested = 0;
 static void catch_sigint(int signo) {
+    (void)signo;
     quit_requested = 1;
 }
 
@@ -72,6 +73,7 @@ static void init_c64_colors(void) {
 }
 
 int main(int argc, char* argv[]) {
+    (void)argc; (void)argv;
     c64_init(&c64, &(c64_desc_t){
         .rom_char = dump_c64_char_bin,
         .rom_char_size = sizeof(dump_c64_char_bin),

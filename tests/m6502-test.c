@@ -84,6 +84,7 @@ UTEST(m6502, INIT) {
 }
 
 UTEST(m6502, RESET) {
+    (void)utest_result;
     // FIXME
     /*
     init();

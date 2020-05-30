@@ -77,7 +77,7 @@ void vic20ui_discard(void) {
     ui_vic20_discard(&ui_vic20);
 }
 
-void vic20ui_exec(vic20_t* vic20, uint32_t frame_time_us) {
+void vic20ui_exec(uint32_t frame_time_us) {
     uint64_t start = stm_now();
     ui_vic20_exec(&ui_vic20, frame_time_us);
     exec_time = ui_vic20.dbg.dbg.stopped ? 0.0 : stm_ms(stm_since(start));

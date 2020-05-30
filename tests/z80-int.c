@@ -40,6 +40,8 @@ static uint8_t mem[1<<16] = { 0 };
 static bool reti_executed = false;
 
 static uint64_t tick(int num, uint64_t pins, void* user_data) {
+    (void)num;
+    (void)user_data;
     if (pins & Z80_MREQ) {
         const uint16_t addr = Z80_GET_ADDR(pins);
         if (pins & Z80_RD) {

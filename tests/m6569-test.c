@@ -11,6 +11,8 @@ static uint32_t rgba8_buffer[262144];
 
 static uint16_t fetch(uint16_t addr, void* user_data) {
     // FIXME
+    (void)addr;
+    (void)user_data;
     return 0;
 }
 

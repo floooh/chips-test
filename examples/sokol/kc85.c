@@ -54,11 +54,13 @@ sapp_desc sokol_main(int argc, char* argv[]) {
 
 /* audio-streaming callback */
 static void push_audio(const float* samples, int num_samples, void* user_data) {
+    (void)user_data;
     saudio_push(samples, num_samples);
 }
 
 /* a callback to patch some known problems in game snapshot files */
 static void patch_snapshots(const char* snapshot_name, void* user_data) {
+    (void)user_data;
     if (strcmp(snapshot_name, "JUNGLE     ") == 0) {
         /* patch start level 1 into memory */
         mem_wr(&kc85.mem, 0x36b7, 1);

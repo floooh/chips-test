@@ -42,6 +42,7 @@ static struct {
 // a signal handler for Ctrl-C, for proper cleanup 
 static int quit_requested = 0;
 static void catch_sigint(int signo) {
+    (void)signo;
     quit_requested = 1;
 }
 

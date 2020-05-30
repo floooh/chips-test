@@ -27,7 +27,11 @@ static struct {
 
 #define NUM_USEC (1*1000000)
 
-static void dummy_audio_callback(const float* samples, int num_samples, void* user_data) { };
+static void dummy_audio_callback(const float* samples, int num_samples, void* user_data) {
+    (void)samples;
+    (void)num_samples;
+    (void)user_data;
+};
 
 int main() {
     /* provide "throw-away" pixel buffer and audio callback, so

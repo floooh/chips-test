@@ -80,7 +80,7 @@ void c64ui_discard(void) {
     ui_c64_discard(&ui_c64);
 }
 
-void c64ui_exec(c64_t* c64, uint32_t frame_time_us) {
+void c64ui_exec(uint32_t frame_time_us) {
     uint64_t start = stm_now();
     ui_c64_exec(&ui_c64, frame_time_us);
     exec_time = ui_c64.dbg.dbg.stopped ? 0.0 : stm_ms(stm_since(start));

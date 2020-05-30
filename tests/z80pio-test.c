@@ -14,10 +14,12 @@ static uint8_t PORT_A = 0;
 static uint8_t PORT_B = 0;
 
 static uint8_t in_cb(int port_id, void* user_data) {
+    (void)user_data;
     return (port_id == Z80PIO_PORT_A) ? PORT_A : PORT_B;
 }
 
 static void out_cb(int port_id, uint8_t data, void* user_data) {
+    (void)user_data;
     if (port_id == Z80PIO_PORT_A) { PORT_A = data; }
     else { PORT_B = data; }
 }

@@ -109,6 +109,7 @@ bool test_pc(const char* name) {
 }
 
 uint64_t cpu_tick(int num, uint64_t pins, void* user_data) {
+    (void)num; (void)user_data;
     if (pins & Z80_MREQ) {
         if (pins & Z80_RD) {
             Z80_SET_DATA(pins, mem[Z80_GET_ADDR(pins)]);
@@ -127,6 +128,7 @@ uint64_t cpu_tick(int num, uint64_t pins, void* user_data) {
 }
 
 bool run_test(int test_index, fuse_test_t* inp, fuse_test_t* exp) {
+    (void)test_index;
     assert(inp->state.halted == 0);
 
     /* prepare CPU and memory with test input data (same initial state as coretest.c in FUSE */

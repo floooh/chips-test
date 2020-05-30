@@ -68,6 +68,7 @@ static kc85_module_type_t delay_insert_module = KC85_MODULE_NONE;
 // a signal handler for Ctrl-C, for proper cleanup 
 static int quit_requested = 0;
 static void catch_sigint(int signo) {
+    (void)signo;
     quit_requested = 1;
 }
 

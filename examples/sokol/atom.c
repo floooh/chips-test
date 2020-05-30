@@ -29,7 +29,7 @@
 void atomui_init(atom_t* atom);
 void atomui_discard(void);
 void atomui_draw(void);
-void atomui_exec(atom_t* atom, uint32_t frame_time_us);
+void atomui_exec(uint32_t frame_time_us);
 static const int ui_extra_height = 16;
 #else
 static const int ui_extra_height = 0;
@@ -59,6 +59,7 @@ sapp_desc sokol_main(int argc, char* argv[]) {
 
 /* audio-streaming callback */
 static void push_audio(const float* samples, int num_samples, void* user_data) {
+    (void)user_data;
     saudio_push(samples, num_samples);
 }
 
@@ -121,7 +122,7 @@ void app_init(void) {
 void app_frame() {
     const uint32_t frame_time = clock_frame_time();
     #if CHIPS_USE_UI
-        atomui_exec(&atom, frame_time);
+        atomui_exec(frame_time);
     #else
         atom_exec(&atom, frame_time);
     #endif

@@ -125,6 +125,7 @@ static z80ctc_t ctc;
 static uint8_t mem[1<<16];
 
 static uint64_t tick(int num_ticks, uint64_t pins, void* user_data) {
+    (void)user_data;
     for (int i = 0; i < num_ticks; i++) {
         pins = z80ctc_tick(&ctc, pins);
     }

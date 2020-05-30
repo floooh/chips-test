@@ -79,7 +79,7 @@ void atomui_discard(void) {
     ui_atom_discard(&ui_atom);
 }
 
-void atomui_exec(atom_t* atom, uint32_t frame_time_us) {
+void atomui_exec(uint32_t frame_time_us) {
     uint64_t start = stm_now();
     ui_atom_exec(&ui_atom, frame_time_us);
     exec_time = ui_atom.dbg.dbg.stopped ? 0.0 : stm_ms(stm_since(start));

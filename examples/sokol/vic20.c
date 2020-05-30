@@ -19,7 +19,7 @@
 void vic20ui_init(vic20_t* vic20);
 void vic20ui_discard(void);
 void vic20ui_draw(void);
-void vic20ui_exec(vic20_t* vic20, uint32_t frame_time_us);
+void vic20ui_exec(uint32_t frame_time_us);
 static const int ui_extra_height = 16;
 #else
 static const int ui_extra_height = 0;
@@ -53,6 +53,7 @@ sapp_desc sokol_main(int argc, char* argv[]) {
 
 /* audio-streaming callback */
 static void push_audio(const float* samples, int num_samples, void* user_data) {
+    (void)user_data;
     saudio_push(samples, num_samples);
 }
 
@@ -146,7 +147,7 @@ void app_init(void) {
 void app_frame(void) {
     const uint32_t frame_time = clock_frame_time();
     #ifdef CHIPS_USE_UI
-        vic20ui_exec(&vic20, frame_time);
+        vic20ui_exec(frame_time);
     #else
         vic20_exec(&vic20, frame_time);
     #endif

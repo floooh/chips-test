@@ -43,7 +43,7 @@ static ui_lc80_t ui_lc80;
 /* reboot callback */
 static void boot_cb(lc80_t* sys) {
     lc80_desc_t desc = lc80_desc();
-    lc80_init(ui_lc80.sys, &desc);
+    lc80_init(sys, &desc);
 }
 
 void lc80ui_draw(void) {
