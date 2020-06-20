@@ -68,10 +68,7 @@ static struct {
     bool rot90;
     uint32_t rgba8_buffer[GFX_MAX_FB_WIDTH * GFX_MAX_FB_HEIGHT];
     void (*draw_extra_cb)(void);
-} gfx = {
-    .upscale_pass_action =  { .colors[0] = { .action = SG_ACTION_DONTCARE } },
-    .draw_pass_action = { .colors[0] = { .action = SG_ACTION_CLEAR, .val = { 0.05f, 0.05f, 0.05f, 1.0f } } }
-};
+} gfx;
 
 void gfx_flash_success(void) {
     gfx.flash_success_count = 20;
@@ -125,6 +122,14 @@ void gfx_init_images_and_pass(void) {
 }
 
 void gfx_init(const gfx_desc_t* desc) {
+
+    gfx.upscale_pass_action = (sg_pass_action) {
+        .colors[0] = { .action = SG_ACTION_DONTCARE }
+    };
+    gfx.draw_pass_action = (sg_pass_action) {
+        .colors[0] = { .action = SG_ACTION_CLEAR, .val = { 0.05f, 0.05f, 0.05f, 1.0f } }
+    };
+
     gfx.top_offset = desc->top_offset;
     gfx.fb_width = 0;
     gfx.fb_height = 0;
