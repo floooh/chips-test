@@ -4,7 +4,6 @@ must be a *.m file on MacOS/iOS, and *.c file everywhere else
 */
 #define SOKOL_IMPL
 #if defined(_WIN32)
-#include <Windows.h>
 #define SOKOL_LOG(s) OutputDebugStringA(s)
 #endif
 /* sokol 3D-API defines are provided by build options */
