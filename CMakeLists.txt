@@ -3,6 +3,9 @@
 #
 cmake_minimum_required(VERSION 3.0)
 project(chips-test)
+if (CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
+    set(CMAKE_CXX_STANDARD 17)
+endif()
 
 # include the fips main cmake file
 get_filename_component(FIPS_ROOT_DIR "../fips" ABSOLUTE)

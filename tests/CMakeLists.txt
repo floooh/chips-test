@@ -1,3 +1,5 @@
+if (NOT FIPS_UWP)
+
 include_directories(../examples/roms)
 
 fips_begin_app(chips-test cmdline)
@@ -73,3 +75,5 @@ fips_begin_app(c64-bench cmdline)
     fips_files(c64-bench.c)
     fips_deps(roms)
 fips_end_app()
+
+endif() # FIPS_UWP
