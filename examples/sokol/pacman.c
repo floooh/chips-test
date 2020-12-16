@@ -122,11 +122,10 @@ static void app_frame(void) {
         }
     }
     if (dirty && snd.recording) {
-        __builtin_printf("{ .frame=%d, .voice = { {%d,%d,%d}, {%d,%d,%d}, {%d,%d,%d} }\n",
-            snd.frame,
-            snd.chn[0].freq, snd.chn[0].wave, snd.chn[0].vol,
-            snd.chn[1].freq, snd.chn[1].wave, snd.chn[1].vol,
-            snd.chn[2].freq, snd.chn[2].wave, snd.chn[2].vol);
+        uint32_t v0 = (snd.chn[0].freq&0xFFFFF) | ((snd.chn[0].wave&7)<<24) | ((snd.chn[0].vol&0xF)<<28);
+        uint32_t v1 = (snd.chn[1].freq&0xFFFFF) | ((snd.chn[1].wave&7)<<24) | ((snd.chn[1].vol&0xF)<<28);
+        uint32_t v2 = (snd.chn[2].freq&0xFFFFF) | ((snd.chn[2].wave&7)<<24) | ((snd.chn[2].vol&0xF)<<28);
+        __builtin_printf("%4d: 0x%08X, 0x%08X, 0x%08X\n", snd.frame, v0, v1, v2);
     }
     snd.frame++;
 
