@@ -87,6 +87,18 @@ static void app_init(void) {
     #endif
 }
 
+typedef struct {
+    struct {
+        uint32_t freq;
+        uint8_t wave;
+        uint8_t vol;
+    } chn[3];
+    bool recording;
+    uint32_t frame;
+} sound_t;
+
+static sound_t snd = {0};
+
 static void app_frame(void) {
     #if CHIPS_USE_UI
         pacmanui_exec(&sys, clock_frame_time());
@@ -95,6 +107,29 @@ static void app_frame(void) {
     #endif
     namco_decode_video(&sys);
     gfx_draw(namco_display_width(&sys), namco_display_height(&sys));
+
+    // capture sound
+    bool dirty = false;
+    for (int i = 0; i < 3; i++) {
+        if ((snd.chn[i].freq != sys.sound.voice[i].frequency) ||
+            (snd.chn[i].wave != sys.sound.voice[i].waveform) ||
+            (snd.chn[i].vol != sys.sound.voice[i].volume))
+        {
+            snd.chn[i].freq = sys.sound.voice[i].frequency;
+            snd.chn[i].wave = sys.sound.voice[i].waveform;
+            snd.chn[i].vol  = sys.sound.voice[i].volume;
+            dirty = true;
+        }
+    }
+    if (dirty && snd.recording) {
+        __builtin_printf("{ .frame=%d, .voice = { {%d,%d,%d}, {%d,%d,%d}, {%d,%d,%d} }\n",
+            snd.frame,
+            snd.chn[0].freq, snd.chn[0].wave, snd.chn[0].vol,
+            snd.chn[1].freq, snd.chn[1].wave, snd.chn[1].vol,
+            snd.chn[2].freq, snd.chn[2].wave, snd.chn[2].vol);
+    }
+    snd.frame++;
+
 }
 
 static void app_input(const sapp_event* event) {
@@ -113,6 +148,7 @@ static void app_input(const sapp_event* event) {
                 case SAPP_KEYCODE_DOWN:     namco_input_set(&sys, NAMCO_INPUT_P1_DOWN); break;
                 case SAPP_KEYCODE_1:        namco_input_set(&sys, NAMCO_INPUT_P1_COIN); break;
                 case SAPP_KEYCODE_2:        namco_input_set(&sys, NAMCO_INPUT_P2_COIN); break;
+                case SAPP_KEYCODE_SPACE:    snd.recording = !snd.recording; break;
                 default:                    namco_input_set(&sys, NAMCO_INPUT_P1_START); break;
             }
             break;
