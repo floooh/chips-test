@@ -108,7 +108,7 @@ void app_init(void) {
         #endif
         .top_offset = ui_extra_height
     });
-    keybuf_init(6);
+    keybuf_init(10);
     clock_init();
     saudio_setup(&(saudio_desc){0});
     fs_init();
