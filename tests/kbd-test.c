@@ -36,6 +36,7 @@ UTEST(kbd, kbd) {
     kbd_key_up(&kbd, 'b');
     T((1<<3) == kbd_test_lines(&kbd, 0xFFFF));
     kbd_update(&kbd, 16667);
+    kbd_update(&kbd, 16667);
     T(0 == kbd_test_lines(&kbd, 0xFFFF));
 
     /* shifted key */
