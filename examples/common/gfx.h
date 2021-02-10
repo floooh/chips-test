@@ -127,7 +127,7 @@ void gfx_init(const gfx_desc_t* desc) {
         .colors[0] = { .action = SG_ACTION_DONTCARE }
     };
     gfx.draw_pass_action = (sg_pass_action) {
-        .colors[0] = { .action = SG_ACTION_CLEAR, .val = { 0.05f, 0.05f, 0.05f, 1.0f } }
+        .colors[0] = { .action = SG_ACTION_CLEAR, .value = { 0.05f, 0.05f, 0.05f, 1.0f } }
     };
 
     gfx.top_offset = desc->top_offset;
@@ -172,19 +172,20 @@ void gfx_init(const gfx_desc_t* desc) {
         1.0f, 1.0f, 0.0f, 0.0f
     };
     gfx.upscale_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-        .size = sizeof(verts),
-        .content = verts,
+        .data = SG_RANGE(verts)
     });
     gfx.display_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-        .size = sizeof(verts),
-        .content = sg_query_features().origin_top_left ? 
-                        (gfx.rot90 ? verts_rot : verts) :
-                        (gfx.rot90 ? verts_flipped_rot : verts_flipped)
+        .data = {
+            .ptr = sg_query_features().origin_top_left ?
+                    (gfx.rot90 ? verts_rot : verts) :
+                    (gfx.rot90 ? verts_flipped_rot : verts_flipped),
+            .size = sizeof(verts)
+        }
     });
 
     /* 2 pipeline-state-objects, one for upscaling, one for rendering */
     gfx.display_pip = sg_make_pipeline(&(sg_pipeline_desc){
-        .shader = sg_make_shader(display_shader_desc()),
+        .shader = sg_make_shader(display_shader_desc(sg_query_backend())),
         .layout = {
             .attrs = {
                 [0].format = SG_VERTEXFORMAT_FLOAT2,
@@ -194,7 +195,7 @@ void gfx_init(const gfx_desc_t* desc) {
         .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP
     });
     gfx.upscale_pip = sg_make_pipeline(&(sg_pipeline_desc){
-        .shader = sg_make_shader(upscale_shader_desc()),
+        .shader = sg_make_shader(upscale_shader_desc(sg_query_backend())),
         .layout = {
             .attrs = {
                 [0].format = SG_VERTEXFORMAT_FLOAT2,
@@ -202,7 +203,7 @@ void gfx_init(const gfx_desc_t* desc) {
             }
         },
         .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
-        .blend.depth_format = SG_PIXELFORMAT_NONE
+        .depth.pixel_format = SG_PIXELFORMAT_NONE
     });
 }
 
@@ -240,8 +241,8 @@ void gfx_draw(int width, int height) {
     }
 
     /* copy emulator pixel data into upscaling source texture */
-    sg_update_image(gfx.upscale_bind.fs_images[0], &(sg_image_content){
-        .subimage[0][0] = { 
+    sg_update_image(gfx.upscale_bind.fs_images[0], &(sg_image_data){
+        .subimage[0][0] = {
             .ptr = gfx.rgba8_buffer,
             .size = gfx.fb_width*gfx.fb_height*sizeof(uint32_t)
         }
@@ -257,15 +258,15 @@ void gfx_draw(int width, int height) {
     /* tint the clear color red or green if flash feedback is requested */
     if (gfx.flash_error_count > 0) {
         gfx.flash_error_count--;
-        gfx.draw_pass_action.colors[0].val[0] = 0.7f;
+        gfx.draw_pass_action.colors[0].value.r = 0.7f;
     }
     else if (gfx.flash_success_count > 0) {
         gfx.flash_success_count--;
-        gfx.draw_pass_action.colors[0].val[1] = 0.7f;
+        gfx.draw_pass_action.colors[0].value.g = 0.7f;
     }
     else {
-        gfx.draw_pass_action.colors[0].val[0] = 0.05f;
-        gfx.draw_pass_action.colors[0].val[1] = 0.05f;
+        gfx.draw_pass_action.colors[0].value.r = 0.05f;
+        gfx.draw_pass_action.colors[0].value.g = 0.05f;
     }
 
     /* draw the final pass with linear filtering */
@@ -304,7 +305,7 @@ void* gfx_create_texture(int w, int h) {
 
 void gfx_update_texture(void* h, void* data, int data_byte_size) {
     sg_image img = { .id=(uint32_t)(uintptr_t)h };
-    sg_update_image(img, &(sg_image_content){.subimage[0][0] = { .ptr = data, .size=data_byte_size } });
+    sg_update_image(img, &(sg_image_data){.subimage[0][0] = { .ptr = data, .size=data_byte_size } });
 }
 
 void gfx_destroy_texture(void* h) {
