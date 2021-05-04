@@ -4,7 +4,7 @@
 
 Tests and sample emulators for https://github.com/floooh/chips
 
-Live demos of the example emulators: https://floooh.github.com/tiny8bit
+Live demos of the example emulators: https://floooh.github.io/tiny8bit
 
 To build and run on Windows, OSX or Linux (exact versions of tools shouldn't matter):
 
