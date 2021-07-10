@@ -352,6 +352,7 @@ UTEST(z80, LD_r_iHLi) {
 }
 
 /* LD r,(IX|IY+d) */
+// FIXME FIXME FIXME: this is actually a copy of LD (IX|IY+d),r!!
 UTEST(z80, LD_r_iIXIYi) {
     uint8_t prog[] = {
         0xDD, 0x21, 0x03, 0x10,     // LD IX,0x1003
