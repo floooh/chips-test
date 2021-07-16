@@ -36,12 +36,12 @@ UTEST(z80pio, read_write_control) {
     _z80pio_write_ctrl(&pio, Z80PIO_PORT_A, 0xEE);
     T(!pio.reset_active);
     T(pio.port[Z80PIO_PORT_A].int_vector == 0xEE);
-    T(pio.port[Z80PIO_PORT_A].int_control &= Z80PIO_INTCTRL_EI);
+    T(pio.port[Z80PIO_PORT_A].int_control & Z80PIO_INTCTRL_EI);
 
     /* write interrupt vector 0xCC for port B */
     _z80pio_write_ctrl(&pio, Z80PIO_PORT_B, 0xCC);
     T(pio.port[Z80PIO_PORT_B].int_vector == 0xCC);
-    T(pio.port[Z80PIO_PORT_B].int_control &= Z80PIO_INTCTRL_EI);
+    T(pio.port[Z80PIO_PORT_B].int_control & Z80PIO_INTCTRL_EI);
 
     /* set port A to output */
     _z80pio_write_ctrl(&pio, Z80PIO_PORT_A, (Z80PIO_MODE_OUTPUT<<6)|0x0F);
