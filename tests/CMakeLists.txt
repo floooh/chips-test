@@ -76,4 +76,9 @@ fips_begin_app(c64-bench cmdline)
     fips_deps(roms)
 fips_end_app()
 
+fips_begin_app(z80x-test cmdline)
+    fips_vs_warning_level(3)
+    fips_files(z80x-test.c)
+fips_end_app()
+
 endif() # FIPS_UWP
