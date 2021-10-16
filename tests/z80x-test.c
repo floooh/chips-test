@@ -57,12 +57,13 @@ static uint32_t step(void) {
 }
 
 static void prefetch(uint16_t pc) {
-    pins = Z80_M1|Z80_MREQ|Z80_RD;
+    pins = 0;
     Z80_SET_ADDR(pins, pc);
     Z80_SET_DATA(pins, mem[pc]);
     cpu.pc = (pc + 1) & 0xFFFF;
     cpu.f = 0;
-    // advance to the first refresh cycle
+    cpu.op.pip = (1ULL<<31)|(5ULL);
+    cpu.op.step = 0;
     step();
 }
 
