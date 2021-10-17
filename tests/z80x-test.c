@@ -16,10 +16,12 @@
 #define _C (cpu.c)
 #define _B (cpu.b)
 #define _WZ (cpu.wz)
-#define _FA ((uint16_t)(cpu.f<<8)|cpu.a)
-#define _HL ((uint16_t)(cpu.h<<8)|cpu.l) 
-#define _DE ((uint16_t)(cpu.d<<8)|cpu.e)
-#define _BC ((uint16_t)(cpu.b<<8)|cpu.c)
+#define _FA (cpu.af)
+#define _HL (cpu.hl)
+#define _DE (cpu.de)
+#define _BC (cpu.bc)
+#define _IX (cpu.ix)
+#define _IY (cpu.iy)
 
 static z80_t cpu;
 static uint64_t pins;
@@ -291,6 +293,73 @@ UTEST(z80, LD_iHLi_r) {
     T(7==step()); T(0x16 == mem[0x1000]);
     T(7==step()); T(0x10 == mem[0x1000]);
     T(7==step()); T(0x00 == mem[0x1000]);
+}
+
+/* LD (IX|IY+d),r */
+UTEST(z80, LD_iIXIYi_r) {
+    uint8_t prog[] = {
+        0xDD, 0x21, 0x03, 0x10,     // LD IX,0x1003
+        0x3E, 0x12,                 // LD A,0x12
+        0xDD, 0x77, 0x00,           // LD (IX+0),A
+        0x06, 0x13,                 // LD B,0x13
+        0xDD, 0x70, 0x01,           // LD (IX+1),B
+        0x0E, 0x14,                 // LD C,0x14
+        0xDD, 0x71, 0x02,           // LD (IX+2),C
+        0x16, 0x15,                 // LD D,0x15
+        0xDD, 0x72, 0xFF,           // LD (IX-1),D
+        0x1E, 0x16,                 // LD E,0x16
+        0xDD, 0x73, 0xFE,           // LD (IX-2),E
+        0x26, 0x17,                 // LD H,0x17
+        0xDD, 0x74, 0x03,           // LD (IX+3),H
+        0x2E, 0x18,                 // LD L,0x18
+        0xDD, 0x75, 0xFD,           // LD (IX-3),L
+        0xFD, 0x21, 0x03, 0x10,     // LD IY,0x1003
+        0x3E, 0x12,                 // LD A,0x12
+        0xFD, 0x77, 0x00,           // LD (IY+0),A
+        0x06, 0x13,                 // LD B,0x13
+        0xFD, 0x70, 0x01,           // LD (IY+1),B
+        0x0E, 0x14,                 // LD C,0x14
+        0xFD, 0x71, 0x02,           // LD (IY+2),C
+        0x16, 0x15,                 // LD D,0x15
+        0xFD, 0x72, 0xFF,           // LD (IY-1),D
+        0x1E, 0x16,                 // LD E,0x16
+        0xFD, 0x73, 0xFE,           // LD (IY-2),E
+        0x26, 0x17,                 // LD H,0x17
+        0xFD, 0x74, 0x03,           // LD (IY+3),H
+        0x2E, 0x18,                 // LD L,0x18
+        0xFD, 0x75, 0xFD,           // LD (IY-3),L
+    };
+    init(0x0000, prog, sizeof(prog));
+    T(14==step()); T(0x1003 == _IX);
+    T(7 ==step()); T(0x12 == _A);
+    T(19==step()); T(0x12 == mem[0x1003]); T(_WZ == 0x1003);
+    T(7 ==step()); T(0x13 == _B);
+    T(19==step()); T(0x13 == mem[0x1004]); T(_WZ == 0x1004);
+    T(7 ==step()); T(0x14 == _C);
+    T(19==step()); T(0x14 == mem[0x1005]); T(_WZ == 0x1005);
+    T(7 ==step()); T(0x15 == _D);
+    T(19==step()); T(0x15 == mem[0x1002]); T(_WZ == 0x1002);
+    T(7 ==step()); T(0x16 == _E);
+    T(19==step()); T(0x16 == mem[0x1001]); T(_WZ == 0x1001);
+    T(7 ==step()); T(0x17 == _H);
+    T(19==step()); T(0x17 == mem[0x1006]); T(_WZ == 0x1006);
+    T(7 ==step()); T(0x18 == _L);
+    T(19==step()); T(0x18 == mem[0x1000]); T(_WZ == 0x1000);
+    T(14==step()); T(0x1003 == _IY);
+    T(7 ==step()); T(0x12 == _A);
+    T(19==step()); T(0x12 == mem[0x1003]); T(_WZ == 0x1003);
+    T(7 ==step()); T(0x13 == _B);
+    T(19==step()); T(0x13 == mem[0x1004]); T(_WZ == 0x1004);
+    T(7 ==step()); T(0x14 == _C);
+    T(19==step()); T(0x14 == mem[0x1005]); T(_WZ == 0x1005);
+    T(7 ==step()); T(0x15 == _D);
+    T(19==step()); T(0x15 == mem[0x1002]); T(_WZ == 0x1002);
+    T(7 ==step()); T(0x16 == _E);
+    T(19==step()); T(0x16 == mem[0x1001]); T(_WZ == 0x1001);
+    T(7 ==step()); T(0x17 == _H);
+    T(19==step()); T(0x17 == mem[0x1006]); T(_WZ == 0x1006);
+    T(7 ==step()); T(0x18 == _L);
+    T(19==step()); T(0x18 == mem[0x1000]); T(_WZ == 0x1000);
 }
 
 /* LD (HL),n */
