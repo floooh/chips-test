@@ -79,6 +79,29 @@ static void init(uint16_t start_addr, const uint8_t* bytes, size_t num_bytes) {
     prefetch(start_addr);    
 }
 
+// test that the nested ix/iy/hl mapping union works
+UTEST(z80, MAP_IX_IY_HL) {
+    z80_init(&cpu);
+    cpu.hl = 0x1122;
+    cpu.ix = 0x3344;
+    cpu.iy = 0x5566;
+    T(cpu.h == 0x11);
+    T(cpu.l == 0x22);
+    T(cpu.ixh == 0x33);
+    T(cpu.ixl == 0x44);
+    T(cpu.iyh == 0x55);
+    T(cpu.iyl == 0x66);
+    T(cpu.hlx[0].h == 0x11);
+    T(cpu.hlx[0].l == 0x22);
+    T(cpu.hlx[1].h == 0x33);
+    T(cpu.hlx[1].l == 0x44);
+    T(cpu.hlx[2].h == 0x55);
+    T(cpu.hlx[2].l == 0x66);
+    T(cpu.hlx[0].hl == 0x1122);
+    T(cpu.hlx[1].hl == 0x3344);
+    T(cpu.hlx[2].hl == 0x5566);
+}
+
 /* LD r,s; LD r,n */
 UTEST(z80, LD_r_sn) {
     uint8_t prog[] = {
