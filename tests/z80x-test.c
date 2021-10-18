@@ -16,13 +16,17 @@
 #define _C (cpu.c)
 #define _B (cpu.b)
 #define _WZ (cpu.wz)
-#define _FA (cpu.af)
+#define _AF (cpu.af)
 #define _HL (cpu.hl)
 #define _DE (cpu.de)
 #define _BC (cpu.bc)
 #define _IX (cpu.ix)
 #define _IY (cpu.iy)
 #define _SP (cpu.sp)
+#define _AF_ (cpu.af2)
+#define _HL_ (cpu.hl2)
+#define _DE_ (cpu.de2)
+#define _BC_ (cpu.bc2)
 
 static z80_t cpu;
 static uint64_t pins;
@@ -32,6 +36,12 @@ static uint8_t io[1<<16];
 static bool flags(uint8_t expected) {
     // don't check undocumented flags
     return (cpu.f & ~(Z80_YF|Z80_XF)) == expected;
+}
+
+static uint16_t mem16(uint16_t addr) {
+    uint8_t l = mem[addr];
+    uint8_t h = mem[addr+1];
+    return (h<<8)|l;
 }
 
 static void tick(void) {
@@ -78,6 +88,10 @@ static void init(uint16_t start_addr, const uint8_t* bytes, size_t num_bytes) {
     memset(mem, 0, sizeof(mem));
     pins = z80_init(&cpu);
     cpu.f = 0;
+    cpu.af2 = 0xFF00;
+    cpu.bc2 = 0xFFFF;
+    cpu.de2 = 0xFFFF;
+    cpu.hl2 = 0xFFFF;
     copy(start_addr, bytes, num_bytes);
     prefetch(start_addr);    
 }
@@ -578,7 +592,6 @@ UTEST(z80, LD_SP_HLIXIY) {
 }
 
 /* PUSH qq; PUSH IX; PUSH IY; POP qq; POP IX; POP IY */
-/*
 UTEST(z80, PUSH_POP_qqIXIY) {
     uint8_t prog[] = {
         0x01, 0x34, 0x12,       // LD BC,0x1234
@@ -601,12 +614,11 @@ UTEST(z80, PUSH_POP_qqIXIY) {
         0xDD, 0xE1,             // POP IX
         0xFD, 0xE1,             // POP IY
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    init(0x0000, prog, sizeof(prog));
     T(10==step()); T(0x1234 == _BC);
     T(10==step()); T(0x5678 == _DE);
     T(10==step()); T(0x9ABC == _HL);
-    T(7 ==step()); T(0x00EF == _FA);
+    T(7 ==step()); T(0xEF00 == _AF);
     T(14==step()); T(0x2345 == _IX);
     T(14==step()); T(0x6789 == _IY);
     T(10==step()); T(0x0100 == _SP);
@@ -616,17 +628,15 @@ UTEST(z80, PUSH_POP_qqIXIY) {
     T(11==step()); T(0x9ABC == mem16(0x00F8)); T(0x00F8 == _SP);
     T(15==step()); T(0x2345 == mem16(0x00F6)); T(0x00F6 == _SP);
     T(15==step()); T(0x6789 == mem16(0x00F4)); T(0x00F4 == _SP);
-    T(10==step()); T(0x8967 == _FA); T(0x00F6 == _SP);
+    T(10==step()); T(0x6789 == _AF); T(0x00F6 == _SP);
     T(10==step()); T(0x2345 == _BC); T(0x00F8 == _SP);
     T(10==step()); T(0x9ABC == _DE); T(0x00FA == _SP);
     T(10==step()); T(0x5678 == _HL); T(0x00FC == _SP);
     T(14==step()); T(0x1234 == _IX); T(0x00FE == _SP);
     T(14==step()); T(0xEF00 == _IY); T(0x0100 == _SP);
 }
-*/
 
 /* EX DE,HL; EX AF,AF'; EX (SP),HL; EX (SP),IX; EX (SP),IY */
-/*
 UTEST(z80, EX) {
     uint8_t prog[] = {
         0x21, 0x34, 0x12,       // LD HL,0x1234
@@ -650,15 +660,14 @@ UTEST(z80, EX) {
         0xFD, 0x21, 0x77, 0x66, // LD IY,0x6677
         0xFD, 0xE3,             // EX (SP),IY
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    init(0x0000, prog, sizeof(prog));
     T(10==step()); T(0x1234 == _HL);
     T(10==step()); T(0x5678 == _DE);
     T(4 ==step()); T(0x1234 == _DE); T(0x5678 == _HL);
-    T(7 ==step()); T(0x0011 == _FA); T(0x00FF == _FA_);
-    T(4 ==step()); T(0x00FF == _FA); T(0x0011 == _FA_);
-    T(7 ==step()); T(0x0022 == _FA); T(0x0011 == _FA_);
-    T(4 ==step()); T(0x0011 == _FA); T(0x0022 == _FA_);
+    T(7 ==step()); T(0x1100 == _AF); T(0xFF00 == _AF_);
+    T(4 ==step()); T(0xFF00 == _AF); T(0x1100 == _AF_);
+    T(7 ==step()); T(0x2200 == _AF); T(0x1100 == _AF_);
+    T(4 ==step()); T(0x1100 == _AF); T(0x2200 == _AF_);
     T(10==step()); T(0x9ABC == _BC);
     T(4 ==step());
     T(0xFFFF == _HL); T(0x5678 == _HL_);
@@ -679,7 +688,6 @@ UTEST(z80, EX) {
     T(14==step()); T(0x6677 == _IY);
     T(23==step()); T(0x8899 == _IY); T(_WZ == _IY); T(0x6677 == mem16(0x00FE));
 }
-*/
 
 /* ADD A,r; ADD A,n */
 UTEST(z80, ADD_A_rn) {
@@ -1228,6 +1236,46 @@ UTEST(z80, INC_DEC_iHLIXIYi) {
     T(23==step()); T(0x3F == mem[0x1001]); T(flags(Z80_HF|Z80_NF));
     T(23==step()); T(0x80 == mem[0x1002]); T(flags(Z80_SF|Z80_HF|Z80_VF));
     T(23==step()); T(0x7F == mem[0x1002]); T(flags(Z80_HF|Z80_PF|Z80_NF));
+}
+
+/* INC ss; INC IX; INC IY; DEC ss; DEC IX; DEC IY */
+UTEST(z80, INC_DEC_ssIXIY) {
+    uint8_t prog[] = {
+        0x01, 0x00, 0x00,       // LD BC,0x0000
+        0x11, 0xFF, 0xFF,       // LD DE,0xffff
+        0x21, 0xFF, 0x00,       // LD HL,0x00ff
+        0x31, 0x11, 0x11,       // LD SP,0x1111
+        0xDD, 0x21, 0xFF, 0x0F, // LD IX,0x0fff
+        0xFD, 0x21, 0x34, 0x12, // LD IY,0x1234
+        0x0B,                   // DEC BC
+        0x03,                   // INC BC
+        0x13,                   // INC DE
+        0x1B,                   // DEC DE
+        0x23,                   // INC HL
+        0x2B,                   // DEC HL
+        0x33,                   // INC SP
+        0x3B,                   // DEC SP
+        0xDD, 0x23,             // INC IX
+        0xDD, 0x2B,             // DEC IX
+        0xFD, 0x23,             // INC IX
+        0xFD, 0x2B,             // DEC IX
+    };
+    init(0x0000, prog, sizeof(prog));
+    for (int i = 0; i < 6; i++) {
+        step();
+    }
+    T(6 ==step()); T(0xFFFF == _BC);
+    T(6 ==step()); T(0x0000 == _BC);
+    T(6 ==step()); T(0x0000 == _DE);
+    T(6 ==step()); T(0xFFFF == _DE);
+    T(6 ==step()); T(0x0100 == _HL);
+    T(6 ==step()); T(0x00FF == _HL);
+    T(6 ==step()); T(0x1112 == _SP);
+    T(6 ==step()); T(0x1111 == _SP);
+    T(10==step()); T(0x1000 == _IX);
+    T(10==step()); T(0x0FFF == _IX);
+    T(10==step()); T(0x1235 == _IY);
+    T(10==step()); T(0x1234 == _IY);
 }
 
 UTEST_MAIN()
