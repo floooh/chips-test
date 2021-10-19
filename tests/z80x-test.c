@@ -509,7 +509,6 @@ UTEST(z80, LD_ddIXIY_nn) {
 }
 
 /* LD HL,(nn); LD dd,(nn); LD IX,(nn); LD IY,(nn) */
-/*
 UTEST(z80, LD_HLddIXIY_inni) {
     uint8_t data[] = {
         0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08
@@ -533,10 +532,8 @@ UTEST(z80, LD_HLddIXIY_inni) {
     T(20==step()); T(0x0706 == _IX); T(0x1006 == _WZ);
     T(20==step()); T(0x0807 == _IY); T(0x1007 == _WZ);
 }
-*/
 
 /* LD (nn),HL; LD (nn),dd; LD (nn),IX; LD (nn),IY */
-/*
 UTEST(z80, LD_inni_HLddIXIY) {
     uint8_t prog[] = {
         0x21, 0x01, 0x02,           // LD HL,0x0201
@@ -554,8 +551,7 @@ UTEST(z80, LD_inni_HLddIXIY) {
         0xFD, 0x21, 0x65, 0x87,     // LD IY,0x8765
         0xFD, 0x22, 0x0C, 0x10,     // LD (0x100C),IY
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    init(0x0000, prog, sizeof(prog));
     T(10==step()); T(0x0201 == _HL);
     T(16==step()); T(0x0201 == mem16(0x1000)); T(0x1001 == _WZ);
     T(10==step()); T(0x1234 == _BC);
@@ -571,7 +567,6 @@ UTEST(z80, LD_inni_HLddIXIY) {
     T(14==step()); T(0x8765 == _IY);
     T(20==step()); T(0x8765 == mem16(0x100C)); T(0x100D == _WZ);
 }
-*/
 
 /* LD SP,HL; LD SP,IX; LD SP,IY */
 UTEST(z80, LD_SP_HLIXIY) {
