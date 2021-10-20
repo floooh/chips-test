@@ -1851,11 +1851,11 @@ UTEST(z80, NEG) {
         0x3E, 0x01,         // LD A,0x01
         0xED, 0x44,         // NEG
         0xC6, 0x01,         // ADD A,0x01
-        0xED, 0x44,         // NEG
+        0xED, 0x4C,         // a duplicate NEG
         0xD6, 0x80,         // SUB A,0x80
-        0xED, 0x44,         // NEG
+        0xED, 0x54,         // another duplicate NEG
         0xC6, 0x40,         // ADD A,0x40
-        0xED, 0x44,         // NEG
+        0xED, 0x5C,         // and another duplicate NEG
     };
     init(0x0000, prog, sizeof(prog));
     T(7==step()); T(0x01 == _A);
@@ -1869,7 +1869,6 @@ UTEST(z80, NEG) {
 }
 
 /* LDI */
-/*
 UTEST(z80, LDI) {
     uint8_t data[] = {
         0x01, 0x02, 0x03,
@@ -1882,9 +1881,8 @@ UTEST(z80, LDI) {
         0xED, 0xA0,             // LDI
         0xED, 0xA0,             // LDI
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x0000, prog, sizeof(prog));
-    init();
 
     // skip loads
     for (int i = 0; i < 3; i++) {
@@ -1909,10 +1907,8 @@ UTEST(z80, LDI) {
     T(0x03 == mem[0x2002]);
     T(flags(0));
 }
-*/
 
 /* LDIR */
-/*
 UTEST(z80, LDIR) {
     uint8_t data[] = {
         0x01, 0x02, 0x03,
@@ -1924,9 +1920,8 @@ UTEST(z80, LDIR) {
         0xED, 0xB0,             // LDIR
         0x3E, 0x33,             // LD A,0x33
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x0000, prog, sizeof(prog));
-    init();
 
     // skip loads
     for (int i = 0; i < 3; i++) {
@@ -1937,6 +1932,7 @@ UTEST(z80, LDIR) {
     T(0x2001 == _DE);
     T(0x0002 == _BC);
     T(0x000A == _WZ);
+    T(0x000A == _PC);
     T(0x01 == mem[0x2000]);
     T(flags(Z80_PF));
     T(21==step());
@@ -1944,21 +1940,22 @@ UTEST(z80, LDIR) {
     T(0x2002 == _DE);
     T(0x0001 == _BC);
     T(0x000A == _WZ);
+    T(0x000A == _PC);
     T(0x02 == mem[0x2001]);
     T(flags(Z80_PF));
     T(16==step());
     T(0x1003 == _HL);
     T(0x2003 == _DE);
     T(0x0000 == _BC);
+    T(0x000A == _WZ);
+    T(0x000C == _PC);
     T(0x02 == mem[0x2001]);
     T(0x03 == mem[0x2002]);
     T(flags(0));
     T(7==step()); T(0x33 == _A);
 }
-*/
 
 /* LDD */
-/*
 UTEST(z80, LDD) {
     uint8_t data[] = {
         0x01, 0x02, 0x03,
@@ -1971,9 +1968,8 @@ UTEST(z80, LDD) {
         0xED, 0xA8,             // LDD
         0xED, 0xA8,             // LDD
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x0000, prog, sizeof(prog));
-    init();
 
     // skip loads
     for (int i = 0; i < 3; i++) {
@@ -1998,10 +1994,8 @@ UTEST(z80, LDD) {
     T(0x01 == mem[0x2000]);
     T(flags(0));
 }
-*/
 
 /* LDDR */
-/*
 UTEST(z80, LDDR) {
     uint8_t data[] = {
         0x01, 0x02, 0x03,
@@ -2013,9 +2007,8 @@ UTEST(z80, LDDR) {
         0xED, 0xB8,             // LDDR
         0x3E, 0x33,             // LD A,0x33
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x0000, prog, sizeof(prog));
-    init();
 
     // skip loads
     for (int i = 0; i < 3; i++) {
@@ -2026,6 +2019,7 @@ UTEST(z80, LDDR) {
     T(0x2001 == _DE);
     T(0x0002 == _BC);
     T(0x000A == _WZ);
+    T(0x000A == _PC);
     T(0x03 == mem[0x2002]);
     T(flags(Z80_PF));
     T(21==step());
@@ -2033,6 +2027,7 @@ UTEST(z80, LDDR) {
     T(0x2000 == _DE);
     T(0x0001 == _BC);
     T(0x000A == _WZ);
+    T(0x000A == _PC);
     T(0x02 == mem[0x2001]);
     T(flags(Z80_PF));
     T(16==step());
@@ -2040,14 +2035,13 @@ UTEST(z80, LDDR) {
     T(0x1FFF == _DE);
     T(0x0000 == _BC);
     T(0x000A == _WZ);
+    T(0x000C == _PC);
     T(0x01 == mem[0x2000]);
     T(flags(0));
     T(7 == step()); T(0x33 == _A);
 }
-*/
 
 /* CPI */
-/*
 UTEST(z80, CPI) {
     uint8_t data[] = {
         0x01, 0x02, 0x03, 0x04
@@ -2061,9 +2055,9 @@ UTEST(z80, CPI) {
         0xed, 0xa1,             // cpi
         0xed, 0xa1,             // cpi
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    cpu.wz = 0x1111;
 
     // skip loads
     for (int i = 0; i < 3; i++) {
@@ -2072,25 +2066,27 @@ UTEST(z80, CPI) {
     T(16 == step());
     T(0x1001 == _HL);
     T(0x0003 == _BC);
+    T(0x1112 == _WZ);
     T(flags(Z80_PF|Z80_NF));
-    z80_set_f(&cpu, z80_f(&cpu) | Z80_CF);
+    cpu.f |= Z80_CF;
     T(16 == step());
     T(0x1002 == _HL);
     T(0x0002 == _BC);
+    T(0x1113 == _WZ);
     T(flags(Z80_PF|Z80_NF|Z80_CF));
     T(16 == step());
     T(0x1003 == _HL);
     T(0x0001 == _BC);
+    T(0x1114 == _WZ);
     T(flags(Z80_ZF|Z80_PF|Z80_NF|Z80_CF));
     T(16 == step());
     T(0x1004 == _HL);
     T(0x0000 == _BC);
+    T(0x1115 == _WZ);
     T(flags(Z80_SF|Z80_HF|Z80_NF|Z80_CF));
 }
-*/
 
 /* CPIR */
-/*
 UTEST(z80, CPIR) {
     uint8_t data[] = {
         0x01, 0x02, 0x03, 0x04
@@ -2102,9 +2098,8 @@ UTEST(z80, CPIR) {
         0xed, 0xb1,             // cpir
         0xed, 0xb1,             // cpir
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x0000, prog, sizeof(prog));
-    init();
 
     // skip loads
     for (int i = 0; i < 3; i++) {
@@ -2114,7 +2109,7 @@ UTEST(z80, CPIR) {
     T(0x1001 == _HL);
     T(0x0003 == _BC);
     T(flags(Z80_PF|Z80_NF));
-    z80_set_f(&cpu, z80_f(&cpu) | Z80_CF);
+    cpu.f |= Z80_CF;
     T(21 == step());
     T(0x1002 == _HL);
     T(0x0002 == _BC);
@@ -2128,10 +2123,8 @@ UTEST(z80, CPIR) {
     T(0x0000 == _BC);
     T(flags(Z80_SF|Z80_HF|Z80_NF|Z80_CF));
 }
-*/
 
 /* CPD */
-/*
 UTEST(z80, CPD) {
     uint8_t data[] = {
         0x01, 0x02, 0x03, 0x04
@@ -2145,9 +2138,9 @@ UTEST(z80, CPD) {
         0xed, 0xa9,             // cpi
         0xed, 0xa9,             // cpi
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    cpu.wz = 0x1111;
 
     // skip loads
     for (int i = 0; i < 3; i++) {
@@ -2156,25 +2149,27 @@ UTEST(z80, CPD) {
     T(16 == step());
     T(0x1002 == _HL);
     T(0x0003 == _BC);
+    T(0x1110 == _WZ);
     T(flags(Z80_SF|Z80_HF|Z80_PF|Z80_NF));
-    z80_set_f(&cpu, z80_f(&cpu) | Z80_CF);
+    cpu.f |= Z80_CF;
     T(16 == step());
     T(0x1001 == _HL);
     T(0x0002 == _BC);
+    T(0x110F == _WZ);
     T(flags(Z80_SF|Z80_HF|Z80_PF|Z80_NF|Z80_CF));
     T(16 == step());
     T(0x1000 == _HL);
     T(0x0001 == _BC);
+    T(0x110E == _WZ);
     T(flags(Z80_ZF|Z80_PF|Z80_NF|Z80_CF));
     T(16 == step());
     T(0x0FFF == _HL);
     T(0x0000 == _BC);
+    T(0x110D == _WZ);
     T(flags(Z80_NF|Z80_CF));
 }
-*/
 
 /* CPDR */
-/*
 UTEST(z80, CPDR) {
     uint8_t data[] = {
         0x01, 0x02, 0x03, 0x04
@@ -2186,9 +2181,8 @@ UTEST(z80, CPDR) {
         0xed, 0xb9,             // cpdr
         0xed, 0xb9,             // cpdr
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x0000, prog, sizeof(prog));
-    init();
 
     // skip loads
     for (int i = 0; i < 3; i++) {
@@ -2198,7 +2192,7 @@ UTEST(z80, CPDR) {
     T(0x1002 == _HL);
     T(0x0003 == _BC);
     T(flags(Z80_SF|Z80_HF|Z80_PF|Z80_NF));
-    z80_set_f(&cpu, z80_f(&cpu) | Z80_CF);
+    cpu.f |= Z80_CF;
     T(21 == step());
     T(0x1001 == _HL);
     T(0x0002 == _BC);
@@ -2212,7 +2206,6 @@ UTEST(z80, CPDR) {
     T(0x0000 == _BC);
     T(flags(Z80_NF|Z80_CF));
 }
-*/
 
 /* DI/EI/IM */
 /*
@@ -2443,7 +2436,6 @@ UTEST(z80, CALL_RET_cc) {
 }
 
 /* ADD HL,rr; ADC HL,rr; SBC HL,rr; ADD IX,rr; ADD IY,rr */
-/*
 UTEST(z80, ADD_ADC_SBC_16) {
     uint8_t prog[] = {
         0x21, 0xFC, 0x00,       // LD HL,0x00FC
@@ -2467,8 +2459,7 @@ UTEST(z80, ADD_ADC_SBC_16) {
         0xFD, 0x29,             // ADD IY,IY
         0xFD, 0x39,             // ADD IY,SP
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    init(0x0000, prog, sizeof(prog));
     T(10==step()); T(0x00FC == _HL);
     T(10==step()); T(0x0008 == _BC);
     T(10==step()); T(0xFFFF == _DE);
@@ -2490,7 +2481,6 @@ UTEST(z80, ADD_ADC_SBC_16) {
     T(15==step()); T(0x000C == _IY); T(flags(0)); T(0x0007 == _WZ);
     T(15==step()); T(0x100C == _IY); T(flags(0)); T(0x000D == _WZ);
 }
-*/
 
 /* IN */
 /*
