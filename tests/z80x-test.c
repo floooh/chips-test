@@ -2664,8 +2664,64 @@ UTEST(z80, INIR_INDR) {
     T(cpu.f & Z80_ZF);
 }
 
+/* OUTI, OUTD */
+UTEST(z80, OUTI_OUTD) {
+    uint8_t data[] = { 1, 2, 3, 4 };
+    uint8_t prog[] = {
+        0x21, 0x00, 0x10,       // LD HL,0x1000
+        0x01, 0x02, 0x03,       // LD BC,0x0302
+        0xED, 0xA3,             // OUTI
+        0xED, 0xA3,             // OUTI
+        0xED, 0xA3,             // OUTI
+        0x01, 0x03, 0x03,       // LD BC,0x0303
+        0xED, 0xAB,             // OUTD
+        0xED, 0xAB,             // OUTD
+        0xED, 0xAB,             // OUTD
+    };
+    init(0x0000, prog, sizeof(prog));
+    copy(0x1000, data, sizeof(data));
+    T(10 == step()); T(0x1000 == _HL);
+    T(10 == step()); T(0x0302 == _BC);
+    T(16 == step());
+    T(0x1001 == _HL);
+    T(0x0202 == _BC);
+    T(0x0203 == _WZ);
+    T(0x0202 == out_port); T(0x01 == out_byte);
+    T(!(cpu.f & Z80_ZF));
+    T(16 == step());
+    T(0x1002 == _HL);
+    T(0x0102 == _BC);
+    T(0x0103 == _WZ);
+    T(0x0102 == out_port); T(0x02 == out_byte);
+    T(!(cpu.f & Z80_ZF));
+    T(16 == step());
+    T(0x1003 == _HL);
+    T(0x0002 == _BC);
+    T(0x0003 == _WZ);
+    T(0x0002 == out_port); T(0x03 == out_byte);
+    T(cpu.f & Z80_ZF);
+    T(10 == step()); T(0x0303 == _BC);
+    T(16 == step());
+    T(0x1002 == _HL);
+    T(0x0203 == _BC);
+    T(0x0202 == _WZ)
+    T(0x0203 == out_port); T(0x04 == out_byte);
+    T(!(cpu.f & Z80_ZF));
+    T(16 == step());
+    T(0x1001 == _HL);
+    T(0x0103 == _BC);
+    T(0x0102 == _WZ);
+    T(0x0103 == out_port); T(0x03 == out_byte);
+    T(!(cpu.f & Z80_ZF));
+    T(16 == step());
+    T(0x1000 == _HL);
+    T(0x0003 == _BC);
+    T(0x0002 == _WZ);
+    T(0x0003 == out_port); T(0x02 == out_byte);
+    T(cpu.f & Z80_ZF);
+}
+
 /* OTIR; OTDR */
-/*
 UTEST(z80, OTIR_OTDR) {
     uint8_t data[] = {
         0x01, 0x02, 0x03, 0x04
@@ -2677,44 +2733,48 @@ UTEST(z80, OTIR_OTDR) {
         0x01, 0x03, 0x03,       // LD BC,0x0303
         0xED, 0xBB,             // OTDR
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x0000, prog, sizeof(prog));
-    init();
     T(10 == step()); T(0x1000 == _HL);
     T(10 == step()); T(0x0302 == _BC);
     T(21 == step());
     T(0x1001 == _HL);
     T(0x0202 == _BC);
+    T(0x0007 == _WZ);
     T(0x0202 == out_port); T(0x01 == out_byte);
-    T(!(z80_f(&cpu) & Z80_ZF));
+    T(!(cpu.f & Z80_ZF));
     T(21 == step());
     T(0x1002 == _HL);
     T(0x0102 == _BC);
+    T(0x0007 == _WZ);
     T(0x0102 == out_port); T(0x02 == out_byte);
-    T(!(z80_f(&cpu) & Z80_ZF));
+    T(!(cpu.f & Z80_ZF));
     T(16 == step());
     T(0x1003 == _HL);
     T(0x0002 == _BC);
+    T(0x0003 == _WZ);
     T(0x0002 == out_port); T(0x03 == out_byte);
-    T(z80_f(&cpu) & Z80_ZF);
+    T(cpu.f & Z80_ZF);
     T(10 == step()); T(0x0303 == _BC);
     T(21 == step());
     T(0x1002 == _HL);
     T(0x0203 == _BC);
+    T(0x000C == _WZ);
     T(0x0203 == out_port); T(0x04 == out_byte);
-    T(!(z80_f(&cpu) & Z80_ZF));
+    T(!(cpu.f & Z80_ZF));
     T(21 == step());
     T(0x1001 == _HL);
     T(0x0103 == _BC);
+    T(0x000C == _WZ);
     T(0x0103 == out_port); T(0x03 == out_byte);
-    T(!(z80_f(&cpu) & Z80_ZF));
+    T(!(cpu.f & Z80_ZF));
     T(16 == step());
     T(0x1000 == _HL);
     T(0x0003 == _BC);
+    T(0x0002 == _WZ);
     T(0x0003 == out_port); T(0x02 == out_byte);
-    T(z80_f(&cpu) & Z80_ZF);
+    T(cpu.f & Z80_ZF);
 }
-*/
 
 UTEST_MAIN()
 
