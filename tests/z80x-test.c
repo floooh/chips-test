@@ -28,6 +28,8 @@
 #define _DE_ (cpu.de2)
 #define _BC_ (cpu.bc2)
 #define _PC (cpu.pc)
+#define _I (cpu.i)
+#define _R (cpu.r)
 
 static z80_t cpu;
 static uint64_t pins;
@@ -123,41 +125,34 @@ UTEST(z80, MAP_IX_IY_HL) {
 }
 
 /* LD A,R; LD A,I */
-/*
 UTEST(z80, LD_A_RI) {
     uint8_t prog[] = {
         0xED, 0x57,         // LD A,I
         0x97,               // SUB A
         0xED, 0x5F,         // LD A,R
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
-    z80_set_iff1(&cpu, true);
-    z80_set_iff2(&cpu, true);
-    z80_set_r(&cpu, 0x34);
-    z80_set_i(&cpu, 0x01);
-    z80_set_f(&cpu, Z80_CF);
+    init(0x0000, prog, sizeof(prog));
+    cpu.iff1 = cpu.iff2 = true;
+    cpu.r = 0x34;
+    cpu.i = 0x01;
+    cpu.f = Z80_CF;
     T(9 == step()); T(0x01 == _A); T(flags(Z80_PF|Z80_CF));
     T(4 == step()); T(0x00 == _A); T(flags(Z80_ZF|Z80_NF));
     T(9 == step()); T(0x39 == _A); T(flags(Z80_PF));
 }
-*/
 
 /* LD I,A; LD R,A */
-/*
 UTEST(z80, LD_IR_A) {
     uint8_t prog[] = {
         0x3E, 0x45,     // LD A,0x45
         0xED, 0x47,     // LD I,A
         0xED, 0x4F,     // LD R,A
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    init(0x0000, prog, sizeof(prog));
     T(7==step()); T(0x45 == _A);
     T(9==step()); T(0x45 == _I);
     T(9==step()); T(0x45 == _R);
 }
-*/
 
 /* RST */
 UTEST(z80, RST) {
@@ -1662,7 +1657,6 @@ UTEST(z80, SRL_iHLIXIYi) {
 */
 
 /* RLD; RRD */
-/*
 UTEST(z80, RLD_RRD) {
     uint8_t prog[] = {
         0x3E, 0x12,         // LD A,0x12
@@ -1682,8 +1676,7 @@ UTEST(z80, RLD_RRD) {
         0xED, 0x67,         // RRD
         0x7E
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    init(0x0000, prog, sizeof(prog));
     T(7 ==step()); T(0x12 == _A);
     T(10==step()); T(0x1000 == _HL);
     T(10==step()); T(0x34 == mem[0x1000]);
@@ -1697,12 +1690,11 @@ UTEST(z80, RLD_RRD) {
     T(7 ==step()); T(0x00 == _A);
     T(7 ==step()); T(0x01 == _A);
     T(10 ==step()); T(0x00 == mem[0x1000]);
-    z80_set_f(&cpu, z80_f(&cpu) | Z80_CF);
+    cpu.f |= Z80_CF;
     T(18==step()); T(0x00 == _A); T(0x01 == mem[0x1000]); T(flags(Z80_ZF|Z80_PF|Z80_CF)); T(0x1001 == _WZ);
     T(18==step()); T(0x01 == _A); T(0x00 == mem[0x1000]); T(flags(Z80_CF)); T(0x1001 == _WZ);
     T(7 ==step()); T(0x00 == _A);
 }
-*/
 
 /* HALT */
 UTEST(z80, HALT) {
