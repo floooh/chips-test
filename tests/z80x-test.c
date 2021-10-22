@@ -1683,27 +1683,6 @@ UTEST(z80, HALT) {
     T(4==step()); T(0x0001 == _PC); T(pins & Z80_HALT);
 }
 
-/* BIT b,r; BIT b,(HL); BIT b,(IX+d); BIT b,(IY+d) */
-/*
-UTEST(z80, BIT) {
-    // only test cycle count for now 
-    uint8_t prog[] = {
-        0xCB, 0x47,             // BIT 0,A
-        0xCB, 0x46,             // BIT 0,(HL)
-        0xDD, 0xCB, 0x01, 0x46, // BIT 0,(IX+1)
-        0xFD, 0xCB, 0xFF, 0x46, // BIT 0,(IY-1)
-        0xDD, 0xCB, 0x02, 0x47, // undocumented: BIT 0,(IX+2),A
-    };
-    copy(0x0000, prog, sizeof(prog));
-    init();
-    T(8 ==step());
-    T(12==step());
-    T(20==step());
-    T(20==step());
-    T(20==step());
-}
-*/
-
 /* SET b,r; SET b,(HL); SET b,(IX+d); SET b,(IY+d) */
 UTEST(z80, SET_RES) {
     uint8_t prog[] = {
@@ -1737,6 +1716,34 @@ UTEST(z80, SET_RES) {
     T(23 == step()); T(mem[0x51] == 0); T(_WZ == 0x0051);
     T(23 == step()); T(mem[0x5F] == 0); T(_WZ == 0x005F);
     T(23 == step()); T(mem[0x52] == 0); T(_A == 0); T(_WZ == 0x0052);
+}
+
+/* BIT b,r; BIT b,(HL); BIT b,(IX+d); BIT b,(IY+d) */
+UTEST(z80, BIT) {
+    // only test cycle count for now 
+    uint8_t prog[] = {
+        0x3E, 0x01,             // LD A,1
+        0x21, 0x40, 0x00,       // LD HL,0x0040
+        0xDD, 0x21, 0x50, 0x00, // LD IX,0x0050
+        0xFD, 0x21, 0x60, 0x00, // LD IY,0x0060
+        0xCB, 0x47,             // BIT 0,A
+        0xCB, 0x46,             // BIT 0,(HL)
+        0xDD, 0xCB, 0x01, 0x46, // BIT 0,(IX+1)
+        0xFD, 0xCB, 0xFF, 0x46, // BIT 0,(IY-1)
+        0xDD, 0xCB, 0x02, 0x47, // undocumented: BIT 0,(IX+2),A
+    };
+    init(0x0000, prog, sizeof(prog));
+    cpu.f = 0;
+
+    T(7  == step()); T(_A == 1);
+    T(10 == step()); T(_HL == 0x0040);
+    T(14 == step()); T(_IX == 0x0050);
+    T(14 == step()); T(_IY == 0x0060);
+    T(8  == step()); T(flags(Z80_HF));
+    T(12 == step()); T(flags(Z80_ZF|Z80_HF|Z80_VF));
+    T(20 == step()); T(_WZ == 0x0051); T(flags(Z80_ZF|Z80_HF|Z80_VF));
+    T(20 == step()); T(_WZ == 0x005F); T(flags(Z80_ZF|Z80_HF|Z80_VF));
+    T(20 == step()); T(_WZ == 0x0052); T(flags(Z80_ZF|Z80_HF|Z80_VF));
 }
 
 /* DAA */
