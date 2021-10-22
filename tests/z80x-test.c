@@ -1705,46 +1705,39 @@ UTEST(z80, BIT) {
 */
 
 /* SET b,r; SET b,(HL); SET b,(IX+d); SET b,(IY+d) */
-/*
-UTEST(z80, SET) {
-    // only test cycle count for now 
+UTEST(z80, SET_RES) {
     uint8_t prog[] = {
+        0xAF,                   // XOR A
+        0x21, 0x40, 0x00,       // LD HL,0x0040
+        0xDD, 0x21, 0x50, 0x00, // LD IX,0x0050
+        0xFD, 0x21, 0x60, 0x00, // LD IY,0x0060
         0xCB, 0xC7,             // SET 0,A
         0xCB, 0xC6,             // SET 0,(HL)
         0xDD, 0xCB, 0x01, 0xC6, // SET 0,(IX+1)
         0xFD, 0xCB, 0xFF, 0xC6, // SET 0,(IY-1)
-        0xDD, 0xCB, 0x02, 0xC7, // undocumented: SET 0,(IX+2),A
-    };
-    copy(0x0000, prog, sizeof(prog));
-    init();
-    T(8 ==step());
-    T(15==step());
-    T(23==step());
-    T(23==step());
-    T(23==step());
-}
-*/
-
-/* RES b,r; RES b,(HL); RES b,(IX+d); RES b,(IY+d) */
-/*
-UTEST(z80, RES) {
-    // only test cycle count for now 
-    uint8_t prog[] = {
-        0xCB, 0x87,             // RES 0,A
+        0xDD, 0xCB, 0x02, 0xCF, // undocumented: SET 1,(IX+2),A
+        0xCB, 0x8F,             // RES 1,A
         0xCB, 0x86,             // RES 0,(HL)
         0xDD, 0xCB, 0x01, 0x86, // RES 0,(IX+1)
         0xFD, 0xCB, 0xFF, 0x86, // RES 0,(IY-1)
-        0xDD, 0xCB, 0x02, 0x87, // undocumented: RES 0,(IX+2),A
+        0xDD, 0xCB, 0x02, 0x8F, // undocumented: RES 1,(IX+2),A
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
-    T(8 ==step());
-    T(15==step());
-    T(23==step());
-    T(23==step());
-    T(23==step());
+    init(0x0000, prog, sizeof(prog));
+    T(4  == step()); T(_A == 0);
+    T(10 == step()); T(_HL == 0x0040);
+    T(14 == step()); T(_IX == 0x0050);
+    T(14 == step()); T(_IY == 0x0060);
+    T(8  == step()); T(_A == 1);
+    T(15 == step()); T(mem[0x40] == 1);
+    T(23 == step()); T(mem[0x51] == 1); T(_WZ == 0x0051);
+    T(23 == step()); T(mem[0x5F] == 1); T(_WZ == 0x005F);
+    T(23 == step()); T(mem[0x52] == 2); T(_A == 2); T(_WZ == 0x0052);
+    T(8  == step()); T(_A == 0);
+    T(15 == step()); T(mem[0x40] == 0);
+    T(23 == step()); T(mem[0x51] == 0); T(_WZ == 0x0051);
+    T(23 == step()); T(mem[0x5F] == 0); T(_WZ == 0x005F);
+    T(23 == step()); T(mem[0x52] == 0); T(_A == 0); T(_WZ == 0x0052);
 }
-*/
 
 /* DAA */
 UTEST(z80, DAA) {
