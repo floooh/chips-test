@@ -111,8 +111,8 @@ static bool run_test(z80_t* cpu, const char* name) {
     printf("\n%s: %"PRIu64" cycles in %.3fsecs (%.2f MHz)\n", name, ticks, dur, (ticks/dur)/1000000.0);
 
     /* check if an error occurred */
-    if (output_size > 0) {
-        output[output_size-1] = 0;
+    if (out_pos > 0) {
+        output[out_pos-1] = 0;
         if (strstr((const char*)output, "ERROR")) {
             return false;
         }
