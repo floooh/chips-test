@@ -268,7 +268,6 @@ bool run_test(int test_index, fuse_test_t* inp, fuse_test_t* exp) {
                 ok = false;
             }
         }
-
     }
     return ok;
 }

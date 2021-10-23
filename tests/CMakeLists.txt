@@ -77,6 +77,13 @@ fips_begin_app(z80-fuse cmdline)
     fips_generate(FROM fuse.yml TYPE fuse HEADER fuse.h)
 fips_end_app()
 
+fips_begin_app(z80x-fuse cmdline)
+    fips_vs_warning_level(3)
+    fips_files(z80x-fuse.c)
+    fips_dir(fuse)
+    fips_generate(FROM fuse.yml TYPE fuse HEADER fuse.h)
+fips_end_app()
+
 fips_begin_app(c64-bench cmdline)
     fips_vs_warning_level(3)
     fips_files(c64-bench.c)
