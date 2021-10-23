@@ -2178,7 +2178,6 @@ UTEST(z80, CPDR) {
 }
 
 /* DI/EI/IM */
-/*
 UTEST(z80, DI_EI_IM) {
     uint8_t prog[] = {
         0xF3,           // DI
@@ -2192,20 +2191,18 @@ UTEST(z80, DI_EI_IM) {
         0xED, 0x5E,     // IM 2
         0xED, 0x46,     // IM 0
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
-    T(4==step()); T(!z80_iff1(&cpu)); T(!z80_iff2(&cpu));
-    T(4==step()); T(z80_iff1(&cpu));  T(z80_iff2(&cpu));
-    T(4==step()); T(z80_iff1(&cpu));  T(z80_iff2(&cpu));
-    T(4==step()); T(!z80_iff1(&cpu)); T(!z80_iff2(&cpu));
-    T(4==step()); T(z80_iff1(&cpu));  T(z80_iff2(&cpu));
-    T(4==step()); T(z80_iff1(&cpu));  T(z80_iff2(&cpu));
-    T(8==step()); T(0 == z80_im(&cpu));
-    T(8==step()); T(1 == z80_im(&cpu));
-    T(8==step()); T(2 == z80_im(&cpu));
-    T(8==step()); T(0 == z80_im(&cpu));
+    init(0x0000, prog, sizeof(prog));
+    T(4==step()); T(!cpu.iff2); T(!cpu.iff2);
+    T(4==step()); T(cpu.iff1);  T(cpu.iff2);
+    T(4==step()); T(cpu.iff1);  T(cpu.iff2);
+    T(4==step()); T(!cpu.iff1); T(!cpu.iff2);
+    T(4==step()); T(cpu.iff1);  T(cpu.iff2);
+    T(4==step()); T(cpu.iff1);  T(cpu.iff2);
+    T(8==step()); T(0 == cpu.im);
+    T(8==step()); T(1 == cpu.im);
+    T(8==step()); T(2 == cpu.im);
+    T(8==step()); T(0 == cpu.im);
 }
-*/
 
 /* JP cc,nn */
 UTEST(z80, JP_cc_nn) {
