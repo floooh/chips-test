@@ -10,14 +10,15 @@
 #include "sokol_time.h"
 #include "roms/zex-dump.h"
 #include <stdio.h>
-#include <inttypes.h>
+#include <inttypes.h> // PRIu64
+#include <stdalign.h>
 
 #define MEM_SIZE (1<<16)
 #define MEM_MASK (MEM_SIZE-1)
 #define OUTPUT_SIZE (1<<16)
 
 static struct {
-    z80_t cpu;
+    alignas(64) z80_t cpu;
     uint8_t mem[MEM_SIZE];
     int out_pos;
     char output[OUTPUT_SIZE];
