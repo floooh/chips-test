@@ -50,6 +50,11 @@ fips_begin_app(z80x-zex cmdline)
     fipsutil_embed(zex-dump.yml zex-dump.h)
 fips_end_app()
 
+fips_begin_app(z80x-int cmdline)
+    fips_vs_warning_level(3)
+    fips_files(z80x-int.c)
+fips_end_app()
+
 fips_begin_app(m6502-nestest cmdline)
     fips_vs_warning_level(3)
     fips_files(m6502-nestest.c)
