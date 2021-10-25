@@ -55,6 +55,11 @@ fips_begin_app(z80x-int cmdline)
     fips_files(z80x-int.c)
 fips_end_app()
 
+fips_begin_app(z80x-timing cmdline)
+    fips_vs_warning_level(3)
+    fips_files(z80x-timing.c)
+fips_end_app()
+
 fips_begin_app(m6502-nestest cmdline)
     fips_vs_warning_level(3)
     fips_files(m6502-nestest.c)
