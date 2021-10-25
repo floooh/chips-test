@@ -26,6 +26,26 @@ static void tick(void) {
     }
 }
 
+static bool pins_none(void) {
+    return (pins & Z80_CTRL_PIN_MASK) == 0;
+}
+
+static bool pins_m1(void) {
+    return (pins & Z80_CTRL_PIN_MASK) == (Z80_M1|Z80_MREQ|Z80_RD);
+}
+
+static bool pins_rfsh(void) {
+    return (pins & Z80_CTRL_PIN_MASK) == (Z80_MREQ|Z80_RFSH);
+}
+
+static bool pins_mread(void) {
+    return (pins & Z80_CTRL_PIN_MASK) == (Z80_MREQ|Z80_RD);
+}
+
+static bool pins_mwrite(void) {
+    return (pins & Z80_CTRL_PIN_MASK) == (Z80_MREQ|Z80_WR);
+}
+
 static void copy(uint16_t addr, const uint8_t* bytes, size_t num_bytes) {
     assert((addr + num_bytes) <= sizeof(mem));
     memcpy(&mem[addr], bytes, num_bytes);
@@ -57,72 +77,80 @@ UTEST(z80, NMI) {
     cpu.sp = 0x0100;
 
     // EI
-    tick();
-    tick();
-    tick();
-    tick(); T(!cpu.iff1); T(!cpu.iff2);
+    tick(); T(pins_m1());
+    tick(); T(pins_none());
+    tick(); T(pins_rfsh());
+    tick(); T(pins_none()); T(!cpu.iff1); T(!cpu.iff2);
 
     // LD HL,1111h
-    tick(); T(cpu.iff1); T(cpu.iff2);
-    tick();
-    tick();
-    tick(); T((pins & (Z80_MREQ|Z80_RFSH)) == (Z80_MREQ|Z80_RFSH)); T(cpu.int_bits == 0);
-    tick(); pins |= Z80_NMI;
-    tick(); pins &= ~Z80_NMI;
-    tick(); T(cpu.int_bits == Z80_NMI);
-    tick();
-    tick();
-    tick();
+    tick(); T(pins_m1()); T(cpu.iff1); T(cpu.iff2);
+    tick(); T(pins_none());
+    tick(); T(pins_rfsh()); T(cpu.int_bits == 0);
+    tick(); T(pins_none());
+    tick(); T(pins_mread()); pins |= Z80_NMI;
+    tick(); T(pins_none()); pins &= ~Z80_NMI;
+    tick(); T(pins_none()); T(cpu.int_bits == Z80_NMI);
+    tick(); T(pins_mread());
+    tick(); T(pins_none());
+    tick(); T(pins_none());
 
     // the NMI should kick in here, starting with a regular refresh cycle
-    tick(); T(cpu.pc == 4); T((pins & (Z80_M1|Z80_MREQ|Z80_RD)) == (Z80_M1|Z80_MREQ|Z80_RD));
-    tick(); T(cpu.pc == 4); T(!cpu.iff1);
-    tick(); T((pins & (Z80_MREQ|Z80_RFSH)) == (Z80_MREQ|Z80_RFSH));
-    tick();
-    tick();
-    tick(); T(cpu.pc == 4);
-    tick(); T((pins & (Z80_MREQ|Z80_WR)) == (Z80_MREQ|Z80_WR)); T(cpu.sp == 0x00FF); T(mem[0x00FF] == 0);
-    tick();
-    tick();
-    tick(); T((pins & (Z80_MREQ|Z80_WR)) == (Z80_MREQ|Z80_WR)); T(cpu.sp == 0x00FE); T(mem[0x00FE] == 4);
-    tick();
+    tick(); T(pins_m1()); T(cpu.pc == 4);
+    tick(); T(pins_none()); T(cpu.pc == 4); T(!cpu.iff1);
+    tick(); T(pins_rfsh());
+    tick(); T(pins_none());
+    // extra tick
+    tick(); T(pins_none());
+    // mwrite
+    tick(); T(pins_none()); T(cpu.pc == 4);
+    tick(); T(pins_mwrite()); T(cpu.sp == 0x00FF); T(mem[0x00FF] == 0);
+    tick(); T(pins_none());
+    // mwrite
+    tick(); T(pins_none());
+    tick(); T(pins_mwrite()); T(cpu.sp == 0x00FE); T(mem[0x00FE] == 4);
+    tick(); T(pins_none());
 
     // first overlapped tick of interrupt service routine
-    tick(); T(cpu.pc == 0x67); T((pins & (Z80_M1|Z80_MREQ|Z80_RD)) == (Z80_M1|Z80_MREQ|Z80_RD));
-    tick();
-    tick();
-    tick(); T((pins & (Z80_MREQ|Z80_RFSH)) == (Z80_MREQ|Z80_RFSH));
-    tick();
-    tick();
-    tick();
+    tick(); T(pins_m1()); T(cpu.pc == 0x67);
+    tick(); T(pins_none());
+    tick(); T(pins_rfsh());
+    tick(); T(pins_none());
+    // mread
+    tick(); T(pins_mread());
+    tick(); T(pins_none());
+    tick(); T(pins_none());
 
     // RETN
-    tick(); T((pins & (Z80_M1|Z80_MREQ|Z80_RD)) == (Z80_M1|Z80_MREQ|Z80_RD)); T(cpu.a == 0x33);
-    tick();
-    tick();
-    tick(); T((pins & (Z80_MREQ|Z80_RFSH)) == (Z80_MREQ|Z80_RFSH));
-    tick(); T((pins & (Z80_M1|Z80_MREQ|Z80_RD)) == (Z80_M1|Z80_MREQ|Z80_RD));
-    tick();
-    tick();
-    tick(); T((pins & (Z80_MREQ|Z80_RFSH)) == (Z80_MREQ|Z80_RFSH));
-    tick(); T((pins & (Z80_MREQ|Z80_RD)) == (Z80_MREQ|Z80_RD)); T(cpu.sp == 0x00FF);
-    tick(); T(cpu.pch == 0x00);
-    tick();
-    tick(); T((pins & (Z80_MREQ|Z80_RD)) == (Z80_MREQ|Z80_RD)); T(cpu.sp == 0x0100);
-    tick(); T(cpu.pcl == 0x04);
-    tick(); T(!cpu.iff1);
+    // ED prefix
+    tick(); T(pins_m1()); T(cpu.a == 0x33);
+    tick(); T(pins_none());
+    tick(); T(pins_rfsh());
+    tick(); T(pins_none());
+    // opcode
+    tick(); T(pins_m1());
+    tick(); T(pins_none());
+    tick(); T(pins_rfsh());
+    tick(); T(pins_none());
+    // mread
+    tick(); T(pins_mread()); T(cpu.sp == 0x00FF);
+    tick(); T(pins_none()); T(cpu.pch == 0x00);
+    tick(); T(pins_none());
+    // mread
+    tick(); T(pins_mread()); T(cpu.sp == 0x0100);
+    tick(); T(pins_none()); T(cpu.pcl == 0x04);
+    tick(); T(pins_none()); T(!cpu.iff1);
 
     // continue at LD DE,2222h
-    tick(); T(cpu.iff1); T(pins & Z80_RETI); T((pins & (Z80_M1|Z80_MREQ|Z80_RD)) == (Z80_M1|Z80_MREQ|Z80_RD));
-    tick();
-    tick();
-    tick(); T((pins & (Z80_MREQ|Z80_RFSH)) == (Z80_MREQ|Z80_RFSH));
-    tick(); T((pins & (Z80_MREQ|Z80_RD)) == (Z80_MREQ|Z80_RD));
-    tick(); T(cpu.e == 0x22);
-    tick();
-    tick(); T((pins & (Z80_MREQ|Z80_RD)) == (Z80_MREQ|Z80_RD));
-    tick(); T(cpu.d == 0x22);
-    tick();
+    tick(); T(pins_m1()); T(cpu.iff1); T(pins & Z80_RETI);
+    tick(); T(pins_none());
+    tick(); T(pins_rfsh());
+    tick(); T(pins_none());
+    tick(); T(pins_mread());
+    tick(); T(pins_none()); T(cpu.e == 0x22);
+    tick(); T(pins_none());
+    tick(); T(pins_mread());
+    tick(); T(pins_none()); T(cpu.d == 0x22);
+    tick(); T(pins_none());
 }
 
 UTEST_MAIN()
