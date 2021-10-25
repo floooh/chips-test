@@ -1,7 +1,9 @@
 //------------------------------------------------------------------------------
-//  z80x-timing.c
+// z80x-timing.c
 //
-//  Tests tcycle timing.
+// Tests tcycle timing.
+//
+// NOTE: Interrupt-related instructions are tested in z80x-int.c
 //------------------------------------------------------------------------------
 #include "utest.h"
 #define CHIPS_IMPL
@@ -830,63 +832,431 @@ UTEST(z80, IN_OUT_ini_A) {
     T(finish());
 }
 
-// ED prefix:
-// FIXME: IN ry,(C)
-// FIXME: IN (C)
-// FIXME: OUT (C),ry
-// FIXME: OUT (C),0
-// FIXME: LD (nn),rp
-// FIXME: LD rp,(nn)
-// FIXME: RETI/RETN
-// FIXME: RRD
-// FIXME: RLD
-// FIXME: LDI
-// FIXME: LDD
-// FIXME: LDIR
-// FIXME: LDDR
-// FIXME: CPI
-// FIXME: CPD
-// FIXME: CPIR
-// FIXME: CPDR
-// FIXME: INI
-// FIXME: IND
-// FIXME: INIR
-// FIXME: INDR
-// FIXME: OUTI
-// FIXME: OUTD
-// FIXME: OTIR
-// FIXME: OTDR
-// FIXME: SET r, BIT r
-// FIXME: SET (HL), BIT (HL)
-// FIXME: SET (IX+d), BIT (IX+d)
-
-UTEST(z80, SET_IX) {
+UTEST(z80, IN_OUT_ry_iCi) {
     uint8_t prog[] = {
-        0xDD, 0xCB, 0x01, 0xC6, // SET 0,(ix+1)
-        0xFD, 0xCB, 0x01, 0xCE, // SET 1,(iy+1)
-        0x00, 0x00,             // NOP NOP
+        0xED, 0x78,         // IN A,(C)
+        0xED, 0x70,         // IN (C)
+        0xED, 0x79,         // OUT (C),A
+        0xED, 0x71,         // OUT (C),0
+        0x00, 0x00,
     };
     init(prog, sizeof(prog));
 
-    // SET 0,(ix+1)
-    T(m1_cycle());      // DD prefix
-    T(m1_cycle());      // CB prefix
-    T(mread_cycle());   // load d-offset
-    T(mread_cycle());   // C6 opcode
-    T(none_cycle(2));   // 2 filler ticks
-    T(mread_cycle());   // load (ix+1)
-    T(none_cycle(1));   // 1 filler tick
-    T(mwrite_cycle());  // write result
+    // IN A,(C)
+    T(m1_cycle());
+    T(m1_cycle());
+    T(ioread_cycle());
 
-    // SET 1,(iy+1)
-    T(m1_cycle());      // DD prefix
-    T(m1_cycle());      // CB prefix
-    T(mread_cycle());   // load d-offset
-    T(mread_cycle());   // CE opcode
-    T(none_cycle(2));   // 2 filler ticks
-    T(mread_cycle());   // load (iy+1)
-    T(none_cycle(1));   // 1 filler tick
-    T(mwrite_cycle());  // write result
+    // IN (C)
+    T(m1_cycle());
+    T(m1_cycle());
+    T(ioread_cycle());
+
+    // OUT (C),A
+    T(m1_cycle());
+    T(m1_cycle());
+    T(iowrite_cycle());
+
+    // OUT (C),0
+    T(m1_cycle());
+    T(m1_cycle());
+    T(iowrite_cycle());
+
+    T(finish());
+}
+
+UTEST(z80, LD_inni_rp) {
+    uint8_t prog[] = {
+        0xED, 0x43, 0x11, 0x11,     // LD (1111h),BC
+        0xED, 0x4B, 0x22, 0x22,     // LD BC,(2222h)
+        0x00, 0x00,
+    };
+    init(prog, sizeof(prog));
+
+    // LD (1111h),BC
+    T(m1_cycle());
+    T(m1_cycle());
+    T(mread_cycle());
+    T(mread_cycle());
+    T(mwrite_cycle());
+    T(mwrite_cycle());
+
+    // LD BC,(2222h)
+    T(m1_cycle());
+    T(m1_cycle());
+    T(mread_cycle());
+    T(mread_cycle());
+    T(mread_cycle());
+    T(mread_cycle());
+
+    T(finish());
+}
+
+UTEST(z80, RRD_RLD) {
+    uint8_t prog[] = {
+        0xED, 0x67,     // RRD
+        0xED, 0x6F,     // RLD
+        0x00, 0x00,
+    };
+    init(prog, sizeof(prog));
+
+    // RRD
+    T(m1_cycle());
+    T(m1_cycle());
+    T(mread_cycle());
+    T(none_cycle(4));
+    T(mwrite_cycle());
+
+    // RLD
+    T(m1_cycle());
+    T(m1_cycle());
+    T(mread_cycle());
+    T(none_cycle(4));
+    T(mwrite_cycle());
+
+    T(finish());
+}
+
+UTEST(z80, LDI_LDD_CPI_CPD) {
+    uint8_t prog[] = {
+        0xED, 0xA0,     // LDI
+        0xED, 0xA8,     // LDD
+        0xED, 0xA1,     // CPI
+        0xED, 0xA9,     // CPD
+        0x00, 0x00,
+    };
+    init(prog, sizeof(prog));
+
+    // LDI
+    T(m1_cycle());
+    T(m1_cycle());
+    T(mread_cycle());
+    T(mwrite_cycle());
+    T(none_cycle(2));
+
+    // LDD
+    T(m1_cycle());
+    T(m1_cycle());
+    T(mread_cycle());
+    T(mwrite_cycle());
+    T(none_cycle(2));
+
+    // CPI
+    T(m1_cycle());
+    T(m1_cycle());
+    T(mread_cycle());
+    T(none_cycle(5));
+
+    // CPD
+    T(m1_cycle());
+    T(m1_cycle());
+    T(mread_cycle());
+    T(none_cycle(5));
+
+    T(finish());
+}
+
+UTEST(z80, INI_IND_OUTI_OUTD) {
+    uint8_t prog[] = {
+        0xED, 0xA2,     // INI
+        0xED, 0xAA,     // IND
+        0xED, 0xA3,     // OUTI
+        0xED, 0xAB,     // OUTD
+        0x00, 0x00,
+    };
+    init(prog, sizeof(prog));
+
+    // INI
+    T(m1_cycle());
+    T(m1_cycle());
+    T(none_cycle(1));
+    T(ioread_cycle());
+    T(mwrite_cycle());
+
+    // IND
+    T(m1_cycle());
+    T(m1_cycle());
+    T(none_cycle(1));
+    T(ioread_cycle());
+    T(mwrite_cycle());
+
+    // OUTI
+    T(m1_cycle());
+    T(m1_cycle());
+    T(none_cycle(1));
+    T(mread_cycle());
+    T(iowrite_cycle());
+
+    // OUTD
+    T(m1_cycle());
+    T(m1_cycle());
+    T(none_cycle(1));
+    T(mread_cycle());
+    T(iowrite_cycle());
+
+    T(finish());
+}
+
+UTEST(z80, LDIR_LDDR) {
+    uint8_t prog[] = {
+        0x01, 0x02, 0x00,   // LD BC,2
+        0xED, 0xB0,         // LDIR
+        0x01, 0x02, 0x00,   // LD BC,2
+        0xED, 0xB8,         // LDDR
+        0x00, 0x00,
+    };
+    init(prog, sizeof(prog));
+
+    // LD BC,2
+    T(m1_cycle());
+    T(mread_cycle());
+    T(mread_cycle());
+
+    // LDIR (1)
+    T(m1_cycle());
+    T(m1_cycle());
+    T(mread_cycle());
+    T(mwrite_cycle());
+    T(none_cycle(7));
+
+    // LDIR (2)
+    T(m1_cycle());
+    T(m1_cycle());
+    T(mread_cycle());
+    T(mwrite_cycle());
+    T(none_cycle(2));
+
+    // LD BC,2
+    T(m1_cycle());
+    T(mread_cycle());
+    T(mread_cycle());
+
+    // LDDR (1)
+    T(m1_cycle());
+    T(m1_cycle());
+    T(mread_cycle());
+    T(mwrite_cycle());
+    T(none_cycle(7));
+
+    // LDDR (2)
+    T(m1_cycle());
+    T(m1_cycle());
+    T(mread_cycle());
+    T(mwrite_cycle());
+    T(none_cycle(2));
+
+    T(finish());
+}
+
+UTEST(z80, CPIR_CPDR) {
+    uint8_t prog[] = {
+        0x01, 0x02, 0x00,   // LD BC,2
+        0xED, 0xB1,         // CPIR
+        0x01, 0x02, 0x00,   // LD BC,2
+        0xED, 0xB9,         // CPDR
+        0x00, 0x00,
+    };
+    init(prog, sizeof(prog));
+
+    // LD BC,2
+    T(m1_cycle());
+    T(mread_cycle());
+    T(mread_cycle());
+
+    // CPIR (1)
+    T(m1_cycle());
+    T(m1_cycle());
+    T(mread_cycle());
+    T(none_cycle(10));
+
+    // CPIR (2)
+    T(m1_cycle());
+    T(m1_cycle());
+    T(mread_cycle());
+    T(none_cycle(5));
+
+    // LD BC,2
+    T(m1_cycle());
+    T(mread_cycle());
+    T(mread_cycle());
+
+    // CPDR (1)
+    T(m1_cycle());
+    T(m1_cycle());
+    T(mread_cycle());
+    T(none_cycle(10));
+
+    // CPDR (2)
+    T(m1_cycle());
+    T(m1_cycle());
+    T(mread_cycle());
+    T(none_cycle(5));
+
+    T(finish());
+}
+
+UTEST(z80, INIR_INDR) {
+    uint8_t prog[] = {
+        0x06, 0x02,         // LD B,2
+        0xED, 0xB2,         // INIR
+        0x06, 0x02,         // LD B,2
+        0xED, 0xBA,         // INDR
+        0x00, 0x00,
+    };
+    init(prog, sizeof(prog));
+
+    // LD BC,2
+    T(m1_cycle());
+    T(mread_cycle());
+
+    // INIR (1)
+    T(m1_cycle());
+    T(m1_cycle());
+    T(none_cycle(1));
+    T(ioread_cycle());
+    T(mwrite_cycle());
+    T(none_cycle(5));
+
+    // INIR (2)
+    T(m1_cycle());
+    T(m1_cycle());
+    T(none_cycle(1));
+    T(ioread_cycle());
+    T(mwrite_cycle());
+
+    // LD BC,2
+    T(m1_cycle());
+    T(mread_cycle());
+
+    // INDR (1)
+    T(m1_cycle());
+    T(m1_cycle());
+    T(none_cycle(1));
+    T(ioread_cycle());
+    T(mwrite_cycle());
+    T(none_cycle(5));
+
+    // INDR (2)
+    T(m1_cycle());
+    T(m1_cycle());
+    T(none_cycle(1));
+    T(ioread_cycle());
+    T(mwrite_cycle());
+
+    T(finish());
+}
+
+UTEST(z80, OTIR_OTDR) {
+    uint8_t prog[] = {
+        0x06, 0x02,     // LD B,2
+        0xED, 0xB3,     // OTIR
+        0x06, 0x02,     // LD B,2
+        0xED, 0xBB,     // OTDR
+        0x00, 0x00,
+    };
+    init(prog, sizeof(prog));
+
+    // LD B,2
+    T(m1_cycle());
+    T(mread_cycle());
+
+    // OTIR (1)
+    T(m1_cycle());
+    T(m1_cycle());
+    T(none_cycle(1));
+    T(mread_cycle());
+    T(iowrite_cycle());
+    T(none_cycle(5));
+
+    // OTIR (2)
+    T(m1_cycle());
+    T(m1_cycle());
+    T(none_cycle(1));
+    T(mread_cycle());
+    T(iowrite_cycle());
+
+    // LD B,2
+    T(m1_cycle());
+    T(mread_cycle());
+
+    // OTDR (1)
+    T(m1_cycle());
+    T(m1_cycle());
+    T(none_cycle(1));
+    T(mread_cycle());
+    T(iowrite_cycle());
+    T(none_cycle(5));
+
+    // OTDR (2)
+    T(m1_cycle());
+    T(m1_cycle());
+    T(none_cycle(1));
+    T(mread_cycle());
+    T(iowrite_cycle());
+
+    T(finish());
+}
+
+UTEST(z80, SET_BIT_n_r) {
+    uint8_t prog[] = {
+        0xCB, 0xC7,     // SET 0,A
+        0xCB, 0x48,     // BIT 1,B
+        0x00, 0x00,
+    };
+    init(prog, sizeof(prog));
+
+    // SET 0,A
+    T(m1_cycle());
+    T(m1_cycle());
+
+    // BIT 1,B
+    T(m1_cycle());
+    T(m1_cycle());
+
+    T(finish());
+}
+
+UTEST(z80, SET_BIT_iHLi) {
+    uint8_t prog[] = {
+        0xCB, 0xC6,                 // SET 0,(HL)
+        0xDD, 0xCB, 0x01, 0xC6,     // SET 0,(IX+1)
+        0xCB, 0x46,                 // BIT 0,(HL)
+        0xDD, 0xCB, 0x01, 0x46,     // BIT 0,(IX+1)
+        0x00, 0x00,
+    };
+    init(prog, sizeof(prog));
+
+    // SET 0,(HL)
+    T(m1_cycle());
+    T(m1_cycle());
+    T(mread_cycle());
+    T(none_cycle(1));
+    T(mwrite_cycle());
+
+    // SET 0,(IX+1)
+    T(m1_cycle());
+    T(m1_cycle());
+    T(mread_cycle());
+    T(mread_cycle());
+    T(none_cycle(2));
+    T(mread_cycle());
+    T(none_cycle(1));
+    T(mwrite_cycle());
+
+    // BIT 0,(HL)
+    T(m1_cycle());
+    T(m1_cycle());
+    T(mread_cycle());
+    T(none_cycle(1));
+
+    // BIT 0,(IX+1)
+    T(m1_cycle());
+    T(m1_cycle());
+    T(mread_cycle());
+    T(mread_cycle());
+    T(none_cycle(2));
+    T(mread_cycle());
+    T(none_cycle(1));
 
     T(finish());
 }
