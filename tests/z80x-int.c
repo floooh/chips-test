@@ -24,6 +24,11 @@ static void tick(void) {
             mem[addr] = Z80_GET_DATA(pins);
         }
     }
+    else if ((pins & (Z80_M1|Z80_IORQ)) == (Z80_M1|Z80_IORQ)) {
+        // put 0xE0 on data bus (in IM2 mode this is the low byte of the
+        // interrupt vector, and in IM1 mode it is ignored)
+        Z80_SET_DATA(pins, 0xE0);
+    }
 }
 
 // special tick function for IM0, puts the RST 38h opcode on the data
@@ -554,5 +559,81 @@ UTEST(z80, INT_IM0) {
     im0_tick(); T(pins_rfsh()); T(!cpu.iff1);
     im0_tick(); T(pins_none()); T(!cpu.iff1);
 }
+
+// test IM1 interrupt behaviour and timing
+UTEST(z80, INT_IM1) {
+    uint8_t prog[] = {
+        0xFB,               //      EI
+        0xED, 0x56,         //      IM 1
+        0x00, 0x00, 0x00,   // l0:  NOPs
+        0x18, 0xFB,         //      JR l0
+    };
+    uint8_t isr[] = {
+        0x3E, 0x33,         //      LD A,33h
+        0xED, 0x4D,         //      RETI
+    };
+    init(0x0000, prog, sizeof(prog));
+    copy(0x0038, isr, sizeof(isr));
+    cpu.sp = 0x1000;
+
+    // EI + IM1
+    skip(12);
+
+    // NOP
+    tick(); T(pins_m1()); T(cpu.iff1);
+    tick(); T(pins_none());
+    pins |= Z80_INT;
+    tick(); T(pins_rfsh());
+    tick(); T(pins_none());
+
+    // interrupt should trigger now
+    tick(); T(pins_none());
+    tick(); T(pins_none()); T(!cpu.iff1); T(!cpu.iff2);
+    tick(); T(pins_m1iorq());
+    tick(); T(pins_none());
+    // regular refresh cycle
+    tick(); T(pins_rfsh());
+    tick(); T(pins_none());
+    // one extra tcycle
+    tick(); T(pins_none());
+    // two mwrite cycles (push PC to stack)
+    tick(); T(pins_none());
+    tick(); T(pins_mwrite());
+    tick(); T(pins_none());
+    tick(); T(pins_none());
+    tick(); T(pins_mwrite());
+    tick(); T(pins_none());
+    // ISR starts here (LD A,33h)
+    tick(); T(pins_m1());  T(!cpu.iff1); T(!cpu.iff2); T(cpu.pc == 0x0039);
+    tick(); T(pins_none());
+    tick(); T(pins_rfsh());
+    tick(); T(pins_none());
+    // mread (LD A,33h)
+    tick(); T(pins_mread());
+    tick(); T(pins_none());
+    tick(); T(pins_none());
+    // RETI, ED prefix
+    tick(); T(pins_m1());
+    tick(); T(pins_none());
+    tick(); T(pins_rfsh());
+    tick(); T(pins_none());
+    // RETI opcode
+    tick(); T(pins_m1());
+    tick(); T(pins_none());
+    tick(); T(pins_rfsh());
+    tick(); T(pins_none());
+    // RETI mread (pop)
+    tick(); T(pins_mread());
+    tick(); T(pins_none());
+    tick(); T(pins_none());
+    // RETI mread (pop)
+    tick(); T(pins_mread());
+    tick(); T(pins_none());
+    tick(); T(pins_none());
+
+    // next NOP (interrupts still disabled!)
+    tick(); T(pins_m1()); T(!cpu.iff1); T(!cpu.iff2); T(cpu.pc == 5);
+}
+
 
 UTEST_MAIN()
