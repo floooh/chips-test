@@ -320,5 +320,139 @@ UTEST(z80, NMI_during_EI) {
     tick(); T(pins_m1()); T(cpu.iff1); T(pins & Z80_RETI);
 }
 
+// test that NMIs don't trigger after prefixes
+UTEST(z80, NMI_prefix) {
+    uint8_t isr[] = {
+        0x3E, 0x33,     // LD A,33h
+        0xED, 0x45,     // RETN
+    };
+
+    //=== DD prefix
+    uint8_t dd_prog[] = {
+        0xFB,               //      EI
+        0xDD, 0x46, 0x01,   // l0:  LD B,(IX+1)
+        0x00,               //      NOP
+        0x18, 0xFA,         //      JR l0
+    };
+    init(0x0000, dd_prog, sizeof(dd_prog));
+    copy(0x0066, isr, sizeof(isr));
+
+    // EI
+    skip(4);
+
+    // LD B,(IX+1)
+    // trigger NMI during prefix
+    tick(); T(pins_m1());
+    pins |= Z80_NMI;
+    tick(); T(pins_none()); T(cpu.iff1);
+    pins &= ~Z80_NMI;
+    tick(); T(pins_rfsh());
+    tick(); T(pins_none());
+    // opcode, NMI should not have triggered
+    tick(); T(pins_m1());
+    tick(); T(pins_none()); T(cpu.iff1);
+    tick(); T(pins_rfsh());
+    tick(); T(pins_none());
+    // run to end of LD B,(IX+1)
+    skip(11); T(cpu.iff1);
+
+    // NOP, NMI should trigger now
+    tick(); T(pins_m1());
+    tick(); T(pins_none());  T(!cpu.iff1);
+
+    //=== ED prefix
+    uint8_t ed_prog[] = {
+        0xFB,               //      EI
+        0xED, 0xA0,         // l0:  LDI
+        0x00,               //      NOP
+        0x18, 0xFB,         //      JR l0
+    };
+    init(0x0000, ed_prog, sizeof(ed_prog));
+    copy(0x0066, isr, sizeof(isr));
+
+    // EI
+    skip(4);
+
+    // LDI, trigger NMI during ED prefix
+    tick(); T(pins_m1());
+    pins |= Z80_NMI;
+    tick(); T(pins_none()); T(cpu.iff1);
+    pins &= ~Z80_NMI;
+    tick(); T(pins_rfsh());
+    tick(); T(pins_none());
+    // opcode, NMI should not have triggered
+    tick(); T(pins_m1());
+    tick(); T(pins_none()); T(cpu.iff1);
+    tick(); T(pins_rfsh());
+    tick(); T(pins_none());
+    // run to end of LDI
+    skip(8); T(cpu.iff1);
+
+    // NOP, NMI should trigger now
+    tick(); T(pins_m1());
+    tick(); T(pins_none());  T(!cpu.iff1);
+
+    //=== CB prefix
+    uint8_t cb_prog[] = {
+        0xFB,           //      EI
+        0xCB, 0x17,     // l0:  RL A
+        0x00,           //      NOP
+        0x18, 0xFB,     //      JR l0
+    };
+    init(0x0000, cb_prog, sizeof(cb_prog));
+    copy(0x0066, isr, sizeof(isr));
+
+    // EI
+    skip(4);
+
+    // RL A, trigger NMI during CB prefix
+    tick(); T(pins_m1());
+    pins |= Z80_NMI;
+    tick(); T(pins_none()); T(cpu.iff1);
+    pins &= ~Z80_NMI;
+    tick(); T(pins_rfsh());
+    tick(); T(pins_none());
+    // opcode, NMI should not have triggered
+    tick(); T(pins_m1());
+    tick(); T(pins_none()); T(cpu.iff1);
+    tick(); T(pins_rfsh());
+    tick(); T(pins_none());
+
+    // NOP, NMI should trigger now
+    tick(); T(pins_m1());
+    tick(); T(pins_none());  T(!cpu.iff1);
+
+    //=== DD+CB prefix
+    uint8_t ddcb_prog[] = {
+        0xFB,                       //      EI
+        0xDD, 0xCB, 0x01, 0x16,     // l0:  RL (IX+1)
+        0x00,                       //      NOP
+        0x18, 0xF9,                 //      JR l0
+    };
+    init(0x0000, ddcb_prog, sizeof(ddcb_prog));
+    copy(0x0066, isr, sizeof(isr));
+
+    // EI
+    skip(4);
+
+    // RL (IX+1), trigger NMI during DD+CB prefix
+    tick(); T(pins_m1());
+    pins |= Z80_NMI;
+    tick(); T(pins_none()); T(cpu.iff1);
+    pins &= ~Z80_NMI;
+    tick(); T(pins_rfsh());
+    tick(); T(pins_none());
+    // CB prefix, NMI should not trigger
+    tick(); T(pins_m1());
+    tick(); T(pins_none()); T(cpu.iff1);
+    tick(); T(pins_rfsh());
+    tick(); T(pins_none());
+    // run to end of RL (IX+1)
+    skip(15); T(cpu.iff1);
+
+    // NOP, NMI should trigger now
+    tick(); T(pins_m1());
+    tick(); T(pins_none()); T(!cpu.iff1);
+}
 
 UTEST_MAIN()
