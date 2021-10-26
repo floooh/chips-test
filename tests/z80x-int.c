@@ -727,4 +727,117 @@ UTEST(z80, INT_IM2) {
     tick(); T(pins_m1()); T(!cpu.iff1); T(!cpu.iff2); T(cpu.pc == 9);
 }
 
+// maskable interrupts shouldn't trigger when interrupts are disabled
+UTEST(z80, INT_disabled) {
+    uint8_t prog[] = {
+        0xF3,       //      DI
+        0xED, 0x56, //      IM 1
+        0x00,       // l0:  NOP
+        0x18, 0xFD, //      JR l0
+    };
+    uint8_t isr[] = {
+        0x3E, 0x33, //      LD A,33h
+        0xED, 0x3D, //      RETI
+    };
+    init(0x0000, prog, sizeof(prog));
+    copy(0x0038, isr, sizeof(isr));
+
+    // DI
+    skip(4);
+    // IM 1
+    skip(8);
+
+    // NOP
+    tick(); T(pins_m1());
+    pins |= Z80_INT;
+    tick(); T(pins_none());
+    tick(); T(pins_rfsh())
+    tick(); T(pins_none());
+    // JR l0 (interrupt should not have triggered)
+    tick(); T(pins_m1());
+    tick(); T(pins_none());
+    tick(); T(pins_rfsh());
+    tick(); T(pins_none());
+    // mread
+    tick(); T(pins_mread());
+    tick(); T(pins_none());
+    tick(); T(pins_none());
+    // 5x ticks
+    tick(); T(pins_none());
+    tick(); T(pins_none());
+    tick(); T(pins_none());
+    tick(); T(pins_none());
+    tick(); T(pins_none());
+
+    // next NOP
+    tick(); T(pins_m1());
+    tick(); T(pins_none());
+    tick(); T(pins_rfsh())
+    tick(); T(pins_none());
+}
+
+// maskable interrupts shouldn't trigger during EI sequences
+UTEST(z80, Z80_INT_EI_seq) {
+    uint8_t prog[] = {
+        0xFB,               //      EI
+        0xED, 0x56,         //      IM 1
+        0xFB, 0xFB, 0xFB,   // l0:  3x EI
+        0x00,               //      NOP
+        0x18, 0xFA,         //      JR l0
+    };
+    uint8_t isr[] = {
+        0x3E, 0x33,         //      LD A,33h
+        0xED, 0x3D,         //      RETI
+    };
+    init(0x0000, prog, sizeof(prog));
+    copy(0x0038, isr, sizeof(isr));
+
+    // EI
+    skip(4);
+    // IM 1
+    skip(8);
+
+    // EI
+    tick(); T(pins_m1());
+    pins |= Z80_INT;
+    tick(); T(pins_none());
+    tick(); T(pins_rfsh());
+    tick(); T(pins_none());
+    // EI (interrupt shouldn't trigger)
+    tick(); T(pins_m1());
+    tick(); T(pins_none());
+    tick(); T(pins_rfsh());
+    tick(); T(pins_none());
+    // EI (interrupt shouldn't trigger)
+    tick(); T(pins_m1());
+    tick(); T(pins_none());
+    tick(); T(pins_rfsh());
+    tick(); T(pins_none());
+    // NOP (interrupt should trigger at end)
+    tick(); T(pins_m1());
+    tick(); T(pins_none());
+    tick(); T(pins_rfsh());
+    tick(); T(pins_none());
+
+    // IM1 interrupt request starts here
+    tick(); T(pins_none());
+    tick(); T(pins_none()); T(!cpu.iff1); T(!cpu.iff2);
+    tick(); T(pins_m1iorq());
+    tick(); T(pins_none());
+    // regular refresh cycle
+    tick(); T(pins_rfsh());
+    tick(); T(pins_none());
+    // one extra tcycle
+    tick(); T(pins_none());
+    // two mwrite cycles (push PC to stack)
+    tick(); T(pins_none());
+    tick(); T(pins_mwrite());
+    tick(); T(pins_none());
+    tick(); T(pins_none());
+    tick(); T(pins_mwrite());
+    tick(); T(pins_none());
+    // ISR starts here (LD A,33h)
+    tick(); T(pins_m1());  T(!cpu.iff1); T(!cpu.iff2); T(cpu.pc == 0x0039);
+}
+
 UTEST_MAIN()
