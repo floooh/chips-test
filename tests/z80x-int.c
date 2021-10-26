@@ -15,14 +15,33 @@ static uint8_t mem[(1<<16)];
 
 static void tick(void) {
     pins = z80_tick(&cpu, pins);
-    const uint16_t addr = Z80_GET_ADDR(pins);
     if (pins & Z80_MREQ) {
+        const uint16_t addr = Z80_GET_ADDR(pins);
         if (pins & Z80_RD) {
             Z80_SET_DATA(pins, mem[addr]);
         }
         else if (pins & Z80_WR) {
             mem[addr] = Z80_GET_DATA(pins);
         }
+    }
+}
+
+// special tick function for IM0, puts the RST 38h opcode on the data
+// bus when requested by the interrupt handling
+static void im0_tick(void) {
+    pins = z80_tick(&cpu, pins);
+    if (pins & Z80_MREQ) {
+        const uint16_t addr = Z80_GET_ADDR(pins);
+        if (pins & Z80_RD) {
+            Z80_SET_DATA(pins, mem[addr]);
+        }
+        else if (pins & Z80_WR) {
+            mem[addr] = Z80_GET_DATA(pins);
+        }
+    }
+    else if ((pins & (Z80_M1|Z80_IORQ)) == (Z80_M1|Z80_IORQ)) {
+        // put RST 38h opcode on data bus
+        Z80_SET_DATA(pins, 0xFF);
     }
 }
 
@@ -44,6 +63,10 @@ static bool pins_mread(void) {
 
 static bool pins_mwrite(void) {
     return (pins & Z80_CTRL_PIN_MASK) == (Z80_MREQ|Z80_WR);
+}
+
+static bool pins_m1iorq(void) {
+    return (pins & Z80_CTRL_PIN_MASK) == (Z80_M1|Z80_IORQ);
 }
 
 static void skip(int num_ticks) {
@@ -453,6 +476,83 @@ UTEST(z80, NMI_prefix) {
     // NOP, NMI should trigger now
     tick(); T(pins_m1());
     tick(); T(pins_none()); T(!cpu.iff1);
+}
+
+// test IM0 interrupt behaviour and timing
+UTEST(z80, INT_IM0) {
+    uint8_t prog[] = {
+        0xFB,               //      EI
+        0xED, 0x46,         //      IM 0
+        0x31, 0x22, 0x11,   //      LD SP, 1122h
+        0x00, 0x00, 0x00,   // l0:  NOPS
+        0x18, 0xFB,         //      JR l0
+    };
+    uint8_t isr[] = {
+        0x3E, 0x33,         //      LD A,33h
+        0xED, 0x4D,         //      RETI
+    };
+    init(0x0000, prog, sizeof(prog));
+    copy(0x0038, isr, sizeof(isr));
+    cpu.sp = 0x0100;
+
+    // EI + IM 0 + LD SP,1122h
+    skip(22);
+    // NOP
+    im0_tick(); T(pins_m1());
+    im0_tick(); T(pins_none());
+    pins |= Z80_INT;
+    im0_tick(); T(pins_rfsh());
+    im0_tick(); T(pins_none());
+    // interrupt handling starts here
+    im0_tick(); T(pins_none());
+    im0_tick(); T(pins_none()); T(!cpu.iff1); T(!cpu.iff2);
+    im0_tick(); T(pins_m1iorq()); T(Z80_GET_DATA(pins) == 0xFF);
+    im0_tick(); T(pins_none());
+    im0_tick(); T(pins_rfsh());
+    im0_tick(); T(pins_none());
+    // RST execution should start here
+    im0_tick(); T(pins_none());
+    // mwrite (push PC)
+    im0_tick(); T(pins_none());
+    im0_tick(); T(pins_mwrite());
+    im0_tick(); T(pins_none());
+    // mwrite (push PC)
+    im0_tick(); T(pins_none());
+    im0_tick(); T(pins_mwrite());
+    im0_tick(); T(pins_none());
+    // interrupt service routine at address 0x0038 (LD A,33)
+    im0_tick(); T(pins_m1()); T(cpu.pc == 0x0039);
+    im0_tick(); T(pins_none());
+    im0_tick(); T(pins_rfsh());
+    im0_tick(); T(pins_none());
+    // mread
+    im0_tick(); T(pins_mread());
+    im0_tick(); T(pins_none());
+    im0_tick(); T(pins_none());
+    // RETI, ED prefix
+    im0_tick(); T(pins_m1());
+    im0_tick(); T(pins_none());
+    im0_tick(); T(pins_rfsh());
+    im0_tick(); T(pins_none());
+    // RETI opcode
+    im0_tick(); T(pins_m1());
+    im0_tick(); T(pins_none());
+    im0_tick(); T(pins_rfsh());
+    im0_tick(); T(pins_none());
+    // RETI mread (pop)
+    im0_tick(); T(pins_mread());
+    im0_tick(); T(pins_none());
+    im0_tick(); T(pins_none());
+    // RETI mread (pop)
+    im0_tick(); T(pins_mread());
+    im0_tick(); T(pins_none());
+    im0_tick(); T(pins_none());
+
+    // continue with next NOP, NOTE: iff1 is *NOT* reenabled!
+    im0_tick(); T(pins_m1()); T(!cpu.iff1);
+    im0_tick(); T(pins_none()); T(!cpu.iff1);
+    im0_tick(); T(pins_rfsh()); T(!cpu.iff1);
+    im0_tick(); T(pins_none()); T(!cpu.iff1);
 }
 
 UTEST_MAIN()
