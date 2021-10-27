@@ -5,7 +5,7 @@
 */
 #include "common.h"
 #define CHIPS_IMPL
-#include "chips/z80.h"
+#include "chips/z80x.h"
 #include "chips/z80pio.h"
 #include "chips/kbd.h"
 #include "chips/mem.h"
@@ -13,7 +13,7 @@
 #include "systems/z1013.h"
 #include "z1013-roms.h"
 
-/* imports from z1013-ui.cc */
+// imports from z1013-ui.cc
 #ifdef CHIPS_USE_UI
 #include "ui.h"
 void z1013ui_init(z1013_t* z1013);
@@ -27,7 +27,7 @@ static const int ui_extra_height = 0;
 
 static z1013_t z1013;
 
-/* sokol-app entry, configure application callbacks and window */
+// sokol-app entry, configure application callbacks and window
 static void app_init(void);
 static void app_frame(void);
 static void app_input(const sapp_event*);
@@ -47,7 +47,7 @@ sapp_desc sokol_main(int argc, char* argv[]) {
     };
 }
 
-/* get z1013_desc_t struct for given Z1013 model */
+// get z1013_desc_t struct for given Z1013 model
 z1013_desc_t z1013_desc(z1013_type_t type) {
     return(z1013_desc_t) {
         .type = type,
@@ -62,7 +62,6 @@ z1013_desc_t z1013_desc(z1013_type_t type) {
     };
 }
 
-/* one-time application init */
 void app_init(void) {
     gfx_init(&(gfx_desc_t){
         #ifdef CHIPS_USE_UI
@@ -101,7 +100,7 @@ void app_init(void) {
     }
 }
 
-/* per frame stuff: tick the emulator, render the framebuffer, delay-load game files */
+// per frame stuff: tick the emulator, render the framebuffer, delay-load game files
 void app_frame(void) {
     const uint32_t frame_time = clock_frame_time();
     #if CHIPS_USE_UI
@@ -140,11 +139,11 @@ void app_frame(void) {
     }
 }
 
-/* keyboard input handling */
+// keyboard input handling
 void app_input(const sapp_event* event) {
     #ifdef CHIPS_USE_UI
     if (ui_input(event)) {
-        /* input was handled by UI */
+        // input was handled by UI
         return;
     }
     #endif
@@ -153,7 +152,7 @@ void app_input(const sapp_event* event) {
         case SAPP_EVENTTYPE_CHAR:
             c = (int) event->char_code;
             if ((c >= 0x20) && (c < 0x7F)) {
-                /* need to invert case (unshifted is upper caps, shifted is lower caps */
+                // need to invert case (unshifted is upper caps, shifted is lower caps)
                 if (isupper(c)) {
                     c = tolower(c);
                 }
@@ -192,7 +191,7 @@ void app_input(const sapp_event* event) {
     }
 }
 
-/* application cleanup callback */
+// application cleanup callback
 void app_cleanup(void) {
     z1013_discard(&z1013);
     #ifdef CHIPS_USE_UI

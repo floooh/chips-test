@@ -3,7 +3,7 @@
 */
 #include "common.h"
 #include "imgui.h"
-#include "chips/z80.h"
+#include "chips/z80x.h"
 #include "chips/z80pio.h"
 #include "chips/kbd.h"
 #include "chips/mem.h"
@@ -34,7 +34,7 @@ extern z1013_desc_t z1013_desc(z1013_type_t type);
 static double exec_time;
 static ui_z1013_t ui_z1013;
 
-/* reboot callback */
+// reboot callback
 static void boot_cb(z1013_t* sys, z1013_type_t type) {
     z1013_desc_t desc = z1013_desc(type);
     z1013_init(sys, &desc);
