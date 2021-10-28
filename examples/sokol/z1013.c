@@ -19,7 +19,7 @@
 void z1013ui_init(z1013_t* z1013);
 void z1013ui_discard(void);
 void z1013ui_draw(void);
-void z1013ui_exec(z1013_t* z1013, uint32_t frame_time_us);
+void z1013ui_exec(uint32_t frame_time_us);
 static const int ui_extra_height = 16;
 #else
 static const int ui_extra_height = 0;
@@ -87,7 +87,7 @@ void app_init(void) {
 void app_frame(void) {
     const uint32_t frame_time_us = clock_frame_time();
     #if CHIPS_USE_UI
-        z1013ui_exec(&z1013, frame_time_us);
+        z1013ui_exec(frame_time_us);
     #else
         z1013_exec(&z1013, frame_time_us);
     #endif

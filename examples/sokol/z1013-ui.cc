@@ -60,6 +60,8 @@ void z1013ui_init(z1013_t* z1013) {
     desc.dbg_keys.step_over_name = "F6";
     desc.dbg_keys.step_into_keycode = SAPP_KEYCODE_F7;
     desc.dbg_keys.step_into_name = "F7";
+    desc.dbg_keys.step_tick_keycode = SAPP_KEYCODE_F8;
+    desc.dbg_keys.step_tick_name = "F8";    
     desc.dbg_keys.toggle_breakpoint_keycode = SAPP_KEYCODE_F9;
     desc.dbg_keys.toggle_breakpoint_name = "F9";
     ui_z1013_init(&ui_z1013, &desc);
@@ -69,16 +71,10 @@ void z1013ui_discard(void) {
     ui_z1013_discard(&ui_z1013);
 }
 
-void z1013ui_exec(z1013_t* z1013, uint32_t frame_time_us) {
-    if (ui_z1013_before_exec(&ui_z1013)) {
-        uint64_t start = stm_now();
-        z1013_exec(z1013, frame_time_us);
-        exec_time = stm_ms(stm_since(start));
-        ui_z1013_after_exec(&ui_z1013);
-    }
-    else {
-        exec_time = 0.0;
-    }
+void z1013ui_exec(uint32_t frame_time_us) {
+    uint64_t start = stm_now();
+    ui_z1013_exec(&ui_z1013, frame_time_us);
+    exec_time = ui_z1013.dbg.dbg.stopped ? 0.0 : stm_ms(stm_since(start));
 }
 
 } /* extern "C" */
