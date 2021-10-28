@@ -2,26 +2,24 @@
 /*
     Simple file access functions.
 */
-extern void fs_init(void);
-extern bool fs_load_file(const char* path);
-extern bool fs_load_base64(const char* name, const char* payload);
-extern void fs_load_mem(const char* path, const uint8_t* ptr, uint32_t size);
-extern uint32_t fs_size(void);
-extern const uint8_t* fs_ptr(void);
-extern void fs_free(void);
-extern bool fs_ext(const char* str);
+void fs_init(void);
+void fs_dowork(void);
+void fs_start_load_file(const char* path);
+void fs_start_load_dropped_file(void);
+bool fs_load_base64(const char* name, const char* payload);
+void fs_load_mem(const char* path, const uint8_t* ptr, uint32_t size);
+uint32_t fs_size(void);
+const uint8_t* fs_ptr(void);
+void fs_free(void);
+bool fs_ext(const char* str);
 
 /*== IMPLEMENTATION ==========================================================*/
 #ifdef COMMON_IMPL
-#include <stdlib.h>
+#include "sokol_fetch.h"
+#include "sokol_app.h"
 #include <string.h>
-#include <ctype.h>
 #include <assert.h>
-#if !defined(__EMSCRIPTEN__)
-#include <stdio.h>
-#else
-#include <emscripten/emscripten.h>
-#endif
+#include <ctype.h>
 
 #define FS_EXT_SIZE (16)
 #define FS_MAX_SIZE (1024 * 1024)
@@ -32,7 +30,20 @@ static struct {
     uint8_t buf[FS_MAX_SIZE + 1];
 } fs;
 
-void fs_copy_ext(const char* path) {
+void fs_init(void) {
+    memset(&fs, 0, sizeof(fs));
+    sfetch_setup(&(sfetch_desc_t){
+        .max_requests = 1,
+        .num_channels = 1,
+        .num_lanes = 1,
+    });
+}
+
+void fs_dowork(void) {
+    sfetch_dowork();
+}
+
+static void fs_copy_ext(const char* path) {
     fs.ext[0] = 0;
     const char* str = path;
     const char* slash = strrchr(str, '/');
@@ -53,7 +64,7 @@ void fs_copy_ext(const char* path) {
 
 // http://web.mit.edu/freebsd/head/contrib/wpa/src/utils/base64.c
 static const unsigned char fs_base64_table[65] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-bool fs_base64_decode(const char* src) {
+static bool fs_base64_decode(const char* src) {
     int len = (int)strlen(src);
 
     uint8_t dtable[256];
@@ -147,69 +158,54 @@ bool fs_load_base64(const char* name, const char* payload) {
     }
 }
 
-#if !defined(__EMSCRIPTEN__)
-bool fs_load_file(const char* path) {
-    fs_free();
-    fs_copy_ext(path);
-    FILE* fp = fopen(path, "rb");
-    bool success = false;
-    if (fp) {
-        fseek(fp, 0, SEEK_END);
-        int size = ftell(fp);
-        if (size <= FS_MAX_SIZE) {
-            fs.size = size;
-            fseek(fp, 0, SEEK_SET);
-            if (fs.size > 0) {
-                fs.ptr = fs.buf;
-                uint32_t res = (int) fread(fs.ptr, 1, fs.size, fp); (void)res;
-                success = (res == fs.size);
-            }
-            fclose(fp);
-            /* zero-terminate in case this is a text file */
-            fs.ptr[fs.size] = 0;
-        }
+static void fs_fetch_callback(const sfetch_response_t* response) {
+    if (response->fetched) {
+        fs.ptr = fs.buf;
+        fs.size = response->fetched_size;
+        assert(fs.size < sizeof(fs.buf));
+        // in case it's a text file, zero-terminate the data
+        fs.buf[fs.size] = 0;
     }
-    return success;
-}
-#else
-EMSCRIPTEN_KEEPALIVE void emsc_load_data(const char* path, const uint8_t* ptr, int size) {
-    fs_load_mem(path, ptr, size);
+    // FIXME: signal failure
 }
 
-EM_JS(void, emsc_fs_init, (void), {
-    console.log("fs.h: registering Module['ccall']");
-    Module['ccall'] = ccall;
-});
-
-EM_JS(void, emsc_load_file, (const char* path_cstr), {
-    var path = UTF8ToString(path_cstr);
-    var req = new XMLHttpRequest();
-    req.open("GET", path);
-    req.responseType = "arraybuffer";
-    req.onload = function(e) {
-        var uint8Array = new Uint8Array(req.response);
-        var res = ccall('emsc_load_data',
-            'int',
-            ['string', 'array', 'number'],
-            [path, uint8Array, uint8Array.length]);
-    };
-    req.send();
-});
-
-/* NOTE: this is loading the data asynchronously, need to check fs_ptr()
-   whether the data has actually been loaded!
-*/
-bool fs_load_file(const char* path) {
-    fs_free();
-    emsc_load_file(path);
-    return true;
+#if defined(__EMSCRIPTEN__)
+static void fs_emsc_dropped_file_callback(const sapp_html5_fetch_response* response) {
+    if (response->succeeded) {
+        fs.ptr = fs.buf;
+        fs.size = response->fetched_size;
+        assert(fs.size < sizeof(fs.buf));
+        // in case it's a text file, zero-terminate the data
+        fs.buf[fs.size] = 0;
+    }
+    // FIXME: signal failure
 }
 #endif
 
-void fs_init(void) {
-    memset(&fs, 0, sizeof(fs));
+void fs_start_load_file(const char* path) {
+    fs_free();
+    fs_copy_ext(path);
+    sfetch_send(&(sfetch_request_t){
+        .path = path,
+        .callback = fs_fetch_callback,
+        .buffer_ptr = fs.buf,
+        .buffer_size = FS_MAX_SIZE,
+    });
+}
+
+void fs_start_load_dropped_file(void) {
+    fs_free();
+    const char* path = sapp_get_dropped_file_path(0);
+    fs_copy_ext(path);
     #if defined(__EMSCRIPTEN__)
-    emsc_fs_init();
+        sapp_html5_fetch_dropped_file(&(sapp_html5_fetch_request){
+            .dropped_file_index = 0,
+            .callback = fs_emsc_dropped_file_callback,
+            .buffer_ptr = fs.buf,
+            .buffer_size = FS_MAX_SIZE
+        });
+    #else
+        fs_start_load_file(path);
     #endif
 }
 

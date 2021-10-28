@@ -18,6 +18,7 @@ extern uint8_t keybuf_get(uint32_t frame_time_us);
 #ifdef COMMON_IMPL
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
 #include "keybuf.h"
 
 #define KEYBUF_MAX_KEYS (64 * 1024)

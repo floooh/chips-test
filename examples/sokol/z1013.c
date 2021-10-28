@@ -27,27 +27,13 @@ static const int ui_extra_height = 0;
 
 static z1013_t z1013;
 
-// sokol-app entry, configure application callbacks and window
 static void app_init(void);
 static void app_frame(void);
 static void app_input(const sapp_event*);
 static void app_cleanup(void);
+static void handle_file_loading(void);
+static void handle_input(uint32_t frame_time_us);
 
-sapp_desc sokol_main(int argc, char* argv[]) {
-    sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
-    return (sapp_desc) {
-        .init_cb = app_init,
-        .frame_cb = app_frame,
-        .event_cb = app_input,
-        .cleanup_cb = app_cleanup,
-        .width = 2 * z1013_std_display_width(),
-        .height = 2 * z1013_std_display_height() + ui_extra_height,
-        .window_title = "Robotron Z1013",
-        .ios_keyboard_resizes_canvas = true
-    };
-}
-
-// get z1013_desc_t struct for given Z1013 model
 z1013_desc_t z1013_desc(z1013_type_t type) {
     return(z1013_desc_t) {
         .type = type,
@@ -89,9 +75,7 @@ void app_init(void) {
     bool delay_input = false;
     if (sargs_exists("file")) {
         delay_input = true;
-        if (!fs_load_file(sargs_value("file"))) {
-            gfx_flash_error();
-        }
+        fs_start_load_file(sargs_value("file"));
     }
     if (!delay_input) {
         if (sargs_exists("input")) {
@@ -100,43 +84,16 @@ void app_init(void) {
     }
 }
 
-// per frame stuff: tick the emulator, render the framebuffer, delay-load game files
 void app_frame(void) {
-    const uint32_t frame_time = clock_frame_time();
+    const uint32_t frame_time_us = clock_frame_time();
     #if CHIPS_USE_UI
-        z1013ui_exec(&z1013, frame_time);
+        z1013ui_exec(&z1013, frame_time_us);
     #else
-        z1013_exec(&z1013, frame_time);
+        z1013_exec(&z1013, frame_time_us);
     #endif
     gfx_draw(z1013_display_width(&z1013), z1013_display_height(&z1013));
-    const uint32_t load_delay_frames = 20;
-    if (fs_ptr() && clock_frame_count_60hz() > load_delay_frames) {
-        bool load_success = false;
-        if (fs_ext("txt") || fs_ext("bas")) {
-            load_success = true;
-            keybuf_put((const char*)fs_ptr());
-        }
-        else {
-            load_success = z1013_quickload(&z1013, fs_ptr(), fs_size());
-        }
-        if (load_success) {
-            if (clock_frame_count_60hz() > (load_delay_frames + 10)) {
-                gfx_flash_success();
-            }
-            if (sargs_exists("input")) {
-                keybuf_put(sargs_value("input"));
-            }
-        }
-        else {
-            gfx_flash_error();
-        }
-        fs_free();
-    }
-    uint8_t key_code;
-    if (0 != (key_code = keybuf_get(frame_time))) {
-        z1013_key_down(&z1013, key_code);
-        z1013_key_up(&z1013, key_code);
-    }
+    handle_file_loading();
+    handle_input(frame_time_us);
 }
 
 // keyboard input handling
@@ -186,6 +143,9 @@ void app_input(const sapp_event* event) {
         case SAPP_EVENTTYPE_TOUCHES_BEGAN:
             sapp_show_keyboard(true);
             break;
+        case SAPP_EVENTTYPE_FILES_DROPPED:
+            fs_start_load_dropped_file();
+            break;
         default:
             break;
     }
@@ -199,4 +159,55 @@ void app_cleanup(void) {
     #endif
     gfx_shutdown();
     sargs_shutdown();
+}
+
+static void handle_input(uint32_t frame_time_us) {
+    uint8_t key_code;
+    if (0 != (key_code = keybuf_get(frame_time_us))) {
+        z1013_key_down(&z1013, key_code);
+        z1013_key_up(&z1013, key_code);
+    }
+}
+
+static void handle_file_loading(void) {
+    fs_dowork();
+    const uint32_t load_delay_frames = 20;
+    if (fs_ptr() && (clock_frame_count_60hz() > load_delay_frames)) {
+        bool load_success = false;
+        if (fs_ext("txt") || fs_ext("bas")) {
+            load_success = true;
+            keybuf_put((const char*)fs_ptr());
+        }
+        else {
+            load_success = z1013_quickload(&z1013, fs_ptr(), fs_size());
+        }
+        if (load_success) {
+            if (clock_frame_count_60hz() > (load_delay_frames + 10)) {
+                gfx_flash_success();
+            }
+            if (sargs_exists("input")) {
+                keybuf_put(sargs_value("input"));
+            }
+        }
+        else {
+            gfx_flash_error();
+        }
+        fs_free();
+    }
+}
+
+sapp_desc sokol_main(int argc, char* argv[]) {
+    sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
+    return (sapp_desc) {
+        .init_cb = app_init,
+        .frame_cb = app_frame,
+        .event_cb = app_input,
+        .cleanup_cb = app_cleanup,
+        .width = 2 * z1013_std_display_width(),
+        .height = 2 * z1013_std_display_height() + ui_extra_height,
+        .window_title = "Robotron Z1013",
+        .icon.sokol_default = true,
+        .ios_keyboard_resizes_canvas = true,
+        .enable_dragndrop = true,
+    };
 }
