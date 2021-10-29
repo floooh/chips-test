@@ -12,27 +12,31 @@
 #include "chips/clk.h"
 #include "systems/z1013.h"
 #include "z1013-roms.h"
-
-// imports from z1013-ui.cc
-#ifdef CHIPS_USE_UI
+#if defined(CHIPS_USE_UI)
+#define UI_DBG_USE_Z80
 #include "ui.h"
-void z1013ui_init(z1013_t* z1013);
-void z1013ui_discard(void);
-void z1013ui_draw(void);
-z1013_debug_t z1013ui_get_debug(void);
-static const int ui_extra_height = 16;
-#else
-static const int ui_extra_height = 0;
+#include "ui/ui_chip.h"
+#include "ui/ui_memedit.h"
+#include "ui/ui_memmap.h"
+#include "ui/ui_dasm.h"
+#include "ui/ui_dbg.h"
+#include "ui/ui_z80.h"
+#include "ui/ui_z80pio.h"
+#include "ui/ui_z1013.h"
 #endif
 
 static z1013_t z1013;
 
-static void app_init(void);
-static void app_frame(void);
-static void app_input(const sapp_event*);
-static void app_cleanup(void);
 static void handle_file_loading(void);
 static void handle_input(uint32_t frame_time_us);
+
+// imports from z1013-ui.cc
+#ifdef CHIPS_USE_UI
+static ui_z1013_t ui_z1013;
+static const int ui_extra_height = 16;
+#else
+static const int ui_extra_height = 0;
+#endif
 
 z1013_desc_t z1013_desc(z1013_type_t type) {
     return(z1013_desc_t) {
@@ -46,10 +50,20 @@ z1013_desc_t z1013_desc(z1013_type_t type) {
         .rom_font = dump_z1013_font_bin,
         .rom_font_size = sizeof(dump_z1013_font_bin),
         #if defined(CHIPS_USE_UI)
-        .debug = z1013ui_get_debug(),
+        .debug = ui_z1013_get_debug(&ui_z1013)
         #endif
     };
 }
+
+#if defined(CHIPS_USE_UI)
+static void ui_draw_cb(void) {
+    ui_z1013_draw(&ui_z1013, 0.0);
+}
+static void ui_boot_cb(z1013_t* sys, z1013_type_t type) {
+    z1013_desc_t desc = z1013_desc(type);
+    z1013_init(sys, &desc);
+}
+#endif
 
 void app_init(void) {
     gfx_init(&(gfx_desc_t){
@@ -73,7 +87,22 @@ void app_init(void) {
     z1013_desc_t desc = z1013_desc(type);
     z1013_init(&z1013, &desc);
     #ifdef CHIPS_USE_UI
-    z1013ui_init(&z1013);
+        ui_init(ui_draw_cb);
+        ui_z1013_init(&ui_z1013, &(ui_z1013_desc_t){
+            .z1013 = &z1013,
+            .boot_cb = ui_boot_cb,
+            .create_texture_cb = gfx_create_texture,
+            .update_texture_cb = gfx_update_texture,
+            .destroy_texture_cb = gfx_destroy_texture,
+            .dbg_keys = {
+                .cont = { .keycode = SAPP_KEYCODE_F5, .name = "F5" },
+                .stop = { .keycode = SAPP_KEYCODE_F5, .name = "F5" },
+                .step_over = { .keycode = SAPP_KEYCODE_F6, .name = "F6" },
+                .step_into = { .keycode = SAPP_KEYCODE_F7, .name = "F7" },
+                .step_tick = { .keycode = SAPP_KEYCODE_F8, .name = "F8" },
+                .toggle_breakpoint = { .keycode = SAPP_KEYCODE_F9, .name = "F9" }
+            }
+        });
     #endif
     bool delay_input = false;
     if (sargs_exists("file")) {
@@ -154,7 +183,7 @@ void app_input(const sapp_event* event) {
 void app_cleanup(void) {
     z1013_discard(&z1013);
     #ifdef CHIPS_USE_UI
-    z1013ui_discard();
+        ui_z1013_discard(&ui_z1013);
     #endif
     gfx_shutdown();
     sargs_shutdown();
