@@ -31,7 +31,6 @@ extern "C" {
 
 extern z1013_desc_t z1013_desc(z1013_type_t type);
 
-static double exec_time;
 static ui_z1013_t ui_z1013;
 
 // reboot callback
@@ -41,7 +40,7 @@ static void boot_cb(z1013_t* sys, z1013_type_t type) {
 }
 
 void z1013ui_draw(void) {
-    ui_z1013_draw(&ui_z1013, exec_time);
+    ui_z1013_draw(&ui_z1013, 0.0);
 }
 
 void z1013ui_init(z1013_t* z1013) {
@@ -71,10 +70,8 @@ void z1013ui_discard(void) {
     ui_z1013_discard(&ui_z1013);
 }
 
-void z1013ui_exec(uint32_t frame_time_us) {
-    uint64_t start = stm_now();
-    ui_z1013_exec(&ui_z1013, frame_time_us);
-    exec_time = ui_z1013.dbg.dbg.stopped ? 0.0 : stm_ms(stm_since(start));
+z1013_debug_t z1013ui_get_debug(void) {
+    return ui_z1013_get_debug(&ui_z1013);
 }
 
 } /* extern "C" */

@@ -19,7 +19,7 @@
 void z1013ui_init(z1013_t* z1013);
 void z1013ui_discard(void);
 void z1013ui_draw(void);
-void z1013ui_exec(uint32_t frame_time_us);
+z1013_debug_t z1013ui_get_debug(void);
 static const int ui_extra_height = 16;
 #else
 static const int ui_extra_height = 0;
@@ -44,7 +44,10 @@ z1013_desc_t z1013_desc(z1013_type_t type) {
         .rom_mon202 = dump_z1013_mon202_bin,
         .rom_mon202_size = sizeof(dump_z1013_mon202_bin),
         .rom_font = dump_z1013_font_bin,
-        .rom_font_size = sizeof(dump_z1013_font_bin)
+        .rom_font_size = sizeof(dump_z1013_font_bin),
+        #if defined(CHIPS_USE_UI)
+        .debug = z1013ui_get_debug(),
+        #endif
     };
 }
 
@@ -86,11 +89,7 @@ void app_init(void) {
 
 void app_frame(void) {
     const uint32_t frame_time_us = clock_frame_time();
-    #if CHIPS_USE_UI
-        z1013ui_exec(frame_time_us);
-    #else
-        z1013_exec(&z1013, frame_time_us);
-    #endif
+    z1013_exec(&z1013, frame_time_us);
     gfx_draw(z1013_display_width(&z1013), z1013_display_height(&z1013));
     handle_file_loading();
     handle_input(frame_time_us);
