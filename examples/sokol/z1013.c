@@ -62,7 +62,7 @@ z1013_desc_t z1013_desc(z1013_type_t type) {
 
 #if defined(CHIPS_USE_UI)
 static void ui_draw_cb(void) {
-    ui_z1013_draw(&state.ui_z1013, state.exec_time_ms);
+    ui_z1013_draw(&state.ui_z1013);
 }
 static void ui_boot_cb(z1013_t* sys, z1013_type_t type) {
     z1013_desc_t desc = z1013_desc(type);
