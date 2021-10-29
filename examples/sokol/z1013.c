@@ -25,16 +25,23 @@
     #include "ui/ui_z1013.h"
 #endif
 
-static z1013_t z1013;
-static double exec_time_ms;
+static struct {
+    z1013_t z1013;
+    uint32_t frame_time_us;
+    uint32_t ticks;
+    double exec_time_ms;
+    #ifdef CHIPS_USE_UI
+        ui_z1013_t ui_z1013;
+    #endif
+} state;
 
 // imports from z1013-ui.cc
 #ifdef CHIPS_USE_UI
-    static ui_z1013_t ui_z1013;
-    static const int ui_extra_height = 16;
+#define TOP_BORDER (16)
 #else
-    static const int ui_extra_height = 0;
+#define TOP_BORDER (0)
 #endif
+#define BOTTOM_BORDER (16)
 
 z1013_desc_t z1013_desc(z1013_type_t type) {
     return(z1013_desc_t) {
@@ -48,14 +55,14 @@ z1013_desc_t z1013_desc(z1013_type_t type) {
         .rom_font = dump_z1013_font_bin,
         .rom_font_size = sizeof(dump_z1013_font_bin),
         #if defined(CHIPS_USE_UI)
-        .debug = ui_z1013_get_debug(&ui_z1013)
+        .debug = ui_z1013_get_debug(&state.ui_z1013)
         #endif
     };
 }
 
 #if defined(CHIPS_USE_UI)
 static void ui_draw_cb(void) {
-    ui_z1013_draw(&ui_z1013, exec_time_ms);
+    ui_z1013_draw(&state.ui_z1013, state.exec_time_ms);
 }
 static void ui_boot_cb(z1013_t* sys, z1013_type_t type) {
     z1013_desc_t desc = z1013_desc(type);
@@ -68,7 +75,8 @@ void app_init(void) {
         #ifdef CHIPS_USE_UI
         .draw_extra_cb = ui_draw,
         #endif
-        .top_offset = ui_extra_height
+        .top_border = TOP_BORDER,
+        .bottom_border = BOTTOM_BORDER,
     });
     keybuf_init(&(keybuf_desc_t){
         .key_delay_frames = 6
@@ -85,11 +93,11 @@ void app_init(void) {
         }
     }
     z1013_desc_t desc = z1013_desc(type);
-    z1013_init(&z1013, &desc);
+    z1013_init(&state.z1013, &desc);
     #ifdef CHIPS_USE_UI
         ui_init(ui_draw_cb);
-        ui_z1013_init(&ui_z1013, &(ui_z1013_desc_t){
-            .z1013 = &z1013,
+        ui_z1013_init(&state.ui_z1013, &(ui_z1013_desc_t){
+            .z1013 = &state.z1013,
             .boot_cb = ui_boot_cb,
             .create_texture_cb = gfx_create_texture,
             .update_texture_cb = gfx_update_texture,
@@ -117,16 +125,18 @@ void app_init(void) {
 }
 
 static void handle_file_loading(void);
-static void handle_input(uint32_t frame_time_us);
+static void handle_input(void);
+static void draw_status_bar(void);
 
 void app_frame(void) {
-    const uint32_t frame_time_us = clock_frame_time();
+    state.frame_time_us = clock_frame_time();
     const uint64_t exec_start_time = stm_now();
-    z1013_exec(&z1013, frame_time_us);
-    exec_time_ms = stm_ms(stm_since(exec_start_time));
-    gfx_draw(z1013_display_width(&z1013), z1013_display_height(&z1013));
+    state.ticks = z1013_exec(&state.z1013, state.frame_time_us);
+    state.exec_time_ms = stm_ms(stm_since(exec_start_time));
+    draw_status_bar();
+    gfx_draw(z1013_display_width(&state.z1013), z1013_display_height(&state.z1013));
     handle_file_loading();
-    handle_input(frame_time_us);
+    handle_input();
 }
 
 void app_input(const sapp_event* event) {
@@ -148,8 +158,8 @@ void app_input(const sapp_event* event) {
                 else if (islower(c)) {
                     c = toupper(c);
                 }
-                z1013_key_down(&z1013, c);
-                z1013_key_up(&z1013, c);
+                z1013_key_down(&state.z1013, c);
+                z1013_key_up(&state.z1013, c);
             }
             break;
         case SAPP_EVENTTYPE_KEY_DOWN:
@@ -165,10 +175,10 @@ void app_input(const sapp_event* event) {
             }
             if (c) {
                 if (event->type == SAPP_EVENTTYPE_KEY_DOWN) {
-                    z1013_key_down(&z1013, c);
+                    z1013_key_down(&state.z1013, c);
                 }
                 else {
-                    z1013_key_up(&z1013, c);
+                    z1013_key_up(&state.z1013, c);
                 }
             }
             break;
@@ -181,19 +191,19 @@ void app_input(const sapp_event* event) {
 }
 
 void app_cleanup(void) {
-    z1013_discard(&z1013);
+    z1013_discard(&state.z1013);
     #ifdef CHIPS_USE_UI
-        ui_z1013_discard(&ui_z1013);
+        ui_z1013_discard(&state.ui_z1013);
     #endif
     gfx_shutdown();
     sargs_shutdown();
 }
 
-static void handle_input(uint32_t frame_time_us) {
+static void handle_input(void) {
     uint8_t key_code;
-    if (0 != (key_code = keybuf_get(frame_time_us))) {
-        z1013_key_down(&z1013, key_code);
-        z1013_key_up(&z1013, key_code);
+    if (0 != (key_code = keybuf_get(state.frame_time_us))) {
+        z1013_key_down(&state.z1013, key_code);
+        z1013_key_up(&state.z1013, key_code);
     }
 }
 
@@ -207,7 +217,7 @@ static void handle_file_loading(void) {
             keybuf_put((const char*)fs_ptr());
         }
         else {
-            load_success = z1013_quickload(&z1013, fs_ptr(), fs_size());
+            load_success = z1013_quickload(&state.z1013, fs_ptr(), fs_size());
         }
         if (load_success) {
             if (clock_frame_count_60hz() > (load_delay_frames + 10)) {
@@ -224,6 +234,16 @@ static void handle_file_loading(void) {
     }
 }
 
+static void draw_status_bar(void) {
+    const float w = sapp_widthf();
+    const float h = sapp_heightf();
+    double frame_time_ms = state.frame_time_us / 1000.0f;
+    sdtx_canvas(w, h);
+    sdtx_color3b(255, 255, 255);
+    sdtx_pos(1.0f, (h / 8.0f) - 1.5f);
+    sdtx_printf("frame:%.2fms emu:%.2fms ticks/frame:%d", frame_time_ms, state.exec_time_ms, state.ticks);
+}
+
 sapp_desc sokol_main(int argc, char* argv[]) {
     sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
     return (sapp_desc) {
@@ -232,7 +252,7 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .event_cb = app_input,
         .cleanup_cb = app_cleanup,
         .width = 2 * z1013_std_display_width(),
-        .height = 2 * z1013_std_display_height() + ui_extra_height,
+        .height = 2 * z1013_std_display_height() + TOP_BORDER + BOTTOM_BORDER,
         .window_title = "Robotron Z1013",
         .icon.sokol_default = true,
         .ios_keyboard_resizes_canvas = true,

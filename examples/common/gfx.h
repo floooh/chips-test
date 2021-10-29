@@ -17,7 +17,8 @@ extern "C" {
 #define GFX_MAX_FB_HEIGHT (1024)
 
 typedef struct {
-    int top_offset;
+    int top_border;
+    int bottom_border;
     int aspect_x;
     int aspect_y;
     bool rot90;
@@ -44,7 +45,7 @@ void gfx_flash_error(void);
 
 #include "sokol_gfx.h"
 #include "sokol_app.h"
-#include "sokol_time.h"
+#include "sokol_debugtext.h"
 #include "sokol_glue.h"
 #include "shaders.glsl.h"
 
@@ -60,7 +61,8 @@ typedef struct {
     sg_pass_action draw_pass_action;
     int flash_success_count;
     int flash_error_count;
-    int top_offset;
+    int top_border;
+    int bottom_border;
     int fb_width;
     int fb_height;
     int fb_aspect_x;
@@ -158,6 +160,10 @@ void gfx_init(const gfx_desc_t* desc) {
         .context_pool_size = 2,
         .context = sapp_sgcontext()
     });
+    sdtx_setup(&(sdtx_desc_t){
+        .context_pool_size = 1,
+        .fonts[0] = sdtx_font_oric()
+    });
 
     gfx = (gfx_state_t) {
         .upscale_pass_action = {
@@ -166,7 +172,8 @@ void gfx_init(const gfx_desc_t* desc) {
         .draw_pass_action = {
             .colors[0] = { .action = SG_ACTION_CLEAR, .value = { 0.05f, 0.05f, 0.05f, 1.0f } }
         },
-        .top_offset = desc->top_offset,
+        .top_border = desc->top_border,
+        .bottom_border = desc->bottom_border,
         .fb_width = 0,
         .fb_height = 0,
         .fb_aspect_x = _GFX_DEF(desc->aspect_x, 1),
@@ -223,16 +230,16 @@ static void apply_viewport(int canvas_width, int canvas_height) {
     const int frame_y = 5;
     int vp_x, vp_y, vp_w, vp_h;
     if (fb_aspect < canvas_aspect) {
-        vp_y = frame_y + gfx.top_offset;
-        vp_h = canvas_height - (2 * frame_y) - gfx.top_offset;
+        vp_y = frame_y + gfx.top_border;
+        vp_h = canvas_height - (2 * frame_y) - gfx.top_border - gfx.bottom_border;
         vp_w = (int) (canvas_height * fb_aspect) - 2 * frame_x;
         vp_x = (canvas_width - vp_w) / 2;
     }
     else {
         vp_x = frame_x;
         vp_w = canvas_width - 2 * frame_x;
-        vp_h = (int) (canvas_width / fb_aspect) - (2 * frame_y) - gfx.top_offset;
-        vp_y = frame_y + gfx.top_offset;
+        vp_h = (int) (canvas_width / fb_aspect) - (2 * frame_y) - gfx.top_border - gfx.bottom_border;
+        vp_y = frame_y + gfx.top_border;
     }
     sg_apply_viewport(vp_x, vp_y, vp_w, vp_h, true);
 }
@@ -283,6 +290,7 @@ void gfx_draw(int width, int height) {
     sg_apply_bindings(&gfx.display_bind);
     sg_draw(0, 4, 1);
     sg_apply_viewport(0, 0, w, h, true);
+    sdtx_draw();
     if (gfx.draw_extra_cb) {
         gfx.draw_extra_cb();
     }
@@ -291,6 +299,7 @@ void gfx_draw(int width, int height) {
 }
 
 void gfx_shutdown() {
+    sdtx_shutdown();
     sg_shutdown();
 }
 
