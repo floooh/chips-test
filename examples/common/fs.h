@@ -23,15 +23,17 @@ bool fs_ext(const char* str);
 
 #define FS_EXT_SIZE (16)
 #define FS_MAX_SIZE (1024 * 1024)
-static struct {
+
+typedef struct {
     char ext[FS_EXT_SIZE];
     uint8_t* ptr;
     uint32_t size;
     uint8_t buf[FS_MAX_SIZE + 1];
-} fs;
+} fs_state_t;
+static fs_state_t fs;
 
 void fs_init(void) {
-    memset(&fs, 0, sizeof(fs));
+    fs = (fs_state_t){0};
     sfetch_setup(&(sfetch_desc_t){
         .max_requests = 1,
         .num_channels = 1,

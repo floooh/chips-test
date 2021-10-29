@@ -50,7 +50,7 @@ void gfx_flash_error(void);
 
 #define _GFX_DEF(v,def) (v?v:def)
 
-static struct {
+typedef struct {
     sg_pipeline upscale_pip;
     sg_bindings upscale_bind;
     sg_pass upscale_pass;
@@ -68,7 +68,34 @@ static struct {
     bool rot90;
     uint32_t rgba8_buffer[GFX_MAX_FB_WIDTH * GFX_MAX_FB_HEIGHT];
     void (*draw_extra_cb)(void);
-} gfx;
+} gfx_state_t;
+
+static gfx_state_t gfx;
+
+static const float gfx_verts[] = {
+    0.0f, 0.0f, 0.0f, 0.0f,
+    1.0f, 0.0f, 1.0f, 0.0f,
+    0.0f, 1.0f, 0.0f, 1.0f,
+    1.0f, 1.0f, 1.0f, 1.0f
+};
+static const float gfx_verts_rot[] = {
+    0.0f, 0.0f, 1.0f, 0.0f,
+    1.0f, 0.0f, 1.0f, 1.0f,
+    0.0f, 1.0f, 0.0f, 0.0f,
+    1.0f, 1.0f, 0.0f, 1.0f
+};
+static const float gfx_verts_flipped[] = {
+    0.0f, 0.0f, 0.0f, 1.0f,
+    1.0f, 0.0f, 1.0f, 1.0f,
+    0.0f, 1.0f, 0.0f, 0.0f,
+    1.0f, 1.0f, 1.0f, 0.0f
+};
+static const float gfx_verts_flipped_rot[] = {
+    0.0f, 0.0f, 1.0f, 1.0f,
+    1.0f, 0.0f, 1.0f, 0.0f,
+    0.0f, 1.0f, 0.0f, 1.0f,
+    1.0f, 1.0f, 0.0f, 0.0f
+};
 
 void gfx_flash_success(void) {
     gfx.flash_success_count = 20;
@@ -86,7 +113,7 @@ int gfx_framebuffer_size(void) {
     return sizeof(gfx.rgba8_buffer);
 }
 
-void gfx_init_images_and_pass(void) {
+static void gfx_init_images_and_pass(void) {
 
     /* destroy previous resources (if exist) */
     sg_destroy_image(gfx.upscale_bind.fs_images[0]);
@@ -123,20 +150,6 @@ void gfx_init_images_and_pass(void) {
 
 void gfx_init(const gfx_desc_t* desc) {
 
-    gfx.upscale_pass_action = (sg_pass_action) {
-        .colors[0] = { .action = SG_ACTION_DONTCARE }
-    };
-    gfx.draw_pass_action = (sg_pass_action) {
-        .colors[0] = { .action = SG_ACTION_CLEAR, .value = { 0.05f, 0.05f, 0.05f, 1.0f } }
-    };
-
-    gfx.top_offset = desc->top_offset;
-    gfx.fb_width = 0;
-    gfx.fb_height = 0;
-    gfx.fb_aspect_x = _GFX_DEF(desc->aspect_x, 1);
-    gfx.fb_aspect_y = _GFX_DEF(desc->aspect_y, 1);
-    gfx.rot90 = desc->rot90;
-    gfx.draw_extra_cb = desc->draw_extra_cb;
     sg_setup(&(sg_desc){
         .buffer_pool_size = 8,
         .image_pool_size = 128,
@@ -146,65 +159,57 @@ void gfx_init(const gfx_desc_t* desc) {
         .context = sapp_sgcontext()
     });
 
-    /* quad vertex buffers with and without flipped UVs */
-    static float verts[] = {
-        0.0f, 0.0f, 0.0f, 0.0f,
-        1.0f, 0.0f, 1.0f, 0.0f,
-        0.0f, 1.0f, 0.0f, 1.0f,
-        1.0f, 1.0f, 1.0f, 1.0f
-    };
-    static float verts_rot[] = {
-        0.0f, 0.0f, 1.0f, 0.0f,
-        1.0f, 0.0f, 1.0f, 1.0f,
-        0.0f, 1.0f, 0.0f, 0.0f,
-        1.0f, 1.0f, 0.0f, 1.0f
-    };
-    static float verts_flipped[] = {
-        0.0f, 0.0f, 0.0f, 1.0f,
-        1.0f, 0.0f, 1.0f, 1.0f,
-        0.0f, 1.0f, 0.0f, 0.0f,
-        1.0f, 1.0f, 1.0f, 0.0f
-    };
-    static float verts_flipped_rot[] = {
-        0.0f, 0.0f, 1.0f, 1.0f,
-        1.0f, 0.0f, 1.0f, 0.0f,
-        0.0f, 1.0f, 0.0f, 1.0f,
-        1.0f, 1.0f, 0.0f, 0.0f
-    };
-    gfx.upscale_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-        .data = SG_RANGE(verts)
-    });
-    gfx.display_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-        .data = {
-            .ptr = sg_query_features().origin_top_left ?
-                    (gfx.rot90 ? verts_rot : verts) :
-                    (gfx.rot90 ? verts_flipped_rot : verts_flipped),
-            .size = sizeof(verts)
-        }
-    });
+    gfx = (gfx_state_t) {
+        .upscale_pass_action = {
+            .colors[0] = { .action = SG_ACTION_DONTCARE }
+        },
+        .draw_pass_action = {
+            .colors[0] = { .action = SG_ACTION_CLEAR, .value = { 0.05f, 0.05f, 0.05f, 1.0f } }
+        },
+        .top_offset = desc->top_offset,
+        .fb_width = 0,
+        .fb_height = 0,
+        .fb_aspect_x = _GFX_DEF(desc->aspect_x, 1),
+        .fb_aspect_y = _GFX_DEF(desc->aspect_y, 1),
+        .rot90 = desc->rot90,
+        .draw_extra_cb = desc->draw_extra_cb,
 
-    /* 2 pipeline-state-objects, one for upscaling, one for rendering */
-    gfx.display_pip = sg_make_pipeline(&(sg_pipeline_desc){
-        .shader = sg_make_shader(display_shader_desc(sg_query_backend())),
-        .layout = {
-            .attrs = {
-                [0].format = SG_VERTEXFORMAT_FLOAT2,
-                [1].format = SG_VERTEXFORMAT_FLOAT2
+        .upscale_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+            .data = SG_RANGE(gfx_verts)
+        }),
+
+        .display_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
+            .data = {
+                .ptr = sg_query_features().origin_top_left ?
+                        (gfx.rot90 ? gfx_verts_rot : gfx_verts) :
+                        (gfx.rot90 ? gfx_verts_flipped_rot : gfx_verts_flipped),
+                .size = sizeof(gfx_verts)
             }
-        },
-        .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP
-    });
-    gfx.upscale_pip = sg_make_pipeline(&(sg_pipeline_desc){
-        .shader = sg_make_shader(upscale_shader_desc(sg_query_backend())),
-        .layout = {
-            .attrs = {
-                [0].format = SG_VERTEXFORMAT_FLOAT2,
-                [1].format = SG_VERTEXFORMAT_FLOAT2
-            }
-        },
-        .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
-        .depth.pixel_format = SG_PIXELFORMAT_NONE
-    });
+        }),
+    
+        .display_pip = sg_make_pipeline(&(sg_pipeline_desc){
+            .shader = sg_make_shader(display_shader_desc(sg_query_backend())),
+            .layout = {
+                .attrs = {
+                    [0].format = SG_VERTEXFORMAT_FLOAT2,
+                    [1].format = SG_VERTEXFORMAT_FLOAT2
+                }
+            },
+            .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP
+        }),
+
+        .upscale_pip = sg_make_pipeline(&(sg_pipeline_desc){
+            .shader = sg_make_shader(upscale_shader_desc(sg_query_backend())),
+            .layout = {
+                .attrs = {
+                    [0].format = SG_VERTEXFORMAT_FLOAT2,
+                    [1].format = SG_VERTEXFORMAT_FLOAT2
+                }
+            },
+            .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
+            .depth.pixel_format = SG_PIXELFORMAT_NONE
+        }),
+    };
 }
 
 /* apply a viewport rectangle to preserve the emulator's aspect ratio,

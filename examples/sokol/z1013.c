@@ -13,29 +13,27 @@
 #include "systems/z1013.h"
 #include "z1013-roms.h"
 #if defined(CHIPS_USE_UI)
-#define UI_DBG_USE_Z80
-#include "ui.h"
-#include "ui/ui_chip.h"
-#include "ui/ui_memedit.h"
-#include "ui/ui_memmap.h"
-#include "ui/ui_dasm.h"
-#include "ui/ui_dbg.h"
-#include "ui/ui_z80.h"
-#include "ui/ui_z80pio.h"
-#include "ui/ui_z1013.h"
+    #define UI_DBG_USE_Z80
+    #include "ui.h"
+    #include "ui/ui_chip.h"
+    #include "ui/ui_memedit.h"
+    #include "ui/ui_memmap.h"
+    #include "ui/ui_dasm.h"
+    #include "ui/ui_dbg.h"
+    #include "ui/ui_z80.h"
+    #include "ui/ui_z80pio.h"
+    #include "ui/ui_z1013.h"
 #endif
 
 static z1013_t z1013;
-
-static void handle_file_loading(void);
-static void handle_input(uint32_t frame_time_us);
+static double exec_time_ms;
 
 // imports from z1013-ui.cc
 #ifdef CHIPS_USE_UI
-static ui_z1013_t ui_z1013;
-static const int ui_extra_height = 16;
+    static ui_z1013_t ui_z1013;
+    static const int ui_extra_height = 16;
 #else
-static const int ui_extra_height = 0;
+    static const int ui_extra_height = 0;
 #endif
 
 z1013_desc_t z1013_desc(z1013_type_t type) {
@@ -57,7 +55,7 @@ z1013_desc_t z1013_desc(z1013_type_t type) {
 
 #if defined(CHIPS_USE_UI)
 static void ui_draw_cb(void) {
-    ui_z1013_draw(&ui_z1013, 0.0);
+    ui_z1013_draw(&ui_z1013, exec_time_ms);
 }
 static void ui_boot_cb(z1013_t* sys, z1013_type_t type) {
     z1013_desc_t desc = z1013_desc(type);
@@ -72,7 +70,9 @@ void app_init(void) {
         #endif
         .top_offset = ui_extra_height
     });
-    keybuf_init(6);
+    keybuf_init(&(keybuf_desc_t){
+        .key_delay_frames = 6
+    });
     clock_init();
     fs_init();
     z1013_type_t type = Z1013_TYPE_64;
@@ -116,15 +116,19 @@ void app_init(void) {
     }
 }
 
+static void handle_file_loading(void);
+static void handle_input(uint32_t frame_time_us);
+
 void app_frame(void) {
     const uint32_t frame_time_us = clock_frame_time();
+    const uint64_t exec_start_time = stm_now();
     z1013_exec(&z1013, frame_time_us);
+    exec_time_ms = stm_ms(stm_since(exec_start_time));
     gfx_draw(z1013_display_width(&z1013), z1013_display_height(&z1013));
     handle_file_loading();
     handle_input(frame_time_us);
 }
 
-// keyboard input handling
 void app_input(const sapp_event* event) {
     #ifdef CHIPS_USE_UI
     if (ui_input(event)) {
@@ -168,9 +172,6 @@ void app_input(const sapp_event* event) {
                 }
             }
             break;
-        case SAPP_EVENTTYPE_TOUCHES_BEGAN:
-            sapp_show_keyboard(true);
-            break;
         case SAPP_EVENTTYPE_FILES_DROPPED:
             fs_start_load_dropped_file();
             break;
@@ -179,7 +180,6 @@ void app_input(const sapp_event* event) {
     }
 }
 
-// application cleanup callback
 void app_cleanup(void) {
     z1013_discard(&z1013);
     #ifdef CHIPS_USE_UI

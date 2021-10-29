@@ -7,12 +7,16 @@
     ${wait:20} - wait 20 frames before continuing
 */
 
+typedef struct {
+    int key_delay_frames;
+} keybuf_desc_t;
+
 /* initialize the keybuf with a base-delay between keys in 60 Hz frames */
-extern void keybuf_init(int key_delay_frames);
+void keybuf_init(const keybuf_desc_t* desc);
 /* put a text for playback into keybuf */
-extern void keybuf_put(const char* text);
+void keybuf_put(const char* text);
 /* get next key to feed into emulator, call once per frame, returns 0 if no key to feed */
-extern uint8_t keybuf_get(uint32_t frame_time_us);
+uint8_t keybuf_get(uint32_t frame_time_us);
 
 /*== IMPLEMENTATION ==========================================================*/
 #ifdef COMMON_IMPL
@@ -27,12 +31,13 @@ typedef struct {
     int cur_delay_time;
     int key_delay_time;
     uint8_t buf[KEYBUF_MAX_KEYS];
-} keybuf_state;
-static keybuf_state keybuf;
+} keybuf_state_t;
+static keybuf_state_t keybuf;
 
-void keybuf_init(int key_delay_frames) {
-    memset(&keybuf, 0, sizeof(keybuf));
-    keybuf.key_delay_time = key_delay_frames * 16667;
+void keybuf_init(const keybuf_desc_t* desc) {
+    keybuf = (keybuf_state_t) {
+        .key_delay_time = desc->key_delay_frames * 16667,
+    };
 }
 
 void keybuf_put(const char* text) {
