@@ -78,9 +78,7 @@ void app_init(void) {
         .top_border = TOP_BORDER,
         .bottom_border = BOTTOM_BORDER,
     });
-    keybuf_init(&(keybuf_desc_t){
-        .key_delay_frames = 6
-    });
+    keybuf_init(&(keybuf_desc_t){ .key_delay_frames = 6 });
     clock_init();
     fs_init();
     z1013_type_t type = Z1013_TYPE_64;
@@ -125,7 +123,7 @@ void app_init(void) {
 }
 
 static void handle_file_loading(void);
-static void handle_input(void);
+static void send_keybuf_input(void);
 static void draw_status_bar(void);
 
 void app_frame(void) {
@@ -136,7 +134,7 @@ void app_frame(void) {
     draw_status_bar();
     gfx_draw(z1013_display_width(&state.z1013), z1013_display_height(&state.z1013));
     handle_file_loading();
-    handle_input();
+    send_keybuf_input();
 }
 
 void app_input(const sapp_event* event) {
@@ -199,7 +197,7 @@ void app_cleanup(void) {
     sargs_shutdown();
 }
 
-static void handle_input(void) {
+static void send_keybuf_input(void) {
     uint8_t key_code;
     if (0 != (key_code = keybuf_get(state.frame_time_us))) {
         z1013_key_down(&state.z1013, key_code);
@@ -255,7 +253,6 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .height = 2 * z1013_std_display_height() + TOP_BORDER + BOTTOM_BORDER,
         .window_title = "Robotron Z1013",
         .icon.sokol_default = true,
-        .ios_keyboard_resizes_canvas = true,
         .enable_dragndrop = true,
     };
 }
