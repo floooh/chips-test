@@ -14,16 +14,30 @@
 #include "chips/mem.h"
 #include "systems/kc85.h"
 #include "kc85-roms.h"
+#if defined(CHIPS_USE_UI)
+    #define UI_DBG_USE_Z80
+    #include "ui.h"
+    #include "ui/ui_chip.h"
+    #include "ui/ui_memedit.h"
+    #include "ui/ui_memmap.h"
+    #include "ui/ui_dasm.h"
+    #include "ui/ui_dbg.h"
+    #include "ui/ui_z80.h"
+    #include "ui/ui_z80pio.h"
+    #include "ui/ui_z80ctc.h"
+    #include "ui/ui_kc85sys.h"
+    #include "ui/ui_audio.h"
+    #include "ui/ui_kc85.h"
+#endif
 
 static struct {
     kc85_t kc85;
     uint32_t frame_time_us;
     uint32_t ticks;
     double exec_time_ms;
-    // module to insert after ROM module image has been loaded
-    kc85_module_type_t delay_insert_module;
+    kc85_module_type_t delay_insert_module; // module to insert after ROM module image has been loaded
     #ifdef CHIPS_USE_UI
-        ui_z1013_t ui_z1013;
+        ui_kc85_t ui_kc85;
     #endif
 } state;
 
@@ -79,9 +93,22 @@ kc85_desc_t kc85_desc(kc85_type_t type) {
             .caos42c = { .ptr = dump_caos42c_854, .size = sizeof(dump_caos42c_854) },
             .caos42e = { .ptr = dump_caos42e_854, .size = sizeof(dump_caos42e_854) },
             .kcbasic = { .ptr = dump_basic_c0_853, .size = sizeof(dump_basic_c0_853) }
-        }
+        },
+        #if defined(CHIPS_USE_UI)
+        .debug = ui_kc85_get_debug(&state.ui_kc85)
+        #endif
     };
 }
+
+#if defined(CHIPS_USE_UI)
+static void ui_draw_cb(void) {
+    ui_kc85_draw(&state.ui_kc85);
+}
+static void ui_boot_cb(kc85_t* sys, kc85_type_t type) {
+    kc85_desc_t desc = kc85_desc(type);
+    kc85_init(sys, &desc);
+}
+#endif
 
 void app_init(void) {
     gfx_init(&(gfx_desc_t) {
@@ -109,7 +136,22 @@ void app_init(void) {
     kc85_desc_t desc = kc85_desc(type);
     kc85_init(&state.kc85, &desc);
     #ifdef CHIPS_USE_UI
-    // FIXME!
+        ui_init(ui_draw_cb);
+        ui_kc85_init(&state.ui_kc85, &(ui_kc85_desc_t){
+            .kc85 = &state.kc85,
+            .boot_cb = ui_boot_cb,
+            .create_texture_cb = gfx_create_texture,
+            .update_texture_cb = gfx_update_texture,
+            .destroy_texture_cb = gfx_destroy_texture,
+            .dbg_keys = {
+                .cont = { .keycode = SAPP_KEYCODE_F5, .name = "F5" },
+                .stop = { .keycode = SAPP_KEYCODE_F5, .name = "F5" },
+                .step_over = { .keycode = SAPP_KEYCODE_F6, .name = "F6" },
+                .step_into = { .keycode = SAPP_KEYCODE_F7, .name = "F7" },
+                .step_tick = { .keycode = SAPP_KEYCODE_F8, .name = "F8" },
+                .toggle_breakpoint = { .keycode = SAPP_KEYCODE_F9, .name = "F9" }
+            }
+        });
     #endif
 
     bool delay_input = false;
@@ -243,7 +285,7 @@ void app_input(const sapp_event* event) {
 void app_cleanup(void) {
     kc85_discard(&state.kc85);
     #ifdef CHIPS_USE_UI
-    // FIXME
+        ui_kc85_discard(&state.ui_kc85);
     #endif
     saudio_shutdown();
     gfx_shutdown();
