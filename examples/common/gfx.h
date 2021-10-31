@@ -17,10 +17,12 @@ extern "C" {
 #define GFX_MAX_FB_HEIGHT (1024)
 
 typedef struct {
-    int top_border;
-    int bottom_border;
-    int aspect_x;
-    int aspect_y;
+    int border_top;
+    int border_bottom;
+    int border_left;
+    int border_right;
+    int emu_aspect_x;
+    int emu_aspect_y;
     bool rot90;
     void (*draw_extra_cb)(void);
 } gfx_desc_t;
@@ -28,7 +30,7 @@ typedef struct {
 void gfx_init(const gfx_desc_t* desc);
 uint32_t* gfx_framebuffer(void);
 int gfx_framebuffer_size(void);
-void gfx_draw(int width, int height);
+void gfx_draw(int emu_width, int emu_height);
 void gfx_shutdown(void);
 void* gfx_create_texture(int w, int h);
 void gfx_update_texture(void* h, void* data, int data_byte_size);
@@ -61,12 +63,14 @@ typedef struct {
     sg_pass_action draw_pass_action;
     int flash_success_count;
     int flash_error_count;
-    int top_border;
-    int bottom_border;
-    int fb_width;
-    int fb_height;
-    int fb_aspect_x;
-    int fb_aspect_y;
+    int border_top;
+    int border_bottom;
+    int border_left;
+    int border_right;
+    int emu_aspect_x;
+    int emu_aspect_y;
+    int emu_width;
+    int emu_height;
     bool rot90;
     uint32_t rgba8_buffer[GFX_MAX_FB_WIDTH * GFX_MAX_FB_HEIGHT];
     void (*draw_extra_cb)(void);
@@ -124,8 +128,8 @@ static void gfx_init_images_and_pass(void) {
 
     /* a texture with the emulator's raw pixel data */
     gfx.upscale_bind.fs_images[0] = sg_make_image(&(sg_image_desc){
-        .width = gfx.fb_width,
-        .height = gfx.fb_height,
+        .width = gfx.emu_width,
+        .height = gfx.emu_height,
         .pixel_format = SG_PIXELFORMAT_RGBA8,
         .usage = SG_USAGE_STREAM,
         .min_filter = SG_FILTER_NEAREST,
@@ -136,8 +140,8 @@ static void gfx_init_images_and_pass(void) {
     /* a 2x upscaled render-target-texture */
     gfx.display_bind.fs_images[0] = sg_make_image(&(sg_image_desc){
         .render_target = true,
-        .width = 2 * gfx.fb_width,
-        .height = 2 * gfx.fb_height,
+        .width = 2 * gfx.emu_width,
+        .height = 2 * gfx.emu_height,
         .min_filter = SG_FILTER_LINEAR,
         .mag_filter = SG_FILTER_LINEAR,
         .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
@@ -172,12 +176,14 @@ void gfx_init(const gfx_desc_t* desc) {
         .draw_pass_action = {
             .colors[0] = { .action = SG_ACTION_CLEAR, .value = { 0.05f, 0.05f, 0.05f, 1.0f } }
         },
-        .top_border = desc->top_border,
-        .bottom_border = desc->bottom_border,
-        .fb_width = 0,
-        .fb_height = 0,
-        .fb_aspect_x = _GFX_DEF(desc->aspect_x, 1),
-        .fb_aspect_y = _GFX_DEF(desc->aspect_y, 1),
+        .border_top = desc->border_top,
+        .border_bottom = desc->border_bottom,
+        .border_left = desc->border_left,
+        .border_right = desc->border_right,
+        .emu_width = 0,
+        .emu_height = 0,
+        .emu_aspect_x = _GFX_DEF(desc->emu_aspect_x, 1),
+        .emu_aspect_y = _GFX_DEF(desc->emu_aspect_y, 1),
         .rot90 = desc->rot90,
         .draw_extra_cb = desc->draw_extra_cb,
 
@@ -224,31 +230,37 @@ void gfx_init(const gfx_desc_t* desc) {
    top, to make room at the bottom for mobile virtual keyboard
 */
 static void apply_viewport(int canvas_width, int canvas_height) {
-    const float canvas_aspect = (float)canvas_width / (float)canvas_height;
-    const float fb_aspect = (float)(gfx.fb_width*gfx.fb_aspect_x) / (float)(gfx.fb_height*gfx.fb_aspect_y);
-    const int frame_x = 5;
-    const int frame_y = 5;
-    int vp_x, vp_y, vp_w, vp_h;
-    if (fb_aspect < canvas_aspect) {
-        vp_y = frame_y + gfx.top_border;
-        vp_h = canvas_height - (2 * frame_y) - gfx.top_border - gfx.bottom_border;
-        vp_w = (int) (canvas_height * fb_aspect) - 2 * frame_x;
-        vp_x = (canvas_width - vp_w) / 2;
+    float cw = canvas_width - gfx.border_left - gfx.border_right;
+    if (cw < 1.0f) {
+        cw = 1.0f;
+    }
+    float ch = canvas_height - gfx.border_top - gfx.border_bottom;
+    if (ch < 1.0f) {
+        ch = 1.0f;
+    }
+    const float canvas_aspect = (float)cw / (float)ch;
+    const float emu_aspect = (float)(gfx.emu_width*gfx.emu_aspect_x) / (float)(gfx.emu_height*gfx.emu_aspect_y);
+    float vp_x, vp_y, vp_w, vp_h;
+    if (emu_aspect < canvas_aspect) {
+        vp_y = gfx.border_top;
+        vp_h = ch;
+        vp_w = (ch * emu_aspect);
+        vp_x = gfx.border_left + (cw - vp_w) / 2;
     }
     else {
-        vp_x = frame_x;
-        vp_w = canvas_width - 2 * frame_x;
-        vp_h = (int) (canvas_width / fb_aspect) - (2 * frame_y) - gfx.top_border - gfx.bottom_border;
-        vp_y = frame_y + gfx.top_border;
+        vp_x = gfx.border_left;
+        vp_w = cw;
+        vp_h = (cw / emu_aspect);
+        vp_y = gfx.border_top;
     }
     sg_apply_viewport(vp_x, vp_y, vp_w, vp_h, true);
 }
 
-void gfx_draw(int width, int height) {
+void gfx_draw(int emu_width, int emu_height) {
     /* check if framebuffer size has changed, need to create new backing texture */
-    if ((width != gfx.fb_width) || (height != gfx.fb_height)) {
-        gfx.fb_width = width;
-        gfx.fb_height = height;
+    if ((emu_width != gfx.emu_width) || (emu_height != gfx.emu_height)) {
+        gfx.emu_width = emu_width;
+        gfx.emu_height = emu_height;
         gfx_init_images_and_pass();
     }
 
@@ -256,7 +268,7 @@ void gfx_draw(int width, int height) {
     sg_update_image(gfx.upscale_bind.fs_images[0], &(sg_image_data){
         .subimage[0][0] = {
             .ptr = gfx.rgba8_buffer,
-            .size = gfx.fb_width*gfx.fb_height*sizeof(uint32_t)
+            .size = gfx.emu_width*gfx.emu_height*sizeof(uint32_t)
         }
     });
 

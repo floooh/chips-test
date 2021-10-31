@@ -50,11 +50,13 @@ static struct {
 } state;
 
 #ifdef CHIPS_USE_UI
-#define TOP_BORDER (16)
+#define BORDER_TOP (24)
 #else
-#define TOP_BORDER (0)
+#define BORDER_TOP (8)
 #endif
-#define BOTTOM_BORDER (16)
+#define BORDER_LEFT (8)
+#define BORDER_RIGHT (8)
+#define BORDER_BOTTOM (16)
 
 static void push_audio(const float* samples, int num_samples, void* user_data) {
     (void)user_data;
@@ -95,8 +97,10 @@ void app_init(void) {
         #ifdef CHIPS_USE_UI
         .draw_extra_cb = ui_draw,
         #endif
-        .top_border = TOP_BORDER,
-        .bottom_border = BOTTOM_BORDER,
+        .border_left = BORDER_LEFT,
+        .border_right = BORDER_RIGHT,
+        .border_top = BORDER_TOP,
+        .border_bottom = BORDER_BOTTOM,
     });
     keybuf_init(&(keybuf_desc_t){ .key_delay_frames = 10 });
     clock_init();
@@ -274,8 +278,8 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .frame_cb = app_frame,
         .event_cb = app_input,
         .cleanup_cb = app_cleanup,
-        .width = 2 * atom_std_display_width(),
-        .height = 2 * atom_std_display_height() + TOP_BORDER + BOTTOM_BORDER,
+        .width = 2 * atom_std_display_width() + BORDER_LEFT + BORDER_RIGHT,
+        .height = 2 * atom_std_display_height() + BORDER_TOP + BORDER_BOTTOM,
         .window_title = "Acorn Atom",
         .icon.sokol_default = true,
         .enable_dragndrop = true,
