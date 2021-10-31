@@ -47,14 +47,12 @@ static struct {
 z1013_desc_t z1013_desc(z1013_type_t type) {
     return(z1013_desc_t) {
         .type = type,
-        .pixel_buffer = gfx_framebuffer(),
-        .pixel_buffer_size = gfx_framebuffer_size(),
-        .rom_mon_a2 = dump_z1013_mon_a2_bin,
-        .rom_mon_a2_size = sizeof(dump_z1013_mon_a2_bin),
-        .rom_mon202 = dump_z1013_mon202_bin,
-        .rom_mon202_size = sizeof(dump_z1013_mon202_bin),
-        .rom_font = dump_z1013_font_bin,
-        .rom_font_size = sizeof(dump_z1013_font_bin),
+        .pixel_buffer = { .ptr = gfx_framebuffer(), .size = gfx_framebuffer_size() },
+        .roms = {
+            .mon_a2 = { .ptr=dump_z1013_mon_a2_bin, .size=sizeof(dump_z1013_mon_a2_bin) },
+            .mon202 = { .ptr=dump_z1013_mon202_bin, .size=sizeof(dump_z1013_mon202_bin) },
+            .font = { .ptr=dump_z1013_font_bin, .size=sizeof(dump_z1013_font_bin) }
+        },
         #if defined(CHIPS_USE_UI)
         .debug = ui_z1013_get_debug(&state.ui_z1013)
         #endif

@@ -8,6 +8,7 @@
 */
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,7 +30,7 @@ typedef struct {
 
 void gfx_init(const gfx_desc_t* desc);
 uint32_t* gfx_framebuffer(void);
-int gfx_framebuffer_size(void);
+size_t gfx_framebuffer_size(void);
 void gfx_draw(int emu_width, int emu_height);
 void gfx_shutdown(void);
 void* gfx_create_texture(int w, int h);
@@ -115,7 +116,7 @@ uint32_t* gfx_framebuffer(void) {
     return gfx.rgba8_buffer;
 }
 
-int gfx_framebuffer_size(void) {
+size_t gfx_framebuffer_size(void) {
     return sizeof(gfx.rgba8_buffer);
 }
 

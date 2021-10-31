@@ -66,16 +66,19 @@ static void push_audio(const float* samples, int num_samples, void* user_data) {
 atom_desc_t atom_desc(atom_joystick_type_t joy_type) {
     return (atom_desc_t) {
         .joystick_type = joy_type,
-        .audio_cb = push_audio,
-        .audio_sample_rate = saudio_sample_rate(),
-        .pixel_buffer = gfx_framebuffer(),
-        .pixel_buffer_size = gfx_framebuffer_size(),
-        .rom_abasic = dump_abasic_ic20,
-        .rom_abasic_size = sizeof(dump_abasic_ic20),
-        .rom_afloat = dump_afloat_ic21,
-        .rom_afloat_size = sizeof(dump_afloat_ic21),
-        .rom_dosrom = dump_dosrom_u15,
-        .rom_dosrom_size = sizeof(dump_dosrom_u15),
+        .audio = {
+            .callback = { .func = push_audio },
+            .sample_rate = saudio_sample_rate(),
+        },
+        .pixel_buffer = {
+            .ptr = gfx_framebuffer(),
+            .size = gfx_framebuffer_size(),
+        },
+        .roms = {
+            .abasic = { .ptr=dump_abasic_ic20, .size = sizeof(dump_abasic_ic20) },
+            .afloat = { .ptr=dump_afloat_ic21, .size = sizeof(dump_afloat_ic21) },
+            .dosrom = { .ptr=dump_dosrom_u15, .size = sizeof(dump_dosrom_u15) }
+        },
         #if defined(CHIPS_USE_UI)
         .debug = ui_atom_get_debug(&state.ui_atom)
         #endif
