@@ -89,10 +89,6 @@ static void init(uint16_t start_addr, const uint8_t* bytes, size_t num_bytes) {
     memset(mem, 0, sizeof(mem));
     pins = z80_init(&cpu);
     copy(start_addr, bytes, num_bytes);
-    // run through the initial NOP
-    tick();
-    tick();
-    tick();
 }
 
 // test general NMI timing

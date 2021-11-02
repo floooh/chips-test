@@ -136,10 +136,6 @@ static void init(const uint8_t* bytes, size_t num_bytes) {
     memset(mem, 0, sizeof(mem));
     pins = z80_init(&cpu);
     copy(0, bytes, num_bytes);
-    // run through the initial NOP
-    tick();
-    tick();
-    tick();
 }
 
 UTEST(z80, LD_r_iHLi_r) {
