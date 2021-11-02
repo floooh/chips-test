@@ -48,7 +48,7 @@ static struct {
 #endif
 #define BORDER_LEFT (8)
 #define BORDER_RIGHT (8)
-#define BORDER_BOTTOM (16)
+#define BORDER_BOTTOM (32)
 
 // audio-streaming callback
 static void push_audio(const float* samples, int num_samples, void* user_data) {
@@ -337,6 +337,14 @@ static void draw_status_bar(void) {
     const float w = sapp_widthf();
     const float h = sapp_heightf();
     double frame_time_ms = state.frame_time_us / 1000.0f;
+    const char* slot_c = kc85_slot_mod_short_name(&state.kc85, 0x0C);
+    const char* slot_8 = kc85_slot_mod_short_name(&state.kc85, 0x08);
+    const uint8_t pio_a = state.kc85.pio_a;
+    const uint32_t text_color = 0xFFFFFFFF;
+    const uint32_t green_active = 0xFF00EE00;
+    const uint32_t green_inactive = 0xFF006600;
+    const uint32_t orange_active = 0xFF00CCEE;
+    const uint32_t orange_inactive = 0xFF004466;
     const char* kc_type;
     switch (state.kc85.type) {
         case KC85_TYPE_2: kc_type = "KC85/2"; break;
@@ -345,10 +353,20 @@ static void draw_status_bar(void) {
         default: kc_type = "???"; break;
     }
     sdtx_canvas(w, h);
-    sdtx_color3b(255, 255, 255);
-    sdtx_pos(1.0f, (h / 8.0f) - 1.5f);
-    sdtx_printf("%s frame:%.2fms emu:%.2fms ticks/frame:%d",
-        kc_type,
+    sdtx_origin(1.0f, (h / 8.0f) - 3.5f);
+    sdtx_color1i(text_color);
+    sdtx_printf("%s SLOTC:%s SLOT8:%s", kc_type, slot_c, slot_8);
+    sdtx_color1i((pio_a & KC85_PIO_A_TAPE_LED) ? orange_active : orange_inactive);
+    sdtx_puts(" TAPE");
+    sdtx_color1i((pio_a & KC85_PIO_A_CAOS_ROM) ? green_active : green_inactive);
+    sdtx_puts(" ROM");
+    sdtx_color1i((pio_a & KC85_PIO_A_RAM) ? green_active : green_inactive);
+    sdtx_puts(" RAM");
+    sdtx_color1i((pio_a & KC85_PIO_A_IRM) ? green_active : green_inactive);
+    sdtx_puts(" IRM");
+    sdtx_pos(0.0f, 1.5f);
+    sdtx_color1i(text_color);
+    sdtx_printf("frame:%.2fms emu:%.2fms ticks:%d",
         frame_time_ms,
         state.exec_time_ms,
         state.ticks);
