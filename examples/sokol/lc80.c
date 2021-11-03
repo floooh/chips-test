@@ -6,6 +6,7 @@
 #include "sokol_gfx.h"
 #include "sokol_args.h"
 #include "sokol_audio.h"
+#include "sokol_debugtext.h"
 #include "sokol_glue.h"
 #include "clock.h"
 #define CHIPS_IMPL
@@ -65,6 +66,10 @@ static void ui_draw_cb(void) {
 
 void app_init(void) {
     sg_setup(&(sg_desc){ .context = sapp_sgcontext() });
+    sdtx_setup(&(sdtx_desc_t){
+        .context_pool_size = 1,
+        .fonts[0] = sdtx_font_oric()
+    });
     clock_init();
     saudio_setup(&(saudio_desc){0});
 
@@ -89,13 +94,17 @@ void app_init(void) {
     });
 }
 
+static void draw_status_bar(void);
+
 void app_frame(void) {
     state.frame_time_us = clock_frame_time();
     const uint64_t exec_start_time = stm_now();
     state.ticks = lc80_exec(&state.lc80, state.frame_time_us);
     state.exec_time_ms = stm_ms(stm_since(exec_start_time));
+    draw_status_bar();
     sg_begin_default_pass(&(sg_pass_action){0}, sapp_width(), sapp_height());
     ui_draw();
+    sdtx_draw();
     sg_end_pass();
     sg_commit();
 }
@@ -108,8 +117,19 @@ void app_cleanup(void) {
     lc80_discard(&state.lc80);
     ui_lc80_discard(&state.ui_lc80);
     saudio_shutdown();
+    sdtx_shutdown();
     sg_shutdown();
     sargs_shutdown();
+}
+
+static void draw_status_bar(void) {
+    const float w = sapp_widthf();
+    const float h = sapp_heightf();
+    double frame_time_ms = state.frame_time_us / 1000.0f;
+    sdtx_canvas(w, h);
+    sdtx_color3b(255, 255, 255);
+    sdtx_pos(1.0f, (h / 8.0f) - 1.5f);
+    sdtx_printf("frame:%.2fms emu:%.2fms ticks:%d", frame_time_ms, state.exec_time_ms, state.ticks);
 }
 
 sapp_desc sokol_main(int argc, char* argv[]) {
