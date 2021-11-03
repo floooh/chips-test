@@ -240,7 +240,7 @@ static void draw_status_bar(void) {
     sdtx_canvas(w, h);
     sdtx_color3b(255, 255, 255);
     sdtx_pos(1.0f, (h / 8.0f) - 1.5f);
-    sdtx_printf("frame:%.2fms emu:%.2fms ticks/frame:%d", frame_time_ms, state.exec_time_ms, state.ticks);
+    sdtx_printf("frame:%.2fms emu:%.2fms ticks:%d", frame_time_ms, state.exec_time_ms, state.ticks);
 }
 
 sapp_desc sokol_main(int argc, char* argv[]) {
