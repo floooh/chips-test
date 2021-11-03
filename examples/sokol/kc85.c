@@ -50,6 +50,17 @@ static struct {
 #define BORDER_RIGHT (8)
 #define BORDER_BOTTOM (32)
 
+#if defined(CHIPS_KC85_TYPE_2)
+#define KC85_TYPE_NAME "KC85/2"
+#define LOAD_DELAY_FRAMES (480)
+#elif defined(CHIPS_KC85_TYPE_3)
+#define KC85_TYPE_NAME "KC85/3"
+#define LOAD_DELAY_FRAMES (480)
+#else
+#define KC85_TYPE_NAME "KC85/4"
+#define LOAD_DELAY_FRAMES (180)
+#endif
+
 // audio-streaming callback
 static void push_audio(const float* samples, int num_samples, void* user_data) {
     (void)user_data;
@@ -78,9 +89,8 @@ static void patch_snapshots(const char* snapshot_name, void* user_data) {
 }
 
 // get kc85_desc_t struct for a given KC85 type
-kc85_desc_t kc85_desc(kc85_type_t type) {
+kc85_desc_t kc85_desc(void) {
     return (kc85_desc_t) {
-        .type = type,
         .pixel_buffer = { .ptr=gfx_framebuffer(), .size=gfx_framebuffer_size() },
         .audio = {
             .callback = { .func = push_audio },
@@ -88,11 +98,17 @@ kc85_desc_t kc85_desc(kc85_type_t type) {
         },
         .patch_callback = { .func = patch_snapshots },
         .roms = {
-            .caos22 = { .ptr = dump_caos22_852, .size = sizeof(dump_caos22_852) },
-            .caos31 = { .ptr = dump_caos31_853, .size = sizeof(dump_caos31_853) },
-            .caos42c = { .ptr = dump_caos42c_854, .size = sizeof(dump_caos42c_854) },
-            .caos42e = { .ptr = dump_caos42e_854, .size = sizeof(dump_caos42e_854) },
-            .kcbasic = { .ptr = dump_basic_c0_853, .size = sizeof(dump_basic_c0_853) }
+            #if defined(CHIPS_KC85_TYPE_2)
+                .caos22 = { .ptr = dump_caos22_852, .size = sizeof(dump_caos22_852) },
+            #elif defined(CHIPS_KC85_TYPE_3)
+                .caos31 = { .ptr = dump_caos31_853, .size = sizeof(dump_caos31_853) },
+            #elif defined(CHIPS_KC85_TYPE_4)
+                .caos42c = { .ptr = dump_caos42c_854, .size = sizeof(dump_caos42c_854) },
+                .caos42e = { .ptr = dump_caos42e_854, .size = sizeof(dump_caos42e_854) },
+            #endif
+            #if !defined(CHIPS_KC85_TYPE_2)
+                .kcbasic = { .ptr = dump_basic_c0_853, .size = sizeof(dump_basic_c0_853) }
+            #endif
         },
         #if defined(CHIPS_USE_UI)
         .debug = ui_kc85_get_debug(&state.ui_kc85)
@@ -104,8 +120,8 @@ kc85_desc_t kc85_desc(kc85_type_t type) {
 static void ui_draw_cb(void) {
     ui_kc85_draw(&state.ui_kc85);
 }
-static void ui_boot_cb(kc85_t* sys, kc85_type_t type) {
-    kc85_desc_t desc = kc85_desc(type);
+static void ui_boot_cb(kc85_t* sys) {
+    kc85_desc_t desc = kc85_desc();
     kc85_init(sys, &desc);
 }
 #endif
@@ -124,16 +140,7 @@ void app_init(void) {
     clock_init();
     saudio_setup(&(saudio_desc){0});
     fs_init();
-    kc85_type_t type = KC85_TYPE_2;
-    if (sargs_exists("type")) {
-        if (sargs_equals("type", "kc85_3")) {
-            type = KC85_TYPE_3;
-        }
-        else if (sargs_equals("type", "kc85_4")) {
-            type = KC85_TYPE_4;
-        }
-    }
-    kc85_desc_t desc = kc85_desc(type);
+    const kc85_desc_t desc = kc85_desc();
     kc85_init(&state.kc85, &desc);
     #ifdef CHIPS_USE_UI
         ui_init(ui_draw_cb);
@@ -302,7 +309,7 @@ static void send_keybuf_input(void) {
 
 static void handle_file_loading(void) {
     fs_dowork();
-    const uint32_t load_delay_frames = state.kc85.type == KC85_TYPE_4 ? 180 : 480;
+    const uint32_t load_delay_frames = LOAD_DELAY_FRAMES;
     if (fs_ptr() && clock_frame_count_60hz() > load_delay_frames) {
         bool load_success = false;
         if (sargs_exists("mod_image")) {
@@ -345,17 +352,10 @@ static void draw_status_bar(void) {
     const uint32_t green_inactive = 0xFF006600;
     const uint32_t orange_active = 0xFF00CCEE;
     const uint32_t orange_inactive = 0xFF004466;
-    const char* kc_type;
-    switch (state.kc85.type) {
-        case KC85_TYPE_2: kc_type = "KC85/2"; break;
-        case KC85_TYPE_3: kc_type = "KC85/3"; break;
-        case KC85_TYPE_4: kc_type = "KC85/4"; break;
-        default: kc_type = "???"; break;
-    }
     sdtx_canvas(w, h);
     sdtx_origin(1.0f, (h / 8.0f) - 3.5f);
     sdtx_color1i(text_color);
-    sdtx_printf("%s SLOTC:%s SLOT8:%s", kc_type, slot_c, slot_8);
+    sdtx_printf(KC85_TYPE_NAME " SLOTC:%s SLOT8:%s", slot_c, slot_8);
     sdtx_color1i((pio_a & KC85_PIO_A_TAPE_LED) ? orange_active : orange_inactive);
     sdtx_puts(" TAPE");
     sdtx_color1i((pio_a & KC85_PIO_A_CAOS_ROM) ? green_active : green_inactive);
@@ -381,7 +381,7 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .cleanup_cb = app_cleanup,
         .width = 2 * kc85_std_display_width()  + BORDER_LEFT + BORDER_RIGHT,
         .height = 2 * kc85_std_display_height() + BORDER_TOP + BORDER_BOTTOM,
-        .window_title = "KC85",
+        .window_title = KC85_TYPE_NAME,
         .icon.sokol_default = true,
         .enable_dragndrop = true,
     };
