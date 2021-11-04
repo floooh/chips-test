@@ -17,6 +17,21 @@
 #include "chips/mem.h"
 #include "systems/z9001.h"
 #include "z9001-roms.h"
+#if defined(CHIPS_USE_UI)
+    #define UI_DBG_USE_Z80
+    #include "ui.h"
+    #include "ui/ui_chip.h"
+    #include "ui/ui_memedit.h"
+    #include "ui/ui_memmap.h"
+    #include "ui/ui_kbd.h"
+    #include "ui/ui_dasm.h"
+    #include "ui/ui_dbg.h"
+    #include "ui/ui_audio.h"
+    #include "ui/ui_z80.h"
+    #include "ui/ui_z80pio.h"
+    #include "ui/ui_z80ctc.h"
+    #include "ui/ui_z9001.h"
+#endif
 
 static struct {
     z9001_t z9001;
@@ -24,7 +39,7 @@ static struct {
     uint32_t ticks;
     double exec_time_ms;
     #ifdef CHIPS_USE_UI
-        ui_z1013_t ui_z1013;
+        ui_z9001_t ui_z9001;
     #endif
 } state;
 
