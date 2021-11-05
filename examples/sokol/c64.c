@@ -321,7 +321,7 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .frame_cb = app_frame,
         .event_cb = app_input,
         .cleanup_cb = app_cleanup,
-        .width = 2 * c64_std_display_width()  + BORDER_LEFT + BORDER_RIGHT,
+        .width = 2 * c64_std_display_width() + BORDER_LEFT + BORDER_RIGHT,
         .height = 2 * c64_std_display_height() + BORDER_TOP + BORDER_BOTTOM,
         .window_title = "C64",
         .icon.sokol_default = true,
