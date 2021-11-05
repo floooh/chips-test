@@ -195,8 +195,8 @@ void gfx_init(const gfx_desc_t* desc) {
         .display_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
             .data = {
                 .ptr = sg_query_features().origin_top_left ?
-                        (gfx.rot90 ? gfx_verts_rot : gfx_verts) :
-                        (gfx.rot90 ? gfx_verts_flipped_rot : gfx_verts_flipped),
+                        (desc->rot90 ? gfx_verts_rot : gfx_verts) :
+                        (desc->rot90 ? gfx_verts_flipped_rot : gfx_verts_flipped),
                 .size = sizeof(gfx_verts)
             }
         }),
