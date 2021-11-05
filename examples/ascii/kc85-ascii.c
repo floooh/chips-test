@@ -1,37 +1,9 @@
 /*
     kc85.c
 
-    Stripped down KC85/2../4 emulator running in a (xterm-256color) terminal,
+    Stripped down KC85/4 emulator running in a (xterm-256color) terminal,
     rendering the ASCII buffer of the KC85 through curses. Requires a UNIX
     environment to build and run (tested on OSX and Linux).
-
-    Select the KC85 model with cmdline args:
-
-        kc85-ascii type=kc85_2
-        kc85-ascii type=kc85_3
-        kc85-ascii type=kc85_4
-
-        Default is kc85_4.
-
-    Load a snapshot file:
-
-        kc85-ascii snapshot=abspath
-
-    Insert a module with:
-
-        kc85-ascii mod=modname [mod_image=abspath]
-
-        Where modname is one of:
-            - m022  (16 KB RAM expansion)
-            - m011  (64 KB RAM expansion)
-            - m006  (BASIC module for KC85/2, needs mod_image)
-            - m012  (TEXOR module, needs mod_image)
-            - m026  (FORTH module, needs mod_image)
-            - m027  (ASM IDE module, needs mod_image)
-
-    Provide keyboard input for playback with:
-        
-        kc85-ascii input=...
 */
 #include <stdint.h>
 #include <stdbool.h>
@@ -45,7 +17,8 @@
 #define SOKOL_IMPL
 #include "sokol_args.h"
 #define CHIPS_IMPL
-#include "chips/z80.h"
+#define CHIPS_KC85_TYPE_4
+#include "chips/z80x.h"
 #include "chips/z80ctc.h"
 #include "chips/z80pio.h"
 #include "chips/beeper.h"
@@ -59,8 +32,6 @@ static kc85_t kc85;
 
 /* frame counter for delayed actions */
 static uint32_t frame_count;
-/* module to insert after ROM module image has been loaded */
-static kc85_module_type_t delay_insert_module = KC85_MODULE_NONE;
 
 // run the emulator and render-loop at 30fps
 #define FRAME_USEC (33333)
@@ -119,76 +90,17 @@ static void init_kc_colors(void) {
 int main(int argc, char* argv[]) {
     sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
 
-    // select KC85 model
-    kc85_type_t type = KC85_TYPE_4;
-    if (sargs_exists("type")) {
-        if (sargs_equals("type", "kc85_2")) {
-            type = KC85_TYPE_2;
-        }
-        else if (sargs_equals("type", "kc85_3")) {
-            type = KC85_TYPE_3;
-        }
-    }
-
-    // initialize a KC85/4 emulator instance, we don't need audio 
+    // initialize a KC85/4 emulator instance, we don't need audio
     // or video output, so don't provide a pixel buffer and
     // audio callback
     kc85_init(&kc85, &(kc85_desc_t){
-        .type = type,
-        .rom_caos22 = dump_caos22_852,
-        .rom_caos22_size = sizeof(dump_caos22_852),
-        .rom_caos31 = dump_caos31_853,
-        .rom_caos31_size = sizeof(dump_caos31_853),
-        .rom_caos42c = dump_caos42c_854,
-        .rom_caos42c_size = sizeof(dump_caos42c_854),
-        .rom_caos42e = dump_caos42e_854,
-        .rom_caos42e_size = sizeof(dump_caos42e_854),
-        .rom_kcbasic = dump_basic_c0_853,
-        .rom_kcbasic_size = sizeof(dump_basic_c0_853)
+        .roms = {
+            .caos42c = { .ptr=dump_caos42c_854, .size=sizeof(dump_caos42c_854) },
+            .caos42e = { .ptr=dump_caos42e_854, .size=sizeof(dump_caos42e_854) },
+            .kcbasic = { .ptr=dump_basic_c0_853, .size=sizeof(dump_basic_c0_853) }
+        }
     });
 
-    bool delay_input = false;
-    // snapshot file or rom-module image
-    if (sargs_exists("snapshot")) {
-        delay_input = true;
-        fs_load_file(sargs_value("snapshot"));
-    }
-    else if (sargs_exists("mod_image")) {
-        fs_load_file(sargs_value("mod_image"));
-    }
-    // check if any modules should be inserted
-    if (sargs_exists("mod")) {
-        // RAM modules can be inserted immediately, ROM modules
-        // only after the ROM image has been loaded
-        if (sargs_equals("mod", "m022")) {
-            kc85_insert_ram_module(&kc85, 0x08, KC85_MODULE_M022_16KBYTE);
-        }
-        else if (sargs_equals("mod", "m011")) {
-            kc85_insert_ram_module(&kc85, 0x08, KC85_MODULE_M011_64KBYE);
-        }
-        else {
-            // a ROM module
-            delay_input = true;
-            if (sargs_equals("mod", "m006")) {
-                delay_insert_module = KC85_MODULE_M006_BASIC;
-            }
-            else if (sargs_equals("mod", "m012")) {
-                delay_insert_module = KC85_MODULE_M012_TEXOR;
-            }
-            else if (sargs_equals("mod", "m026")) {
-                delay_insert_module = KC85_MODULE_M026_FORTH;
-            }
-            else if (sargs_equals("mod", "m027")) {
-                delay_insert_module = KC85_MODULE_M027_DEVELOPMENT;
-            }
-        }
-    }
-    // keyboard input to send to emulator
-    if (!delay_input) {
-        if (sargs_exists("input")) {
-            keybuf_put(sargs_value("input"));
-        }
-    }
     // install a Ctrl-C signal handler
     signal(SIGINT, catch_sigint);
 
@@ -235,27 +147,6 @@ int main(int argc, char* argv[]) {
                 kc85_key_up(&kc85, ch);
             }
         }
-    
-        // handle file IO
-        uint32_t delay_frames = kc85.type == KC85_TYPE_4 ? 90 : 240;
-        if (fs_ptr() && (frame_count > delay_frames)) {
-            if (sargs_exists("snapshot")) {
-                kc85_quickload(&kc85, fs_ptr(), fs_size());
-                if (sargs_exists("input")) {
-                    keybuf_put(sargs_value("input"));
-                }
-            }
-            else if (sargs_exists("mod_image")) {
-                // insert the rom module
-                if (delay_insert_module != KC85_MODULE_NONE) {
-                    kc85_insert_rom_module(&kc85, 0x08, delay_insert_module, fs_ptr(), fs_size());
-                }
-                if (sargs_exists("input")) {
-                    keybuf_put(sargs_value("input"));
-                }
-            }
-            fs_free();
-        }
         uint8_t key_code;
         if (0 != (key_code = keybuf_get(FRAME_USEC))) {
             kc85_key_down(&kc85, key_code);
@@ -273,27 +164,10 @@ int main(int argc, char* argv[]) {
                 // get color code from color buffer, different location and
                 // layout on KC85/2,/3 vs KC85/4!
                 uint8_t color_byte;
-                if (type == KC85_TYPE_4) {
-                    // video memory on KC85/4 is 90 degree rotated and
-                    // there are 2 color memory banks
-                    int irm_bank = (kc85.io84 & 1) * 2;
-                    color_byte = kc85.ram[5+irm_bank][x*256 + y*8];
-                }
-                else {
-                    // video memory on KC85/2,/3 is split in a 32x40 part on left side,
-                    // and a 8x40 part on right side
-                    uint32_t py = y * 8;
-                    uint32_t color_offset;
-                    if (x < 32) {
-                        uint32_t y_offset = (((py>>2)&0x3f)<<5);
-                        color_offset = x + y_offset;
-                    }
-                    else {
-                        uint32_t y_offset = (((py>>4)&0x3)<<3) | (((py>>2)&0x3)<<5) | (((py>>6)&0x3)<<7);
-                        color_offset = 0x0800 + y_offset + (x & 7);
-                    }
-                    color_byte = kc85.ram[4][0x2800 + color_offset];
-                }
+                // video memory on KC85/4 is 90 degree rotated and
+                // there are 2 color memory banks
+                int irm_bank = (kc85.io84 & 1) * 2;
+                color_byte = kc85.ram[5+irm_bank][x*256 + y*8];
                 int color_pair = ((int)(color_byte & 0x7F))+1;
                 if (color_pair != cur_color_pair) {
                     attron(COLOR_PAIR(color_pair));
@@ -310,13 +184,13 @@ int main(int argc, char* argv[]) {
                 mvaddch(y, x*2, ' ');
                 // on KC85_4 we need to render an ASCII cursor, the 85/2 and /3
                 // implement the cursor through a color byte
-                if ((type == KC85_TYPE_4) && (x == cursor_x) && (y == cursor_y)) {
+                if ((x == cursor_x) && (y == cursor_y)) {
                     attron(A_UNDERLINE);
                 }
                 // character 
                 mvaddch(y, x*2+1, chr);
                 // cursor off?
-                if ((type == KC85_TYPE_4) && (x == cursor_x) && (y == cursor_y)) {
+                if ((x == cursor_x) && (y == cursor_y)) {
                     attroff(A_UNDERLINE);
                 }
             }
