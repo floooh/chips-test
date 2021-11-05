@@ -293,6 +293,7 @@ void app_cleanup(void) {
     kc85_discard(&state.kc85);
     #ifdef CHIPS_USE_UI
         ui_kc85_discard(&state.ui_kc85);
+        ui_discard();
     #endif
     saudio_shutdown();
     gfx_shutdown();

@@ -193,6 +193,7 @@ void app_cleanup(void) {
     z1013_discard(&state.z1013);
     #ifdef CHIPS_USE_UI
         ui_z1013_discard(&state.ui_z1013);
+        ui_discard();
     #endif
     gfx_shutdown();
     sargs_shutdown();

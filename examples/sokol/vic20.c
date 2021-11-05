@@ -251,6 +251,7 @@ void app_cleanup(void) {
     vic20_discard(&state.vic20);
     #ifdef CHIPS_USE_UI
         ui_vic20_discard(&state.ui_vic20);
+        ui_discard();
     #endif
     saudio_shutdown();
     gfx_shutdown();

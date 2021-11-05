@@ -223,6 +223,7 @@ void app_cleanup(void) {
     atom_discard(&state.atom);
     #ifdef CHIPS_USE_UI
         ui_atom_discard(&state.ui_atom);
+        ui_discard();
     #endif
     saudio_shutdown();
     gfx_shutdown();

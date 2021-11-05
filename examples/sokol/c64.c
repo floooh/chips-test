@@ -241,6 +241,7 @@ void app_cleanup(void) {
     c64_discard(&state.c64);
     #ifdef CHIPS_USE_UI
         ui_c64_discard(&state.ui_c64);
+        ui_discard();
     #endif
     saudio_shutdown();
     gfx_shutdown();

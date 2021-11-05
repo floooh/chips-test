@@ -223,6 +223,7 @@ void app_cleanup(void) {
     z9001_discard(&state.z9001);
     #ifdef CHIPS_USE_UI
         ui_z9001_discard(&state.ui_z9001);
+        ui_discard();
     #endif
     saudio_shutdown();
     gfx_shutdown();
