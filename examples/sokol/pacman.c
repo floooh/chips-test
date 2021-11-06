@@ -11,6 +11,18 @@
 #include "pacman-roms.h"
 #define NAMCO_PACMAN
 #include "systems/namco.h"
+#if defined(CHIPS_USE_UI)
+    #define UI_DBG_USE_Z80
+    #include "ui.h"
+    #include "ui/ui_chip.h"
+    #include "ui/ui_memedit.h"
+    #include "ui/ui_memmap.h"
+    #include "ui/ui_dasm.h"
+    #include "ui/ui_dbg.h"
+    #include "ui/ui_z80.h"
+    #include "ui/ui_audio.h"
+    #include "ui/ui_namco.h"
+#endif
 
 static struct {
     namco_t sys;
@@ -36,6 +48,12 @@ static void push_audio(const float* samples, int num_samples, void* user_data) {
     (void)user_data;
     saudio_push(samples, num_samples);
 }
+
+#if defined(CHIPS_USE_UI)
+static void ui_draw_cb(void) {
+    ui_namco_draw(&state.ui);
+}
+#endif
 
 // application init callback
 static void app_init(void) {
@@ -74,13 +92,15 @@ static void app_init(void) {
                 .gfx_1000_1FFF = { .ptr=dump_pacman_5f, .size = sizeof(dump_pacman_5f) },
                 .prom_0020_011F = { .ptr=dump_82s126_4a, .size = sizeof(dump_82s126_4a) },
             }
-        }
+        },
+        #ifdef CHIPS_USE_UI
+        .debug = ui_namco_get_debug(&state.ui),
+        #endif
     });
     #ifdef CHIPS_USE_UI
         ui_init(ui_draw_cb);
-        ui_namco_init(&state.ui_sys, &(ui_namco_desc_t){
+        ui_namco_init(&state.ui, &(ui_namco_desc_t){
             .sys = &state.sys,
-            .boot_cb = ui_boot_cb,
             .create_texture_cb = gfx_create_texture,
             .update_texture_cb = gfx_update_texture,
             .destroy_texture_cb = gfx_destroy_texture,
@@ -145,7 +165,7 @@ static void app_input(const sapp_event* event) {
 static void app_cleanup(void) {
     namco_discard(&state.sys);
     #ifdef CHIPS_USE_UI
-        ui_namco_discard(&ui_pacman);
+        ui_namco_discard(&state.ui);
         ui_discard();
     #endif
     saudio_shutdown();
