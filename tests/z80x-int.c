@@ -164,24 +164,25 @@ UTEST(z80, NMI) {
     tick(); T(pins_none());
     // mread
     tick(); T(pins_mread()); T(cpu.sp == 0x00FF);
-    tick(); T(pins_none()); T(cpu.pch == 0x00);
-    tick(); T(pins_none());
+    tick(); T(pins_none()); 
+    // FIXME: Z80_RETI should actually be set earlier!
+    tick(); T(pins_none()); T(cpu.wzl == 0x04); T(pins & Z80_RETI);
     // mread
     tick(); T(pins_mread()); T(cpu.sp == 0x0100);
-    tick(); T(pins_none()); T(cpu.pcl == 0x04);
-    tick(); T(pins_none()); T(!cpu.iff1);
+    tick(); T(pins_none()); 
+    tick(); T(pins_none()); T(!cpu.iff1); T(cpu.wzh == 0x00); T(cpu.pc == 0x0004);
 
     // continue at LD DE,2222h
-    tick(); T(pins_m1()); T(cpu.iff1); T(pins & Z80_RETI);
+    tick(); T(pins_m1()); T(cpu.iff1);
     tick(); T(pins_none());
     tick(); T(pins_rfsh());
     tick(); T(pins_none());
     tick(); T(pins_mread());
+    tick(); T(pins_none());
     tick(); T(pins_none()); T(cpu.e == 0x22);
-    tick(); T(pins_none());
     tick(); T(pins_mread());
-    tick(); T(pins_none()); T(cpu.d == 0x22);
     tick(); T(pins_none());
+    tick(); T(pins_none()); T(cpu.d == 0x22);
 }
 
 // test whether a 'last minute' NMI is detected
@@ -334,14 +335,15 @@ UTEST(z80, NMI_during_EI) {
     // mread
     tick(); T(pins_mread()); T(cpu.sp == 0x00FF);
     tick(); T(pins_none());
-    tick(); T(pins_none());
+    // FIXME: Z80_RETI should actually be set earlier!
+    tick(); T(pins_none()); T(pins & Z80_RETI);
     // mread
     tick(); T(pins_mread()); T(cpu.sp == 0x0100);
     tick(); T(pins_none());
     tick(); T(pins_none()); T(!cpu.iff1);
 
     // continue after NMI
-    tick(); T(pins_m1()); T(cpu.iff1); T(pins & Z80_RETI);
+    tick(); T(pins_m1()); T(cpu.iff1);
 }
 
 // test that NMIs don't trigger after prefixes
