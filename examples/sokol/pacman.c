@@ -43,7 +43,6 @@ static struct {
 #define BORDER_RIGHT (8)
 #define BORDER_BOTTOM (32)
 
-// audio-streaming callback
 static void push_audio(const float* samples, int num_samples, void* user_data) {
     (void)user_data;
     saudio_push(samples, num_samples);
@@ -55,7 +54,6 @@ static void ui_draw_cb(void) {
 }
 #endif
 
-// application init callback
 static void app_init(void) {
     gfx_init(&(gfx_desc_t) {
         #ifdef CHIPS_USE_UI
