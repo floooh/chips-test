@@ -2,6 +2,7 @@
 # project: chips-test
 #
 cmake_minimum_required(VERSION 3.0)
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "")
 project(chips-test)
 if (CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
     set(CMAKE_CXX_STANDARD 17)
