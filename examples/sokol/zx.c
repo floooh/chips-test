@@ -15,6 +15,20 @@
 #include "chips/mem.h"
 #include "systems/zx.h"
 #include "zx-roms.h"
+#if defined(CHIPS_USE_UI)
+    #define UI_DBG_USE_Z80
+    #include "ui.h"
+    #include "ui/ui_chip.h"
+    #include "ui/ui_memedit.h"
+    #include "ui/ui_memmap.h"
+    #include "ui/ui_dasm.h"
+    #include "ui/ui_dbg.h"
+    #include "ui/ui_kbd.h"
+    #include "ui/ui_z80.h"
+    #include "ui/ui_ay38910.h"
+    #include "ui/ui_audio.h"
+    #include "ui/ui_zx.h"
+#endif
 
 static struct {
     zx_t zx;
@@ -63,7 +77,7 @@ zx_desc_t zx_desc(zx_type_t type, zx_joystick_type_t joy_type) {
 }
 
 #if defined(CHIPS_USE_UI)
-void zxui_draw(void) {
+void ui_draw_cb(void) {
     ui_zx_draw(&state.ui_zx);
 }
 static void ui_boot_cb(zx_t* sys, zx_type_t type) {
