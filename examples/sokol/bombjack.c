@@ -43,7 +43,7 @@ static struct {
 #endif
 #define BORDER_LEFT (8)
 #define BORDER_RIGHT (8)
-#define BORDER_BOTTOM (32)
+#define BORDER_BOTTOM (16)
 
 static void push_audio(const float* samples, int num_samples, void* user_data) {
     (void)user_data;
