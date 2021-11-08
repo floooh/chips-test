@@ -9,10 +9,22 @@
 #include "chips/ay38910.h"
 #include "chips/clk.h"
 #include "chips/mem.h"
-#include "bombjack-roms.h"
-
 // the actual emulator is here: https://github.com/floooh/chips/blob/master/systems/bombjack.h
 #include "systems/bombjack.h"
+#include "bombjack-roms.h"
+#if defined(CHIPS_USE_UI)
+    #define UI_DBG_USE_Z80
+    #include "ui.h"
+    #include "ui/ui_chip.h"
+    #include "ui/ui_memedit.h"
+    #include "ui/ui_memmap.h"
+    #include "ui/ui_dasm.h"
+    #include "ui/ui_dbg.h"
+    #include "ui/ui_z80.h"
+    #include "ui/ui_ay38910.h"
+    #include "ui/ui_audio.h"
+    #include "ui/ui_bombjack.h"
+#endif
 
 static struct {
     bombjack_t sys;
