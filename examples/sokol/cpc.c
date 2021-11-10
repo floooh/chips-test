@@ -74,7 +74,7 @@ cpc_desc_t cpc_desc(cpc_type_t type, cpc_joystick_type_t joy_type) {
         .roms = {
             .cpc464 = {
                 .os = { .ptr=dump_cpc464_os_bin, .size=sizeof(dump_cpc464_os_bin) },
-                .basic = { .ptr=dump_cpc464_basic_bin, .size=sizeof(sizeof(dump_cpc464_basic_bin) },
+                .basic = { .ptr=dump_cpc464_basic_bin, .size=sizeof(dump_cpc464_basic_bin) },
             },
             .cpc6128 = {
                 .os = { .ptr=dump_cpc6128_os_bin, .size=sizeof(dump_cpc6128_os_bin) },
@@ -131,7 +131,7 @@ void app_init(void) {
         joy_type = CPC_JOYSTICK_DIGITAL;
     }
     cpc_desc_t desc = cpc_desc(type, joy_type);
-    cpc_init(&cpc, &desc);
+    cpc_init(&state.cpc, &desc);
     #ifdef CHIPS_USE_UI
         ui_init(ui_draw_cb);
         ui_cpc_init(&state.ui_cpc, &(ui_cpc_desc_t){
@@ -173,7 +173,7 @@ void app_frame(void) {
     state.ticks = cpc_exec(&state.cpc, state.frame_time_us);
     state.exec_time_ms = stm_ms(stm_since(exec_start_time));
     draw_status_bar();
-    gfx_draw(cpc_display_width(&cpc), cpc_display_height(&cpc));
+    gfx_draw(cpc_display_width(&state.cpc), cpc_display_height(&state.cpc));
     handle_file_loading();
     send_keybuf_input();
 }
@@ -288,6 +288,16 @@ static void handle_file_loading(void) {
         }
         fs_free();
     }
+}
+
+static void draw_status_bar(void) {
+    const float w = sapp_widthf();
+    const float h = sapp_heightf();
+    double frame_time_ms = state.frame_time_us / 1000.0f;
+    sdtx_canvas(w, h);
+    sdtx_color3b(255, 255, 255);
+    sdtx_pos(1.0f, (h / 8.0f) - 1.5f);
+    sdtx_printf("frame:%.2fms emu:%.2fms ticks:%d", frame_time_ms, state.exec_time_ms, state.ticks);
 }
 
 sapp_desc sokol_main(int argc, char* argv[]) {
