@@ -5,7 +5,7 @@
 */
 #include "common.h"
 #define CHIPS_IMPL
-#include "chips/z80.h"
+#include "chips/z80x.h"
 #include "chips/ay38910.h"
 #include "chips/i8255.h"
 #include "chips/mc6845.h"
@@ -18,93 +18,91 @@
 #include "chips/fdd_cpc.h"
 #include "systems/cpc.h"
 #include "cpc-roms.h"
-
-/* imports from cpc-ui.cc */
-#ifdef CHIPS_USE_UI
-#include "ui.h"
-void cpcui_init(cpc_t* cpc);
-void cpcui_discard(void);
-void cpcui_draw(void);
-void cpcui_exec(cpc_t* cpc, uint32_t frame_time_us);
-static const int ui_extra_height = 16;
-#else
-static const int ui_extra_height = 0;
+#if defined(CHIPS_USE_UI)
+// FIXME
 #endif
 
-static cpc_t cpc;
+static struct {
+    cpc_t cpc;
+    uint32_t frame_time_us;
+    uint32_t ticks;
+    double exec_time_ms;
+    #if defined(CHIPS_USE_UI)
+        ui_cpc_t ui_cpc;
+    #endif
+} state;
 
-/* sokol-app entry, configure application callbacks and window */
-static void app_init(void);
-static void app_frame(void);
-static void app_input(const sapp_event*);
-static void app_cleanup(void);
+#ifdef CHIPS_USE_UI
+#define BORDER_TOP (24)
+#else
+#define BORDER_TOP (8)
+#endif
+#define BORDER_LEFT (8)
+#define BORDER_RIGHT (8)
+#define BORDER_BOTTOM (16)
 
-sapp_desc sokol_main(int argc, char* argv[]) {
-    sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
-    return (sapp_desc) {
-        .init_cb = app_init,
-        .frame_cb = app_frame,
-        .event_cb = app_input,
-        .cleanup_cb = app_cleanup,
-        .width = cpc_std_display_width(),
-        .height = 2 * cpc_std_display_height() + ui_extra_height,
-        .window_title = "CPC 6128",
-        .ios_keyboard_resizes_canvas = true
-    };
-}
-
-/* audio-streaming callback */
+// audio-streaming callback
 static void push_audio(const float* samples, int num_samples, void* user_data) {
     (void)user_data;
     saudio_push(samples, num_samples);
 }
 
-/* get cpc_desc_t struct based on model and joystick type */
+// get cpc_desc_t struct based on model and joystick type
 cpc_desc_t cpc_desc(cpc_type_t type, cpc_joystick_type_t joy_type) {
     return (cpc_desc_t) {
         .type = type,
         .joystick_type = joy_type,
-        .pixel_buffer = gfx_framebuffer(),
-        .pixel_buffer_size = gfx_framebuffer_size(),
-        .audio_cb = push_audio,
-        .audio_sample_rate = saudio_sample_rate(),
-        .rom_464_os = dump_cpc464_os_bin,
-        .rom_464_os_size = sizeof(dump_cpc464_os_bin),
-        .rom_464_basic = dump_cpc464_basic_bin,
-        .rom_464_basic_size = sizeof(dump_cpc464_basic_bin),
-        .rom_6128_os = dump_cpc6128_os_bin,
-        .rom_6128_os_size = sizeof(dump_cpc6128_os_bin),
-        .rom_6128_basic = dump_cpc6128_basic_bin,
-        .rom_6128_basic_size = sizeof(dump_cpc6128_basic_bin),
-        .rom_6128_amsdos = dump_cpc6128_amsdos_bin,
-        .rom_6128_amsdos_size = sizeof(dump_cpc6128_amsdos_bin),
-        .rom_kcc_os = dump_kcc_os_bin,
-        .rom_kcc_os_size = sizeof(dump_kcc_os_bin),
-        .rom_kcc_basic = dump_kcc_bas_bin,
-        .rom_kcc_basic_size = sizeof(dump_kcc_bas_bin)
+        .pixel_buffer = { .ptr=gfx_framebuffer(), .size=gfx_framebuffer_size() },
+        .audio = {
+            .callback = { .func=push_audio },
+            .sample_rate = saudio_sample_rate(),
+        },
+        .roms = {
+            .cpc464 = {
+                .os = { .ptr=dump_cpc464_os_bin, .size=sizeof(dump_cpc464_os_bin) },
+                .basic = { .ptr=dump_cpc464_basic_bin, .size=sizeof(sizeof(dump_cpc464_basic_bin) },
+            },
+            .cpc6128 = {
+                .os = { .ptr=dump_cpc6128_os_bin, .size=sizeof(dump_cpc6128_os_bin) },
+                .basic = { .ptr=dump_cpc6128_basic_bin, .size= sizeof(dump_cpc6128_basic_bin) },
+                .amsdos = { .ptr=dump_cpc6128_amsdos_bin, .size=sizeof(dump_cpc6128_amsdos_bin) }
+            },
+            .kcc = {
+                .os = { .ptr=dump_kcc_os_bin, .size=sizeof(dump_kcc_os_bin) },
+                .basic = { .ptr=dump_kcc_bas_bin, .size=sizeof(dump_kcc_bas_bin) }
+            },
+        }
+        #if defined(CHIPS_USE_UI)
+        .debug = ui_cpc_get_debug(&state.ui_cpc);
+        #endif
     };
 }
 
-/* one-time application init */
+#if defined(CHIPS_USE_UI)
+void ui_draw_cb(void) {
+    ui_cpc_draw(&state.ui_cpc);
+}
+static void ui_boot_cb(cpc_t* sys, cpc_type_t type) {
+    cpc_desc_t desc = cpc_desc(type, sys->joystick_type);
+    cpc_init(sys, &desc);
+}
+#endif
+
 void app_init(void) {
     gfx_init(&(gfx_desc_t){
         #ifdef CHIPS_USE_UI
         .draw_extra_cb = ui_draw,
         #endif
-        .top_offset = ui_extra_height,
-        .aspect_y = 2
+        .border_left = BORDER_LEFT,
+        .border_right = BORDER_RIGHT,
+        .border_top = BORDER_TOP,
+        .border_bottom = BORDER_BOTTOM,
+        .emu_aspect_y = 2
     });
-    keybuf_init(7);
+    keybuf_init(&(keybuf_desc_t) { .key_delay_frames=7 });
     clock_init();
     saudio_setup(&(saudio_desc){0});
     fs_init();
-    bool delay_input = false;
-    if (sargs_exists("file")) {
-        delay_input = true;
-        if (!fs_load_file(sargs_value("file"))) {
-            gfx_flash_error();
-        }
-    }
     cpc_type_t type = CPC_TYPE_6128;
     if (sargs_exists("type")) {
         if (sargs_equals("type", "cpc464")) {
@@ -121,10 +119,29 @@ void app_init(void) {
     cpc_desc_t desc = cpc_desc(type, joy_type);
     cpc_init(&cpc, &desc);
     #ifdef CHIPS_USE_UI
-    cpcui_init(&cpc);
+        ui_init(ui_draw_cb);
+        ui_cpc_init(&state.ui_cpc, &(ui_cpc_desc_t){
+            .cpc = &state.cpc,
+            .boot_cb = ui_boot_cb,
+            .create_texture_cb = gfx_create_texture,
+            .update_texture_cb = gfx_update_texture,
+            .destroy_texture_cb = gfx_destroy_texture,
+            .dbg_keys = {
+                .cont = { .keycode = SAPP_KEYCODE_F5, .name = "F5" },
+                .stop = { .keycode = SAPP_KEYCODE_F5, .name = "F5" },
+                .step_over = { .keycode = SAPP_KEYCODE_F6, .name = "F6" },
+                .step_into = { .keycode = SAPP_KEYCODE_F7, .name = "F7" },
+                .step_tick = { .keycode = SAPP_KEYCODE_F8, .name = "F8" },
+                .toggle_breakpoint = { .keycode = SAPP_KEYCODE_F9, .name = "F9" }
+            }
+        });
     #endif
 
-    /* keyboard input to send to emulator */
+    bool delay_input = false;
+    if (sargs_exists("file")) {
+        delay_input = true;
+        fs_start_load_file(sargs_value("file"));
+    }
     if (!delay_input) {
         if (sargs_exists("input")) {
             keybuf_put(sargs_value("input"));
@@ -132,56 +149,25 @@ void app_init(void) {
     }
 }
 
-/* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
+static void handle_file_loading(void);
+static void send_keybuf_input(void);
+static void draw_status_bar(void);
+
 void app_frame(void) {
-    const uint32_t frame_time = clock_frame_time();
-    #if CHIPS_USE_UI
-        cpcui_exec(&cpc, frame_time);
-    #else
-        cpc_exec(&cpc, frame_time);
-    #endif
+    state.frame_time_us = clock_frame_time();
+    const uint64_t exec_start_time = stm_now();
+    state.ticks = cpc_exec(&state.cpc, state.frame_time_us);
+    state.exec_time_ms = stm_ms(stm_since(exec_start_time));
+    draw_status_bar();
     gfx_draw(cpc_display_width(&cpc), cpc_display_height(&cpc));
-    const uint32_t load_delay_frames = 120;
-    if (fs_ptr() && ((clock_frame_count_60hz() > load_delay_frames) || fs_ext("sna"))) {
-        bool load_success = false;
-        if (fs_ext("txt") || fs_ext("bas")) {
-            load_success = true;
-            keybuf_put((const char*)fs_ptr());
-        }
-        else if (fs_ext("tap")) {
-            load_success = cpc_insert_tape(&cpc, fs_ptr(), fs_size());
-        }
-        else if (fs_ext("dsk")) {
-            load_success = cpc_insert_disc(&cpc, fs_ptr(), fs_size());
-        }
-        else if (fs_ext("sna") || fs_ext("bin")) {
-            load_success = cpc_quickload(&cpc, fs_ptr(), fs_size());
-        }
-        if (load_success) {
-            if (clock_frame_count_60hz() > (load_delay_frames + 10)) {
-                gfx_flash_success();
-            }
-            if (sargs_exists("input")) {
-                keybuf_put(sargs_value("input"));
-            }
-        }
-        else {
-            gfx_flash_error();
-        }
-        fs_free();
-    }
-    uint8_t key_code;
-    if (0 != (key_code = keybuf_get(frame_time))) {
-        cpc_key_down(&cpc, key_code);
-        cpc_key_up(&cpc, key_code);
-    }
+    handle_file_loading();
+    send_keybuf_input();
 }
 
-/* keyboard input handling */
 void app_input(const sapp_event* event) {
     #ifdef CHIPS_USE_UI
     if (ui_input(event)) {
-        /* input was handled by UI */
+        // input was handled by UI
         return;
     }
     #endif
@@ -191,8 +177,8 @@ void app_input(const sapp_event* event) {
         case SAPP_EVENTTYPE_CHAR:
             c = (int) event->char_code;
             if ((c > 0x20) && (c < 0x7F)) {
-                cpc_key_down(&cpc, c);
-                cpc_key_up(&cpc, c);
+                cpc_key_down(&state.cpc, c);
+                cpc_key_up(&state.cpc, c);
             }
             break;
         case SAPP_EVENTTYPE_KEY_DOWN:
@@ -223,28 +209,84 @@ void app_input(const sapp_event* event) {
             }
             if (c) {
                 if (event->type == SAPP_EVENTTYPE_KEY_DOWN) {
-                    cpc_key_down(&cpc, c);
+                    cpc_key_down(&state.cpc, c);
                 }
                 else {
-                    cpc_key_up(&cpc, c);
+                    cpc_key_up(&state.cpc, c);
                 }
             }
             break;
-        case SAPP_EVENTTYPE_TOUCHES_BEGAN:
-            sapp_show_keyboard(true);
+        case SAPP_EVENTTYPE_FILES_DROPPED:
+            fs_start_load_dropped_file();
             break;
         default:
             break;
     }
 }
 
-/* application cleanup callback */
 void app_cleanup(void) {
-    cpc_discard(&cpc);
+    cpc_discard(&state.cpc);
     #ifdef CHIPS_USE_UI
-    cpcui_discard();
+        ui_cpc_discard(&state.ui_cpc);
+        ui_discard();
     #endif
     saudio_shutdown();
     gfx_shutdown();
     sargs_shutdown();
+}
+
+static void send_keybuf_input(void) {
+    uint8_t key_code;
+    if (0 != (key_code = keybuf_get(state.frame_time_us))) {
+        cpc_key_down(&state.cpc, key_code);
+        cpc_key_up(&state.cpc, key_code);
+    }
+}
+
+static void handle_file_loading(void) {
+    fs_dowork();
+    const uint32_t load_delay_frames = 120;
+    if (fs_ptr() && ((clock_frame_count_60hz() > load_delay_frames) || fs_ext("sna"))) {
+        bool load_success = false;
+        if (fs_ext("txt") || fs_ext("bas")) {
+            load_success = true;
+            keybuf_put((const char*)fs_ptr());
+        }
+        else if (fs_ext("tap")) {
+            load_success = cpc_insert_tape(&state.cpc, fs_ptr(), fs_size());
+        }
+        else if (fs_ext("dsk")) {
+            load_success = cpc_insert_disc(&state.cpc, fs_ptr(), fs_size());
+        }
+        else if (fs_ext("sna") || fs_ext("bin")) {
+            load_success = cpc_quickload(&state.cpc, fs_ptr(), fs_size());
+        }
+        if (load_success) {
+            if (clock_frame_count_60hz() > (load_delay_frames + 10)) {
+                gfx_flash_success();
+            }
+            if (sargs_exists("input")) {
+                keybuf_put(sargs_value("input"));
+            }
+        }
+        else {
+            gfx_flash_error();
+        }
+        fs_free();
+    }
+}
+
+sapp_desc sokol_main(int argc, char* argv[]) {
+    sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
+    return (sapp_desc) {
+        .init_cb = app_init,
+        .frame_cb = app_frame,
+        .event_cb = app_input,
+        .cleanup_cb = app_cleanup,
+        .width = cpc_std_display_width() + BORDER_LEFT + BORDER_RIGHT,
+        .height = 2 * cpc_std_display_height() + BORDER_TOP + BORDER_BOTTOM,
+        .window_title = "CPC",
+        .icon.sokol_default = true,
+        .enable_dragndrop = true,
+    };
 }
