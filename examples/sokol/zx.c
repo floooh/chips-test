@@ -213,7 +213,6 @@ void app_input(const sapp_event* event) {
     }
 }
 
-// application cleanup callback
 void app_cleanup() {
     zx_discard(&state.zx);
     #ifdef CHIPS_USE_UI
