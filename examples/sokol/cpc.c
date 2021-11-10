@@ -19,7 +19,21 @@
 #include "systems/cpc.h"
 #include "cpc-roms.h"
 #if defined(CHIPS_USE_UI)
-// FIXME
+    #include "ui/ui_chip.h"
+    #include "ui/ui_memedit.h"
+    #include "ui/ui_memmap.h"
+    #include "ui/ui_dasm.h"
+    #include "ui/ui_dbg.h"
+    #include "ui/ui_z80.h"
+    #include "ui/ui_ay38910.h"
+    #include "ui/ui_mc6845.h"
+    #include "ui/ui_am40010.h"
+    #include "ui/ui_i8255.h"
+    #include "ui/ui_upd765.h"
+    #include "ui/ui_audio.h"
+    #include "ui/ui_kbd.h"
+    #include "ui/ui_fdd.h"
+    #include "ui/ui_cpc.h"
 #endif
 
 static struct {
