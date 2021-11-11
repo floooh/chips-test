@@ -1,7 +1,7 @@
 /*
     UI implementation for cpc.c, this must live in its own .cc file.
 */
-#include "chips/z80.h"
+#include "chips/z80x.h"
 #include "chips/ay38910.h"
 #include "chips/i8255.h"
 #include "chips/mc6845.h"

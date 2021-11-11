@@ -19,6 +19,8 @@
 #include "systems/cpc.h"
 #include "cpc-roms.h"
 #if defined(CHIPS_USE_UI)
+    #define UI_DBG_USE_Z80
+    #include "ui.h"
     #include "ui/ui_chip.h"
     #include "ui/ui_memedit.h"
     #include "ui/ui_memmap.h"
@@ -85,9 +87,9 @@ cpc_desc_t cpc_desc(cpc_type_t type, cpc_joystick_type_t joy_type) {
                 .os = { .ptr=dump_kcc_os_bin, .size=sizeof(dump_kcc_os_bin) },
                 .basic = { .ptr=dump_kcc_bas_bin, .size=sizeof(dump_kcc_bas_bin) }
             },
-        }
+        },
         #if defined(CHIPS_USE_UI)
-        .debug = ui_cpc_get_debug(&state.ui_cpc);
+        .debug = ui_cpc_get_debug(&state.ui_cpc),
         #endif
     };
 }
