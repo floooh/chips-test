@@ -50,8 +50,12 @@ static void im0_tick(void) {
     }
 }
 
+static bool check_wait(void) {
+    return cpu.wait_mask != 0;
+}
+
 static bool pins_none(void) {
-    return (pins & Z80_CTRL_PIN_MASK) == 0;
+    return ((pins & Z80_CTRL_PIN_MASK) == 0);
 }
 
 static bool pins_m1(void) {
@@ -126,20 +130,20 @@ UTEST(z80, NMI) {
     tick(); T(pins_none());
 
     // the NMI should kick in here, starting with a regular refresh cycle
-    tick(); T(pins_m1()); T(cpu.pc == 4);
-    tick(); T(pins_none()); T(cpu.pc == 4); T(!cpu.iff1);
-    tick(); T(pins_rfsh());
-    tick(); T(pins_none());
+    tick(); T(pins_m1()   && !check_wait()); T(cpu.pc == 4);
+    tick(); T(pins_none() && !check_wait()); T(cpu.pc == 4); T(!cpu.iff1);
+    tick(); T(pins_rfsh() && !check_wait());
+    tick(); T(pins_none() && !check_wait());
     // extra tick
-    tick(); T(pins_none());
+    tick(); T(pins_none() && !check_wait());
     // mwrite
-    tick(); T(pins_none()); T(cpu.pc == 4);
-    tick(); T(pins_mwrite()); T(cpu.sp == 0x00FF); T(mem[0x00FF] == 0);
-    tick(); T(pins_none());
+    tick(); T(pins_none()   && !check_wait()); T(cpu.pc == 4);
+    tick(); T(pins_mwrite() && check_wait()); T(cpu.sp == 0x00FF); T(mem[0x00FF] == 0);
+    tick(); T(pins_none()   && !check_wait());
     // mwrite
-    tick(); T(pins_none());
-    tick(); T(pins_mwrite()); T(cpu.sp == 0x00FE); T(mem[0x00FE] == 4);
-    tick(); T(pins_none());
+    tick(); T(pins_none()   && !check_wait());
+    tick(); T(pins_mwrite() && check_wait()); T(cpu.sp == 0x00FE); T(mem[0x00FE] == 4);
+    tick(); T(pins_none()   && !check_wait());
 
     // first overlapped tick of interrupt service routine
     tick(); T(pins_m1()); T(cpu.pc == 0x67);
@@ -153,24 +157,24 @@ UTEST(z80, NMI) {
 
     // RETN
     // ED prefix
-    tick(); T(pins_m1()); T(cpu.a == 0x33);
-    tick(); T(pins_none());
-    tick(); T(pins_rfsh());
-    tick(); T(pins_none());
+    tick(); T(pins_m1()   && !check_wait()); T(cpu.a == 0x33);
+    tick(); T(pins_none() && check_wait());
+    tick(); T(pins_rfsh() && !check_wait());
+    tick(); T(pins_none() && !check_wait());
     // opcode
-    tick(); T(pins_m1());
-    tick(); T(pins_none());
-    tick(); T(pins_rfsh());
-    tick(); T(pins_none());
+    tick(); T(pins_m1()   && !check_wait());
+    tick(); T(pins_none() && check_wait());
+    tick(); T(pins_rfsh() && !check_wait());
+    tick(); T(pins_none() && !check_wait());
     // mread
-    tick(); T(pins_mread()); T(cpu.sp == 0x00FF);
-    tick(); T(pins_none()); 
+    tick(); T(pins_mread() && !check_wait()); T(cpu.sp == 0x00FF);
+    tick(); T(pins_none()  && check_wait());
     // FIXME: Z80_RETI should actually be set earlier!
-    tick(); T(pins_none()); T(cpu.wzl == 0x04); T(pins & Z80_RETI);
+    tick(); T(pins_none()  && !check_wait()); T(cpu.wzl == 0x04); T(pins & Z80_RETI);
     // mread
-    tick(); T(pins_mread()); T(cpu.sp == 0x0100);
-    tick(); T(pins_none()); 
-    tick(); T(pins_none()); T(!cpu.iff1); T(cpu.wzh == 0x00); T(cpu.pc == 0x0004);
+    tick(); T(pins_mread() && !check_wait()); T(cpu.sp == 0x0100);
+    tick(); T(pins_none()  && check_wait());
+    tick(); T(pins_none()  && !check_wait()); T(!cpu.iff1); T(cpu.wzh == 0x00); T(cpu.pc == 0x0004);
 
     // continue at LD DE,2222h
     tick(); T(pins_m1()); T(cpu.iff1);
@@ -507,22 +511,22 @@ UTEST(z80, INT_IM0) {
     im0_tick(); T(pins_rfsh());
     im0_tick(); T(pins_none());
     // interrupt handling starts here
-    im0_tick(); T(pins_none());
-    im0_tick(); T(pins_none()); T(!cpu.iff1); T(!cpu.iff2);
-    im0_tick(); T(pins_m1iorq()); T(Z80_GET_DATA(pins) == 0xFF);
-    im0_tick(); T(pins_none());
-    im0_tick(); T(pins_rfsh());
-    im0_tick(); T(pins_none());
+    im0_tick(); T(pins_none()   && !check_wait());
+    im0_tick(); T(pins_none()   && !check_wait()); T(!cpu.iff1); T(!cpu.iff2);
+    im0_tick(); T(pins_m1iorq() && !check_wait()); T(Z80_GET_DATA(pins) == 0xFF);
+    im0_tick(); T(pins_none()   && check_wait());
+    im0_tick(); T(pins_rfsh()   && !check_wait());
+    im0_tick(); T(pins_none()   && !check_wait());
     // RST execution should start here
-    im0_tick(); T(pins_none());
+    im0_tick(); T(pins_none()   && !check_wait());
     // mwrite (push PC)
-    im0_tick(); T(pins_none());
-    im0_tick(); T(pins_mwrite());
-    im0_tick(); T(pins_none());
+    im0_tick(); T(pins_none()   && !check_wait());
+    im0_tick(); T(pins_mwrite() && check_wait());
+    im0_tick(); T(pins_none()   && !check_wait());
     // mwrite (push PC)
-    im0_tick(); T(pins_none());
-    im0_tick(); T(pins_mwrite());
-    im0_tick(); T(pins_none());
+    im0_tick(); T(pins_none()   && !check_wait());
+    im0_tick(); T(pins_mwrite() && check_wait());
+    im0_tick(); T(pins_none()   && !check_wait());
     // interrupt service routine at address 0x0038 (LD A,33)
     im0_tick(); T(pins_m1()); T(cpu.pc == 0x0039);
     im0_tick(); T(pins_none());
@@ -533,23 +537,23 @@ UTEST(z80, INT_IM0) {
     im0_tick(); T(pins_none());
     im0_tick(); T(pins_none());
     // RETI, ED prefix
-    im0_tick(); T(pins_m1());
-    im0_tick(); T(pins_none());
-    im0_tick(); T(pins_rfsh());
-    im0_tick(); T(pins_none());
+    im0_tick(); T(pins_m1()   && !check_wait());
+    im0_tick(); T(pins_none() && check_wait());
+    im0_tick(); T(pins_rfsh() && !check_wait());
+    im0_tick(); T(pins_none() && !check_wait());
     // RETI opcode
-    im0_tick(); T(pins_m1());
-    im0_tick(); T(pins_none());
-    im0_tick(); T(pins_rfsh());
-    im0_tick(); T(pins_none());
+    im0_tick(); T(pins_m1()   && !check_wait());
+    im0_tick(); T(pins_none() && check_wait());
+    im0_tick(); T(pins_rfsh() && !check_wait());
+    im0_tick(); T(pins_none() && !check_wait());
     // RETI mread (pop)
-    im0_tick(); T(pins_mread());
-    im0_tick(); T(pins_none());
-    im0_tick(); T(pins_none());
+    im0_tick(); T(pins_mread() && !check_wait());
+    im0_tick(); T(pins_none()  && check_wait());
+    im0_tick(); T(pins_none()  && !check_wait());
     // RETI mread (pop)
-    im0_tick(); T(pins_mread());
-    im0_tick(); T(pins_none());
-    im0_tick(); T(pins_none());
+    im0_tick(); T(pins_mread() && !check_wait());
+    im0_tick(); T(pins_none()  && check_wait());
+    im0_tick(); T(pins_none()  && !check_wait());
 
     // continue with next NOP, NOTE: iff1 is *NOT* reenabled!
     im0_tick(); T(pins_m1()); T(!cpu.iff1);
@@ -585,22 +589,22 @@ UTEST(z80, INT_IM1) {
     tick(); T(pins_none());
 
     // interrupt should trigger now
-    tick(); T(pins_none());
-    tick(); T(pins_none()); T(!cpu.iff1); T(!cpu.iff2);
-    tick(); T(pins_m1iorq());
-    tick(); T(pins_none());
+    tick(); T(pins_none()   && !check_wait());
+    tick(); T(pins_none()   && !check_wait()); T(!cpu.iff1); T(!cpu.iff2);
+    tick(); T(pins_m1iorq() && !check_wait());
+    tick(); T(pins_none()   && check_wait());
     // regular refresh cycle
-    tick(); T(pins_rfsh());
-    tick(); T(pins_none());
+    tick(); T(pins_rfsh()   && !check_wait());
+    tick(); T(pins_none()   && !check_wait());
     // one extra tcycle
-    tick(); T(pins_none());
+    tick(); T(pins_none()   && !check_wait());
     // two mwrite cycles (push PC to stack)
-    tick(); T(pins_none());
-    tick(); T(pins_mwrite());
-    tick(); T(pins_none());
-    tick(); T(pins_none());
-    tick(); T(pins_mwrite());
-    tick(); T(pins_none());
+    tick(); T(pins_none()   && !check_wait());
+    tick(); T(pins_mwrite() && check_wait());
+    tick(); T(pins_none()   && !check_wait());
+    tick(); T(pins_none()   && !check_wait());
+    tick(); T(pins_mwrite() && check_wait());
+    tick(); T(pins_none()   && !check_wait());
     // ISR starts here (LD A,33h)
     tick(); T(pins_m1());  T(!cpu.iff1); T(!cpu.iff2); T(cpu.pc == 0x0039);
     tick(); T(pins_none());
@@ -669,29 +673,29 @@ UTEST(z80, INT_IM2) {
     tick(); T(pins_none());
 
     // interrupt should trigger now
-    tick(); T(pins_none());
-    tick(); T(pins_none()); T(!cpu.iff1); T(!cpu.iff2);
-    tick(); T(pins_m1iorq());
-    tick(); T(pins_none());
+    tick(); T(pins_none()   && !check_wait());
+    tick(); T(pins_none()   && !check_wait()); T(!cpu.iff1); T(!cpu.iff2);
+    tick(); T(pins_m1iorq() && !check_wait());
+    tick(); T(pins_none()   && check_wait());
     // regular refresh cycle
-    tick(); T(pins_rfsh());
-    tick(); T(pins_none());
+    tick(); T(pins_rfsh()   && !check_wait());
+    tick(); T(pins_none()   && !check_wait());
     // one extra tcycle
-    tick(); T(pins_none());
+    tick(); T(pins_none()   && !check_wait());
     // two mwrite cycles (push PC to stack)
-    tick(); T(pins_none());
-    tick(); T(pins_mwrite());
-    tick(); T(pins_none());
-    tick(); T(pins_none());
-    tick(); T(pins_mwrite());
-    tick(); T(pins_none()); T(cpu.wz == 0x01E0);    // WZ is interrupt vector
+    tick(); T(pins_none()   && !check_wait());
+    tick(); T(pins_mwrite() && check_wait());
+    tick(); T(pins_none()   && !check_wait());
+    tick(); T(pins_none()   && !check_wait());
+    tick(); T(pins_mwrite() && check_wait());
+    tick(); T(pins_none()   && !check_wait()); T(cpu.wz == 0x01E0);    // WZ is interrupt vector
     // two mread cycles from interrupt vector
-    tick(); T(pins_mread());
-    tick(); T(pins_none());
-    tick(); T(pins_none());
-    tick(); T(pins_mread());
-    tick(); T(pins_none());
-    tick(); T(pins_none()); T(cpu.wz == 0x000D); T(cpu.pc == 0x000D);
+    tick(); T(pins_mread()  && !check_wait());
+    tick(); T(pins_none()   && check_wait());
+    tick(); T(pins_none()   && !check_wait());
+    tick(); T(pins_mread()  && !check_wait());
+    tick(); T(pins_none()   && check_wait());
+    tick(); T(pins_none()   && !check_wait()); T(cpu.wz == 0x000D); T(cpu.pc == 0x000D);
 
     // ISR starts here (LD A,33h)
     tick(); T(pins_m1()); T(!cpu.iff1); T(!cpu.iff2); T(cpu.pc == 0x000E);
