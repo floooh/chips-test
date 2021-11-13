@@ -70,6 +70,10 @@ static bool pins_iowrite(void) {
     return (pins & Z80_CTRL_PIN_MASK) == (Z80_IORQ|Z80_WR);
 }
 
+static bool check_wait(void) {
+    return cpu.wait_mask != 0;
+}
+
 static bool none_cycle(int num) {
     bool success = true;
     for (int i = 0; i < num; i++) {
@@ -80,54 +84,54 @@ static bool none_cycle(int num) {
 
 static bool m1_cycle(void) {
     bool success = true;
-    tick(); success &= pins_m1();
-    tick(); success &= pins_none();
-    tick(); success &= pins_rfsh();
-    tick(); success &= pins_none();
+    tick(); success &= pins_m1()   && !check_wait();
+    tick(); success &= pins_none() && check_wait();
+    tick(); success &= pins_rfsh() && !check_wait();
+    tick(); success &= pins_none() && !check_wait();
     return success;
 }
 
 static bool mread_cycle(void) {
     bool success = true;
-    tick(); success &= pins_mread();
-    tick(); success &= pins_none();
-    tick(); success &= pins_none();
+    tick(); success &= pins_mread() && !check_wait();
+    tick(); success &= pins_none()  && check_wait();
+    tick(); success &= pins_none()  && !check_wait();
     return success;
 }
 
 static bool mwrite_cycle(void) {
     bool success = true;
-    tick(); success &= pins_none();
-    tick(); success &= pins_mwrite();
-    tick(); success &= pins_none();
+    tick(); success &= pins_none()   && !check_wait();
+    tick(); success &= pins_mwrite() && check_wait();
+    tick(); success &= pins_none()   && !check_wait();
     return success;
 }
 
 static bool ioread_cycle(void) {
     bool success = true;
-    tick(); success &= pins_none();
-    tick(); success &= pins_ioread();
-    tick(); success &= pins_none();
-    tick(); success &= pins_none();
+    tick(); success &= pins_none()   && !check_wait();
+    tick(); success &= pins_ioread() && !check_wait();
+    tick(); success &= pins_none()   && check_wait();
+    tick(); success &= pins_none()   && !check_wait();
     return success;
 }
 
 static bool iowrite_cycle(void) {
     bool success = true;
-    tick(); success &= pins_none();
-    tick(); success &= pins_iowrite();
-    tick(); success &= pins_none();
-    tick(); success &= pins_none();
+    tick(); success &= pins_none()    && !check_wait();
+    tick(); success &= pins_iowrite() && !check_wait();
+    tick(); success &= pins_none()    && check_wait();
+    tick(); success &= pins_none()    && !check_wait();
     return success;
 }
 
 static bool finish(void) {
     // run 2x NOP
     for (int i = 0; i < 2; i++) {
-        tick(); if (!pins_m1()) { return false; }
-        tick(); if (!pins_none()) { return false; }
-        tick(); if (!pins_rfsh()) { return false; }
-        tick(); if (!pins_none()) { return false; }
+        tick(); if (!(pins_m1()   && !check_wait())) { return false; }
+        tick(); if (!(pins_none() && check_wait()))  { return false; }
+        tick(); if (!(pins_rfsh() && !check_wait())) { return false; }
+        tick(); if (!(pins_none() && !check_wait())) { return false; }
     }
     return true;
 }
