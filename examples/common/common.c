@@ -5,4 +5,5 @@
 #include "fs.h"
 #include "gfx.h"
 #include "keybuf.h"
+#include "prof.h"
 

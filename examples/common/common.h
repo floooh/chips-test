@@ -6,7 +6,8 @@
 #include "sokol_time.h"
 #include "sokol_debugtext.h"
 #include "clock.h"
+#include "prof.h"
 #include "fs.h"
 #include "gfx.h"
 #include "keybuf.h"
-#include <ctype.h> /* isupper, islower, toupper, tolower */
+#include <ctype.h> // isupper, islower, toupper, tolower
