@@ -43,6 +43,7 @@ typedef struct {
 } prof_bucket_t;
 
 static struct {
+    bool valid;
     prof_bucket_t buckets[PROF_NUM_BUCKET_TYPES];
 } prof;
 
@@ -74,24 +75,29 @@ static float prof_ring_get(prof_ring_t* ring, int index) {
 // public API functions
 void prof_init(void) {
     memset(&prof, 0, sizeof(prof));
+    prof.valid = true;
 }
 
 void prof_push(prof_bucket_type_t type, float val) {
+    assert(prof.valid);
     assert((type >= 0) && (type < PROF_NUM_BUCKET_TYPES));
     prof_ring_put(&prof.buckets[type].ring, val);
 }
 
 int prof_count(prof_bucket_type_t type) {
+    assert(prof.valid);
     assert((type >= 0) && (type < PROF_NUM_BUCKET_TYPES));
     return prof_ring_count(&prof.buckets[type].ring);
 }
 
 float prof_value(prof_bucket_type_t type, int index) {
+    assert(prof.valid);
     assert((type >= 0) && (type < PROF_NUM_BUCKET_TYPES));
     return prof_ring_get(&prof.buckets[type].ring, index);
 }
 
 prof_stats_t prof_stats(prof_bucket_type_t type) {
+    assert(prof.valid);
     assert((type >= 0) && (type < PROF_NUM_BUCKET_TYPES));
     prof_stats_t stats = {0};
     prof_ring_t* ring = &prof.buckets[type].ring;

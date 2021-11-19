@@ -34,7 +34,7 @@ static struct {
     kc85_t kc85;
     uint32_t frame_time_us;
     uint32_t ticks;
-    double exec_time_ms;
+    double emu_time_ms;
     kc85_module_type_t delay_insert_module; // module to insert after ROM module image has been loaded
     #ifdef CHIPS_USE_UI
         ui_kc85_t ui_kc85;
@@ -138,6 +138,7 @@ void app_init(void) {
     });
     keybuf_init(&(keybuf_desc_t){ .key_delay_frames = 10 });
     clock_init();
+    prof_init();
     saudio_setup(&(saudio_desc){0});
     fs_init();
     const kc85_desc_t desc = kc85_desc();
@@ -212,9 +213,9 @@ static void draw_status_bar(void);
 
 void app_frame(void) {
     state.frame_time_us = clock_frame_time();
-    const uint64_t exec_start_time = stm_now();
+    const uint64_t emu_start_time = stm_now();
     state.ticks = kc85_exec(&state.kc85, state.frame_time_us);
-    state.exec_time_ms = stm_ms(stm_since(exec_start_time));
+    state.emu_time_ms = stm_ms(stm_since(emu_start_time));
     draw_status_bar();
     gfx_draw(kc85_display_width(&state.kc85), kc85_display_height(&state.kc85));
     handle_file_loading();
@@ -342,9 +343,13 @@ static void handle_file_loading(void) {
 }
 
 static void draw_status_bar(void) {
+    prof_push(PROF_FRAME, (float)state.frame_time_us * 0.001f);
+    prof_push(PROF_EMU, (float)state.emu_time_ms);
+    prof_stats_t frame_stats = prof_stats(PROF_FRAME);
+    prof_stats_t emu_stats = prof_stats(PROF_EMU);
+
     const float w = sapp_widthf();
     const float h = sapp_heightf();
-    double frame_time_ms = state.frame_time_us / 1000.0f;
     const char* slot_c = kc85_slot_mod_short_name(&state.kc85, 0x0C);
     const char* slot_8 = kc85_slot_mod_short_name(&state.kc85, 0x08);
     const uint8_t pio_a = state.kc85.pio_a;
@@ -367,10 +372,7 @@ static void draw_status_bar(void) {
     sdtx_puts(" IRM");
     sdtx_pos(0.0f, 1.5f);
     sdtx_color1i(text_color);
-    sdtx_printf("frame:%.2fms emu:%.2fms ticks:%d",
-        frame_time_ms,
-        state.exec_time_ms,
-        state.ticks);
+    sdtx_printf("frame:%.2fms emu:%.2fms (min:%.2fms max:%.2fms) ticks:%d", frame_stats.avg_val, emu_stats.avg_val, emu_stats.min_val, emu_stats.max_val, state.ticks);
 }
 
 sapp_desc sokol_main(int argc, char* argv[]) {

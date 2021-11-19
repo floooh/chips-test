@@ -23,10 +23,11 @@ uint8_t keybuf_get(uint32_t frame_time_us);
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
-#include "keybuf.h"
+#include <assert.h>
 
 #define KEYBUF_MAX_KEYS (64 * 1024)
 typedef struct {
+    bool valid;
     int cur_pos;
     int cur_delay_time;
     int key_delay_time;
@@ -36,11 +37,13 @@ static keybuf_state_t keybuf;
 
 void keybuf_init(const keybuf_desc_t* desc) {
     keybuf = (keybuf_state_t) {
+        .valid = true,
         .key_delay_time = desc->key_delay_frames * 16667,
     };
 }
 
 void keybuf_put(const char* text) {
+    assert(keybuf.valid);
     if (!text) {
         return;
     }
@@ -109,6 +112,7 @@ static uint8_t _keybuf_parse_cmd(void) {
 }
 
 uint8_t keybuf_get(uint32_t frame_time_us) {
+    assert(keybuf.valid);
     uint8_t c = 0;
     if (keybuf.cur_delay_time <= 0) {
         keybuf.cur_delay_time = keybuf.key_delay_time;

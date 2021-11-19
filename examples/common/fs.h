@@ -25,6 +25,7 @@ bool fs_ext(const char* str);
 #define FS_MAX_SIZE (1024 * 1024)
 
 typedef struct {
+    bool valid;
     char ext[FS_EXT_SIZE];
     uint8_t* ptr;
     uint32_t size;
@@ -33,7 +34,8 @@ typedef struct {
 static fs_state_t fs;
 
 void fs_init(void) {
-    fs = (fs_state_t){0};
+    memset(&fs, 0, sizeof(fs));
+    fs.valid = true;
     sfetch_setup(&(sfetch_desc_t){
         .max_requests = 1,
         .num_channels = 1,
@@ -42,6 +44,7 @@ void fs_init(void) {
 }
 
 void fs_dowork(void) {
+    assert(fs.valid);
     sfetch_dowork();
 }
 
@@ -129,14 +132,17 @@ static bool fs_base64_decode(const char* src) {
 }
 
 bool fs_ext(const char* ext) {
+    assert(fs.valid);
     return 0 == strcmp(ext, fs.ext);
 }
 
 void fs_free(void) {
+    assert(fs.valid);
     memset(&fs, 0, sizeof(fs));
 }
 
 void fs_load_mem(const char* path, const uint8_t* ptr, uint32_t size) {
+    assert(fs.valid);
     fs_free();
     if ((size > 0) && (size <= FS_MAX_SIZE)) {
         fs_copy_ext(path);
@@ -149,6 +155,7 @@ void fs_load_mem(const char* path, const uint8_t* ptr, uint32_t size) {
 }
 
 bool fs_load_base64(const char* name, const char* payload) {
+    assert(fs.valid);
     fs_free();
     fs_copy_ext(name);
     if (fs_base64_decode(payload)) {
@@ -161,6 +168,7 @@ bool fs_load_base64(const char* name, const char* payload) {
 }
 
 static void fs_fetch_callback(const sfetch_response_t* response) {
+    assert(fs.valid);
     if (response->fetched) {
         fs.ptr = fs.buf;
         fs.size = response->fetched_size;
@@ -185,6 +193,7 @@ static void fs_emsc_dropped_file_callback(const sapp_html5_fetch_response* respo
 #endif
 
 void fs_start_load_file(const char* path) {
+    assert(fs.valid);
     fs_free();
     fs_copy_ext(path);
     sfetch_send(&(sfetch_request_t){
@@ -196,6 +205,7 @@ void fs_start_load_file(const char* path) {
 }
 
 void fs_start_load_dropped_file(void) {
+    assert(fs.valid);
     fs_free();
     const char* path = sapp_get_dropped_file_path(0);
     fs_copy_ext(path);
@@ -212,10 +222,12 @@ void fs_start_load_dropped_file(void) {
 }
 
 const uint8_t* fs_ptr(void) {
+    assert(fs.valid);
     return fs.ptr;
 }
 
 uint32_t fs_size(void) {
+    assert(fs.valid);
     return fs.size;
 }
 

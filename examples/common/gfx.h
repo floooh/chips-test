@@ -51,10 +51,12 @@ void gfx_flash_error(void);
 #include "sokol_debugtext.h"
 #include "sokol_glue.h"
 #include "shaders.glsl.h"
+#include <assert.h>
 
 #define _GFX_DEF(v,def) (v?v:def)
 
 typedef struct {
+    bool valid;
     sg_pipeline upscale_pip;
     sg_bindings upscale_bind;
     sg_pass upscale_pass;
@@ -105,18 +107,22 @@ static const float gfx_verts_flipped_rot[] = {
 };
 
 void gfx_flash_success(void) {
+    assert(gfx.valid);
     gfx.flash_success_count = 20;
 }
 
 void gfx_flash_error(void) {
+    assert(gfx.valid);
     gfx.flash_error_count = 20;
 }
 
 uint32_t* gfx_framebuffer(void) {
+    assert(gfx.valid);
     return gfx.rgba8_buffer;
 }
 
 size_t gfx_framebuffer_size(void) {
+    assert(gfx.valid);
     return sizeof(gfx.rgba8_buffer);
 }
 
@@ -156,7 +162,6 @@ static void gfx_init_images_and_pass(void) {
 }
 
 void gfx_init(const gfx_desc_t* desc) {
-
     sg_setup(&(sg_desc){
         .buffer_pool_size = 8,
         .image_pool_size = 128,
@@ -171,6 +176,7 @@ void gfx_init(const gfx_desc_t* desc) {
     });
 
     gfx = (gfx_state_t) {
+        .valid = true,
         .upscale_pass_action = {
             .colors[0] = { .action = SG_ACTION_DONTCARE }
         },
@@ -258,6 +264,7 @@ static void apply_viewport(int canvas_width, int canvas_height) {
 }
 
 void gfx_draw(int emu_width, int emu_height) {
+    assert(gfx.valid);
     /* check if framebuffer size has changed, need to create new backing texture */
     if ((emu_width != gfx.emu_width) || (emu_height != gfx.emu_height)) {
         gfx.emu_width = emu_width;
@@ -312,6 +319,7 @@ void gfx_draw(int emu_width, int emu_height) {
 }
 
 void gfx_shutdown() {
+    assert(gfx.valid);
     sdtx_shutdown();
     sg_shutdown();
 }

@@ -43,7 +43,7 @@ static struct {
     atom_t atom;
     uint32_t frame_time_us;
     uint32_t ticks;
-    double exec_time_ms;
+    double emu_time_ms;
     #ifdef CHIPS_USE_UI
         ui_atom_t ui_atom;
     #endif
@@ -107,6 +107,7 @@ void app_init(void) {
     });
     keybuf_init(&(keybuf_desc_t){ .key_delay_frames = 10 });
     clock_init();
+    prof_init();
     fs_init();
     saudio_setup(&(saudio_desc){0});
     atom_joystick_type_t joy_type = ATOM_JOYSTICKTYPE_NONE;
@@ -153,9 +154,9 @@ static void draw_status_bar(void);
 
 void app_frame() {
     state.frame_time_us = clock_frame_time();
-    const uint64_t exec_start_time = stm_now();
+    const uint64_t emu_start_time = stm_now();
     state.ticks = atom_exec(&state.atom, state.frame_time_us);
-    state.exec_time_ms = stm_ms(stm_since(exec_start_time));
+    state.emu_time_ms = stm_ms(stm_since(emu_start_time));
     draw_status_bar();
     gfx_draw(atom_display_width(&state.atom), atom_display_height(&state.atom));
     handle_file_loading();
@@ -266,13 +267,16 @@ static void handle_file_loading(void) {
 }
 
 static void draw_status_bar(void) {
+    prof_push(PROF_FRAME, (float)state.frame_time_us * 0.001f);
+    prof_push(PROF_EMU, (float)state.emu_time_ms);
+    prof_stats_t frame_stats = prof_stats(PROF_FRAME);
+    prof_stats_t emu_stats = prof_stats(PROF_EMU);
     const float w = sapp_widthf();
     const float h = sapp_heightf();
-    double frame_time_ms = state.frame_time_us / 1000.0f;
     sdtx_canvas(w, h);
     sdtx_color3b(255, 255, 255);
     sdtx_pos(1.0f, (h / 8.0f) - 1.5f);
-    sdtx_printf("frame:%.2fms emu:%.2fms ticks:%d", frame_time_ms, state.exec_time_ms, state.ticks);
+    sdtx_printf("frame:%.2fms emu:%.2fms (min:%.2fms max:%.2fms) ticks:%d", frame_stats.avg_val, emu_stats.avg_val, emu_stats.min_val, emu_stats.max_val, state.ticks);
 }
 
 sapp_desc sokol_main(int argc, char* argv[]) {

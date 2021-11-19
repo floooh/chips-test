@@ -168,14 +168,14 @@ void app_init(void) {
 
 static void handle_file_loading(void);
 static void send_keybuf_input(void);
-static void draw_stats(void);
+static void draw_status_bar(void);
 
 void app_frame(void) {
     state.frame_time_us = clock_frame_time();
-    const uint64_t exec_start_time = stm_now();
+    const uint64_t emu_start_time = stm_now();
     state.ticks = cpc_exec(&state.cpc, state.frame_time_us);
-    state.emu_time_ms = stm_ms(stm_since(exec_start_time));
-    draw_stats();
+    state.emu_time_ms = stm_ms(stm_since(emu_start_time));
+    draw_status_bar();
     gfx_draw(cpc_display_width(&state.cpc), cpc_display_height(&state.cpc));
     handle_file_loading();
     send_keybuf_input();
@@ -293,12 +293,11 @@ static void handle_file_loading(void) {
     }
 }
 
-static void draw_stats(void) {
+static void draw_status_bar(void) {
     prof_push(PROF_FRAME, (float)state.frame_time_us * 0.001f);
     prof_push(PROF_EMU, (float)state.emu_time_ms);
     prof_stats_t frame_stats = prof_stats(PROF_FRAME);
     prof_stats_t emu_stats = prof_stats(PROF_EMU);
-    
     const float w = sapp_widthf();
     const float h = sapp_heightf();
     sdtx_canvas(w, h);
