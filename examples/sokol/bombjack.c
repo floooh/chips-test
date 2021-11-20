@@ -70,6 +70,7 @@ static void app_init(void) {
         .rot90 = true
     });
     clock_init();
+    prof_init();
     saudio_setup(&(saudio_desc){0});
     bombjack_init(&state.sys, &(bombjack_desc_t){
         .pixel_buffer = { .ptr = gfx_framebuffer(), .size = gfx_framebuffer_size() },
