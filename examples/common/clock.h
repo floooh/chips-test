@@ -29,7 +29,7 @@ void clock_init(void) {
 
 uint32_t clock_frame_time(void) {
     assert(clck.valid);
-    uint32_t frame_time_us = (uint32_t) stm_us(stm_round_to_common_refresh_rate(stm_laptime(&clck.last_time_stamp)));
+    uint32_t frame_time_us = (uint32_t) stm_us(stm_laptime(&clck.last_time_stamp));
     // prevent death-spiral on host systems that are too slow to emulate
     // in real time, or during long frames (e.g. debugging)
     if (frame_time_us > 24000) {
