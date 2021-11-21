@@ -269,9 +269,11 @@ static void handle_file_loading(void) {
             load_success = true;
             keybuf_put((const char*)fs_ptr());
         }
+        /*
         else if (fs_ext("tap")) {
             load_success = cpc_insert_tape(&state.cpc, fs_ptr(), fs_size());
         }
+        */
         else if (fs_ext("dsk")) {
             load_success = cpc_insert_disc(&state.cpc, fs_ptr(), fs_size());
         }
