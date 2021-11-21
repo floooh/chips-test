@@ -124,11 +124,8 @@ static z80_t cpu;
 static z80ctc_t ctc;
 static uint8_t mem[1<<16];
 
-static uint64_t tick(int num_ticks, uint64_t pins, void* user_data) {
-    (void)user_data;
-    for (int i = 0; i < num_ticks; i++) {
-        pins = z80ctc_tick(&ctc, pins);
-    }
+static uint64_t tick(uint64_t pins) {
+    pins = z80_tick(&cpu, pins);
     if (pins & Z80_MREQ) {
         if (pins & Z80_RD) {
             Z80_SET_DATA(pins, mem[Z80_GET_ADDR(pins)]);
@@ -142,12 +139,8 @@ static uint64_t tick(int num_ticks, uint64_t pins, void* user_data) {
         pins = (pins & Z80_PIN_MASK) | Z80CTC_CE;
         if (pins & 1) pins |= Z80CTC_CS0;
         if (pins & 2) pins |= Z80CTC_CS1;
-        pins = z80ctc_iorq(&ctc, pins);
     }
-    /* interrupt handling */
-    Z80_DAISYCHAIN_BEGIN(pins);
-    pins = z80ctc_int(&ctc, pins);
-    Z80_DAISYCHAIN_END(pins);
+    pins = z80ctc_tick(&ctc, pins | Z80_IEIO);
     return pins & Z80_PIN_MASK;
 }
 
@@ -162,10 +155,7 @@ static void copy(uint16_t addr, uint8_t* bytes, size_t num) {
 }
 
 UTEST(z80ctc, interrupt) {
-    z80_init(&cpu, &(z80_desc_t){
-        .tick_cb = tick,
-        .user_data = 0
-    });
+    z80_init(&cpu);
     z80ctc_init(&ctc);
     memset(mem, 0, sizeof(mem));
 
@@ -207,7 +197,6 @@ UTEST(z80ctc, interrupt) {
         0x18, 0xF9,         /* JR -> HALT, endless loop back to the HALT instruction */
     };
     copy(0x0100, main_prog, sizeof(main_prog));
-    z80_set_pc(&cpu, 0x0100);
 
     /* interrupt service routine, increment content of 0x0001 */
     uint8_t int_prog[] = {
@@ -220,7 +209,10 @@ UTEST(z80ctc, interrupt) {
     copy(0x0200, int_prog, sizeof(int_prog));
 
     /* run for 4500 ticks, this should invoke the interrupt routine 4x */
-    z80_exec(&cpu, 4500);
+    uint64_t pins = z80_prefetch(&cpu, 0x0100);
+    for (int i = 0; i < 4500; i++) {
+        pins = tick(pins);
+    }
     T(mem[0x0000] == 4);
     T(mem[0x0001] == 4);
 }

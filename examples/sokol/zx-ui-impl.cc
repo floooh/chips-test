@@ -1,7 +1,7 @@
 /*
     UI implementation for zx.c, this must live in its own C++ file.
 */
-#include "chips/z80x.h"
+#include "chips/z80.h"
 #include "chips/beeper.h"
 #include "chips/ay38910.h"
 #include "chips/kbd.h"

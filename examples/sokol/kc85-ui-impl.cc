@@ -1,7 +1,7 @@
 /*
     UI implementation for kc85.c, this must live in its own .cc file.
 */
-#include "chips/z80x.h"
+#include "chips/z80.h"
 #include "chips/z80ctc.h"
 #include "chips/z80pio.h"
 #include "chips/beeper.h"

@@ -1,94 +1,45 @@
 //------------------------------------------------------------------------------
-//  z80-test.c
+//  z80x-test.c
 //------------------------------------------------------------------------------
-#include "chips/z80.h"
 #include "utest.h"
+#define CHIPS_IMPL
+#include "chips/z80.h"
 
 #define T(b) ASSERT_TRUE(b)
 
-#define _A z80_a(&cpu)
-#define _F z80_f(&cpu)
-#define _L z80_l(&cpu)
-#define _H z80_h(&cpu)
-#define _E z80_e(&cpu)
-#define _D z80_d(&cpu)
-#define _C z80_c(&cpu)
-#define _B z80_b(&cpu)
-#define _FA z80_fa(&cpu)
-#define _HL z80_hl(&cpu)
-#define _DE z80_de(&cpu)
-#define _BC z80_bc(&cpu)
-#define _FA_ z80_fa_(&cpu)
-#define _HL_ z80_hl_(&cpu)
-#define _DE_ z80_de_(&cpu)
-#define _BC_ z80_bc_(&cpu)
-#define _PC z80_pc(&cpu)
-#define _SP z80_sp(&cpu)
-#define _WZ z80_wz(&cpu)
-#define _IR z80_ir(&cpu)
-#define _I z80_i(&cpu)
-#define _R z80_r(&cpu)
-#define _IX z80_ix(&cpu)
-#define _IY z80_iy(&cpu)
-#define _IM z80_im(&cpu)
-#define _IFF1 z80_iff1(&cpu)
-#define _IFF2 z80_iff2(&cpu)
-#define _EI_PENDING z80_ei_pending(&cpu)
+#define _A (cpu.a)
+#define _F (cpu.f)
+#define _L (cpu.l)
+#define _H (cpu.h)
+#define _E (cpu.e)
+#define _D (cpu.d)
+#define _C (cpu.c)
+#define _B (cpu.b)
+#define _WZ (cpu.wz)
+#define _AF (cpu.af)
+#define _HL (cpu.hl)
+#define _DE (cpu.de)
+#define _BC (cpu.bc)
+#define _IX (cpu.ix)
+#define _IY (cpu.iy)
+#define _SP (cpu.sp)
+#define _AF_ (cpu.af2)
+#define _HL_ (cpu.hl2)
+#define _DE_ (cpu.de2)
+#define _BC_ (cpu.bc2)
+#define _PC (cpu.pc)
+#define _I (cpu.i)
+#define _R (cpu.r)
 
 static z80_t cpu;
-static uint8_t mem[1<<16] = { 0 };
-static uint16_t out_port = 0;
-static uint8_t out_byte = 0;
-static uint64_t tick(int num, uint64_t pins, void* user_data) {
-    (void)num;
-    (void)user_data;
-    if (pins & Z80_MREQ) {
-        if (pins & Z80_RD) {
-            /* memory read */
-            Z80_SET_DATA(pins, mem[Z80_GET_ADDR(pins)]);
-        }
-        else if (pins & Z80_WR) {
-            /* memory write */
-            mem[Z80_GET_ADDR(pins)] = Z80_GET_DATA(pins);
-        }
-    }
-    else if (pins & Z80_IORQ) {
-        if (pins & Z80_RD) {
-            /* IN */
-            Z80_SET_DATA(pins, (Z80_GET_ADDR(pins) & 0xFF) * 2);
-        }
-        else if (pins & Z80_WR) {
-            /* OUT */
-            out_port = Z80_GET_ADDR(pins);
-            out_byte = Z80_GET_DATA(pins);
-        }
-    }
-    return pins;
-}
-
-static void init(void) {
-    z80_init(&cpu, &(z80_desc_t) { .tick_cb = tick, });
-    z80_set_f(&cpu, 0);
-    z80_set_fa_(&cpu, 0x00FF);
-}
-
-static void copy(uint16_t addr, uint8_t* bytes, size_t num) {
-    if ((addr + num) <= sizeof(mem)) {
-        memcpy(&mem[addr], bytes, num);
-    }
-}
-
-static uint32_t step(void) {
-    uint32_t ticks = z80_exec(&cpu,0);
-    while (!z80_opdone(&cpu)) {
-        ticks += z80_exec(&cpu,0);
-    }
-    return ticks;
-}
+static uint64_t pins;
+static uint16_t out_port;
+static uint8_t out_byte;
+static uint8_t mem[1<<16];
 
 static bool flags(uint8_t expected) {
-    /* don't check undocumented flags */
-    return (z80_f(&cpu) & ~(Z80_YF|Z80_XF)) == expected;
+    // don't check undocumented flags
+    return (cpu.f & ~(Z80_YF|Z80_XF)) == expected;
 }
 
 static uint16_t mem16(uint16_t addr) {
@@ -97,63 +48,80 @@ static uint16_t mem16(uint16_t addr) {
     return (h<<8)|l;
 }
 
-UTEST(z80, SET_GET) {
-    init();
-    z80_set_f(&cpu, 0x01); z80_set_a(&cpu, 0x23);
-    z80_set_h(&cpu, 0x45); z80_set_l(&cpu, 0x67);
-    z80_set_d(&cpu, 0x89); z80_set_e(&cpu, 0xAB);
-    z80_set_b(&cpu, 0xCD); z80_set_c(&cpu, 0xEF);
-    T(0x01 == _F); T(0x23 == _A); T(0x0123 == _FA);
-    T(0x45 == _H); T(0x67 == _L); T(0x4567 == _HL);
-    T(0x89 == _D); T(0xAB == _E); T(0x89AB == _DE);
-    T(0xCD == _B); T(0xEF == _C); T(0xCDEF == _BC);
+static void tick(void) {
+    pins = z80_tick(&cpu, pins);
+    const uint16_t addr = Z80_GET_ADDR(pins);
+    if (pins & Z80_MREQ) {
+        if (pins & Z80_RD) {
+            Z80_SET_DATA(pins, mem[addr]);
+        }
+        else if (pins & Z80_WR) {
+            mem[addr] = Z80_GET_DATA(pins);
+        }
+    }
+    else if (pins & Z80_IORQ) {
+        if (pins & Z80_RD) {
+            Z80_SET_DATA(pins, (Z80_GET_ADDR(pins) & 0xFF) * 2);
+        }
+        else if (pins & Z80_WR) {
+            out_port = Z80_GET_ADDR(pins);
+            out_byte = Z80_GET_DATA(pins);
+        }
+    }
+}
 
-    z80_set_fa(&cpu, 0x1234);
-    z80_set_hl(&cpu, 0x5678);
-    z80_set_de(&cpu, 0x9abc);
-    z80_set_bc(&cpu, 0xdef0);
-    z80_set_fa_(&cpu, 0x4321);
-    z80_set_hl_(&cpu, 0x8765);
-    z80_set_de_(&cpu, 0xCBA9);
-    z80_set_bc_(&cpu, 0x0FED);
-    T(0x12 == _F); T(0x34 == _A); T(0x1234 == _FA);
-    T(0x56 == _H); T(0x78 == _L); T(0x5678 == _HL);
-    T(0x9A == _D); T(0xBC == _E); T(0x9ABC == _DE);
-    T(0xDE == _B); T(0xF0 == _C); T(0xDEF0 == _BC);
-    T(0x4321 == _FA_);
-    T(0x8765 == _HL_);
-    T(0xCBA9 == _DE_);
-    T(0x0FED == _BC_);
+static uint32_t step(void) {
+    uint32_t ticks = 0;
+    do {
+        tick();
+        ticks++;
+    } while (!z80_opdone(&cpu));
+    return ticks;
+}
 
-    z80_set_pc(&cpu, 0xCEDF);
-    z80_set_wz(&cpu, 0x1324);
-    z80_set_sp(&cpu, 0x2435);
-    z80_set_i(&cpu, 0x35);
-    z80_set_r(&cpu, 0x46);
-    z80_set_ix(&cpu, 0x4657);
-    z80_set_iy(&cpu, 0x5768);
-    T(0xCEDF == _PC);
-    T(0x1324 == _WZ);
-    T(0x2435 == _SP);
-    T(0x35 == _I);
-    T(0x46 == _R);
-    T(0x4657 == _IX); 
-    T(0x5768 == _IY);
+static void prefetch(uint16_t pc) {
+    pins = z80_prefetch(&cpu, pc);
+    step();
+}
 
-    z80_set_im(&cpu, 2);
-    z80_set_iff1(&cpu, true);
-    z80_set_iff2(&cpu, false);
-    z80_set_ei_pending(&cpu, true);
-    T(2 == _IM);
-    T(_IFF1);
-    T(!_IFF2);
-    T(_EI_PENDING);
-    z80_set_iff1(&cpu, false);
-    z80_set_iff2(&cpu, true);
-    z80_set_ei_pending(&cpu, false);
-    T(!_IFF1);
-    T(_IFF2);
-    T(!_EI_PENDING);
+static void copy(uint16_t addr, const uint8_t* bytes, size_t num_bytes) {
+    assert((addr + num_bytes) <= sizeof(mem));
+    memcpy(&mem[addr], bytes, num_bytes);
+}
+
+static void init(uint16_t start_addr, const uint8_t* bytes, size_t num_bytes) {
+    memset(mem, 0, sizeof(mem));
+    pins = z80_init(&cpu);
+    cpu.f = 0;
+    cpu.af2 = 0xFF00;
+    cpu.bc2 = 0xFFFF;
+    cpu.de2 = 0xFFFF;
+    cpu.hl2 = 0xFFFF;
+    copy(start_addr, bytes, num_bytes);
+    prefetch(start_addr);    
+}
+
+// test that the nested ix/iy/hl mapping union works
+UTEST(z80, MAP_IX_IY_HL) {
+    z80_init(&cpu);
+    cpu.hl = 0x1122;
+    cpu.ix = 0x3344;
+    cpu.iy = 0x5566;
+    T(cpu.h == 0x11);
+    T(cpu.l == 0x22);
+    T(cpu.ixh == 0x33);
+    T(cpu.ixl == 0x44);
+    T(cpu.iyh == 0x55);
+    T(cpu.iyl == 0x66);
+    T(cpu.hlx[0].h == 0x11);
+    T(cpu.hlx[0].l == 0x22);
+    T(cpu.hlx[1].h == 0x33);
+    T(cpu.hlx[1].l == 0x44);
+    T(cpu.hlx[2].h == 0x55);
+    T(cpu.hlx[2].l == 0x66);
+    T(cpu.hlx[0].hl == 0x1122);
+    T(cpu.hlx[1].hl == 0x3344);
+    T(cpu.hlx[2].hl == 0x5566);
 }
 
 /* LD A,R; LD A,I */
@@ -163,13 +131,11 @@ UTEST(z80, LD_A_RI) {
         0x97,               // SUB A
         0xED, 0x5F,         // LD A,R
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
-    z80_set_iff1(&cpu, true);
-    z80_set_iff2(&cpu, true);
-    z80_set_r(&cpu, 0x34);
-    z80_set_i(&cpu, 0x01);
-    z80_set_f(&cpu, Z80_CF);
+    init(0x0000, prog, sizeof(prog));
+    cpu.iff1 = cpu.iff2 = true;
+    cpu.r = 0x34;
+    cpu.i = 0x01;
+    cpu.f = Z80_CF;
     T(9 == step()); T(0x01 == _A); T(flags(Z80_PF|Z80_CF));
     T(4 == step()); T(0x00 == _A); T(flags(Z80_ZF|Z80_NF));
     T(9 == step()); T(0x39 == _A); T(flags(Z80_PF));
@@ -182,11 +148,24 @@ UTEST(z80, LD_IR_A) {
         0xED, 0x47,     // LD I,A
         0xED, 0x4F,     // LD R,A
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    init(0x0000, prog, sizeof(prog));
     T(7==step()); T(0x45 == _A);
     T(9==step()); T(0x45 == _I);
     T(9==step()); T(0x45 == _R);
+}
+
+/* RST */
+UTEST(z80, RST) {
+    uint8_t prog[] = {
+        0x31, 0x00, 0x01,   // LD SP,0x0100
+        0xCF,               // RST 8h
+        0x00, 0x00, 0x00, 0x00,
+        0xFF,               // RST 38h
+    };
+    init(0x0000, prog, sizeof(prog));
+    T(10 == step()); T(_SP == 0x0100);
+    T(11 == step()); T(_PC == 0x0009); T(_SP == 0x00FE); T(_WZ == 0x0008); mem16(0x00FE == 0x0004);
+    T(11 == step()); T(_PC == 0x0039); T(_SP == 0x00FC); T(_WZ == 0x0038); mem16(0x00FC == 0x0009); 
 }
 
 /* LD r,s; LD r,n */
@@ -255,9 +234,7 @@ UTEST(z80, LD_r_sn) {
         0x6D,           // LD L,L
         0x7D,           // LD A,L
     };
-    init();
-    copy(0x0000, prog, sizeof(prog));
-
+    init(0x0000, prog, sizeof(prog));
     T(7==step()); T(0x12==_A);
     T(4==step()); T(0x12==_B);
     T(4==step()); T(0x12==_C);
@@ -333,9 +310,7 @@ UTEST(z80, LD_r_iHLi) {
         0x2E, 0x00,         // LD L,0x00
         0x7E,               // LD A,(HL)
     };
-    init();
-    copy(0x0000, prog, sizeof(prog));
-
+    init(0x0000, prog, sizeof(prog));
     T(10==step()); T(0x1000 == _HL);
     T(7==step()); T(0x33 == _A);
     T(7==step()); T(0x33 == mem[0x1000]);
@@ -349,76 +324,6 @@ UTEST(z80, LD_r_iHLi) {
     T(7==step()); T(0x33 == _L);
     T(7==step()); T(0x00 == _L);
     T(7==step()); T(0x33 == _A);       
-}
-
-/* LD r,(IX|IY+d) */
-// FIXME FIXME FIXME: this is actually a copy of LD (IX|IY+d),r!!
-UTEST(z80, LD_r_iIXIYi) {
-    uint8_t prog[] = {
-        0xDD, 0x21, 0x03, 0x10,     // LD IX,0x1003
-        0x3E, 0x12,                 // LD A,0x12
-        0xDD, 0x77, 0x00,           // LD (IX+0),A
-        0x06, 0x13,                 // LD B,0x13
-        0xDD, 0x70, 0x01,           // LD (IX+1),B
-        0x0E, 0x14,                 // LD C,0x14
-        0xDD, 0x71, 0x02,           // LD (IX+2),C
-        0x16, 0x15,                 // LD D,0x15
-        0xDD, 0x72, 0xFF,           // LD (IX-1),D
-        0x1E, 0x16,                 // LD E,0x16
-        0xDD, 0x73, 0xFE,           // LD (IX-2),E
-        0x26, 0x17,                 // LD H,0x17
-        0xDD, 0x74, 0x03,           // LD (IX+3),H
-        0x2E, 0x18,                 // LD L,0x18
-        0xDD, 0x75, 0xFD,           // LD (IX-3),L
-        0xFD, 0x21, 0x03, 0x10,     // LD IY,0x1003
-        0x3E, 0x12,                 // LD A,0x12
-        0xFD, 0x77, 0x00,           // LD (IY+0),A
-        0x06, 0x13,                 // LD B,0x13
-        0xFD, 0x70, 0x01,           // LD (IY+1),B
-        0x0E, 0x14,                 // LD C,0x14
-        0xFD, 0x71, 0x02,           // LD (IY+2),C
-        0x16, 0x15,                 // LD D,0x15
-        0xFD, 0x72, 0xFF,           // LD (IY-1),D
-        0x1E, 0x16,                 // LD E,0x16
-        0xFD, 0x73, 0xFE,           // LD (IY-2),E
-        0x26, 0x17,                 // LD H,0x17
-        0xFD, 0x74, 0x03,           // LD (IY+3),H
-        0x2E, 0x18,                 // LD L,0x18
-        0xFD, 0x75, 0xFD,           // LD (IY-3),L
-    };
-    copy(0x0000, prog, sizeof(prog));
-    init();
-
-    T(14==step()); T(0x1003 == _IX);
-    T(7 ==step()); T(0x12 == _A);
-    T(19==step()); T(0x12 == mem[0x1003]); T(0x1003 == _WZ);
-    T(7 ==step()); T(0x13 == _B);
-    T(19==step()); T(0x13 == mem[0x1004]); T(0x1004 == _WZ);
-    T(7 ==step()); T(0x14 == _C);
-    T(19==step()); T(0x14 == mem[0x1005]); T(0x1005 == _WZ);
-    T(7 ==step()); T(0x15 == _D);
-    T(19==step()); T(0x15 == mem[0x1002]); T(0x1002 == _WZ);
-    T(7 ==step()); T(0x16 == _E);
-    T(19==step()); T(0x16 == mem[0x1001]);
-    T(7 ==step()); T(0x17 == _H);
-    T(19==step()); T(0x17 == mem[0x1006]);
-    T(7 ==step()); T(0x18 == _L);
-    T(19==step()); T(0x18 == mem[0x1000]);
-    T(14==step()); T(0x1003 == _IY);
-    T(7 ==step()); T(0x12 == _A);
-    T(19==step()); T(0x12 == mem[0x1003]);
-    T(7 ==step()); T(0x13 == _B);
-    T(19==step()); T(0x13 == mem[0x1004]);
-    T(7 ==step()); T(0x14 == _C);
-    T(19==step()); T(0x14 == mem[0x1005]);
-    T(7 ==step()); T(0x15 == _D);
-    T(19==step()); T(0x15 == mem[0x1002]);
-    T(7 ==step()); T(0x16 == _E);
-    T(19==step()); T(0x16 == mem[0x1001]);
-    T(7 ==step()); T(0x17 == _H);
-    T(19==step()); T(0x17 == mem[0x1006]);
-    T(7 ==step()); T(0x18 == _L);
-    T(19==step()); T(0x18 == mem[0x1000]);
 }
 
 /* LD (HL),r */
@@ -438,9 +343,7 @@ UTEST(z80, LD_iHLi_r) {
         0x74,               // LD (HL),H
         0x75,               // LD (HL),L
     };
-    init();
-    copy(0x0000, prog, sizeof(prog));
-
+    init(0x0000, prog, sizeof(prog));
     T(10==step()); T(0x1000 == _HL);
     T(7==step()); T(0x12 == _A);
     T(7==step()); T(0x12 == mem[0x1000]);
@@ -490,39 +393,37 @@ UTEST(z80, LD_iIXIYi_r) {
         0x2E, 0x18,                 // LD L,0x18
         0xFD, 0x75, 0xFD,           // LD (IY-3),L
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
-
+    init(0x0000, prog, sizeof(prog));
     T(14==step()); T(0x1003 == _IX);
     T(7 ==step()); T(0x12 == _A);
-    T(19==step()); T(0x12 == mem[0x1003]);
+    T(19==step()); T(0x12 == mem[0x1003]); T(_WZ == 0x1003);
     T(7 ==step()); T(0x13 == _B);
-    T(19==step()); T(0x13 == mem[0x1004]);
+    T(19==step()); T(0x13 == mem[0x1004]); T(_WZ == 0x1004);
     T(7 ==step()); T(0x14 == _C);
-    T(19==step()); T(0x14 == mem[0x1005]);
+    T(19==step()); T(0x14 == mem[0x1005]); T(_WZ == 0x1005);
     T(7 ==step()); T(0x15 == _D);
-    T(19==step()); T(0x15 == mem[0x1002]);
+    T(19==step()); T(0x15 == mem[0x1002]); T(_WZ == 0x1002);
     T(7 ==step()); T(0x16 == _E);
-    T(19==step()); T(0x16 == mem[0x1001]);
+    T(19==step()); T(0x16 == mem[0x1001]); T(_WZ == 0x1001);
     T(7 ==step()); T(0x17 == _H);
-    T(19==step()); T(0x17 == mem[0x1006]);
+    T(19==step()); T(0x17 == mem[0x1006]); T(_WZ == 0x1006);
     T(7 ==step()); T(0x18 == _L);
-    T(19==step()); T(0x18 == mem[0x1000]);
+    T(19==step()); T(0x18 == mem[0x1000]); T(_WZ == 0x1000);
     T(14==step()); T(0x1003 == _IY);
     T(7 ==step()); T(0x12 == _A);
-    T(19==step()); T(0x12 == mem[0x1003]);
+    T(19==step()); T(0x12 == mem[0x1003]); T(_WZ == 0x1003);
     T(7 ==step()); T(0x13 == _B);
-    T(19==step()); T(0x13 == mem[0x1004]);
+    T(19==step()); T(0x13 == mem[0x1004]); T(_WZ == 0x1004);
     T(7 ==step()); T(0x14 == _C);
-    T(19==step()); T(0x14 == mem[0x1005]);
+    T(19==step()); T(0x14 == mem[0x1005]); T(_WZ == 0x1005);
     T(7 ==step()); T(0x15 == _D);
-    T(19==step()); T(0x15 == mem[0x1002]);
+    T(19==step()); T(0x15 == mem[0x1002]); T(_WZ == 0x1002);
     T(7 ==step()); T(0x16 == _E);
-    T(19==step()); T(0x16 == mem[0x1001]);
+    T(19==step()); T(0x16 == mem[0x1001]); T(_WZ == 0x1001);
     T(7 ==step()); T(0x17 == _H);
-    T(19==step()); T(0x17 == mem[0x1006]);
+    T(19==step()); T(0x17 == mem[0x1006]); T(_WZ == 0x1006);
     T(7 ==step()); T(0x18 == _L);
-    T(19==step()); T(0x18 == mem[0x1000]);
+    T(19==step()); T(0x18 == mem[0x1000]); T(_WZ == 0x1000);
 }
 
 /* LD (HL),n */
@@ -533,9 +434,7 @@ UTEST(z80, LD_iHLi_n) {
         0x21, 0x00, 0x10,   // LD HL,0x1000
         0x36, 0x65,         // LD (HL),0x65
     };
-    init();
-    copy(0x0000, prog, sizeof(prog));
-
+    init(0x0000, prog, sizeof(prog));
     T(10==step()); T(0x2000 == _HL);
     T(10==step()); T(0x33 == mem[0x2000]);
     T(10==step()); T(0x1000 == _HL);
@@ -552,23 +451,17 @@ UTEST(z80, LD_iIXIYi_n) {
         0xFD, 0x36, 0x01, 0x22,     // LD (IY+1),0x22
         0xFD, 0x36, 0xFF, 0x44,     // LD (IY-1),0x44
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
-
+    init(0x0000, prog, sizeof(prog));
     T(14==step()); T(0x2000 == _IX);
-    T(19==step()); T(0x33 == mem[0x2002]);
-    T(19==step()); T(0x11 == mem[0x1FFE]);
+    T(19==step()); T(0x33 == mem[0x2002]); T(_WZ == 0x2002);
+    T(19==step()); T(0x11 == mem[0x1FFE]); T(_WZ == 0x1FFE);
     T(14==step()); T(0x1000 == _IY);
-    T(19==step()); T(0x22 == mem[0x1001]);
-    T(19==step()); T(0x44 == mem[0x0FFF]);
+    T(19==step()); T(0x22 == mem[0x1001]); T(_WZ == 0x1001);
+    T(19==step()); T(0x44 == mem[0x0FFF]); T(_WZ == 0x0FFF);
 }
 
 /* LD A,(BC); LD A,(DE); LD A,(nn) */
 UTEST(z80, LD_A_iBCDEnni) {
-    uint8_t data[] = {
-        0x11, 0x22, 0x33
-    };
-    copy(0x1000, data, sizeof(data));
     uint8_t prog[] = {
         0x01, 0x00, 0x10,   // LD BC,0x1000
         0x11, 0x01, 0x10,   // LD DE,0x1001
@@ -576,9 +469,11 @@ UTEST(z80, LD_A_iBCDEnni) {
         0x1A,               // LD A,(DE)
         0x3A, 0x02, 0x10,   // LD A,(0x1002)
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
-
+    init(0x0000, prog, sizeof(prog));
+    uint8_t data[] = {
+        0x11, 0x22, 0x33
+    };
+    copy(0x1000, data, sizeof(data));
     T(10==step()); T(0x1000 == _BC);
     T(10==step()); T(0x1001 == _DE);
     T(7 ==step()); T(0x11 == _A); T(0x1001 == _WZ);
@@ -596,8 +491,7 @@ UTEST(z80, LD_iBCDEnni_A) {
         0x12,               // LD (DE),A
         0x32, 0x02, 0x10,   // LD (0x1002),A
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    init(0x0000, prog, sizeof(prog));
     T(10==step()); T(0x1000 == _BC);
     T(10==step()); T(0x1001 == _DE);
     T(7 ==step()); T(0x77 == _A);
@@ -616,8 +510,7 @@ UTEST(z80, LD_ddIXIY_nn) {
         0xDD, 0x21, 0x21, 0x43, // LD IX,0x4321
         0xFD, 0x21, 0x65, 0x87, // LD IY,0x8765
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    init(0x0000, prog, sizeof(prog));
     T(10==step()); T(0x1234 == _BC);
     T(10==step()); T(0x5678 == _DE);
     T(10==step()); T(0x9ABC == _HL);
@@ -640,9 +533,8 @@ UTEST(z80, LD_HLddIXIY_inni) {
         0xDD, 0x2A, 0x05, 0x10,     // LD IX,(0x1005)
         0xFD, 0x2A, 0x06, 0x10,     // LD IY,(0x1006)
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x0000, prog, sizeof(prog));
-    init();
     T(16==step()); T(0x0201 == _HL); T(0x1001 == _WZ);
     T(20==step()); T(0x0302 == _BC); T(0x1002 == _WZ);
     T(20==step()); T(0x0403 == _DE); T(0x1003 == _WZ);
@@ -670,8 +562,7 @@ UTEST(z80, LD_inni_HLddIXIY) {
         0xFD, 0x21, 0x65, 0x87,     // LD IY,0x8765
         0xFD, 0x22, 0x0C, 0x10,     // LD (0x100C),IY
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    init(0x0000, prog, sizeof(prog));
     T(10==step()); T(0x0201 == _HL);
     T(16==step()); T(0x0201 == mem16(0x1000)); T(0x1001 == _WZ);
     T(10==step()); T(0x1234 == _BC);
@@ -698,8 +589,7 @@ UTEST(z80, LD_SP_HLIXIY) {
         0xDD, 0xF9,                 // LD SP,IX
         0xFD, 0xF9,                 // LD SP,IY
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    init(0x0000, prog, sizeof(prog));
     T(10==step()); T(0x1234 == _HL);
     T(14==step()); T(0x5678 == _IX);
     T(14==step()); T(0x9ABC == _IY);
@@ -731,12 +621,11 @@ UTEST(z80, PUSH_POP_qqIXIY) {
         0xDD, 0xE1,             // POP IX
         0xFD, 0xE1,             // POP IY
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    init(0x0000, prog, sizeof(prog));
     T(10==step()); T(0x1234 == _BC);
     T(10==step()); T(0x5678 == _DE);
     T(10==step()); T(0x9ABC == _HL);
-    T(7 ==step()); T(0x00EF == _FA);
+    T(7 ==step()); T(0xEF00 == _AF);
     T(14==step()); T(0x2345 == _IX);
     T(14==step()); T(0x6789 == _IY);
     T(10==step()); T(0x0100 == _SP);
@@ -746,7 +635,7 @@ UTEST(z80, PUSH_POP_qqIXIY) {
     T(11==step()); T(0x9ABC == mem16(0x00F8)); T(0x00F8 == _SP);
     T(15==step()); T(0x2345 == mem16(0x00F6)); T(0x00F6 == _SP);
     T(15==step()); T(0x6789 == mem16(0x00F4)); T(0x00F4 == _SP);
-    T(10==step()); T(0x8967 == _FA); T(0x00F6 == _SP);
+    T(10==step()); T(0x6789 == _AF); T(0x00F6 == _SP);
     T(10==step()); T(0x2345 == _BC); T(0x00F8 == _SP);
     T(10==step()); T(0x9ABC == _DE); T(0x00FA == _SP);
     T(10==step()); T(0x5678 == _HL); T(0x00FC == _SP);
@@ -778,15 +667,14 @@ UTEST(z80, EX) {
         0xFD, 0x21, 0x77, 0x66, // LD IY,0x6677
         0xFD, 0xE3,             // EX (SP),IY
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    init(0x0000, prog, sizeof(prog));
     T(10==step()); T(0x1234 == _HL);
     T(10==step()); T(0x5678 == _DE);
     T(4 ==step()); T(0x1234 == _DE); T(0x5678 == _HL);
-    T(7 ==step()); T(0x0011 == _FA); T(0x00FF == _FA_);
-    T(4 ==step()); T(0x00FF == _FA); T(0x0011 == _FA_);
-    T(7 ==step()); T(0x0022 == _FA); T(0x0011 == _FA_);
-    T(4 ==step()); T(0x0011 == _FA); T(0x0022 == _FA_);
+    T(7 ==step()); T(0x1100 == _AF); T(0xFF00 == _AF_);
+    T(4 ==step()); T(0xFF00 == _AF); T(0x1100 == _AF_);
+    T(7 ==step()); T(0x2200 == _AF); T(0x1100 == _AF_);
+    T(4 ==step()); T(0x1100 == _AF); T(0x2200 == _AF_);
     T(10==step()); T(0x9ABC == _BC);
     T(4 ==step());
     T(0xFFFF == _HL); T(0x5678 == _HL_);
@@ -828,9 +716,7 @@ UTEST(z80, ADD_A_rn) {
         0x85,           // ADD A,L
         0xC6, 0x44,     // ADD A,0x44
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
-
+    init(0x0000, prog, sizeof(prog));
     T(7==step()); T(0x0F == _A); T(flags(0));
     T(4==step()); T(0x1E == _A); T(flags(Z80_HF));
     T(7==step()); T(0xE0 == _B);
@@ -861,16 +747,15 @@ UTEST(z80, ADD_A_iHLIXIYi) {
         0xDD, 0x86, 0x01,       // ADD A,(IX+1)
         0xFD, 0x86, 0xFF,       // ADD A,(IY-1)
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x0000, prog, sizeof(prog));
-    init();
     T(10==step()); T(0x1000 == _HL);
     T(14==step()); T(0x1000 == _IX);
     T(14==step()); T(0x1003 == _IY);
     T(7 ==step()); T(0x00 == _A);
     T(7 ==step()); T(0x41 == _A); T(flags(0));
-    T(19==step()); T(0xA2 == _A); T(flags(Z80_SF|Z80_VF));
-    T(19==step()); T(0x23 == _A); T(flags(Z80_VF|Z80_CF));
+    T(19==step()); T(0xA2 == _A); T(flags(Z80_SF|Z80_VF)); T(_WZ == 0x1001);
+    T(19==step()); T(0x23 == _A); T(flags(Z80_VF|Z80_CF)); T(_WZ == 0x1002);
 }
 
 /* ADC A,r; ADC A,n */
@@ -892,9 +777,7 @@ UTEST(z80, ADC_A_rn) {
         0x8D,               // ADC A,L
         0xCE, 0x01,         // ADC A,0x01
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
-
+    init(0x0000, prog, sizeof(prog));
     T(7==step()); T(0x00 == _A);
     T(7==step()); T(0x41 == _B);
     T(7==step()); T(0x61 == _C);
@@ -925,17 +808,16 @@ UTEST(z80, ADC_A_iHLIXIYi) {
         0xFD, 0x8E, 0xFF,       // ADC A,(IY-1)
         0xDD, 0x8E, 0x03,       // ADC A,(IX+3)
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x0000, prog, sizeof(prog));
-    init();
     T(10==step()); T(0x1000 == _HL);
     T(14==step()); T(0x1000 == _IX);
     T(14==step()); T(0x1003 == _IY);
     T(7 ==step()); T(0x00 == _A);
     T(7 ==step()); T(0x41 == _A); T(flags(0));
-    T(19==step()); T(0xA2 == _A); T(flags(Z80_SF|Z80_VF));
-    T(19==step()); T(0x23 == _A); T(flags(Z80_VF|Z80_CF));
-    T(19==step()); T(0x26 == _A); T(flags(0));
+    T(19==step()); T(0xA2 == _A); T(flags(Z80_SF|Z80_VF)); T(_WZ == 0x1001);
+    T(19==step()); T(0x23 == _A); T(flags(Z80_VF|Z80_CF)); T(_WZ == 0x1002);
+    T(19==step()); T(0x26 == _A); T(flags(0)); T(_WZ == 0x1003);
 }
 
 /* SUB A,r; SUB A,n */
@@ -958,8 +840,7 @@ UTEST(z80, SUB_A_rn) {
         0xD6, 0x01,     // SUB A,0x01
         0xD6, 0xFE,     // SUB A,0xFE
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    init(0x0000, prog, sizeof(prog));
     T(7==step()); T(0x04 == _A);
     T(7==step()); T(0x01 == _B);
     T(7==step()); T(0xF8 == _C);
@@ -990,16 +871,15 @@ UTEST(z80, SUB_A_iHLIXIYi) {
         0xDD, 0x96, 0x01,       // SUB A,(IX+1)
         0xFD, 0x96, 0xFE,       // SUB A,(IY-2)
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x0000, prog, sizeof(prog));
-    init();
     T(10==step()); T(0x1000 == _HL);
     T(14==step()); T(0x1000 == _IX);
     T(14==step()); T(0x1003 == _IY);
     T(7 ==step()); T(0x00 == _A);
     T(7 ==step()); T(0xBF == _A); T(flags(Z80_SF|Z80_HF|Z80_NF|Z80_CF));
-    T(19==step()); T(0x5E == _A); T(flags(Z80_VF|Z80_NF));
-    T(19==step()); T(0xFD == _A); T(flags(Z80_SF|Z80_NF|Z80_CF));
+    T(19==step()); T(0x5E == _A); T(flags(Z80_VF|Z80_NF)); T(_WZ == 0x1001);
+    T(19==step()); T(0xFD == _A); T(flags(Z80_SF|Z80_NF|Z80_CF)); T(_WZ == 0x1001);
 }
 
 /* SBC A,r; SBC A,n */
@@ -1022,9 +902,7 @@ UTEST(z80, SBC_A_rn) {
         0xDE, 0x01,     // SBC A,0x01
         0xDE, 0xFE,     // SBC A,0xFE
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
-
+    init(0x0000, prog, sizeof(prog));
     for (int i = 0; i < 7; i++) {
         step();
     }
@@ -1051,16 +929,15 @@ UTEST(z80, SBC_A_iHLIXIYi) {
         0xDD, 0x9E, 0x01,       // SBC A,(IX+1)
         0xFD, 0x9E, 0xFE,       // SBC A,(IY-2)
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x0000, prog, sizeof(prog));
-    init();
     T(10==step()); T(0x1000 == _HL);
     T(14==step()); T(0x1000 == _IX);
     T(14==step()); T(0x1003 == _IY);
     T(7 ==step()); T(0x00 == _A);
     T(7 ==step()); T(0xBF == _A); T(flags(Z80_SF|Z80_HF|Z80_NF|Z80_CF));
-    T(19==step()); T(0x5D == _A); T(flags(Z80_VF|Z80_NF));
-    T(19==step()); T(0xFC == _A); T(flags(Z80_SF|Z80_NF|Z80_CF));
+    T(19==step()); T(0x5D == _A); T(flags(Z80_VF|Z80_NF)); T(_WZ == 0x1001);
+    T(19==step()); T(0xFC == _A); T(flags(Z80_SF|Z80_NF|Z80_CF)); T(_WZ == 0x1001);
 }
 
 /* CP A,r; CP A,n */
@@ -1082,9 +959,7 @@ UTEST(z80, CP_A_rn) {
         0xBD,           // CP L
         0xFE, 0x04,     // CP 0x04
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
-
+    init(0x0000, prog, sizeof(prog));
     T(7==step()); T(0x04 == _A);
     T(7==step()); T(0x05 == _B);
     T(7==step()); T(0x03 == _C);
@@ -1114,16 +989,15 @@ UTEST(z80, CP_A_iHLIXIYi) {
         0xDD, 0xBE, 0x01,       // CP (IX+1)
         0xFD, 0xBE, 0xFF,       // CP (IY-1)
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x0000, prog, sizeof(prog));
-    init();
     T(10==step()); T(0x1000 == _HL);
     T(14==step()); T(0x1000 == _IX);
     T(14==step()); T(0x1003 == _IY);
     T(7 ==step()); T(0x41 == _A);
     T(7 ==step()); T(0x41 == _A); T(flags(Z80_ZF|Z80_NF));
-    T(19==step()); T(0x41 == _A); T(flags(Z80_SF|Z80_NF|Z80_CF));
-    T(19==step()); T(0x41 == _A); T(flags(Z80_HF|Z80_NF));
+    T(19==step()); T(0x41 == _A); T(flags(Z80_SF|Z80_NF|Z80_CF)); T(_WZ == 0x1001);
+    T(19==step()); T(0x41 == _A); T(flags(Z80_HF|Z80_NF)); T(_WZ == 0x1002);
 }
 
 /* AND A,r; AND A,n */
@@ -1152,10 +1026,7 @@ UTEST(z80, AND_A_rn) {
         0xF6, 0xFF,             // OR 0xFF
         0xE6, 0xAA,             // AND 0xAA
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
-
-    // skip loads
+    init(0x0000, prog, sizeof(prog));
     for (int i = 0; i < 7; i++) {
         step();
     }
@@ -1188,13 +1059,12 @@ UTEST(z80, AND_A_iHLIXIYi) {
         0xDD, 0xA6, 0x01,           // AND (IX+1)
         0xFD, 0xA6, 0xFF,           // AND (IX-1)
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x0000, prog, sizeof(prog));
-    init();
     step(); step(); step(); step();
     T(7 ==step()); T(0xFE == _A); T(flags(Z80_SF|Z80_HF));
-    T(19==step()); T(0xAA == _A); T(flags(Z80_SF|Z80_HF|Z80_PF));
-    T(19==step()); T(0x88 == _A); T(flags(Z80_SF|Z80_HF|Z80_PF));
+    T(19==step()); T(0xAA == _A); T(flags(Z80_SF|Z80_HF|Z80_PF)); T(_WZ == 0x1001);
+    T(19==step()); T(0x88 == _A); T(flags(Z80_SF|Z80_HF|Z80_PF)); T(_WZ == 0x1002);
 }
 
 /* XOR A,r; XOR A,n */
@@ -1217,10 +1087,7 @@ UTEST(z80, XOR_A_rn) {
         0xEE, 0x7F,     // XOR 0x7F
         0xEE, 0xFF,     // XOR 0xFF
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
-
-    // skip loads
+    init(0x0000, prog, sizeof(prog));
     for (int i = 0; i < 7; i++) {
         step();
     }
@@ -1255,10 +1122,7 @@ UTEST(z80, OR_A_rn) {
         0xF6, 0x40,     // OR 0x40
         0xF6, 0x80,     // OR 0x80
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
-
-    // skip loads
+    init(0x0000, prog, sizeof(prog));
     for (int i = 0; i < 7; i++) {
         step();
     }
@@ -1289,16 +1153,15 @@ UTEST(z80, OR_XOR_A_iHLIXIYi) {
         0xDD, 0xAE, 0x01,           // XOR (IX+1)
         0xFD, 0xAE, 0xFF,           // XOR (IY-1)
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x0000, prog, sizeof(prog));
-    init();
     step(); step(); step(); step();
     T(7 ==step()); T(0x41 == _A); T(flags(Z80_PF));
-    T(19==step()); T(0x63 == _A); T(flags(Z80_PF));
-    T(19==step()); T(0xE7 == _A); T(flags(Z80_SF|Z80_PF));
+    T(19==step()); T(0x63 == _A); T(flags(Z80_PF)); T(_WZ == 0x1001);
+    T(19==step()); T(0xE7 == _A); T(flags(Z80_SF|Z80_PF)); T(_WZ == 0x1002);
     T(7 ==step()); T(0xA6 == _A); T(flags(Z80_SF|Z80_PF));
-    T(19==step()); T(0xC4 == _A); T(flags(Z80_SF));
-    T(19==step()); T(0x40 == _A); T(flags(0));
+    T(19==step()); T(0xC4 == _A); T(flags(Z80_SF)); T(_WZ == 0x1001);
+    T(19==step()); T(0x40 == _A); T(flags(0)); T(_WZ == 0x1002);
 }
 
 /* INC r; DEC r */
@@ -1327,10 +1190,7 @@ UTEST(z80, INC_DEC_r) {
         0x2C,               // INC L
         0x2D,               // DEC L
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
-
-    // skip loads
+    init(0x0000, prog, sizeof(prog));
     for (int i = 0; i < 7; i++) {
         step();
     }
@@ -1372,9 +1232,8 @@ UTEST(z80, INC_DEC_iHLIXIYi) {
         0xFD, 0x34, 0xFF,           // INC (IY-1)
         0xFD, 0x35, 0xFF,           // DEC (IY-1)
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x0000, prog, sizeof(prog));
-    init();
     for (int i = 0; i < 3; i++) {
         step();
     }
@@ -1408,8 +1267,7 @@ UTEST(z80, INC_DEC_ssIXIY) {
         0xFD, 0x23,             // INC IX
         0xFD, 0x2B,             // DEC IX
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    init(0x0000, prog, sizeof(prog));
     for (int i = 0; i < 6; i++) {
         step();
     }
@@ -1440,10 +1298,8 @@ UTEST(z80, RLCA_RLA_RRCA_RRA) {
         0x1F,           // RRA
         0x1F,           // RRA
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
-
-    z80_set_f(&cpu, 0xff);
+    init(0x0000, prog, sizeof(prog));
+    cpu.f = 0xff;
     T(7==step()); T(0xA0 == _A);
     T(4==step()); T(0x41 == _A); T(flags(Z80_SF|Z80_ZF|Z80_VF|Z80_CF));
     T(4==step()); T(0x82 == _A); T(flags(Z80_SF|Z80_ZF|Z80_VF));
@@ -1496,8 +1352,7 @@ UTEST(z80, RLC_RL_RRC_RR_r) {
         0xCB, 0x15,     // RL L
         0xCB, 0x1D,     // RR L
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    init(0x0000, prog, sizeof(prog));
 
     // skip loads
     for (int i = 0; i < 7; i++) {
@@ -1565,9 +1420,8 @@ UTEST(z80, RRC_RLC_RR_RL_iHLIXIYi) {
         0xFD, 0xCB, 0xFF, 0x1E,     // RR (IY-1)
         0xFD, 0x7E, 0xFF,           // LD A,(IY-1)
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x0000, prog, sizeof(prog));
-    init();
 
     // skip loads
     for (int i = 0; i < 3; i++) {
@@ -1577,25 +1431,25 @@ UTEST(z80, RRC_RLC_RR_RL_iHLIXIYi) {
     T(7 ==step()); T(0x80 == _A);
     T(15==step()); T(0x01 == mem[0x1000]); T(flags(Z80_CF));
     T(7 ==step()); T(0x01 == _A);
-    T(23==step()); T(0xFF == mem[0x1001]); T(flags(Z80_SF|Z80_PF|Z80_CF));
+    T(23==step()); T(0xFF == mem[0x1001]); T(_WZ == 0x1001); T(flags(Z80_SF|Z80_PF|Z80_CF));
     T(19==step()); T(0xFF == _A);
-    T(23==step()); T(0xFF == mem[0x1001]); T(flags(Z80_SF|Z80_PF|Z80_CF));
+    T(23==step()); T(0xFF == mem[0x1001]); T(_WZ == 0x1001); T(flags(Z80_SF|Z80_PF|Z80_CF));
     T(19==step()); T(0xFF == _A);
-    T(23==step()); T(0x88 == mem[0x1002]); T(flags(Z80_SF|Z80_PF|Z80_CF));
+    T(23==step()); T(0x88 == mem[0x1002]); T(_WZ == 0x1002); T(flags(Z80_SF|Z80_PF|Z80_CF));
     T(19==step()); T(0x88 == _A);
-    T(23==step()); T(0x11 == mem[0x1002]); T(flags(Z80_PF|Z80_CF));
+    T(23==step()); T(0x11 == mem[0x1002]); T(_WZ == 0x1002); T(flags(Z80_PF|Z80_CF));
     T(19==step()); T(0x11 == _A);
     T(15==step()); T(0x80 == mem[0x1000]); T(flags(Z80_SF|Z80_CF));
     T(7 ==step()); T(0x80 == _A);
     T(15==step()); T(0x01 == mem[0x1000]); T(flags(Z80_CF));
     T(7 ==step()); T(0x01 == _A);
-    T(23==step()); T(0xFF == mem[0x1001]); T(flags(Z80_SF|Z80_PF|Z80_CF));
+    T(23==step()); T(0xFF == mem[0x1001]); T(_WZ == 0x1001); T(flags(Z80_SF|Z80_PF|Z80_CF));
     T(19==step()); T(0xFF == _A);
-    T(23==step()); T(0xFF == mem[0x1001]); T(flags(Z80_SF|Z80_PF|Z80_CF));
+    T(23==step()); T(0xFF == mem[0x1001]); T(_WZ == 0x1001); T(flags(Z80_SF|Z80_PF|Z80_CF));
     T(19==step()); T(0xFF == _A);
-    T(23==step()); T(0x23 == mem[0x1002]); T(flags(0));
+    T(23==step()); T(0x23 == mem[0x1002]); T(_WZ == 0x1002); T(flags(0));
     T(19==step()); T(0x23 == _A);
-    T(23==step()); T(0x11 == mem[0x1002]); T(flags(Z80_PF|Z80_CF));
+    T(23==step()); T(0x11 == mem[0x1002]); T(_WZ == 0x1002); T(flags(Z80_PF|Z80_CF));
     T(19==step()); T(0x11 == _A);
 }
 
@@ -1617,8 +1471,7 @@ UTEST(z80, SLA_r) {
         0xCB, 0x24,         // SLA H
         0xCB, 0x25,         // SLA L
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    init(0x0000, prog, sizeof(prog));
 
     // skip loads
     for (int i = 0; i < 7; i++) {
@@ -1647,9 +1500,8 @@ UTEST(z80, SLA_iHLIXIYi) {
         0xFD, 0xCB, 0xFF, 0x26,     // SLA (IY-1)
         0xFD, 0x7E, 0xFF,           // LD A,(IY-1)
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x000, prog, sizeof(prog));
-    init();
     for (int i = 0; i < 3; i++) {
         step();
     }
@@ -1679,8 +1531,7 @@ UTEST(z80, SRA_r) {
         0xCB, 0x2C,         // SRA H
         0xCB, 0x2D,         // SRA L
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    init(0x0000, prog, sizeof(prog));
     // skip loads
     for (int i = 0; i < 7; i++) {
         step();
@@ -1708,9 +1559,8 @@ UTEST(z80, SRA_iHLIXIYi) {
         0xFD, 0xCB, 0xFF, 0x2E,     // SRA (IY-1)
         0xFD, 0x7E, 0xFF,           // LD A,(IY-1)
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x000, prog, sizeof(prog));
-    init();
     for (int i = 0; i < 3; i++) {
         step();
     }
@@ -1740,8 +1590,7 @@ UTEST(z80, SRL_r) {
         0xCB, 0x3C,         // SRL H
         0xCB, 0x3D,         // SRL L
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    init(0x0000, prog, sizeof(prog));
 
     // skip loads
     for (int i = 0; i < 7; i++) {
@@ -1770,9 +1619,8 @@ UTEST(z80, SRL_iHLIXIYi) {
         0xFD, 0xCB, 0xFF, 0x3E,     // SRL (IY-1)
         0xFD, 0x7E, 0xFF,           // LD A,(IY-1)
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x000, prog, sizeof(prog));
-    init();
     for (int i = 0; i < 3; i++) {
         step();
     }
@@ -1804,8 +1652,7 @@ UTEST(z80, RLD_RRD) {
         0xED, 0x67,         // RRD
         0x7E
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    init(0x0000, prog, sizeof(prog));
     T(7 ==step()); T(0x12 == _A);
     T(10==step()); T(0x1000 == _HL);
     T(10==step()); T(0x34 == mem[0x1000]);
@@ -1819,7 +1666,7 @@ UTEST(z80, RLD_RRD) {
     T(7 ==step()); T(0x00 == _A);
     T(7 ==step()); T(0x01 == _A);
     T(10 ==step()); T(0x00 == mem[0x1000]);
-    z80_set_f(&cpu, z80_f(&cpu) | Z80_CF);
+    cpu.f |= Z80_CF;
     T(18==step()); T(0x00 == _A); T(0x01 == mem[0x1000]); T(flags(Z80_ZF|Z80_PF|Z80_CF)); T(0x1001 == _WZ);
     T(18==step()); T(0x01 == _A); T(0x00 == mem[0x1000]); T(flags(Z80_CF)); T(0x1001 == _WZ);
     T(7 ==step()); T(0x00 == _A);
@@ -1830,68 +1677,73 @@ UTEST(z80, HALT) {
     uint8_t prog[] = {
         0x76,       // HALT
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
-    T(4==step()); T(0x0000 == _PC); T(cpu.pins & Z80_HALT);
-    T(4==step()); T(0x0000 == _PC); T(cpu.pins & Z80_HALT);
-    T(4==step()); T(0x0000 == _PC); T(cpu.pins & Z80_HALT);
+    init(0x0000, prog, sizeof(prog));
+    T(4==step()); T(0x0001 == _PC); T(pins & Z80_HALT);
+    T(4==step()); T(0x0001 == _PC); T(pins & Z80_HALT);
+    T(4==step()); T(0x0001 == _PC); T(pins & Z80_HALT);
+}
+
+/* SET b,r; SET b,(HL); SET b,(IX+d); SET b,(IY+d) */
+UTEST(z80, SET_RES) {
+    uint8_t prog[] = {
+        0xAF,                   // XOR A
+        0x21, 0x40, 0x00,       // LD HL,0x0040
+        0xDD, 0x21, 0x50, 0x00, // LD IX,0x0050
+        0xFD, 0x21, 0x60, 0x00, // LD IY,0x0060
+        0xCB, 0xC7,             // SET 0,A
+        0xCB, 0xC6,             // SET 0,(HL)
+        0xDD, 0xCB, 0x01, 0xC6, // SET 0,(IX+1)
+        0xFD, 0xCB, 0xFF, 0xC6, // SET 0,(IY-1)
+        0xDD, 0xCB, 0x02, 0xCF, // undocumented: SET 1,(IX+2),A
+        0xCB, 0x8F,             // RES 1,A
+        0xCB, 0x86,             // RES 0,(HL)
+        0xDD, 0xCB, 0x01, 0x86, // RES 0,(IX+1)
+        0xFD, 0xCB, 0xFF, 0x86, // RES 0,(IY-1)
+        0xDD, 0xCB, 0x02, 0x8F, // undocumented: RES 1,(IX+2),A
+    };
+    init(0x0000, prog, sizeof(prog));
+    T(4  == step()); T(_A == 0);
+    T(10 == step()); T(_HL == 0x0040);
+    T(14 == step()); T(_IX == 0x0050);
+    T(14 == step()); T(_IY == 0x0060);
+    T(8  == step()); T(_A == 1);
+    T(15 == step()); T(mem[0x40] == 1);
+    T(23 == step()); T(mem[0x51] == 1); T(_WZ == 0x0051);
+    T(23 == step()); T(mem[0x5F] == 1); T(_WZ == 0x005F);
+    T(23 == step()); T(mem[0x52] == 2); T(_A == 2); T(_WZ == 0x0052);
+    T(8  == step()); T(_A == 0);
+    T(15 == step()); T(mem[0x40] == 0);
+    T(23 == step()); T(mem[0x51] == 0); T(_WZ == 0x0051);
+    T(23 == step()); T(mem[0x5F] == 0); T(_WZ == 0x005F);
+    T(23 == step()); T(mem[0x52] == 0); T(_A == 0); T(_WZ == 0x0052);
 }
 
 /* BIT b,r; BIT b,(HL); BIT b,(IX+d); BIT b,(IY+d) */
 UTEST(z80, BIT) {
-    /* only test cycle count for now */
+    // only test cycle count for now 
     uint8_t prog[] = {
+        0x3E, 0x01,             // LD A,1
+        0x21, 0x40, 0x00,       // LD HL,0x0040
+        0xDD, 0x21, 0x50, 0x00, // LD IX,0x0050
+        0xFD, 0x21, 0x60, 0x00, // LD IY,0x0060
         0xCB, 0x47,             // BIT 0,A
         0xCB, 0x46,             // BIT 0,(HL)
         0xDD, 0xCB, 0x01, 0x46, // BIT 0,(IX+1)
         0xFD, 0xCB, 0xFF, 0x46, // BIT 0,(IY-1)
         0xDD, 0xCB, 0x02, 0x47, // undocumented: BIT 0,(IX+2),A
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
-    T(8 ==step());
-    T(12==step());
-    T(20==step());
-    T(20==step());
-    T(20==step());
-}
+    init(0x0000, prog, sizeof(prog));
+    cpu.f = 0;
 
-/* SET b,r; SET b,(HL); SET b,(IX+d); SET b,(IY+d) */
-UTEST(z80, SET) {
-    /* only test cycle count for now */
-    uint8_t prog[] = {
-        0xCB, 0xC7,             // SET 0,A
-        0xCB, 0xC6,             // SET 0,(HL)
-        0xDD, 0xCB, 0x01, 0xC6, // SET 0,(IX+1)
-        0xFD, 0xCB, 0xFF, 0xC6, // SET 0,(IY-1)
-        0xDD, 0xCB, 0x02, 0xC7, // undocumented: SET 0,(IX+2),A
-    };
-    copy(0x0000, prog, sizeof(prog));
-    init();
-    T(8 ==step());
-    T(15==step());
-    T(23==step());
-    T(23==step());
-    T(23==step());
-}
-
-/* RES b,r; RES b,(HL); RES b,(IX+d); RES b,(IY+d) */
-UTEST(z80, RES) {
-    /* only test cycle count for now */
-    uint8_t prog[] = {
-        0xCB, 0x87,             // RES 0,A
-        0xCB, 0x86,             // RES 0,(HL)
-        0xDD, 0xCB, 0x01, 0x86, // RES 0,(IX+1)
-        0xFD, 0xCB, 0xFF, 0x86, // RES 0,(IY-1)
-        0xDD, 0xCB, 0x02, 0x87, // undocumented: RES 0,(IX+2),A
-    };
-    copy(0x0000, prog, sizeof(prog));
-    init();
-    T(8 ==step());
-    T(15==step());
-    T(23==step());
-    T(23==step());
-    T(23==step());
+    T(7  == step()); T(_A == 1);
+    T(10 == step()); T(_HL == 0x0040);
+    T(14 == step()); T(_IX == 0x0050);
+    T(14 == step()); T(_IY == 0x0060);
+    T(8  == step()); T(flags(Z80_HF));
+    T(12 == step()); T(flags(Z80_ZF|Z80_HF|Z80_VF));
+    T(20 == step()); T(_WZ == 0x0051); T(flags(Z80_ZF|Z80_HF|Z80_VF));
+    T(20 == step()); T(_WZ == 0x005F); T(flags(Z80_ZF|Z80_HF|Z80_VF));
+    T(20 == step()); T(_WZ == 0x0052); T(flags(Z80_ZF|Z80_HF|Z80_VF));
 }
 
 /* DAA */
@@ -1910,9 +1762,7 @@ UTEST(z80, DAA) {
         0x90,               // sub b
         0x27                // daa
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
-
+    init(0x0000, prog, sizeof(prog));
     T(7==step()); T(0x15 == _A);
     T(7==step()); T(0x27 == _B);
     T(4==step()); T(0x3C == _A); T(flags(0));
@@ -1937,8 +1787,7 @@ UTEST(z80, CPL) {
         0x2F,               // CPL
         0x2F,               // CPL
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    init(0x0000, prog, sizeof(prog));
     T(4==step()); T(0x00 == _A); T(flags(Z80_ZF|Z80_NF));
     T(4==step()); T(0xFF == _A); T(flags(Z80_ZF|Z80_HF|Z80_NF));
     T(4==step()); T(0x00 == _A); T(flags(Z80_ZF|Z80_HF|Z80_NF));
@@ -1957,8 +1806,7 @@ UTEST(z80, CCF_SCF) {
         0x3F,           // CCF
         0x37,           // SCF
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    init(0x0000, prog, sizeof(prog));
     T(4==step()); T(0x00 == _A); T(flags(Z80_ZF|Z80_NF));
     T(4==step()); T(0x00 == _A); T(flags(Z80_ZF|Z80_CF));
     T(4==step()); T(0x00 == _A); T(flags(Z80_ZF|Z80_HF));
@@ -1967,19 +1815,19 @@ UTEST(z80, CCF_SCF) {
     T(4==step()); T(0x34 == _A); T(flags(Z80_CF));
 }
 
+/* NEG */
 UTEST(z80, NEG) {
     uint8_t prog[] = {
         0x3E, 0x01,         // LD A,0x01
         0xED, 0x44,         // NEG
         0xC6, 0x01,         // ADD A,0x01
-        0xED, 0x44,         // NEG
+        0xED, 0x4C,         // a duplicate NEG
         0xD6, 0x80,         // SUB A,0x80
-        0xED, 0x44,         // NEG
+        0xED, 0x54,         // another duplicate NEG
         0xC6, 0x40,         // ADD A,0x40
-        0xED, 0x44,         // NEG
+        0xED, 0x5C,         // and another duplicate NEG
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    init(0x0000, prog, sizeof(prog));
     T(7==step()); T(0x01 == _A);
     T(8==step()); T(0xFF == _A); T(flags(Z80_SF|Z80_HF|Z80_NF|Z80_CF));
     T(7==step()); T(0x00 == _A); T(flags(Z80_ZF|Z80_HF|Z80_CF));
@@ -2003,9 +1851,8 @@ UTEST(z80, LDI) {
         0xED, 0xA0,             // LDI
         0xED, 0xA0,             // LDI
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x0000, prog, sizeof(prog));
-    init();
 
     // skip loads
     for (int i = 0; i < 3; i++) {
@@ -2043,9 +1890,8 @@ UTEST(z80, LDIR) {
         0xED, 0xB0,             // LDIR
         0x3E, 0x33,             // LD A,0x33
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x0000, prog, sizeof(prog));
-    init();
 
     // skip loads
     for (int i = 0; i < 3; i++) {
@@ -2056,6 +1902,7 @@ UTEST(z80, LDIR) {
     T(0x2001 == _DE);
     T(0x0002 == _BC);
     T(0x000A == _WZ);
+    T(0x000A == _PC);
     T(0x01 == mem[0x2000]);
     T(flags(Z80_PF));
     T(21==step());
@@ -2063,12 +1910,15 @@ UTEST(z80, LDIR) {
     T(0x2002 == _DE);
     T(0x0001 == _BC);
     T(0x000A == _WZ);
+    T(0x000A == _PC);
     T(0x02 == mem[0x2001]);
     T(flags(Z80_PF));
     T(16==step());
     T(0x1003 == _HL);
     T(0x2003 == _DE);
     T(0x0000 == _BC);
+    T(0x000A == _WZ);
+    T(0x000C == _PC);
     T(0x02 == mem[0x2001]);
     T(0x03 == mem[0x2002]);
     T(flags(0));
@@ -2088,9 +1938,8 @@ UTEST(z80, LDD) {
         0xED, 0xA8,             // LDD
         0xED, 0xA8,             // LDD
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x0000, prog, sizeof(prog));
-    init();
 
     // skip loads
     for (int i = 0; i < 3; i++) {
@@ -2128,9 +1977,8 @@ UTEST(z80, LDDR) {
         0xED, 0xB8,             // LDDR
         0x3E, 0x33,             // LD A,0x33
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x0000, prog, sizeof(prog));
-    init();
 
     // skip loads
     for (int i = 0; i < 3; i++) {
@@ -2141,6 +1989,7 @@ UTEST(z80, LDDR) {
     T(0x2001 == _DE);
     T(0x0002 == _BC);
     T(0x000A == _WZ);
+    T(0x000A == _PC);
     T(0x03 == mem[0x2002]);
     T(flags(Z80_PF));
     T(21==step());
@@ -2148,6 +1997,7 @@ UTEST(z80, LDDR) {
     T(0x2000 == _DE);
     T(0x0001 == _BC);
     T(0x000A == _WZ);
+    T(0x000A == _PC);
     T(0x02 == mem[0x2001]);
     T(flags(Z80_PF));
     T(16==step());
@@ -2155,6 +2005,7 @@ UTEST(z80, LDDR) {
     T(0x1FFF == _DE);
     T(0x0000 == _BC);
     T(0x000A == _WZ);
+    T(0x000C == _PC);
     T(0x01 == mem[0x2000]);
     T(flags(0));
     T(7 == step()); T(0x33 == _A);
@@ -2174,9 +2025,9 @@ UTEST(z80, CPI) {
         0xed, 0xa1,             // cpi
         0xed, 0xa1,             // cpi
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    cpu.wz = 0x1111;
 
     // skip loads
     for (int i = 0; i < 3; i++) {
@@ -2185,19 +2036,23 @@ UTEST(z80, CPI) {
     T(16 == step());
     T(0x1001 == _HL);
     T(0x0003 == _BC);
+    T(0x1112 == _WZ);
     T(flags(Z80_PF|Z80_NF));
-    z80_set_f(&cpu, z80_f(&cpu) | Z80_CF);
+    cpu.f |= Z80_CF;
     T(16 == step());
     T(0x1002 == _HL);
     T(0x0002 == _BC);
+    T(0x1113 == _WZ);
     T(flags(Z80_PF|Z80_NF|Z80_CF));
     T(16 == step());
     T(0x1003 == _HL);
     T(0x0001 == _BC);
+    T(0x1114 == _WZ);
     T(flags(Z80_ZF|Z80_PF|Z80_NF|Z80_CF));
     T(16 == step());
     T(0x1004 == _HL);
     T(0x0000 == _BC);
+    T(0x1115 == _WZ);
     T(flags(Z80_SF|Z80_HF|Z80_NF|Z80_CF));
 }
 
@@ -2213,9 +2068,8 @@ UTEST(z80, CPIR) {
         0xed, 0xb1,             // cpir
         0xed, 0xb1,             // cpir
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x0000, prog, sizeof(prog));
-    init();
 
     // skip loads
     for (int i = 0; i < 3; i++) {
@@ -2225,7 +2079,7 @@ UTEST(z80, CPIR) {
     T(0x1001 == _HL);
     T(0x0003 == _BC);
     T(flags(Z80_PF|Z80_NF));
-    z80_set_f(&cpu, z80_f(&cpu) | Z80_CF);
+    cpu.f |= Z80_CF;
     T(21 == step());
     T(0x1002 == _HL);
     T(0x0002 == _BC);
@@ -2254,9 +2108,9 @@ UTEST(z80, CPD) {
         0xed, 0xa9,             // cpi
         0xed, 0xa9,             // cpi
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    cpu.wz = 0x1111;
 
     // skip loads
     for (int i = 0; i < 3; i++) {
@@ -2265,19 +2119,23 @@ UTEST(z80, CPD) {
     T(16 == step());
     T(0x1002 == _HL);
     T(0x0003 == _BC);
+    T(0x1110 == _WZ);
     T(flags(Z80_SF|Z80_HF|Z80_PF|Z80_NF));
-    z80_set_f(&cpu, z80_f(&cpu) | Z80_CF);
+    cpu.f |= Z80_CF;
     T(16 == step());
     T(0x1001 == _HL);
     T(0x0002 == _BC);
+    T(0x110F == _WZ);
     T(flags(Z80_SF|Z80_HF|Z80_PF|Z80_NF|Z80_CF));
     T(16 == step());
     T(0x1000 == _HL);
     T(0x0001 == _BC);
+    T(0x110E == _WZ);
     T(flags(Z80_ZF|Z80_PF|Z80_NF|Z80_CF));
     T(16 == step());
     T(0x0FFF == _HL);
     T(0x0000 == _BC);
+    T(0x110D == _WZ);
     T(flags(Z80_NF|Z80_CF));
 }
 
@@ -2293,9 +2151,8 @@ UTEST(z80, CPDR) {
         0xed, 0xb9,             // cpdr
         0xed, 0xb9,             // cpdr
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x0000, prog, sizeof(prog));
-    init();
 
     // skip loads
     for (int i = 0; i < 3; i++) {
@@ -2305,7 +2162,7 @@ UTEST(z80, CPDR) {
     T(0x1002 == _HL);
     T(0x0003 == _BC);
     T(flags(Z80_SF|Z80_HF|Z80_PF|Z80_NF));
-    z80_set_f(&cpu, z80_f(&cpu) | Z80_CF);
+    cpu.f |= Z80_CF;
     T(21 == step());
     T(0x1001 == _HL);
     T(0x0002 == _BC);
@@ -2334,18 +2191,17 @@ UTEST(z80, DI_EI_IM) {
         0xED, 0x5E,     // IM 2
         0xED, 0x46,     // IM 0
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
-    T(4==step()); T(!z80_iff1(&cpu)); T(!z80_iff2(&cpu));
-    T(4==step()); T(z80_iff1(&cpu));  T(z80_iff2(&cpu));
-    T(4==step()); T(z80_iff1(&cpu));  T(z80_iff2(&cpu));
-    T(4==step()); T(!z80_iff1(&cpu)); T(!z80_iff2(&cpu));
-    T(4==step()); T(z80_iff1(&cpu));  T(z80_iff2(&cpu));
-    T(4==step()); T(z80_iff1(&cpu));  T(z80_iff2(&cpu));
-    T(8==step()); T(0 == z80_im(&cpu));
-    T(8==step()); T(1 == z80_im(&cpu));
-    T(8==step()); T(2 == z80_im(&cpu));
-    T(8==step()); T(0 == z80_im(&cpu));
+    init(0x0000, prog, sizeof(prog));
+    T(4==step()); T(!cpu.iff2); T(!cpu.iff2);
+    T(4==step()); T(cpu.iff1);  T(cpu.iff2);
+    T(4==step()); T(cpu.iff1);  T(cpu.iff2);
+    T(4==step()); T(!cpu.iff1); T(!cpu.iff2);
+    T(4==step()); T(cpu.iff1);  T(cpu.iff2);
+    T(4==step()); T(cpu.iff1);  T(cpu.iff2);
+    T(8==step()); T(0 == cpu.im);
+    T(8==step()); T(1 == cpu.im);
+    T(8==step()); T(2 == cpu.im);
+    T(8==step()); T(0 == cpu.im);
 }
 
 /* JP cc,nn */
@@ -2372,23 +2228,20 @@ UTEST(z80, JP_cc_nn) {
         0x00,               //          NOP
         0x00,               //          NOP
     };
-    copy(0x0204, prog, sizeof(prog));
-    init();
-    z80_set_pc(&cpu, 0x0204);
-    
+    init(0x0204, prog, sizeof(prog));
     T(4 ==step()); T(0x00 == _A); T(flags(Z80_ZF|Z80_NF));
-    T(10==step()); T(0x0208 == _PC); T(0x020C == _WZ);
-    T(10==step()); T(0x020C == _PC); T(0x020C == _WZ);
+    T(10==step()); T(0x0209 == _PC); T(0x020C == _WZ);
+    T(10==step()); T(0x020D == _PC); T(0x020C == _WZ);
     T(7 ==step()); T(0x01 == _A); T(flags(0));
-    T(10==step()); T(0x0211 == _PC);
-    T(10==step()); T(0x0215 == _PC);
+    T(10==step()); T(0x0212 == _PC);
+    T(10==step()); T(0x0216 == _PC);
     T(4 ==step()); T(0x02 == _A); T(flags(0));
-    T(10==step()); T(0x0219 == _PC);
-    T(10==step()); T(0x021D == _PC);
+    T(10==step()); T(0x021A == _PC);
+    T(10==step()); T(0x021E == _PC);
     T(7 ==step()); T(0xFF == _A); T(flags(Z80_SF));
-    T(10==step()); T(0x0222 == _PC);
-    T(10==step()); T(0x0226 == _PC);
-    T(10==step()); T(0x022D == _PC);
+    T(10==step()); T(0x0223 == _PC);
+    T(10==step()); T(0x0227 == _PC);
+    T(10==step()); T(0x022E == _PC);
 }
 
 /* JP; JR */
@@ -2408,23 +2261,21 @@ UTEST(z80, JP_JR) {
         0x18, 0xF8,                 // l5:  JR l6
         0x00                        // l7:  NOP
     };
-    copy(0x0204, prog, sizeof(prog));
-    init();
-    z80_set_pc(&cpu, 0x0204);
+    init(0x0204, prog, sizeof(prog));
     T(10==step()); T(0x0216 == _HL);
     T(14==step()); T(0x0219 == _IX);
     T(14==step()); T(0x0221 == _IY);
-    T(10==step()); T(0x0214 == _PC); T(0x0214 == _WZ);
-    T(12==step()); T(0x0212 == _PC); T(0x0212 == _WZ);
-    T(12==step()); T(0x0218 == _PC); T(0x0218 == _WZ);
-    T(4 ==step()); T(0x0216 == _PC); T(0x0218 == _WZ);
-    T(8 ==step()); T(0x0219 == _PC); T(0x0218 == _WZ);
-    T(8 ==step()); T(0x0221 == _PC); T(0x0218 == _WZ);
-    T(12==step()); T(0x021B == _PC); T(0x021B == _WZ);
-    T(12==step()); T(0x0223 == _PC); T(0x0223 == _WZ);
+    T(10==step()); T(0x0215 == _PC); T(0x0214 == _WZ);
+    T(12==step()); T(0x0213 == _PC); T(0x0212 == _WZ);
+    T(12==step()); T(0x0219 == _PC); T(0x0218 == _WZ);
+    T(4 ==step()); T(0x0217 == _PC); T(0x0218 == _WZ);
+    T(8 ==step()); T(0x021A == _PC); T(0x0218 == _WZ);
+    T(8 ==step()); T(0x0222 == _PC); T(0x0218 == _WZ);
+    T(12==step()); T(0x021C == _PC); T(0x021B == _WZ);
+    T(12==step()); T(0x0224 == _PC); T(0x0223 == _WZ);
 }
 
-/* JR_cc_e) */
+/* JR_cc_e */
 UTEST(z80, JR_cc_e) {
     uint8_t prog[] = {
         0x97,           //      SUB A
@@ -2441,18 +2292,16 @@ UTEST(z80, JR_cc_e) {
         0x00,           //      NOP
         0x00,           // l2:  NOP
     };
-    copy(0x0204, prog, sizeof(prog));
-    init();
-    z80_set_pc(&cpu, 0x0204);
+    init(0x0204, prog, sizeof(prog));
     T(4 ==step()); T(0x00 == _A); T(flags(Z80_ZF|Z80_NF));
-    T(7 ==step()); T(0x0207 == _PC);
-    T(12==step()); T(0x020A == _PC); T(0x020A == _WZ);
+    T(7 ==step()); T(0x0208 == _PC);
+    T(12==step()); T(0x020B == _PC); T(0x020A == _WZ);
     T(7 ==step()); T(0x01 == _A); T(flags(0));
-    T(7 ==step()); T(0x020E == _PC);
-    T(12==step()); T(0x0211 == _PC); T(0x0211 == _WZ);
+    T(7 ==step()); T(0x020F == _PC);
+    T(12==step()); T(0x0212 == _PC); T(0x0211 == _WZ);
     T(7 ==step()); T(0xFE == _A); T(flags(Z80_SF|Z80_HF|Z80_NF|Z80_CF));
-    T(7 ==step()); T(0x0215 == _PC);
-    T(12==step()); T(0x0218 == _PC); T(0x0218 == _WZ);
+    T(7 ==step()); T(0x0216 == _PC);
+    T(12==step()); T(0x0219 == _PC); T(0x0218 == _WZ);
 }
 
 /* DJNZ */
@@ -2464,17 +2313,15 @@ UTEST(z80, DJNZ) {
         0x10, 0xFD,         //      DJNZ l0
         0x00,               //      NOP
     };
-    copy(0x0204, prog, sizeof(prog));
-    init();
-    z80_set_pc(&cpu, 0x0204);
+    init(0x0204, prog, sizeof(prog));
     T(7 ==step()); T(0x03 == _B);
     T(4 ==step()); T(0x00 == _A);
     T(4 ==step()); T(0x01 == _A);
-    T(13==step()); T(0x02 == _B); T(0x0207 == _PC); T(0x0207 == _WZ);
+    T(13==step()); T(0x02 == _B); T(0x0208 == _PC); T(0x0207 == _WZ);
     T(4 ==step()); T(0x02 == _A);
-    T(13==step()); T(0x01 == _B); T(0x0207 == _PC); T(0x0207 == _WZ);
+    T(13==step()); T(0x01 == _B); T(0x0208 == _PC); T(0x0207 == _WZ);
     T(4 ==step()); T(0x03 == _A);
-    T(8 ==step()); T(0x00 == _B); T(0x020A == _PC); T(0x0207 == _WZ);
+    T(8 ==step()); T(0x00 == _B); T(0x020B == _PC); T(0x0207 == _WZ);
 }
 
 /* CALL; RET */
@@ -2484,20 +2331,18 @@ UTEST(z80, CALL_RET) {
         0xCD, 0x0A, 0x02,       //      CALL l0
         0xC9,                   // l0:  RET
     };
-    copy(0x0204, prog, sizeof(prog));
-    init();
-    z80_set_sp(&cpu, 0x0100);
-    z80_set_pc(&cpu, 0x0204);
+    init(0x0204, prog, sizeof(prog));
+    cpu.sp = 0x0100;
     T(17 == step());
-    T(0x020A == _PC); T(0x020A == _WZ); T(0x00FE == _SP);
+    T(0x020B == _PC); T(0x020A == _WZ); T(0x00FE == _SP);
     T(0x07 == mem[0x00FE]); T(0x02 == mem[0x00FF]);
     T(10 == step());
-    T(0x0207 == _PC); T(0x0207 == _WZ); T(0x0100 == _SP);
+    T(0x0208 == _PC); T(0x0207 == _WZ); T(0x0100 == _SP);
     T(17 == step());
-    T(0x020A == _PC); T(0x020A == _WZ); T(0x00FE == _SP);
+    T(0x020B == _PC); T(0x020A == _WZ); T(0x00FE == _SP);
     T(0x0A == mem[0x00FE]); T(0x02 == mem[0x00FF]);
     T(10 == step());
-    T(0x020A == _PC); T(0x020A == _WZ); T(0x0100 == _SP);
+    T(0x020B == _PC); T(0x020A == _WZ); T(0x0100 == _SP);
 }
 
 /* CALL cc/RET cc */
@@ -2529,34 +2374,32 @@ UTEST(z80, CALL_RET_cc) {
         0xD0,               // l4:  RET NC
         0xD8,               //      RET C
     };
-    copy(0x0204, prog, sizeof(prog));
-    init();
-    z80_set_pc(&cpu, 0x0204);
-    z80_set_sp(&cpu, 0x0100);
+    init(0x0204, prog, sizeof(prog));
+    cpu.sp = 0x0100;
     T(4 ==step()); T(0x00 == _A);
-    T(10==step()); T(0x0208 == _PC); T(0x0229 == _WZ);
-    T(17==step()); T(0x0229 == _PC); T(0x0229 == _WZ);
-    T(5 ==step()); T(0x022A == _PC); T(0x0229 == _WZ);
-    T(11==step()); T(0x020B == _PC); T(0x020B == _WZ);
+    T(10==step()); T(0x0209 == _PC); T(0x0229 == _WZ);
+    T(17==step()); T(0x022A == _PC); T(0x0229 == _WZ);
+    T(5 ==step()); T(0x022B == _PC); T(0x0229 == _WZ);
+    T(11==step()); T(0x020C == _PC); T(0x020B == _WZ);
     T(7 ==step()); T(0x01 == _A);
-    T(10==step()); T(0x0210 == _PC);
-    T(17==step()); T(0x022B == _PC);
-    T(5 ==step()); T(0x022C == _PC);
-    T(11==step()); T(0x0213 == _PC);
+    T(10==step()); T(0x0211 == _PC);
+    T(17==step()); T(0x022C == _PC);
+    T(5 ==step()); T(0x022D == _PC);
+    T(11==step()); T(0x0214 == _PC);
     T(4 ==step()); T(0x02 == _A);
-    T(10==step()); T(0x0217 == _PC);
-    T(17==step()); T(0x022D == _PC);
-    T(5 ==step()); T(0x022E == _PC);
-    T(11==step()); T(0x021A == _PC);
+    T(10==step()); T(0x0218 == _PC);
+    T(17==step()); T(0x022E == _PC);
+    T(5 ==step()); T(0x022F == _PC);
+    T(11==step()); T(0x021B == _PC);
     T(7 ==step()); T(0xFF == _A);
-    T(10==step()); T(0x021F == _PC);
-    T(17==step()); T(0x022F == _PC);
-    T(5 ==step()); T(0x0230 == _PC);
-    T(11==step()); T(0x0222 == _PC);
-    T(10==step()); T(0x0225 == _PC);
-    T(17==step()); T(0x0231 == _PC);
-    T(5 ==step()); T(0x0232 == _PC);
-    T(11==step()); T(0x0228 == _PC);
+    T(10==step()); T(0x0220 == _PC);
+    T(17==step()); T(0x0230 == _PC);
+    T(5 ==step()); T(0x0231 == _PC);
+    T(11==step()); T(0x0223 == _PC);
+    T(10==step()); T(0x0226 == _PC);
+    T(17==step()); T(0x0232 == _PC);
+    T(5 ==step()); T(0x0233 == _PC);
+    T(11==step()); T(0x0229 == _PC);
 }
 
 /* ADD HL,rr; ADC HL,rr; SBC HL,rr; ADD IX,rr; ADD IY,rr */
@@ -2583,8 +2426,7 @@ UTEST(z80, ADD_ADC_SBC_16) {
         0xFD, 0x29,             // ADD IY,IY
         0xFD, 0x39,             // ADD IY,SP
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    init(0x0000, prog, sizeof(prog));
     T(10==step()); T(0x00FC == _HL);
     T(10==step()); T(0x0008 == _BC);
     T(10==step()); T(0xFFFF == _DE);
@@ -2626,9 +2468,9 @@ UTEST(z80, IN) {
         0xED, 0x40,         // IN B,(C)
         0xED, 0x48,         // IN C,(c)
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
-    z80_set_f(&cpu, Z80_HF|Z80_CF);
+    init(0x0000, prog, sizeof(prog));
+    cpu.f |= Z80_CF|Z80_HF;
+
     T(7 ==step()); T(0x01 == _A); T(flags(Z80_HF|Z80_CF));
     T(11==step()); T(0x06 == _A); T(flags(Z80_HF|Z80_CF)); T(0x0104 == _WZ);
     T(11==step()); T(0x08 == _A); T(flags(Z80_HF|Z80_CF)); T(0x0605 == _WZ);
@@ -2662,9 +2504,9 @@ UTEST(z80, OUT) {
         0xED, 0x59,         // OUT (C),E
         0xED, 0x61,         // OUT (C),H
         0xED, 0x69,         // OUT (C),L
+        0xED, 0x71,         // OUT (C),0 (undocumented)
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    init(0x0000, prog, sizeof(prog));
     T(7 ==step()); T(0x01 == _A);
     T(11==step()); T(0x0101 == out_port); T(0x01 == out_byte); T(0x0102 == _WZ);
     T(11==step()); T(0x01FF == out_port); T(0x01 == out_byte); T(0x0100 == _WZ);
@@ -2678,6 +2520,62 @@ UTEST(z80, OUT) {
     T(12==step()); T(0x1234 == out_port); T(0x78 == out_byte); T(0x1235 == _WZ);
     T(12==step()); T(0x1234 == out_port); T(0xAB == out_byte); T(0x1235 == _WZ);
     T(12==step()); T(0x1234 == out_port); T(0xCD == out_byte); T(0x1235 == _WZ);
+    T(12==step()); T(0x1234 == out_port); T(0x00 == out_byte); T(0x1235 == _WZ);
+}
+
+/* INI; IND */
+UTEST(z80, INI_IND) {
+    uint8_t prog[] = {
+        0x21, 0x00, 0x10,       // LD HL,0x1000
+        0x01, 0x02, 0x03,       // LD BC,0x0302
+        0xED, 0xA2,             // INI
+        0xED, 0xA2,             // INI
+        0xED, 0xA2,             // INI
+        0x01, 0x03, 0x03,       // LD BC,0x0303
+        0xED, 0xAA,             // IND
+        0xED, 0xAA,             // IND
+        0xED, 0xAA,             // IND
+    };
+    init(0x0000, prog, sizeof(prog));
+    T(10 == step()); T(0x1000 == _HL);
+    T(10 == step()); T(0x0302 == _BC);
+    T(16 == step());
+    T(0x1001 == _HL);
+    T(0x0202 == _BC);
+    T(0x0303 == _WZ);
+    T(0x04 == mem[0x1000]);
+    T(!(cpu.f & Z80_ZF));
+    T(16 == step());
+    T(0x1002 == _HL);
+    T(0x0102 == _BC);
+    T(0x0203 == _WZ);
+    T(0x04 == mem[0x1001]);
+    T(!(cpu.f & Z80_ZF));
+    T(16 == step());
+    T(0x1003 == _HL);
+    T(0x0002 == _BC);
+    T(0x0103 == _WZ);
+    T(0x04 == mem[0x1002]);
+    T(cpu.f & Z80_ZF);
+    T(10 == step()); T(0x0303 == _BC);
+    T(16 == step());
+    T(0x1002 == _HL);
+    T(0x0203 == _BC);
+    T(0x0302 == _WZ);
+    T(0x06 == mem[0x1003]);
+    T(!(cpu.f & Z80_ZF));
+    T(16 == step());
+    T(0x1001 == _HL);
+    T(0x0103 == _BC);
+    T(0x0202 == _WZ);
+    T(0x06 == mem[0x1002]);
+    T(!(cpu.f & Z80_ZF));
+    T(16 == step());
+    T(0x1000 == _HL);
+    T(0x0003 == _BC);
+    T(0x0102 == _WZ);
+    T(0x06 == mem[0x1001]);
+    T(cpu.f & Z80_ZF);
 }
 
 /* INIR; INDR */
@@ -2689,41 +2587,103 @@ UTEST(z80, INIR_INDR) {
         0x01, 0x03, 0x03,       // LD BC,0x0303
         0xED, 0xBA              // INDR
     };
-    copy(0x0000, prog, sizeof(prog));
-    init();
+    init(0x0000, prog, sizeof(prog));
     T(10 == step()); T(0x1000 == _HL);
     T(10 == step()); T(0x0302 == _BC);
     T(21 == step());
     T(0x1001 == _HL);
     T(0x0202 == _BC);
+    T(0x0007 == _WZ);
     T(0x04 == mem[0x1000]);
-    T(!(z80_f(&cpu) & Z80_ZF));
+    T(!(cpu.f & Z80_ZF));
     T(21 == step());
     T(0x1002 == _HL);
     T(0x0102 == _BC);
+    T(0x0007 == _WZ);
     T(0x04 == mem[0x1001]);
-    T(!(z80_f(&cpu) & Z80_ZF));
+    T(!(cpu.f & Z80_ZF));
     T(16 == step());
     T(0x1003 == _HL);
     T(0x0002 == _BC);
+    T(0x0103 == _WZ);
     T(0x04 == mem[0x1002]);
-    T(z80_f(&cpu) & Z80_ZF);
+    T(cpu.f & Z80_ZF);
     T(10 == step()); T(0x0303 == _BC);
     T(21 == step());
     T(0x1002 == _HL);
     T(0x0203 == _BC);
+    T(0x000C == _WZ);
     T(0x06 == mem[0x1003]);
-    T(!(z80_f(&cpu) & Z80_ZF));
+    T(!(cpu.f & Z80_ZF));
     T(21 == step());
     T(0x1001 == _HL);
     T(0x0103 == _BC);
+    T(0x000C == _WZ);
     T(0x06 == mem[0x1002]);
-    T(!(z80_f(&cpu) & Z80_ZF));
+    T(!(cpu.f & Z80_ZF));
     T(16 == step());
     T(0x1000 == _HL);
     T(0x0003 == _BC);
+    T(0x0102 == _WZ);
     T(0x06 == mem[0x1001]);
-    T(z80_f(&cpu) & Z80_ZF);
+    T(cpu.f & Z80_ZF);
+}
+
+/* OUTI, OUTD */
+UTEST(z80, OUTI_OUTD) {
+    uint8_t data[] = { 1, 2, 3, 4 };
+    uint8_t prog[] = {
+        0x21, 0x00, 0x10,       // LD HL,0x1000
+        0x01, 0x02, 0x03,       // LD BC,0x0302
+        0xED, 0xA3,             // OUTI
+        0xED, 0xA3,             // OUTI
+        0xED, 0xA3,             // OUTI
+        0x01, 0x03, 0x03,       // LD BC,0x0303
+        0xED, 0xAB,             // OUTD
+        0xED, 0xAB,             // OUTD
+        0xED, 0xAB,             // OUTD
+    };
+    init(0x0000, prog, sizeof(prog));
+    copy(0x1000, data, sizeof(data));
+    T(10 == step()); T(0x1000 == _HL);
+    T(10 == step()); T(0x0302 == _BC);
+    T(16 == step());
+    T(0x1001 == _HL);
+    T(0x0202 == _BC);
+    T(0x0203 == _WZ);
+    T(0x0202 == out_port); T(0x01 == out_byte);
+    T(!(cpu.f & Z80_ZF));
+    T(16 == step());
+    T(0x1002 == _HL);
+    T(0x0102 == _BC);
+    T(0x0103 == _WZ);
+    T(0x0102 == out_port); T(0x02 == out_byte);
+    T(!(cpu.f & Z80_ZF));
+    T(16 == step());
+    T(0x1003 == _HL);
+    T(0x0002 == _BC);
+    T(0x0003 == _WZ);
+    T(0x0002 == out_port); T(0x03 == out_byte);
+    T(cpu.f & Z80_ZF);
+    T(10 == step()); T(0x0303 == _BC);
+    T(16 == step());
+    T(0x1002 == _HL);
+    T(0x0203 == _BC);
+    T(0x0202 == _WZ)
+    T(0x0203 == out_port); T(0x04 == out_byte);
+    T(!(cpu.f & Z80_ZF));
+    T(16 == step());
+    T(0x1001 == _HL);
+    T(0x0103 == _BC);
+    T(0x0102 == _WZ);
+    T(0x0103 == out_port); T(0x03 == out_byte);
+    T(!(cpu.f & Z80_ZF));
+    T(16 == step());
+    T(0x1000 == _HL);
+    T(0x0003 == _BC);
+    T(0x0002 == _WZ);
+    T(0x0003 == out_port); T(0x02 == out_byte);
+    T(cpu.f & Z80_ZF);
 }
 
 /* OTIR; OTDR */
@@ -2738,40 +2698,50 @@ UTEST(z80, OTIR_OTDR) {
         0x01, 0x03, 0x03,       // LD BC,0x0303
         0xED, 0xBB,             // OTDR
     };
+    init(0x0000, prog, sizeof(prog));
     copy(0x1000, data, sizeof(data));
-    copy(0x0000, prog, sizeof(prog));
-    init();
     T(10 == step()); T(0x1000 == _HL);
     T(10 == step()); T(0x0302 == _BC);
     T(21 == step());
     T(0x1001 == _HL);
     T(0x0202 == _BC);
+    T(0x0007 == _WZ);
     T(0x0202 == out_port); T(0x01 == out_byte);
-    T(!(z80_f(&cpu) & Z80_ZF));
+    T(!(cpu.f & Z80_ZF));
     T(21 == step());
     T(0x1002 == _HL);
     T(0x0102 == _BC);
+    T(0x0007 == _WZ);
     T(0x0102 == out_port); T(0x02 == out_byte);
-    T(!(z80_f(&cpu) & Z80_ZF));
+    T(!(cpu.f & Z80_ZF));
     T(16 == step());
     T(0x1003 == _HL);
     T(0x0002 == _BC);
+    T(0x0003 == _WZ);
     T(0x0002 == out_port); T(0x03 == out_byte);
-    T(z80_f(&cpu) & Z80_ZF);
+    T(cpu.f & Z80_ZF);
     T(10 == step()); T(0x0303 == _BC);
     T(21 == step());
     T(0x1002 == _HL);
     T(0x0203 == _BC);
+    T(0x000C == _WZ);
     T(0x0203 == out_port); T(0x04 == out_byte);
-    T(!(z80_f(&cpu) & Z80_ZF));
+    T(!(cpu.f & Z80_ZF));
     T(21 == step());
     T(0x1001 == _HL);
     T(0x0103 == _BC);
+    T(0x000C == _WZ);
     T(0x0103 == out_port); T(0x03 == out_byte);
-    T(!(z80_f(&cpu) & Z80_ZF));
+    T(!(cpu.f & Z80_ZF));
     T(16 == step());
     T(0x1000 == _HL);
     T(0x0003 == _BC);
+    T(0x0002 == _WZ);
     T(0x0003 == out_port); T(0x02 == out_byte);
-    T(z80_f(&cpu) & Z80_ZF);
+    T(cpu.f & Z80_ZF);
 }
+
+UTEST_MAIN()
+
+
+

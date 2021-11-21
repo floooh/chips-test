@@ -20,8 +20,6 @@ fips_begin_app(chips-test cmdline)
         z80pio-test.c
         m6502dasm-test.c
         z80dasm-test.c
-        z80-int.c
-        z80-test.c
         m6502-test.c
         m6502-perfect.c
     )
@@ -43,21 +41,14 @@ fips_begin_app(z80-zex cmdline)
     fipsutil_embed(zex-dump.yml zex-dump.h)
 fips_end_app()
 
-fips_begin_app(z80x-zex cmdline)
+fips_begin_app(z80-int cmdline)
     fips_vs_warning_level(3)
-    fips_files(z80x-zex.c)
-    fips_dir(roms)
-    fipsutil_embed(zex-dump.yml zex-dump.h)
+    fips_files(z80-int.c)
 fips_end_app()
 
-fips_begin_app(z80x-int cmdline)
+fips_begin_app(z80-timing cmdline)
     fips_vs_warning_level(3)
-    fips_files(z80x-int.c)
-fips_end_app()
-
-fips_begin_app(z80x-timing cmdline)
-    fips_vs_warning_level(3)
-    fips_files(z80x-timing.c)
+    fips_files(z80-timing.c)
 fips_end_app()
 
 fips_begin_app(m6502-nestest cmdline)
@@ -75,21 +66,9 @@ fips_begin_app(m6502-wltest cmdline)
     fipsutil_embed(dump.yml dump.h)
 fips_end_app()
 
-fips_begin_app(z80-wait cmdline)
-    fips_vs_warning_level(3)
-    fips_files(z80-wait.c)
-fips_end_app()
-
 fips_begin_app(z80-fuse cmdline)
     fips_vs_warning_level(3)
     fips_files(z80-fuse.c)
-    fips_dir(fuse)
-    fips_generate(FROM fuse.yml TYPE fuse HEADER fuse.h)
-fips_end_app()
-
-fips_begin_app(z80x-fuse cmdline)
-    fips_vs_warning_level(3)
-    fips_files(z80x-fuse.c)
     fips_dir(fuse)
     fips_generate(FROM fuse.yml TYPE fuse HEADER fuse.h)
 fips_end_app()
@@ -100,9 +79,9 @@ fips_begin_app(c64-bench cmdline)
     fips_deps(roms)
 fips_end_app()
 
-fips_begin_app(z80x-test cmdline)
+fips_begin_app(z80-test cmdline)
     fips_vs_warning_level(3)
-    fips_files(z80x-test.c)
+    fips_files(z80-test.c)
 fips_end_app()
 
 endif() # FIPS_UWP

@@ -25,7 +25,7 @@ static struct {
     uint8_t dummy_pixel_buffer[1024*1024];
 } state;
 
-#define NUM_USEC (1*1000000)
+#define NUM_USEC (5*1000000)
 
 static void dummy_audio_callback(const float* samples, int num_samples, void* user_data) {
     (void)samples;
@@ -39,15 +39,13 @@ int main() {
        emulator
     */
     c64_init(&state.c64, &(c64_desc_t){
-        .pixel_buffer = state.dummy_pixel_buffer,
-        .pixel_buffer_size = sizeof(state.dummy_pixel_buffer),
-        .audio_cb = dummy_audio_callback,
-        .rom_char = dump_c64_char_bin,
-        .rom_char_size = sizeof(dump_c64_char_bin),
-        .rom_basic = dump_c64_basic_bin,
-        .rom_basic_size = sizeof(dump_c64_basic_bin),
-        .rom_kernal = dump_c64_kernalv3_bin,
-        .rom_kernal_size = sizeof(dump_c64_kernalv3_bin)
+        .pixel_buffer = { .ptr = state.dummy_pixel_buffer, .size = sizeof(state.dummy_pixel_buffer) },
+        .audio.callback.func = dummy_audio_callback,
+        .roms = {
+            .chars = { .ptr=dump_c64_char_bin, .size=sizeof(dump_c64_char_bin) },
+            .basic = { .ptr=dump_c64_basic_bin, .size=sizeof(dump_c64_basic_bin) },
+            .kernal = { .ptr=dump_c64_kernalv3_bin, .size=sizeof(dump_c64_kernalv3_bin) }
+        }
     });
     stm_setup();
     printf("== running emulation for %.2f emulated secs\n", NUM_USEC / 1000000.0);

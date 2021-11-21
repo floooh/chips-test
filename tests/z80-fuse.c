@@ -10,12 +10,11 @@
 //------------------------------------------------------------------------------
 #define CHIPS_IMPL
 #include "chips/z80.h"
-#include "test.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 
-/* CPU state */
+// CPU state
 typedef struct {
     uint16_t af, bc, de, hl;
     uint16_t af_, bc_, de_, hl_;
@@ -25,7 +24,7 @@ typedef struct {
     int ticks;
 } fuse_state_t;
 
-/* memory chunk */
+// memory chunk
 #define FUSE_MAX_BYTES (32)
 typedef struct {
     int num_bytes;
@@ -33,7 +32,7 @@ typedef struct {
     uint8_t bytes[FUSE_MAX_BYTES];
 } fuse_mem_t;
 
-/* a result event */
+// a result event
 typedef enum {
     EVENT_NONE,
     EVENT_MR,     /* memory read */
@@ -49,7 +48,7 @@ typedef struct {
     uint8_t data;
 } fuse_event_t;
 
-/* a complete test (used for input, output, expected) */
+// a complete test (used for input, output, expected)
 #define FUSE_MAX_EVENTS (128)
 #define FUSE_MAX_MEMCHUNKS (8)
 typedef struct {
@@ -63,12 +62,12 @@ typedef struct {
 
 #include "fuse/fuse.h"
 
-uint8_t mem[1<<16];
+static uint8_t mem[1<<16];
 
 /* don't test the XF/YF flags in the indirect BIT test instructions,
     since FUSE handles those wrong
 */
-const char* xfyf_blacklist[] = {
+static const char* xfyf_blacklist[] = {
     "cb46",     // BIT 0,(HL)
     "cb4e",     // BIT 1,(HL)
     "cb56",     // BIT 2,(HL)
@@ -80,13 +79,7 @@ const char* xfyf_blacklist[] = {
     0
 };
 
-/* another blacklist to ignore the value of PC, this only affects the HALT op */
-const char* pc_blacklist[] = {
-    "76",   // HALT
-    0
-};
-
-bool test_xfyf(const char* name) {
+static bool test_xfyf(const char* name) {
     int i = 0;
     while (xfyf_blacklist[i]) {
         if (0 == strcmp(xfyf_blacklist[i], name)) {
@@ -97,65 +90,52 @@ bool test_xfyf(const char* name) {
     return true;
 }
 
-bool test_pc(const char* name) {
-    int i = 0;
-    while (pc_blacklist[i]) {
-        if (0 == strcmp(pc_blacklist[i], name)) {
-            return false;
-        }
-        i++;
-    }
-    return true;
-}
-
-uint64_t cpu_tick(int num, uint64_t pins, void* user_data) {
-    (void)num; (void)user_data;
+static uint64_t tick(z80_t* cpu, uint64_t pins) {
+    pins = z80_tick(cpu, pins);
     if (pins & Z80_MREQ) {
+        uint16_t addr = Z80_GET_ADDR(pins);
         if (pins & Z80_RD) {
-            Z80_SET_DATA(pins, mem[Z80_GET_ADDR(pins)]);
+            Z80_SET_DATA(pins, mem[addr]);
         }
         else if (pins & Z80_WR) {
-            mem[Z80_GET_ADDR(pins)] = Z80_GET_DATA(pins);
+            mem[addr] = Z80_GET_DATA(pins);
         }
     }
     else if (pins & Z80_IORQ) {
         if (pins & Z80_RD) {
             uint16_t port = Z80_GET_ADDR(pins);
-            Z80_SET_DATA(pins, port>>8);
+            Z80_SET_DATA(pins, port >> 8);
         }
     }
     return pins;
 }
 
-bool run_test(int test_index, fuse_test_t* inp, fuse_test_t* exp) {
-    (void)test_index;
-    assert(inp->state.halted == 0);
+static bool run_test(fuse_test_t* inp, fuse_test_t* exp) {
 
-    /* prepare CPU and memory with test input data (same initial state as coretest.c in FUSE */
+    // prepare CPU and memory with test input data (same initial state as coretest.c in FUSE
     for (int i = 0; i < 0x10000; i += 4) {
-        mem[i  ] = 0xDE; mem[i+1] = 0xAD;
+        mem[i+0] = 0xDE; mem[i+1] = 0xAD;
         mem[i+2] = 0xBE; mem[i+3] = 0xEF;
     }
     z80_t cpu;
-    z80_init(&cpu, &(z80_desc_t){ .tick_cb=cpu_tick });
-    z80_set_af(&cpu, inp->state.af);
-    z80_set_bc(&cpu, inp->state.bc);
-    z80_set_de(&cpu, inp->state.de);
-    z80_set_hl(&cpu, inp->state.hl);
-    z80_set_af_(&cpu, inp->state.af_);
-    z80_set_bc_(&cpu, inp->state.bc_);
-    z80_set_de_(&cpu, inp->state.de_);
-    z80_set_hl_(&cpu, inp->state.hl_);
-    z80_set_ix(&cpu, inp->state.ix);
-    z80_set_iy(&cpu, inp->state.iy);
-    z80_set_sp(&cpu, inp->state.sp);
-    z80_set_pc(&cpu, inp->state.pc);
-    z80_set_i(&cpu, inp->state.i);
-    z80_set_r(&cpu, inp->state.r);
-    z80_set_iff1(&cpu, 0 != inp->state.iff1);
-    z80_set_iff2(&cpu, 0 != inp->state.iff2);
-    z80_set_im(&cpu, inp->state.im);
-    cpu.pins &= ~Z80_HALT;
+    z80_init(&cpu);
+    cpu.af = inp->state.af;
+    cpu.bc = inp->state.bc;
+    cpu.de = inp->state.de;
+    cpu.hl = inp->state.hl;
+    cpu.af2 = inp->state.af_;
+    cpu.bc2 = inp->state.bc_;
+    cpu.de2 = inp->state.de_;
+    cpu.hl2 = inp->state.hl_;
+    cpu.ix = inp->state.ix;
+    cpu.iy = inp->state.iy;
+    cpu.sp = inp->state.sp;
+    cpu.pc = inp->state.pc;
+    cpu.i = inp->state.i;
+    cpu.r = inp->state.r;
+    cpu.iff1 = 0 != inp->state.iff1;
+    cpu.iff2 = 0 != inp->state.iff2;
+    cpu.im = inp->state.im;
     for (int i = 0; i < inp->num_chunks; i++) {
         uint16_t addr = inp->chunks[i].addr;
         int num_bytes = inp->chunks[i].num_bytes;
@@ -164,13 +144,16 @@ bool run_test(int test_index, fuse_test_t* inp, fuse_test_t* exp) {
         }
     }
 
-    /* execute N ticks */
-    int num_ticks = z80_exec(&cpu, inp->state.ticks);
-    while (!z80_opdone(&cpu)) {
-        num_ticks += z80_exec(&cpu, 0);
-    }
+    // run CPU for at least N ticks or instruction completion
+    uint64_t pins = z80_prefetch(&cpu, cpu.pc);
+    pins = tick(&cpu, pins);
+    int num_ticks = 0;
+    do {
+       pins = tick(&cpu, pins);
+       num_ticks++;
+    } while ((num_ticks < (inp->state.ticks)) || !z80_opdone(&cpu));
 
-    /* compare result against expected state */
+    // compare result against expected state
     bool ok = true;
     uint16_t af_mask = 0xFFFF;
     if (!test_xfyf(inp->desc)) {
@@ -180,82 +163,79 @@ bool run_test(int test_index, fuse_test_t* inp, fuse_test_t* exp) {
         printf("\n  %s: TICKS: %d (expected %d)", inp->desc, num_ticks, exp->state.ticks);
         ok = false;
     }
-    if ((exp->state.af & af_mask) != (z80_af(&cpu) & af_mask)) {
-        printf("\n  %s: AF: 0x%04X (expected 0x%04X)", inp->desc, z80_af(&cpu)&af_mask, exp->state.af&af_mask);
+    if ((exp->state.af & af_mask) != (cpu.af & af_mask)) {
+        printf("\n  %s: AF: 0x%04X (expected 0x%04X)", inp->desc, cpu.af&af_mask, exp->state.af&af_mask);
         ok = false;
     }
-    if (exp->state.bc != z80_bc(&cpu)) {
-        printf("\n  %s: BC: 0x%04X (expected 0x%04X)", inp->desc, z80_bc(&cpu), exp->state.bc);
+    if (exp->state.bc != cpu.bc) {
+        printf("\n  %s: BC: 0x%04X (expected 0x%04X)", inp->desc, cpu.bc, exp->state.bc);
         ok = false;
     }
-    if (exp->state.de != z80_de(&cpu)) {
-        printf("\n  %s: DE: 0x%04X (expected 0x%04X)", inp->desc, z80_de(&cpu), exp->state.de);
+    if (exp->state.de != cpu.de) {
+        printf("\n  %s: DE: 0x%04X (expected 0x%04X)", inp->desc, cpu.de, exp->state.de);
         ok = false;
     }
-    if (exp->state.hl != z80_hl(&cpu)) {
-        printf("\n  %s: HL: 0x%04X (expected 0x%04X)", inp->desc, z80_hl(&cpu), exp->state.hl);
+    if (exp->state.hl != cpu.hl) {
+        printf("\n  %s: HL: 0x%04X (expected 0x%04X)", inp->desc, cpu.hl, exp->state.hl);
         ok = false;
     }
-    if (exp->state.af_ != z80_af_(&cpu)) {
-        printf("\n  %s: AF': 0x%04X (expected 0x%04X)", inp->desc, z80_af_(&cpu), exp->state.af_);
+    if (exp->state.af_ != cpu.af2) {
+        printf("\n  %s: AF': 0x%04X (expected 0x%04X)", inp->desc, cpu.af2, exp->state.af_);
         ok = false;
     }
-    if (exp->state.bc_ != z80_bc_(&cpu)) {
-        printf("\n  %s: BC': 0x%04X (expected 0x%04X)", inp->desc, z80_bc_(&cpu), exp->state.bc_);
+    if (exp->state.bc_ != cpu.bc2) {
+        printf("\n  %s: BC': 0x%04X (expected 0x%04X)", inp->desc, cpu.bc2, exp->state.bc_);
         ok = false;
     }
-    if (exp->state.de_ != z80_de_(&cpu)) {
-        printf("\n  %s: DE': 0x%04X (expected 0x%04X)", inp->desc, z80_de_(&cpu), exp->state.de_);
+    if (exp->state.de_ != cpu.de2) {
+        printf("\n  %s: DE': 0x%04X (expected 0x%04X)", inp->desc, cpu.de2, exp->state.de_);
         ok = false;
     }
-    if (exp->state.hl_ != z80_hl_(&cpu)) {
-        printf("\n  %s: HL': 0x%04X (expected 0x%04X)", inp->desc, z80_hl_(&cpu), exp->state.hl_);
+    if (exp->state.hl_ != cpu.hl2) {
+        printf("\n  %s: HL': 0x%04X (expected 0x%04X)", inp->desc, cpu.hl2, exp->state.hl_);
         ok = false;
     }
-    if (exp->state.ix != z80_ix(&cpu)) {
-        printf("\n  %s: IX: 0x%04X (expected 0x%04X)", inp->desc, z80_ix(&cpu), exp->state.ix);
+    if (exp->state.ix != cpu.ix) {
+        printf("\n  %s: IX: 0x%04X (expected 0x%04X)", inp->desc, cpu.ix, exp->state.ix);
         ok = false;
     }
-    if (exp->state.iy != z80_iy(&cpu)) {
-        printf("\n  %s: IY: 0x%04X (expected 0x%04X)", inp->desc, z80_iy(&cpu), exp->state.iy);
+    if (exp->state.iy != cpu.iy) {
+        printf("\n  %s: IY: 0x%04X (expected 0x%04X)", inp->desc, cpu.iy, exp->state.iy);
         ok = false;
     }
-    if (exp->state.sp != z80_sp(&cpu)) {
-        printf("\n  %s: SP: 0x%04X (expected 0x%04X)", inp->desc, z80_sp(&cpu), exp->state.sp);
+    if (exp->state.sp != cpu.sp) {
+        printf("\n  %s: SP: 0x%04X (expected 0x%04X)", inp->desc, cpu.sp, exp->state.sp);
         ok = false;
     }
-    /* don't test state of PC after HALT, this is off-by-one compared to FUSE,
-       but shouldn't affect any visible emulation state
-    */
-    if (test_pc(inp->desc) && (exp->state.pc != z80_pc(&cpu))) {
-        printf("\n  %s: PC: 0x%04X (expected 0x%04X)", inp->desc, z80_pc(&cpu), exp->state.pc);
+    if (exp->state.pc != (cpu.pc-1)) {
+        printf("\n  %s: PC: 0x%04X (expected 0x%04X)", inp->desc, cpu.pc, exp->state.pc);
         ok = false;
     }
-    if (exp->state.i != z80_i(&cpu)) {
-        printf("\n  %s: I: 0x%02X (expected 0x%02X)", inp->desc, z80_i(&cpu), exp->state.i);
+    if (exp->state.i != cpu.i) {
+        printf("\n  %s: I: 0x%02X (expected 0x%02X)", inp->desc, cpu.i, exp->state.i);
         ok = false;
     }
-    if (exp->state.r != z80_r(&cpu)) {
-        printf("\n  %s: R: 0x%02X (expected 0x%02X)", inp->desc, z80_r(&cpu), exp->state.r);
+    if (exp->state.r != cpu.r) {
+        printf("\n  %s: R: 0x%02X (expected 0x%02X)", inp->desc, cpu.r, exp->state.r);
         ok = false;
     }
-    if (exp->state.iff1 != z80_iff1(&cpu)) {
-        printf("\n  %s: IFF1: %s (expected %s)", inp->desc, z80_iff1(&cpu)?"true":"false", exp->state.iff1?"true":"false");
+    if (exp->state.iff1 != cpu.iff1) {
+        printf("\n  %s: IFF1: %s (expected %s)", inp->desc, cpu.iff1?"true":"false", exp->state.iff1?"true":"false");
         ok = false;
     }
-    if (exp->state.iff2 != z80_iff2(&cpu)) {
-        printf("\n  %s: IFF2: %s (expected %s)", inp->desc, z80_iff2(&cpu)?"true":"false", exp->state.iff2?"true":"false");
+    if (exp->state.iff2 != cpu.iff2) {
+        printf("\n  %s: IFF2: %s (expected %s)", inp->desc, cpu.iff2?"true":"false", exp->state.iff2?"true":"false");
         ok = false;
     }
-    if (exp->state.im != z80_im(&cpu)) {
-        printf("\n  %s: IM: 0x%02X (expected 0x%02X)", inp->desc, z80_im(&cpu), exp->state.im);
+    if (exp->state.im != cpu.im) {
+        printf("\n  %s: IM: 0x%02X (expected 0x%02X)", inp->desc, cpu.im, exp->state.im);
         ok = false;
     }
-    if ((0 != exp->state.halted) != (0 != (cpu.pins & Z80_HALT))) {
-        printf("\n  %s: HALT: %s (expected %s)", inp->desc, (cpu.pins&Z80_HALT)?"true":"false", exp->state.halted?"true":"false");
+    if ((0 != exp->state.halted) != (0 != (pins & Z80_HALT))) {
+        printf("\n  %s: HALT: %s (expected %s)", inp->desc, (pins&Z80_HALT)?"true":"false", exp->state.halted?"true":"false");
         ok = false;
     }
-    /* check memory content */
+    // check memory content
     for (int i = 0; i < exp->num_chunks; i++) {
         fuse_mem_t* chunk = &(exp->chunks[i]);
         uint16_t addr = chunk->addr;
@@ -274,11 +254,20 @@ bool run_test(int test_index, fuse_test_t* inp, fuse_test_t* exp) {
 
 int main() {
     assert(fuse_expected_num == fuse_input_num);
-    test_begin("FUSE Z80 test");
-    test_no_verbose();
+    printf("FUSE Z80 TEST\n");
+    int num_failed = 0;
     for (int i = 0; i < fuse_input_num; i++) {
-        test(fuse_input[i].desc);
-        T(run_test(i, &fuse_input[i], &fuse_expected[i]));
+        if (!run_test(&fuse_input[i], &fuse_expected[i])) {
+            num_failed++;
+        }
     }
-    return test_end();
+    printf("\n");
+    if (0 == num_failed) {
+        printf("All tests succeeded.\n");
+        return 0;
+    }
+    else {
+        printf("%d TESTS FAILED!\n", num_failed);
+        return 10;
+    }
 }

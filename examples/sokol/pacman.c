@@ -5,7 +5,7 @@
 */
 #include "common.h"
 #define CHIPS_IMPL
-#include "chips/z80x.h"
+#include "chips/z80.h"
 #include "chips/clk.h"
 #include "chips/mem.h"
 #include "pacman-roms.h"

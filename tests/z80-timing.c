@@ -7,7 +7,7 @@
 //------------------------------------------------------------------------------
 #include "utest.h"
 #define CHIPS_IMPL
-#include "chips/z80x.h"
+#include "chips/z80.h"
 
 #define T(b) ASSERT_TRUE(b)
 

@@ -3,7 +3,7 @@
 */
 #include "common.h"
 #include "imgui.h"
-#include "chips/z80x.h"
+#include "chips/z80.h"
 #include "chips/clk.h"
 #include "chips/mem.h"
 #include "systems/namco.h"
