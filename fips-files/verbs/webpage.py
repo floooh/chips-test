@@ -26,6 +26,9 @@ systems = [
     'lc80',
     'ext'
 ]
+
+asset_dirs = [ 'kc85', 'zx', 'c64', 'vic20', 'cpc', 'atom', 'z1013', 'z9001', 'bombjack', 'pengo', 'lc80', 'ext' ]
+
 items = [
     { 'type':'ext',  'title':'Visual 6502 Remix', 'system':'none',  'url':'https://floooh.github.io/visual6502remix', 'img':'ext/visual6502remix.jpg', 'note':''},
     { 'type':'ext',  'title':'Visual Z80 Remix', 'system':'none',   'url':'https://floooh.github.io/visualz80remix', 'img':'ext/visualz80remix.jpg', 'note':''},
@@ -239,10 +242,10 @@ def deploy_webpage(fips_dir, proj_dir, webpage_dir) :
             f.write(html)
 
     # copy data files and images
-    for system in systems:
-        src_dir = proj_dir + '/webpage/' + system
+    for asset_dir in asset_dirs:
+        src_dir = proj_dir + '/webpage/' + asset_dir
+        dst_dir = webpage_dir + '/' + asset_dir
         if os.path.exists(src_dir):
-            dst_dir = webpage_dir + '/' + system
             if os.path.isdir(dst_dir):
                 shutil.rmtree(dst_dir)
             shutil.copytree(src_dir, dst_dir)
