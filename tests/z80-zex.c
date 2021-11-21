@@ -34,13 +34,13 @@ static void put_char(char c) {
 static uint64_t tick(uint64_t pins) {
     pins = z80_tick(&state.cpu, pins);
     if (pins & Z80_MREQ) {
-        uint16_t addr = Z80_GET_ADDR(pins);
+        const uint16_t addr = Z80_GET_ADDR(pins);
         if (pins & Z80_RD) {
-            uint8_t data = state.mem[addr];
+            const uint8_t data = state.mem[addr];
             Z80_SET_DATA(pins, data);
         }
         else if (pins & Z80_WR) {
-            uint8_t data = Z80_GET_DATA(pins);
+            const uint8_t data = Z80_GET_DATA(pins);
             state.mem[addr] = data;
         }
     }
