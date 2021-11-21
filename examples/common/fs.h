@@ -139,6 +139,7 @@ bool fs_ext(const char* ext) {
 void fs_free(void) {
     assert(fs.valid);
     memset(&fs, 0, sizeof(fs));
+    fs.valid = true;
 }
 
 void fs_load_mem(const char* path, const uint8_t* ptr, uint32_t size) {
