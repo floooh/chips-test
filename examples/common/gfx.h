@@ -57,24 +57,35 @@ void gfx_flash_error(void);
 
 typedef struct {
     bool valid;
-    sg_pipeline upscale_pip;
-    sg_bindings upscale_bind;
-    sg_pass upscale_pass;
-    sg_pipeline display_pip;
-    sg_bindings display_bind;
-    sg_pass_action upscale_pass_action;
-    sg_pass_action draw_pass_action;
+    struct {
+        int top;
+        int bottom;
+        int left;
+        int right;
+    } border;
+    struct {
+        sg_image img;
+        int aspect_x;
+        int aspect_y;
+        int width;
+        int height;
+    } emufb;
+    struct {
+        sg_buffer vbuf;
+        sg_pipeline pip;
+        sg_image img;
+        sg_pass pass;
+        sg_pass_action pass_action;
+    } upscale;
+    struct {
+        sg_buffer vbuf;
+        sg_pipeline pip;
+        sg_pass_action pass_action;
+        bool rot90;
+    } display;
     int flash_success_count;
     int flash_error_count;
-    int border_top;
-    int border_bottom;
-    int border_left;
-    int border_right;
-    int emu_aspect_x;
-    int emu_aspect_y;
-    int emu_width;
-    int emu_height;
-    bool rot90;
+    
     uint32_t rgba8_buffer[GFX_MAX_FB_WIDTH * GFX_MAX_FB_HEIGHT];
     void (*draw_extra_cb)(void);
 } gfx_state_t;
@@ -127,16 +138,15 @@ size_t gfx_framebuffer_size(void) {
 }
 
 static void gfx_init_images_and_pass(void) {
+    // destroy previous resources (if exist)
+    sg_destroy_image(gfx.emufb.img);
+    sg_destroy_image(gfx.upscale.img);
+    sg_destroy_pass(gfx.upscale.pass);
 
-    /* destroy previous resources (if exist) */
-    sg_destroy_image(gfx.upscale_bind.fs_images[0]);
-    sg_destroy_image(gfx.display_bind.fs_images[0]);
-    sg_destroy_pass(gfx.upscale_pass);
-
-    /* a texture with the emulator's raw pixel data */
-    gfx.upscale_bind.fs_images[0] = sg_make_image(&(sg_image_desc){
-        .width = gfx.emu_width,
-        .height = gfx.emu_height,
+    // a texture with the emulator's raw pixel data
+    gfx.emufb.img = sg_make_image(&(sg_image_desc){
+        .width = gfx.emufb.width,
+        .height = gfx.emufb.height,
         .pixel_format = SG_PIXELFORMAT_RGBA8,
         .usage = SG_USAGE_STREAM,
         .min_filter = SG_FILTER_NEAREST,
@@ -144,20 +154,20 @@ static void gfx_init_images_and_pass(void) {
         .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
         .wrap_v = SG_WRAP_CLAMP_TO_EDGE
     });
-    /* a 2x upscaled render-target-texture */
-    gfx.display_bind.fs_images[0] = sg_make_image(&(sg_image_desc){
+    
+    
+    // 2x-upscaling render target textures and passes
+    gfx.upscale.img = sg_make_image(&(sg_image_desc){
         .render_target = true,
-        .width = 2 * gfx.emu_width,
-        .height = 2 * gfx.emu_height,
+        .width = 2 * gfx.emufb.width,
+        .height = 2 * gfx.emufb.height,
         .min_filter = SG_FILTER_LINEAR,
         .mag_filter = SG_FILTER_LINEAR,
         .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
         .wrap_v = SG_WRAP_CLAMP_TO_EDGE
     });
-
-    /* a render pass for the 2x upscaling */
-    gfx.upscale_pass = sg_make_pass(&(sg_pass_desc){
-        .color_attachments[0].image = gfx.display_bind.fs_images[0]
+    gfx.upscale.pass = sg_make_pass(&(sg_pass_desc){
+        .color_attachments[0].image = gfx.upscale.img
     });
 }
 
@@ -178,58 +188,62 @@ void gfx_init(const gfx_desc_t* desc) {
 
     gfx = (gfx_state_t) {
         .valid = true,
-        .upscale_pass_action = {
-            .colors[0] = { .action = SG_ACTION_DONTCARE }
+        .border = {
+            .top = desc->border_top,
+            .bottom = desc->border_bottom,
+            .left = desc->border_left,
+            .right = desc->border_right,
         },
-        .draw_pass_action = {
-            .colors[0] = { .action = SG_ACTION_CLEAR, .value = { 0.05f, 0.05f, 0.05f, 1.0f } }
+        .emufb = {
+            .width = 0,
+            .height = 0,
+            .aspect_x = _GFX_DEF(desc->emu_aspect_x, 1),
+            .aspect_y = _GFX_DEF(desc->emu_aspect_y, 1),
         },
-        .border_top = desc->border_top,
-        .border_bottom = desc->border_bottom,
-        .border_left = desc->border_left,
-        .border_right = desc->border_right,
-        .emu_width = 0,
-        .emu_height = 0,
-        .emu_aspect_x = _GFX_DEF(desc->emu_aspect_x, 1),
-        .emu_aspect_y = _GFX_DEF(desc->emu_aspect_y, 1),
-        .rot90 = desc->rot90,
+        .upscale = {
+            .pass_action = {
+                .colors[0] = { .action = SG_ACTION_DONTCARE }
+            },
+            .vbuf = sg_make_buffer(&(sg_buffer_desc){
+                .data = SG_RANGE(gfx_verts)
+            }),
+            .pip = sg_make_pipeline(&(sg_pipeline_desc){
+                .shader = sg_make_shader(upscale_shader_desc(sg_query_backend())),
+                .layout = {
+                    .attrs = {
+                        [0].format = SG_VERTEXFORMAT_FLOAT2,
+                        [1].format = SG_VERTEXFORMAT_FLOAT2
+                    }
+                },
+                .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
+                .depth.pixel_format = SG_PIXELFORMAT_NONE
+            }),
+        },
+        .display = {
+            .pass_action = {
+                .colors[0] = { .action = SG_ACTION_CLEAR, .value = { 0.05f, 0.05f, 0.05f, 1.0f } }
+            },
+            .vbuf = sg_make_buffer(&(sg_buffer_desc){
+                .data = {
+                    .ptr = sg_query_features().origin_top_left ?
+                           (desc->rot90 ? gfx_verts_rot : gfx_verts) :
+                           (desc->rot90 ? gfx_verts_flipped_rot : gfx_verts_flipped),
+                    .size = sizeof(gfx_verts)
+                }
+            }),
+            .pip = sg_make_pipeline(&(sg_pipeline_desc){
+                .shader = sg_make_shader(display_shader_desc(sg_query_backend())),
+                .layout = {
+                    .attrs = {
+                        [0].format = SG_VERTEXFORMAT_FLOAT2,
+                        [1].format = SG_VERTEXFORMAT_FLOAT2
+                    }
+                },
+                .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP
+            }),
+            .rot90 = desc->rot90,
+        },
         .draw_extra_cb = desc->draw_extra_cb,
-
-        .upscale_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-            .data = SG_RANGE(gfx_verts)
-        }),
-
-        .display_bind.vertex_buffers[0] = sg_make_buffer(&(sg_buffer_desc){
-            .data = {
-                .ptr = sg_query_features().origin_top_left ?
-                        (desc->rot90 ? gfx_verts_rot : gfx_verts) :
-                        (desc->rot90 ? gfx_verts_flipped_rot : gfx_verts_flipped),
-                .size = sizeof(gfx_verts)
-            }
-        }),
-    
-        .display_pip = sg_make_pipeline(&(sg_pipeline_desc){
-            .shader = sg_make_shader(display_shader_desc(sg_query_backend())),
-            .layout = {
-                .attrs = {
-                    [0].format = SG_VERTEXFORMAT_FLOAT2,
-                    [1].format = SG_VERTEXFORMAT_FLOAT2
-                }
-            },
-            .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP
-        }),
-
-        .upscale_pip = sg_make_pipeline(&(sg_pipeline_desc){
-            .shader = sg_make_shader(upscale_shader_desc(sg_query_backend())),
-            .layout = {
-                .attrs = {
-                    [0].format = SG_VERTEXFORMAT_FLOAT2,
-                    [1].format = SG_VERTEXFORMAT_FLOAT2
-                }
-            },
-            .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
-            .depth.pixel_format = SG_PIXELFORMAT_NONE
-        }),
     };
 }
 
@@ -238,77 +252,83 @@ void gfx_init(const gfx_desc_t* desc) {
    top, to make room at the bottom for mobile virtual keyboard
 */
 static void apply_viewport(int canvas_width, int canvas_height) {
-    float cw = canvas_width - gfx.border_left - gfx.border_right;
+    float cw = canvas_width - gfx.border.left - gfx.border.right;
     if (cw < 1.0f) {
         cw = 1.0f;
     }
-    float ch = canvas_height - gfx.border_top - gfx.border_bottom;
+    float ch = canvas_height - gfx.border.top - gfx.border.bottom;
     if (ch < 1.0f) {
         ch = 1.0f;
     }
     const float canvas_aspect = (float)cw / (float)ch;
-    const float emu_aspect = (float)(gfx.emu_width*gfx.emu_aspect_x) / (float)(gfx.emu_height*gfx.emu_aspect_y);
+    const float emu_aspect = (float)(gfx.emufb.width*gfx.emufb.aspect_x) / (float)(gfx.emufb.height*gfx.emufb.aspect_y);
     float vp_x, vp_y, vp_w, vp_h;
     if (emu_aspect < canvas_aspect) {
-        vp_y = gfx.border_top;
+        vp_y = gfx.border.top;
         vp_h = ch;
         vp_w = (ch * emu_aspect);
-        vp_x = gfx.border_left + (cw - vp_w) / 2;
+        vp_x = gfx.border.left + (cw - vp_w) / 2;
     }
     else {
-        vp_x = gfx.border_left;
+        vp_x = gfx.border.left;
         vp_w = cw;
         vp_h = (cw / emu_aspect);
-        vp_y = gfx.border_top;
+        vp_y = gfx.border.top;
     }
     sg_apply_viewport(vp_x, vp_y, vp_w, vp_h, true);
 }
 
 void gfx_draw(int emu_width, int emu_height) {
     assert(gfx.valid);
-    /* check if framebuffer size has changed, need to create new backing texture */
-    if ((emu_width != gfx.emu_width) || (emu_height != gfx.emu_height)) {
-        gfx.emu_width = emu_width;
-        gfx.emu_height = emu_height;
+    // check if emulator framebuffer size has changed, need to create new backing texture
+    if ((emu_width != gfx.emufb.width) || (emu_height != gfx.emufb.height)) {
+        gfx.emufb.width = emu_width;
+        gfx.emufb.height = emu_height;
         gfx_init_images_and_pass();
     }
 
-    /* copy emulator pixel data into upscaling source texture */
-    sg_update_image(gfx.upscale_bind.fs_images[0], &(sg_image_data){
+    // copy emulator pixel data into emulator framebuffer texture
+    sg_update_image(gfx.emufb.img, &(sg_image_data){
         .subimage[0][0] = {
             .ptr = gfx.rgba8_buffer,
-            .size = gfx.emu_width*gfx.emu_height*sizeof(uint32_t)
+            .size = gfx.emufb.width*gfx.emufb.height*sizeof(uint32_t)
         }
     });
-
-    /* upscale the original framebuffer 2x with nearest filtering */
-    sg_begin_pass(gfx.upscale_pass, &gfx.upscale_pass_action);
-    sg_apply_pipeline(gfx.upscale_pip);
-    sg_apply_bindings(&gfx.upscale_bind);
+    
+    // upscale the original framebuffer 2x with nearest filtering
+    sg_begin_pass(gfx.upscale.pass, &gfx.upscale.pass_action);
+    sg_apply_pipeline(gfx.upscale.pip);
+    sg_apply_bindings(&(sg_bindings){
+        .vertex_buffers[0] = gfx.upscale.vbuf,
+        .fs_images[SLOT_emufb_tex] = gfx.emufb.img,
+    });
     sg_draw(0, 4, 1);
     sg_end_pass();
-
-    /* tint the clear color red or green if flash feedback is requested */
+    
+    // tint the clear color red or green if flash feedback is requested
     if (gfx.flash_error_count > 0) {
         gfx.flash_error_count--;
-        gfx.draw_pass_action.colors[0].value.r = 0.7f;
+        gfx.display.pass_action.colors[0].value.r = 0.7f;
     }
     else if (gfx.flash_success_count > 0) {
         gfx.flash_success_count--;
-        gfx.draw_pass_action.colors[0].value.g = 0.7f;
+        gfx.display.pass_action.colors[0].value.g = 0.7f;
     }
     else {
-        gfx.draw_pass_action.colors[0].value.r = 0.05f;
-        gfx.draw_pass_action.colors[0].value.g = 0.05f;
+        gfx.display.pass_action.colors[0].value.r = 0.05f;
+        gfx.display.pass_action.colors[0].value.g = 0.05f;
     }
 
-    /* draw the final pass with linear filtering */
+    // draw the final pass with linear filtering
     int w = (int) sapp_width();
     int h = (int) sapp_height();
-    sg_begin_default_pass(&gfx.draw_pass_action, w, h);
+    sg_begin_default_pass(&gfx.display.pass_action, w, h);
     apply_viewport(w, h);
-    sg_apply_pipeline(gfx.display_pip);
-    sg_apply_bindings(&gfx.display_bind);
+    sg_apply_pipeline(gfx.display.pip);
+    sg_apply_bindings(&(sg_bindings){
+        .vertex_buffers[0] = gfx.display.vbuf,
+        .fs_images[SLOT_tex] = gfx.upscale.img,
+    });
     sg_draw(0, 4, 1);
     sg_apply_viewport(0, 0, w, h, true);
     sdtx_draw();
