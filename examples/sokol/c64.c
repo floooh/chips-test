@@ -298,7 +298,7 @@ static void handle_file_loading(void) {
         else {
             gfx_flash_error();
         }
-        fs_free();
+        fs_reset();
     }
 }
 

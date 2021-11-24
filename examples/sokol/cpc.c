@@ -316,7 +316,7 @@ static void draw_status_bar(void) {
     sdtx_font(0);
 
     // joystick state
-    sdtx_puts("joystick: ");
+    sdtx_puts("JOYSTICK: ");
     sdtx_font(1);
     const uint8_t joymask = cpc_joystick_mask(&state.cpc);
     sdtx_color1i((joymask & CPC_JOYSTICK_LEFT) ? joy_active : joy_inactive);
@@ -329,21 +329,21 @@ static void draw_status_bar(void) {
     sdtx_putc(0x8A); // arrow down
     sdtx_color1i((joymask & CPC_JOYSTICK_BTN0) ? joy_active : joy_inactive);
     sdtx_putc(0x87); // btn
+    sdtx_font(0);
 
     // FDD disc inserted LED
-    sdtx_font(0);
     sdtx_color1i(text_color);
-    sdtx_puts("  disc: ");
+    sdtx_puts("  DISC: ");
     sdtx_color1i(cpc_disc_inserted(&state.cpc) ? disc_active : disc_inactive);
     sdtx_putc(0xCF);    // filled circle
     // FDD motor on LED
     sdtx_color1i(text_color);
-    sdtx_puts(" motor: ");
+    sdtx_puts("  MOTOR: ");
     sdtx_color1i(state.cpc.fdd.motor_on ? motor_active : motor_inactive);
     sdtx_putc(0xCF);
     
     sdtx_color1i(text_color);
-    sdtx_printf(" track:%d", state.cpc.fdd.cur_track_index);
+    sdtx_printf("  TRACK:%d", state.cpc.fdd.cur_track_index);
     
     sdtx_font(0);
     sdtx_color1i(text_color);

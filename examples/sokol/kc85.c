@@ -338,7 +338,7 @@ static void handle_file_loading(void) {
         else {
             gfx_flash_error();
         }
-        fs_free();
+        fs_reset();
     }
 }
 
@@ -356,20 +356,31 @@ static void draw_status_bar(void) {
     const uint32_t text_color = 0xFFFFFFFF;
     const uint32_t green_active = 0xFF00EE00;
     const uint32_t green_inactive = 0xFF006600;
-    const uint32_t orange_active = 0xFF00CCEE;
-    const uint32_t orange_inactive = 0xFF004466;
     sdtx_canvas(w, h);
     sdtx_origin(1.0f, (h / 8.0f) - 3.5f);
     sdtx_color1i(text_color);
     sdtx_printf(KC85_TYPE_NAME " SLOTC:%s SLOT8:%s", slot_c, slot_8);
-    sdtx_color1i((pio_a & KC85_PIO_A_TAPE_LED) ? orange_active : orange_inactive);
-    sdtx_puts(" TAPE");
+
+    sdtx_color1i(text_color);
+    sdtx_puts("  BASIC: ");
+    sdtx_color1i((pio_a & KC85_PIO_A_BASIC_ROM) ? green_active : green_inactive);
+    sdtx_putc(0xCF);
+
+    sdtx_color1i(text_color);
+    sdtx_puts("  CAOS: ");
     sdtx_color1i((pio_a & KC85_PIO_A_CAOS_ROM) ? green_active : green_inactive);
-    sdtx_puts(" ROM");
+    sdtx_putc(0xCF);
+
+    sdtx_color1i(text_color);
+    sdtx_puts("  RAM: ");
     sdtx_color1i((pio_a & KC85_PIO_A_RAM) ? green_active : green_inactive);
-    sdtx_puts(" RAM");
+    sdtx_putc(0xCF);
+
+    sdtx_color1i(text_color);
+    sdtx_puts("  IRM: ");
     sdtx_color1i((pio_a & KC85_PIO_A_IRM) ? green_active : green_inactive);
-    sdtx_puts(" IRM");
+    sdtx_putc(0xCF);
+
     sdtx_pos(0.0f, 1.5f);
     sdtx_color1i(text_color);
     sdtx_printf("frame:%.2fms emu:%.2fms (min:%.2fms max:%.2fms) ticks:%d", frame_stats.avg_val, emu_stats.avg_val, emu_stats.min_val, emu_stats.max_val, state.ticks);
