@@ -165,6 +165,10 @@ void app_frame() {
 
 /* keyboard input handling */
 void app_input(const sapp_event* event) {
+    // accept dropped files also when ImGui grabs input
+    if (event->type == SAPP_EVENTTYPE_FILES_DROPPED) {
+        fs_start_load_dropped_file();
+    }
     #ifdef CHIPS_USE_UI
     if (ui_input(event)) {
         /* input was handled by UI */
@@ -211,9 +215,6 @@ void app_input(const sapp_event* event) {
                     atom_key_up(&state.atom, c);
                 }
             }
-            break;
-        case SAPP_EVENTTYPE_FILES_DROPPED:
-            fs_start_load_dropped_file();
             break;
         default:
             break;
