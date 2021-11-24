@@ -10,8 +10,9 @@ bool fs_load_base64(const char* name, const char* payload);
 void fs_load_mem(const char* path, const uint8_t* ptr, uint32_t size);
 uint32_t fs_size(void);
 const uint8_t* fs_ptr(void);
-void fs_free(void);
+void fs_reset(void);
 bool fs_ext(const char* str);
+const char* fs_filename(void);
 
 /*== IMPLEMENTATION ==========================================================*/
 #ifdef COMMON_IMPL
@@ -22,10 +23,12 @@ bool fs_ext(const char* str);
 #include <ctype.h>
 
 #define FS_EXT_SIZE (16)
+#define FS_FNAME_SIZE (32)
 #define FS_MAX_SIZE (1024 * 1024)
 
 typedef struct {
     bool valid;
+    char fname[FS_FNAME_SIZE];
     char ext[FS_EXT_SIZE];
     uint8_t* ptr;
     uint32_t size;
@@ -48,13 +51,24 @@ void fs_dowork(void) {
     sfetch_dowork();
 }
 
-static void fs_copy_ext(const char* path) {
+static void fs_strcpy(char* dst, const char* src, size_t buf_size) {
+    strncpy(dst, src, buf_size);
+    fs.fname[buf_size-1] = 0;
+}
+
+static void fs_copy_filename_and_ext(const char* path) {
+    fs.fname[0] = 0;
     fs.ext[0] = 0;
     const char* str = path;
     const char* slash = strrchr(str, '/');
     if (slash) {
         str = slash+1;
+        slash = strrchr(str, '\\');
+        if (slash) {
+            str = slash+1;
+        }
     }
+    fs_strcpy(fs.fname, str, sizeof(fs.fname));
     const char* ext = strrchr(str, '.');
     if (ext) {
         int i = 0;
@@ -136,17 +150,21 @@ bool fs_ext(const char* ext) {
     return 0 == strcmp(ext, fs.ext);
 }
 
-void fs_free(void) {
+const char* fs_filename(void) {
+    return fs.fname;
+}
+
+void fs_reset(void) {
     assert(fs.valid);
-    memset(&fs, 0, sizeof(fs));
-    fs.valid = true;
+    fs.ptr = 0;
+    fs.size = 0;
 }
 
 void fs_load_mem(const char* path, const uint8_t* ptr, uint32_t size) {
     assert(fs.valid);
-    fs_free();
+    fs_reset();
     if ((size > 0) && (size <= FS_MAX_SIZE)) {
-        fs_copy_ext(path);
+        fs_copy_filename_and_ext(path);
         fs.size = size;
         fs.ptr = fs.buf;
         memcpy(fs.ptr, ptr, size);
@@ -157,8 +175,8 @@ void fs_load_mem(const char* path, const uint8_t* ptr, uint32_t size) {
 
 bool fs_load_base64(const char* name, const char* payload) {
     assert(fs.valid);
-    fs_free();
-    fs_copy_ext(name);
+    fs_reset();
+    fs_copy_filename_and_ext(name);
     if (fs_base64_decode(payload)) {
         fs.ptr = fs.buf;
         return true;
@@ -195,8 +213,8 @@ static void fs_emsc_dropped_file_callback(const sapp_html5_fetch_response* respo
 
 void fs_start_load_file(const char* path) {
     assert(fs.valid);
-    fs_free();
-    fs_copy_ext(path);
+    fs_reset();
+    fs_copy_filename_and_ext(path);
     sfetch_send(&(sfetch_request_t){
         .path = path,
         .callback = fs_fetch_callback,
@@ -207,9 +225,9 @@ void fs_start_load_file(const char* path) {
 
 void fs_start_load_dropped_file(void) {
     assert(fs.valid);
-    fs_free();
+    fs_reset();
     const char* path = sapp_get_dropped_file_path(0);
-    fs_copy_ext(path);
+    fs_copy_filename_and_ext(path);
     #if defined(__EMSCRIPTEN__)
         sapp_html5_fetch_dropped_file(&(sapp_html5_fetch_request){
             .dropped_file_index = 0,

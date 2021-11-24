@@ -172,7 +172,8 @@ void gfx_init(const gfx_desc_t* desc) {
     });
     sdtx_setup(&(sdtx_desc_t){
         .context_pool_size = 1,
-        .fonts[0] = sdtx_font_oric()
+        .fonts[0] = sdtx_font_z1013(),
+        .fonts[1] = sdtx_font_kc853()
     });
 
     gfx = (gfx_state_t) {

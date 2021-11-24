@@ -55,7 +55,7 @@ static struct {
 #endif
 #define BORDER_LEFT (8)
 #define BORDER_RIGHT (8)
-#define BORDER_BOTTOM (16)
+#define BORDER_BOTTOM (32)
 
 // audio-streaming callback
 static void push_audio(const float* samples, int num_samples, void* user_data) {
@@ -291,7 +291,7 @@ static void handle_file_loading(void) {
         else {
             gfx_flash_error();
         }
-        fs_free();
+        fs_reset();
     }
 }
 
@@ -300,11 +300,54 @@ static void draw_status_bar(void) {
     prof_push(PROF_EMU, (float)state.emu_time_ms);
     prof_stats_t frame_stats = prof_stats(PROF_FRAME);
     prof_stats_t emu_stats = prof_stats(PROF_EMU);
+    
+    const uint32_t text_color = 0xFFFFFFFF;
+    const uint32_t disc_active = 0xFF00EE00;
+    const uint32_t disc_inactive = 0xFF006600;
+    const uint32_t motor_active = 0xFF00CCEE;
+    const uint32_t motor_inactive = 0xFF004466;
+    const uint32_t joy_active = 0xFFFFEE00;
+    const uint32_t joy_inactive = 0xFF886600;
+    
     const float w = sapp_widthf();
     const float h = sapp_heightf();
     sdtx_canvas(w, h);
-    sdtx_color3b(255, 255, 255);
-    sdtx_pos(1.0f, (h / 8.0f) - 1.5f);
+    sdtx_origin(1.0f, (h / 8.0f) - 3.5f);
+    sdtx_font(0);
+
+    // joystick state
+    sdtx_puts("joystick: ");
+    sdtx_font(1);
+    const uint8_t joymask = cpc_joystick_mask(&state.cpc);
+    sdtx_color1i((joymask & CPC_JOYSTICK_LEFT) ? joy_active : joy_inactive);
+    sdtx_putc(0x88); // arrow left
+    sdtx_color1i((joymask & CPC_JOYSTICK_RIGHT) ? joy_active : joy_inactive);
+    sdtx_putc(0x89); // arrow right
+    sdtx_color1i((joymask & CPC_JOYSTICK_UP) ? joy_active : joy_inactive);
+    sdtx_putc(0x8B); // arrow up
+    sdtx_color1i((joymask & CPC_JOYSTICK_DOWN) ? joy_active : joy_inactive);
+    sdtx_putc(0x8A); // arrow down
+    sdtx_color1i((joymask & CPC_JOYSTICK_BTN0) ? joy_active : joy_inactive);
+    sdtx_putc(0x87); // btn
+
+    // FDD disc inserted LED
+    sdtx_font(0);
+    sdtx_color1i(text_color);
+    sdtx_puts("  disc: ");
+    sdtx_color1i(cpc_disc_inserted(&state.cpc) ? disc_active : disc_inactive);
+    sdtx_putc(0xCF);    // filled circle
+    // FDD motor on LED
+    sdtx_color1i(text_color);
+    sdtx_puts(" motor: ");
+    sdtx_color1i(state.cpc.fdd.motor_on ? motor_active : motor_inactive);
+    sdtx_putc(0xCF);
+    
+    sdtx_color1i(text_color);
+    sdtx_printf(" track:%d", state.cpc.fdd.cur_track_index);
+    
+    sdtx_font(0);
+    sdtx_color1i(text_color);
+    sdtx_pos(0.0f, 1.5f);
     sdtx_printf("frame:%.2fms emu:%.2fms (min:%.2fms max:%.2fms) ticks:%d", frame_stats.avg_val, emu_stats.avg_val, emu_stats.min_val, emu_stats.max_val, state.ticks);
 }
 
