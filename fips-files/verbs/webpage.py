@@ -69,6 +69,7 @@ items = [
     { 'type':'demo', 'title':'Gloire a Piou! (CPC)','system':'cpc',     'url':'cpc.html?file=cpc/piou.dsk&input=run%22gap%0A', 'img':'cpc/piou.jpg', 'note':'by Overlanders'},
     { 'type':'demo', 'title':'phX / Condense (CPC)','system':'cpc',     'url':'cpc.html?file=cpc/phx.dsk&input=run%22phx%0A', 'img':'cpc/phx.jpg', 'note':'by Condense' },
     { 'type':'demo', 'title':'Batman Forever (CPC)','system':'cpc',     'url':'cpc.html?file=cpc/batman_forever.dsk&input=run%22disc%0A', 'img':'cpc/batman_forever.jpg', 'note': 'by Batman Group' },
+    { 'type':'demo', 'title':'CRTC (CPC)',          'system':'cpc',     'url':'cpc.html?file=cpc/crtc.dsk&input=run%22crtc%0A', 'img':'cpc/crtc.jpg', 'note':'by benediction & Arkos'},
     { 'type':'demo', 'title':'Wunderbar (CPC)',     'system':'cpc',     'url':'cpc.html?file=cpc/wunderbar.dsk&input=run%22wunder.bar%0A', 'img':'cpc/wunderbar.jpg', 'note':'by Arkos/Benediction'},
     { 'type':'demo', 'title':'Phortem (CPC)',       'system':'cpc',     'url':'cpc.html?file=cpc/phortem.dsk&input=run%22phortem%0A', 'img':'cpc/phortem.jpg', 'note':'by Condense'},
     { 'type':'demo', 'title':'Battro (CPC)',        'system':'cpc',     'url':'cpc.html?file=cpc/battro.dsk&input=run%22battro%0A', 'img':'cpc/battro.jpg', 'note':'by Batman Group'},
