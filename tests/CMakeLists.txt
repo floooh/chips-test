@@ -1,5 +1,3 @@
-if (NOT FIPS_UWP)
-
 include_directories(../examples/roms)
 
 fips_begin_app(chips-test cmdline)
@@ -83,5 +81,3 @@ fips_begin_app(z80-test cmdline)
     fips_vs_warning_level(3)
     fips_files(z80-test.c)
 fips_end_app()
-
-endif() # FIPS_UWP
