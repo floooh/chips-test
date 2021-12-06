@@ -188,6 +188,16 @@ GitHubSamplesURL = 'https://github.com/floooh/chips-test/master/examples'
 BuildConfig = 'wasm-ninja-release'
 
 #-------------------------------------------------------------------------------
+def cwebp(src_path, dst_path):
+    cmd_line = 'cwebp -quiet -q 80 {} -o {}'.format(src_path, dst_path)
+    print('> {}'.format(cmd_line))
+    subprocess.call(cmd_line, shell=True)
+
+#-------------------------------------------------------------------------------
+def to_webp_ext(path):
+    return os.path.splitext(path)[0] + '.webp'
+
+#-------------------------------------------------------------------------------
 def deploy_webpage(fips_dir, proj_dir, webpage_dir) :
     """builds the final webpage under under fips-deploy/chips-webpage"""
     ws_dir = util.get_workspace_dir(fips_dir)
@@ -202,7 +212,7 @@ def deploy_webpage(fips_dir, proj_dir, webpage_dir) :
         system = item['system']
         url = item['url']
         ui_url = url.replace(".html", "-ui.html")
-        image = item['img']
+        image = to_webp_ext(item['img'])
         note = item['note']
         log.info('> adding thumbnail for {}'.format(url))
         content += '<div class="thumb-frame">\n'
@@ -251,10 +261,19 @@ def deploy_webpage(fips_dir, proj_dir, webpage_dir) :
     for asset_dir in asset_dirs:
         src_dir = proj_dir + '/webpage/' + asset_dir
         dst_dir = webpage_dir + '/' + asset_dir
-        if os.path.exists(src_dir):
+        if os.path.isdir(src_dir):
             if os.path.isdir(dst_dir):
                 shutil.rmtree(dst_dir)
-            shutil.copytree(src_dir, dst_dir)
+            os.makedirs(dst_dir)
+            for filename in os.listdir(src_dir):
+                src_file = src_dir + '/' + filename
+                dst_file = dst_dir + '/' + filename
+                if filename.endswith('.jpg'):
+                    dst_file = to_webp_ext(dst_file)
+                    cwebp(src_file, dst_file)
+                else:
+                    print('> copy {} => {}'.format(src_file, dst_file))
+                    shutil.copyfile(src_file, dst_file)
 
 #-------------------------------------------------------------------------------
 def build_deploy_webpage(fips_dir, proj_dir, rebuild) :
