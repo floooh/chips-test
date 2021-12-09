@@ -217,13 +217,19 @@ chipStatus(void *state)
 	uint16_t a = readAddressBus(state);
 	uint8_t d = readDataBus(state);
 	BOOL r_w = isNodeHigh(state, rw);
+	BOOL sync_p = isNodeHigh(state, sync_);
+	BOOL irq_p = isNodeHigh(state, irq);
+	BOOL nmi_p = isNodeHigh(state, nmi);
 
-	printf("halfcyc:%d phi0:%d AB:%04X D:%02X RnW:%d PC:%04X A:%02X X:%02X Y:%02X SP:%02X P:%02X IR:%02X",
+	printf("halfcyc:%d phi0:%d AB:%04X D:%02X RnW:%d SYN:%d IRQ:%d NMI:%d PC:%04X A:%02X X:%02X Y:%02X SP:%02X P:%02X IR:%02X",
 		   cycle,
 		   clk,
 		   a,
 		   d,
 		   r_w,
+		   sync_p,
+		   irq_p,
+		   nmi_p,
 		   readPC(state),
 		   readA(state),
 		   readX(state),

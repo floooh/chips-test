@@ -19,14 +19,6 @@ fips_begin_app(chips-test cmdline)
         m6502dasm-test.c
         z80dasm-test.c
         m6502-test.c
-        m6502-perfect.c
-    )
-    fips_dir(perfect6502)
-    fips_files(
-        netlist_6502.h
-        netlist_sim.c netlist_sim.h
-        perfect6502.c perfect6502.h
-        types.h
     )
     fips_dir(disks)
     fipsutil_embed(fdd-test.yml fdd-test.h)
@@ -67,6 +59,18 @@ fips_begin_app(m6502-wltest cmdline)
     fips_files(m6502-wltest.c)
     fips_dir(testsuite-2.15/bin)
     fipsutil_embed(dump.yml dump.h)
+fips_end_app()
+
+fips_begin_app(m6502-perfect cmdline)
+    fips_vs_warning_level(3)
+    fips_files(m6502-perfect.c)
+    fips_dir(perfect6502)
+    fips_files(
+        netlist_6502.h
+        netlist_sim.c netlist_sim.h
+        perfect6502.c perfect6502.h
+        types.h
+    )    
 fips_end_app()
 
 fips_begin_app(z80-fuse cmdline)
