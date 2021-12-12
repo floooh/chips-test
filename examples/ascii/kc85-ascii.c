@@ -89,6 +89,7 @@ static void init_kc_colors(void) {
 
 int main(int argc, char* argv[]) {
     sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
+    keybuf_init(&(keybuf_desc_t){ .key_delay_frames = 10 });
 
     // initialize a KC85/4 emulator instance, we don't need audio
     // or video output, so don't provide a pixel buffer and
