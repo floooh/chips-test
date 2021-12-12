@@ -152,7 +152,7 @@ static void handle_file_loading(void);
 static void send_keybuf_input(void);
 static void draw_status_bar(void);
 
-void app_frame() {
+void app_frame(void) {
     state.frame_time_us = clock_frame_time();
     const uint64_t emu_start_time = stm_now();
     state.ticks = atom_exec(&state.atom, state.frame_time_us);

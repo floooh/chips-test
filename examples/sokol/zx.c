@@ -86,7 +86,7 @@ static void ui_boot_cb(zx_t* sys, zx_type_t type) {
 }
 #endif
 
-void app_init() {
+void app_init(void) {
     gfx_init(&(gfx_desc_t){
         #ifdef CHIPS_USE_UI
         .draw_extra_cb = ui_draw,
@@ -156,7 +156,7 @@ static void handle_file_loading(void);
 static void send_keybuf_input(void);
 static void draw_status_bar(void);
 
-void app_frame() {
+void app_frame(void) {
     state.frame_time_us = clock_frame_time();
     const uint64_t emu_start_time = stm_now();
     state.ticks = zx_exec(&state.zx, state.frame_time_us);
@@ -215,7 +215,7 @@ void app_input(const sapp_event* event) {
     }
 }
 
-void app_cleanup() {
+void app_cleanup(void) {
     zx_discard(&state.zx);
     #ifdef CHIPS_USE_UI
         ui_zx_discard(&state.ui_zx);
