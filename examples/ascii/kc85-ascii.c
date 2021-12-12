@@ -12,7 +12,6 @@
 #include <ctype.h>
 #include <signal.h>
 #define COMMON_IMPL
-#include "fs.h"
 #include "keybuf.h"
 #define SOKOL_IMPL
 #include "sokol_args.h"
