@@ -252,11 +252,11 @@ void gfx_init(const gfx_desc_t* desc) {
    top, to make room at the bottom for mobile virtual keyboard
 */
 static void apply_viewport(int canvas_width, int canvas_height) {
-    float cw = canvas_width - gfx.border.left - gfx.border.right;
+    float cw = (float) (canvas_width - gfx.border.left - gfx.border.right);
     if (cw < 1.0f) {
         cw = 1.0f;
     }
-    float ch = canvas_height - gfx.border.top - gfx.border.bottom;
+    float ch = (float) (canvas_height - gfx.border.top - gfx.border.bottom);
     if (ch < 1.0f) {
         ch = 1.0f;
     }
@@ -264,18 +264,18 @@ static void apply_viewport(int canvas_width, int canvas_height) {
     const float emu_aspect = (float)(gfx.emufb.width*gfx.emufb.aspect_x) / (float)(gfx.emufb.height*gfx.emufb.aspect_y);
     float vp_x, vp_y, vp_w, vp_h;
     if (emu_aspect < canvas_aspect) {
-        vp_y = gfx.border.top;
+        vp_y = (float)gfx.border.top;
         vp_h = ch;
         vp_w = (ch * emu_aspect);
         vp_x = gfx.border.left + (cw - vp_w) / 2;
     }
     else {
-        vp_x = gfx.border.left;
+        vp_x = (float)gfx.border.left;
         vp_w = cw;
         vp_h = (cw / emu_aspect);
-        vp_y = gfx.border.top;
+        vp_y = (float)gfx.border.top;
     }
-    sg_apply_viewport(vp_x, vp_y, vp_w, vp_h, true);
+    sg_apply_viewportf(vp_x, vp_y, vp_w, vp_h, true);
 }
 
 void gfx_draw(int emu_width, int emu_height) {
