@@ -185,66 +185,60 @@ void gfx_init(const gfx_desc_t* desc) {
         .fonts[0] = sdtx_font_z1013(),
         .fonts[1] = sdtx_font_kc853()
     });
-
-    gfx = (gfx_state_t) {
-        .valid = true,
-        .border = {
-            .top = desc->border_top,
-            .bottom = desc->border_bottom,
-            .left = desc->border_left,
-            .right = desc->border_right,
-        },
-        .emufb = {
-            .width = 0,
-            .height = 0,
-            .aspect_x = _GFX_DEF(desc->emu_aspect_x, 1),
-            .aspect_y = _GFX_DEF(desc->emu_aspect_y, 1),
-        },
-        .upscale = {
-            .pass_action = {
-                .colors[0] = { .action = SG_ACTION_DONTCARE }
-            },
-            .vbuf = sg_make_buffer(&(sg_buffer_desc){
-                .data = SG_RANGE(gfx_verts)
-            }),
-            .pip = sg_make_pipeline(&(sg_pipeline_desc){
-                .shader = sg_make_shader(upscale_shader_desc(sg_query_backend())),
-                .layout = {
-                    .attrs = {
-                        [0].format = SG_VERTEXFORMAT_FLOAT2,
-                        [1].format = SG_VERTEXFORMAT_FLOAT2
-                    }
-                },
-                .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
-                .depth.pixel_format = SG_PIXELFORMAT_NONE
-            }),
-        },
-        .display = {
-            .pass_action = {
-                .colors[0] = { .action = SG_ACTION_CLEAR, .value = { 0.05f, 0.05f, 0.05f, 1.0f } }
-            },
-            .vbuf = sg_make_buffer(&(sg_buffer_desc){
-                .data = {
-                    .ptr = sg_query_features().origin_top_left ?
-                           (desc->rot90 ? gfx_verts_rot : gfx_verts) :
-                           (desc->rot90 ? gfx_verts_flipped_rot : gfx_verts_flipped),
-                    .size = sizeof(gfx_verts)
-                }
-            }),
-            .pip = sg_make_pipeline(&(sg_pipeline_desc){
-                .shader = sg_make_shader(display_shader_desc(sg_query_backend())),
-                .layout = {
-                    .attrs = {
-                        [0].format = SG_VERTEXFORMAT_FLOAT2,
-                        [1].format = SG_VERTEXFORMAT_FLOAT2
-                    }
-                },
-                .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP
-            }),
-            .rot90 = desc->rot90,
-        },
-        .draw_extra_cb = desc->draw_extra_cb,
+    
+    gfx.valid = true;
+    
+    gfx.border.top = desc->border_top;
+    gfx.border.bottom = desc->border_bottom;
+    gfx.border.left = desc->border_left;
+    gfx.border.right = desc->border_right;
+    
+    gfx.emufb.width = 0;
+    gfx.emufb.height = 0;
+    gfx.emufb.aspect_x = _GFX_DEF(desc->emu_aspect_x, 1);
+    gfx.emufb.aspect_y = _GFX_DEF(desc->emu_aspect_y, 1);
+    
+    gfx.upscale.pass_action = (sg_pass_action) {
+        .colors[0] = { .action = SG_ACTION_DONTCARE }
     };
+    gfx.upscale.vbuf = sg_make_buffer(&(sg_buffer_desc){
+        .data = SG_RANGE(gfx_verts)
+    });
+    gfx.upscale.pip = sg_make_pipeline(&(sg_pipeline_desc){
+        .shader = sg_make_shader(upscale_shader_desc(sg_query_backend())),
+        .layout = {
+            .attrs = {
+                [0].format = SG_VERTEXFORMAT_FLOAT2,
+                [1].format = SG_VERTEXFORMAT_FLOAT2
+            }
+        },
+        .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
+        .depth.pixel_format = SG_PIXELFORMAT_NONE
+    });
+    
+    gfx.display.pass_action = (sg_pass_action) {
+        .colors[0] = { .action = SG_ACTION_CLEAR, .value = { 0.05f, 0.05f, 0.05f, 1.0f } }
+    };
+    gfx.display.vbuf = sg_make_buffer(&(sg_buffer_desc){
+        .data = {
+            .ptr = sg_query_features().origin_top_left ?
+                   (desc->rot90 ? gfx_verts_rot : gfx_verts) :
+                   (desc->rot90 ? gfx_verts_flipped_rot : gfx_verts_flipped),
+            .size = sizeof(gfx_verts)
+        }
+    });
+    gfx.display.pip = sg_make_pipeline(&(sg_pipeline_desc){
+        .shader = sg_make_shader(display_shader_desc(sg_query_backend())),
+        .layout = {
+            .attrs = {
+                [0].format = SG_VERTEXFORMAT_FLOAT2,
+                [1].format = SG_VERTEXFORMAT_FLOAT2
+            }
+        },
+        .primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP
+    });
+    gfx.display.rot90 = desc->rot90;
+    gfx.draw_extra_cb = desc->draw_extra_cb;
 }
 
 /* apply a viewport rectangle to preserve the emulator's aspect ratio,
