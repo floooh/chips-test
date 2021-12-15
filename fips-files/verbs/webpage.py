@@ -75,7 +75,7 @@ items = [
     { 'type':'demo', 'title':'Pheelone (CPC)',      'system':'cpc',     'url':'cpc.html?file=cpc/pheelone_2009condense.dsk&input=run%22pheelone%0A', 'img':'cpc/pheelone.jpg', 'note':'by Condense' },
     { 'type':'demo', 'title':'Phreaks (CPC)',       'system':'cpc',     'url':'cpc.html?file=cpc/phreaks_2010condense.dsk&input=run%22phreaks%0A', 'img':'cpc/phreaks.jpg', 'note':'by Condense' },
     { 'type':'demo', 'title':'Phat 2 (CPC)',        'system':'cpc',     'url':'cpc.html?file=cpc/phat_2.dsk&input=run%22phat2%0A', 'img':'cpc/phat_2.jpg', 'note':'by Condense'},
-    { 'type':'demo', 'title':'Wobbler (CPC)',       'system':'cpc',     'url':'cpc.html?file=cpc/wobbler.dsk&input=run%22wobbler%0A', 'img':'cpc/wobbler.jpg', 'note':'by TAF' },
+    { 'type':'demo', 'title':'Wobbler (CPC)',       'system':'cpc',     'url':'cpc.html?file=cpc/wobbler.dsk&input=run%22-wobbler%0A', 'img':'cpc/wobbler.jpg', 'note':'by TAF' },
     { 'type':'demo', 'title':'Battro (CPC)',        'system':'cpc',     'url':'cpc.html?file=cpc/battro.dsk&input=run%22battro%0A', 'img':'cpc/battro.jpg', 'note':'by Batman Group'},
     { 'type':'demo', 'title':'Rebels 1989 (C64)',   'system':'c64',     'url':'c64.html?file=c64/rebels1989_c64.prg', 'img':'c64/rebels1989_c64.jpg', 'note':'by Rebels'},
     { 'type':'demo', 'title':'$777 (C64)',          'system':'c64',     'url':'c64.html?file=c64/s777_c64.prg', 'img':'c64/s777_c64.jpg', 'note':'by Razor 1911' },
