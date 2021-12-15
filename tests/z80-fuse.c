@@ -4,9 +4,10 @@
 //  Run the FUSE ZX Spectrum emulator CPU test:
 //  https://github.com/tom-seddon/fuse-emulator-code/tree/master/fuse/z80/tests
 //
-//  I'm quite sure that FUSE handles the undocumented XF/YF flag bits wrong
-//  for the BIT n,(HL), BIT n,(IX+d), BIT n,(IY+d) instructions, since
-//  the FUSE Z80 emulation doesn't seem to know about the WZ register.
+//  NOTE: FUSE doesn't always agree with ZEXALL about the state of the 
+//  undocumented XF and YF flag bits, maybe the two tests are based
+//  on different Z80 revisions. This test ignores the XF and YF flags
+//  for instructions where ZEXALL and FUSE disagree.
 //------------------------------------------------------------------------------
 #define CHIPS_IMPL
 #include "chips/z80.h"
