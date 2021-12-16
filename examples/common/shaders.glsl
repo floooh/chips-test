@@ -9,11 +9,11 @@ void main() {
 @end
 
 @fs upscale_fs
-uniform sampler2D tex;
+uniform sampler2D emufb_tex;
 in vec2 uv;
 out vec4 frag_color;
 void main() {
-    frag_color = texture(tex, uv);
+    frag_color = texture(emufb_tex, uv);
 }
 @end
 

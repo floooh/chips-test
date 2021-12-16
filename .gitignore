@@ -1,4 +1,5 @@
 .vscode/
+.DS_Store
 #>fips
 # this area is managed by fips, do not edit
 .fips-*

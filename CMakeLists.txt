@@ -2,10 +2,10 @@
 # project: chips-test
 #
 cmake_minimum_required(VERSION 3.0)
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "")
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_C_STANDARD 99)
 project(chips-test)
-if (CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
-    set(CMAKE_CXX_STANDARD 17)
-endif()
 
 # include the fips main cmake file
 get_filename_component(FIPS_ROOT_DIR "../fips" ABSOLUTE)

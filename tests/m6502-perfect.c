@@ -18,6 +18,7 @@
 #include "perfect6502/types.h"
 #include "perfect6502/netlist_sim.h"
 #include "perfect6502/perfect6502.h"
+#define CHIPS_IMPL
 #include "chips/m6502.h"
 #include "utest.h"
 #include <assert.h>
@@ -43,6 +44,7 @@ static void* p6502_state;
 static m6502_t cpu;
 static uint64_t pins;
 static uint8_t mem[1<<16] = { 0 };
+static uint8_t logsteps = 0;
 
 // copy a range of bytes into both memories
 static void copy(uint16_t addr, uint8_t* bytes, size_t num) {
@@ -140,42 +142,75 @@ static void start(uint16_t start_addr) {
     assert(readPC(p6502_state) == start_addr);
     // run one half-tick ahead into the next instruction
     step(p6502_state);
+    if (logsteps) {
+        printf("<-- "); chipStatus(p6502_state);
+    }
     // make sure both memories have the same content
     assert(0 == memcmp(mem, memory, (1<<16)));
 }
 
 // do a single tick (two half-ticks) and check if both emulators agree
 static bool step_cycle(uint32_t cur_tick) {
+    bool stepok = true;
     // step our own emu
     pins = mem_access(m6502_tick(&cpu, pins));
     // step perfect6502 simulation (in half-steps)
     if (cur_tick > 0) {
         // skip the first half tick which was executed in the last invocation
         step(p6502_state);
+        if (logsteps) {
+            printf("<-- "); chipStatus(p6502_state);
+        }
     }
     step(p6502_state);
+    if (logsteps) {
+        printf("<-- "); chipStatus(p6502_state);
+    }
     // check whether both emulators agree on the observable pin state after each tick
     bool m6502_rw = (pins & M6502_RW);
     bool p6502_rw = readRW(p6502_state);
     if (m6502_rw != p6502_rw) {
-        return false;
+        if (logsteps) {
+            printf("RW mismatch\n");
+        }
+        stepok =  false;
     }
     uint16_t m6502_addr = M6502_GET_ADDR(pins);
     uint16_t p6502_addr  = readAddressBus(p6502_state);
     if (m6502_addr != p6502_addr) {
-        return false;
+        if (logsteps) {
+            printf("AD mismatch\n");
+        }
+        stepok =  false;
     }
     uint8_t m6502_data = M6502_GET_DATA(pins);
     uint8_t p6502_data  = readDataBus(p6502_state);
     if (m6502_data != p6502_data) {
-        return false;
+        if (logsteps) {
+            printf("D mismatch\n");
+        }
+        stepok =  false;
     }
     bool m6502_sync = (pins & M6502_SYNC);
     bool p6502_sync = isNodeHigh(p6502_state, 539); // 539 is SYNC pin
     if (m6502_sync != p6502_sync) {
-        return false;
+        if (logsteps) {
+            printf("SYN mismatch\n");
+        }
+        stepok =  false;
     }
-    return true;
+    if (logsteps) {
+        printf("<= AB:%04X DA:%02X RnW:%d SYN:%d IRQ:%d NMI:%d nmi_pip:%04x irq_pip:%04x\n",
+            m6502_addr,
+            m6502_data,
+            m6502_rw,
+            m6502_sync,
+            (pins & M6502_IRQ)==0, // note: inverted output for easier comparison with perfect6502
+            (pins & M6502_NMI)==0,
+            cpu.nmi_pip,
+            cpu.irq_pip);
+    }
+    return stepok;
 }
 
 // step both emulators through the current instruction,
@@ -189,18 +224,59 @@ static bool step_until_sync(uint32_t expected_ticks, bool irq, bool nmi) {
         }
     } while (!isNodeHigh(p6502_state, 539)); // 539 is SYNC pin, next instruction about to begin
     if (irq) {
+        if (logsteps) {
+            printf("Assert IRQ\n");
+        }
         pins |= M6502_IRQ;
         setNode(p6502_state, 103, 0);   // 103 is IRQ pin
     }
     if (nmi) {
+        if (logsteps) {
+            printf("Assert NMI\n");
+        }
         pins |= M6502_NMI;
         setNode(p6502_state, 1297, 0);  // 1297 is NMI pin
     }
     // run one half tick into next instruction so that overlapped operations can finish
     step(p6502_state);
+    if (logsteps) {
+        printf("<-- "); chipStatus(p6502_state);
+        printf("tick=%d exp=%d\n", tick, expected_ticks);
+    }
     return (tick == expected_ticks);
 }
 
+static bool single_step(uint32_t ticks, bool irq, bool nmi) {
+    uint32_t tick = 0;
+    do {
+        if (!step_cycle(tick++)) {
+            return false;
+        }
+    } while (tick < ticks);
+    if (irq) {
+        pins |= M6502_IRQ;
+        setNode(p6502_state, 103, 0);   // 103 is IRQ pin
+    }
+    else{
+        pins &= ~M6502_IRQ;
+        setNode(p6502_state, 103, 1);   // 103 is IRQ pin
+
+    }
+    if (nmi) {
+        pins |= M6502_NMI;
+        setNode(p6502_state, 1297, 0);  // 1297 is NMI pin
+    }
+    else{
+        pins &= ~M6502_NMI;
+        setNode(p6502_state, 1297, 1);  // 1297 is NMI pin
+    }
+    // run one half tick into next instruction so that overlapped operations can finish
+    step(p6502_state);
+    if (logsteps) {
+        printf("<-- "); chipStatus(p6502_state);
+    }
+    return true;
+}
 // check the flag bits and registers in both emulators against expected value
 static bool tf(uint8_t expected) {
     uint8_t p6502_p = readP(p6502_state) & ~(M6502_XF|M6502_IF|M6502_BF);
@@ -1217,3 +1293,70 @@ UTEST(m6502_perfect, NMI) {
     OP(2); TA(0x33) // first LDA
     OP(2); TA(0x22) // second LDA
 }
+
+#define SINGLE_PULSE_INT 0
+UTEST(m6502_perfect, NMI2) {
+//        logsteps = 1;
+    for (int nmi_delay = 0; nmi_delay < 9; nmi_delay++)
+    //int nmi_delay = 7;
+    {
+        if (logsteps) {
+            printf("---------------------- NMI delay %d\n", nmi_delay);
+        }
+        init();
+        uint8_t prog[] = {
+            0xEA,         // NOP
+            0xA9, 0x00,   // LDA #0
+            0xD0, 0xFC,   // BEQ $0000
+            0xF0, 0xFA,   // BEQ $0000
+            0xEA,         // NOP
+            0xA9, 0x33,   // interrupt service routine
+            0xA9, 0x22,
+        };
+        copy(0x0, prog, sizeof(prog));
+        start(0x0);
+        w16(0xFFFA, 0x8);
+
+        T(single_step(1, false, false));
+        T(single_step(nmi_delay, false, true));
+#if SINGLE_PULSE_INT
+        T(single_step(0, false, false));
+        T(single_step(10, false, false));
+#else
+        T(single_step(10, false, true));
+#endif
+    }
+}
+
+UTEST(m6502_perfect, IRQ2) {
+//        logsteps = 1;
+    for (int irq_delay = 0; irq_delay < 9; irq_delay++) {
+        if (logsteps) {
+            printf("---------------------- IRQ delay %d\n", irq_delay);
+        }
+        init();
+        uint8_t prog[] = {
+            0x58,         // CLI
+            0xA9, 0x00,   // LDA #0
+            0xD0, 0xFC,   // BEQ $0000
+            0xF0, 0xFA,   // BEQ $0000
+            0xEA,         // NOP
+            0xA9, 0x33,   // interrupt service routine
+            0xA9, 0x22,
+        };
+        copy(0x0, prog, sizeof(prog));
+        start(0x0);
+        w16(0xFFFA, 0x8);
+
+        T(single_step(1, false, false));
+        T(single_step(irq_delay, true, false));
+#if SINGLE_PULSE_INT
+        T(single_step(0, false, false));
+        T(single_step(10, false, false));
+#else
+        T(single_step(10, true, false));
+#endif
+    }
+}
+
+UTEST_MAIN();

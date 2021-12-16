@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 //  m6502dasm-test.c
 //------------------------------------------------------------------------------
-#define CHIPS_IMPL
+#define CHIPS_UTIL_IMPL
 #include "util/m6502dasm.h"
 #include "utest.h"
 #include <string.h>

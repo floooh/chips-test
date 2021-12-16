@@ -112,14 +112,12 @@ int main() {
 
     // setup the C64 emulator
     c64_init(&state.c64, &(c64_desc_t){
-        .pixel_buffer = state.pixels,
-        .pixel_buffer_size = sizeof(state.pixels),
-        .rom_char = dump_c64_char_bin,
-        .rom_char_size = sizeof(dump_c64_char_bin),
-        .rom_basic = dump_c64_basic_bin,
-        .rom_basic_size = sizeof(dump_c64_basic_bin),
-        .rom_kernal = dump_c64_kernalv3_bin,
-        .rom_kernal_size = sizeof(dump_c64_kernalv3_bin)
+        .pixel_buffer = { .ptr = state.pixels, .size = sizeof(state.pixels) },
+        .roms = {
+            .chars = { .ptr=dump_c64_char_bin, .size=sizeof(dump_c64_char_bin) },
+            .basic = { .ptr=dump_c64_basic_bin, .size=sizeof(dump_c64_basic_bin) },
+            .kernal = { .ptr=dump_c64_kernalv3_bin, .size=sizeof(dump_c64_kernalv3_bin) }
+        }
     });
 
     while (!quit_requested) {

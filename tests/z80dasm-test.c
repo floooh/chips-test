@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 //  z80dasm-test.c
 //------------------------------------------------------------------------------
-#define CHIPS_IMPL
+#define CHIPS_UTIL_IMPL
 #include "util/z80dasm.h"
 #include "utest.h"
 #include <string.h>

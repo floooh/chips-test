@@ -12,102 +12,100 @@
 #include "systems/c1530.h"
 #include "systems/vic20.h"
 #include "vic20-roms.h"
-
-/* imports from cpc-ui.cc */
-#ifdef CHIPS_USE_UI
-#include "ui.h"
-void vic20ui_init(vic20_t* vic20);
-void vic20ui_discard(void);
-void vic20ui_draw(void);
-void vic20ui_exec(uint32_t frame_time_us);
-static const int ui_extra_height = 16;
-#else
-static const int ui_extra_height = 0;
+#if defined(CHIPS_USE_UI)
+    #define UI_DBG_USE_M6502
+    #include "ui.h"
+    #include "ui/ui_chip.h"
+    #include "ui/ui_memedit.h"
+    #include "ui/ui_memmap.h"
+    #include "ui/ui_dasm.h"
+    #include "ui/ui_dbg.h"
+    #include "ui/ui_m6502.h"
+    #include "ui/ui_m6522.h"
+    #include "ui/ui_m6561.h"
+    #include "ui/ui_audio.h"
+    #include "ui/ui_kbd.h"
+    #include "ui/ui_c1530.h"
+    #include "ui/ui_vic20.h"
 #endif
 
-vic20_t vic20;
+static struct {
+    vic20_t vic20;
+    uint32_t frame_time_us;
+    uint32_t ticks;
+    double exec_time_ms;
+    #ifdef CHIPS_USE_UI
+        ui_vic20_t ui_vic20;
+    #endif
+} state;
 
-/* sokol-app entry, configure application callbacks and window */
-void app_init(void);
-void app_frame(void);
-void app_input(const sapp_event*);
-void app_cleanup(void);
+#ifdef CHIPS_USE_UI
+#define BORDER_TOP (24)
+#else
+#define BORDER_TOP (8)
+#endif
+#define BORDER_LEFT (8)
+#define BORDER_RIGHT (8)
+#define BORDER_BOTTOM (16)
 
-sapp_desc sokol_main(int argc, char* argv[]) {
-    sargs_setup(&(sargs_desc){
-        .argc=argc,
-        .argv=argv,
-        .buf_size = 512 * 1024,
-    });
-    return (sapp_desc) {
-        .init_cb = app_init,
-        .frame_cb = app_frame,
-        .event_cb = app_input,
-        .cleanup_cb = app_cleanup,
-        .width = 3 * vic20_std_display_width(),
-        .height = 2 * vic20_std_display_height() + ui_extra_height,
-        .window_title = "VIC-20",
-        .ios_keyboard_resizes_canvas = true
-    };
-}
-
-/* audio-streaming callback */
+// audio-streaming callback
 static void push_audio(const float* samples, int num_samples, void* user_data) {
     (void)user_data;
     saudio_push(samples, num_samples);
 }
 
-/* get c64_desc_t struct based on joystick type */
+// get vic20_desc_t struct based on joystick type
 vic20_desc_t vic20_desc(vic20_joystick_type_t joy_type, vic20_memory_config_t mem_config, bool c1530_enabled) {
     return (vic20_desc_t) {
         .c1530_enabled = c1530_enabled,
         .joystick_type = joy_type,
         .mem_config = mem_config,
-        .pixel_buffer = gfx_framebuffer(),
-        .pixel_buffer_size = gfx_framebuffer_size(),
-        .audio_cb = push_audio,
-        .audio_sample_rate = saudio_sample_rate(),
-        .audio_volume = 0.3f,
-        .rom_char = dump_vic20_characters_901460_03_bin,
-        .rom_char_size = sizeof(dump_vic20_characters_901460_03_bin),
-        .rom_basic = dump_vic20_basic_901486_01_bin,
-        .rom_basic_size = sizeof(dump_vic20_basic_901486_01_bin),
-        .rom_kernal = dump_vic20_kernal_901486_07_bin,
-        .rom_kernal_size = sizeof(dump_vic20_kernal_901486_07_bin)
+        .audio = {
+            .callback = { .func=push_audio },
+            .sample_rate = saudio_sample_rate(),
+            .volume = 0.3f,
+        },
+        .pixel_buffer = {
+            .ptr = gfx_framebuffer(),
+            .size = gfx_framebuffer_size()
+        },
+        .roms = {
+            .chars = { .ptr=dump_vic20_characters_901460_03_bin, .size=sizeof(dump_vic20_characters_901460_03_bin) },
+            .basic = { .ptr=dump_vic20_basic_901486_01_bin, .size=sizeof(dump_vic20_basic_901486_01_bin) },
+            .kernal = { .ptr=dump_vic20_kernal_901486_07_bin, .size=sizeof(dump_vic20_kernal_901486_07_bin) },
+        },
+        #if defined(CHIPS_USE_UI)
+        .debug = ui_vic20_get_debug(&state.ui_vic20)
+        #endif
     };
 }
 
-/* one-time application init */
+#if defined(CHIPS_USE_UI)
+static void ui_draw_cb(void) {
+    ui_vic20_draw(&state.ui_vic20);
+}
+static void ui_boot_cb(vic20_t* sys) {
+    vic20_desc_t desc = vic20_desc(sys->joystick_type, sys->mem_config, sys->c1530.valid);
+    vic20_init(sys, &desc);
+}
+#endif
+
 void app_init(void) {
     gfx_init(&(gfx_desc_t){
         #ifdef CHIPS_USE_UI
         .draw_extra_cb = ui_draw,
         #endif
-        .top_offset = ui_extra_height,
-        .aspect_x = 3,
-        .aspect_y = 2
+        .border_left = BORDER_LEFT,
+        .border_right = BORDER_RIGHT,
+        .border_top = BORDER_TOP,
+        .border_bottom = BORDER_BOTTOM,
+        .emu_aspect_x = 3,
+        .emu_aspect_y = 2
     });
-    keybuf_init(5);
+    keybuf_init(&(keybuf_desc_t){ .key_delay_frames=5 });
     clock_init();
-    saudio_setup(&(saudio_desc){0});
     fs_init();
-    bool delay_input = false;
-    if (sargs_exists("file")) {
-        delay_input = true;
-        if (!fs_load_file(sargs_value("file"))) {
-            gfx_flash_error();
-        }
-    }
-    if (sargs_exists("rom")) {
-        if (!fs_load_file(sargs_value("rom"))) {
-            gfx_flash_error();
-        }
-    }
-    if (sargs_exists("prg")) {
-        if (!fs_load_base64("url.prg", sargs_value("prg"))) {
-            gfx_flash_error();
-        }
-    }
+    saudio_setup(&(saudio_desc){0});
     vic20_joystick_type_t joy_type = VIC20_JOYSTICKTYPE_NONE;
     if (sargs_exists("joystick")) {
         joy_type = VIC20_JOYSTICKTYPE_DIGITAL;
@@ -132,10 +130,38 @@ void app_init(void) {
     }
     bool c1530_enabled = sargs_exists("c1530");
     vic20_desc_t desc = vic20_desc(joy_type, mem_config, c1530_enabled);
-    vic20_init(&vic20, &desc);
+    vic20_init(&state.vic20, &desc);
     #ifdef CHIPS_USE_UI
-    vic20ui_init(&vic20);
+        ui_init(ui_draw_cb);
+        ui_vic20_init(&state.ui_vic20, &(ui_vic20_desc_t){
+            .vic20 = &state.vic20,
+            .boot_cb = ui_boot_cb,
+            .create_texture_cb = gfx_create_texture,
+            .update_texture_cb = gfx_update_texture,
+            .destroy_texture_cb = gfx_destroy_texture,
+            .dbg_keys = {
+                .cont = { .keycode = SAPP_KEYCODE_F5, .name = "F5" },
+                .stop = { .keycode = SAPP_KEYCODE_F5, .name = "F5" },
+                .step_over = { .keycode = SAPP_KEYCODE_F6, .name = "F6" },
+                .step_into = { .keycode = SAPP_KEYCODE_F7, .name = "F7" },
+                .step_tick = { .keycode = SAPP_KEYCODE_F8, .name = "F8" },
+                .toggle_breakpoint = { .keycode = SAPP_KEYCODE_F9, .name = "F9" }
+            }
+        });
     #endif
+    bool delay_input = false;
+    if (sargs_exists("file")) {
+        delay_input = true;
+        fs_start_load_file(sargs_value("file"));
+    }
+    if (sargs_exists("rom")) {
+        fs_start_load_file(sargs_value("rom"));
+    }
+    if (sargs_exists("prg")) {
+        if (!fs_load_base64("url.prg", sargs_value("prg"))) {
+            gfx_flash_error();
+        }
+    }
     if (!delay_input) {
         if (sargs_exists("input")) {
             keybuf_put(sargs_value("input"));
@@ -143,73 +169,30 @@ void app_init(void) {
     }
 }
 
-/* per frame stuff, tick the emulator, handle input, decode and draw emulator display */
-void app_frame(void) {
-    const uint32_t frame_time = clock_frame_time();
-    #ifdef CHIPS_USE_UI
-        vic20ui_exec(frame_time);
-    #else
-        vic20_exec(&vic20, frame_time);
-    #endif
-    gfx_draw(vic20_display_width(&vic20), vic20_display_height(&vic20));
-    const uint32_t load_delay_frames = 180;
-    if (fs_ptr() && clock_frame_count_60hz() > load_delay_frames) {
-        bool load_success = false;
-        if (fs_ext("txt") || fs_ext("bas")) {
-            load_success = true;
-            keybuf_put((const char*)fs_ptr());
-        }
-        else if (fs_ext("tap")) {
-            load_success = vic20_insert_tape(&vic20, fs_ptr(), fs_size());
-        }
-        else if (fs_ext("bin") || fs_ext("prg") || fs_ext("")) {
-            if (sargs_exists("rom")) {
-                load_success = vic20_insert_rom_cartridge(&vic20, fs_ptr(), fs_size());
-            }
-            else {
-                load_success = vic20_quickload(&vic20, fs_ptr(), fs_size());
-            }
-        }
-        if (load_success) {
-            if (clock_frame_count_60hz() > (load_delay_frames + 10)) {
-                gfx_flash_success();
-            }
-            if (fs_ext("tap")) {
-                vic20_tape_play(&vic20);
-            }
-            if (!sargs_exists("debug")) {
-                if (sargs_exists("input")) {
-                    keybuf_put(sargs_value("input"));
-                }
-                else if (fs_ext("tap")) {
-                    keybuf_put("LOAD\n");
-                }
-                else if (fs_ext("prg")) {
-                    keybuf_put("RUN\n");
-                }
-            }
-        }
-        else {
-            gfx_flash_error();
-        }
-        fs_free();
-    }
-    uint8_t key_code;
-    if (0 != (key_code = keybuf_get(frame_time))) {
-        /* FIXME: this is ugly */
-        vic20_joystick_type_t joy_type = vic20.joystick_type;
-        vic20.joystick_type = VIC20_JOYSTICKTYPE_NONE;
-        vic20_key_down(&vic20, key_code);
-        vic20_key_up(&vic20, key_code);
-        vic20.joystick_type = joy_type;
-    }
-}
+static void handle_file_loading(void);
+static void send_keybuf_input(void);
+static void draw_status_bar(void);
 
-/* keyboard input handling */
+// per frame stuff, tick the emulator, handle input, decode and draw emulator display
+void app_frame(void) {
+    state.frame_time_us = clock_frame_time();
+    const uint64_t exec_start_time = stm_now();
+    state.ticks = vic20_exec(&state.vic20, state.frame_time_us);
+    state.exec_time_ms = stm_ms(stm_since(exec_start_time));
+    draw_status_bar();
+    gfx_draw(vic20_display_width(&state.vic20), vic20_display_height(&state.vic20));
+    handle_file_loading();
+    send_keybuf_input();
+}
+    
 void app_input(const sapp_event* event) {
+    // accept dropped files also when ImGui grabs input
+    if (event->type == SAPP_EVENTTYPE_FILES_DROPPED) {
+        fs_start_load_dropped_file();
+    }
     #ifdef CHIPS_USE_UI
     if (ui_input(event)) {
-        /* input was handled by UI */
+        // input was handled by UI
         return;
     }
     #endif
@@ -219,15 +202,15 @@ void app_input(const sapp_event* event) {
         case SAPP_EVENTTYPE_CHAR:
             c = (int) event->char_code;
             if ((c > 0x20) && (c < 0x7F)) {
-                /* need to invert case (unshifted is upper caps, shifted is lower caps */
+                // need to invert case (unshifted is upper caps, shifted is lower caps
                 if (isupper(c)) {
                     c = tolower(c);
                 }
                 else if (islower(c)) {
                     c = toupper(c);
                 }
-                vic20_key_down(&vic20, c);
-                vic20_key_up(&vic20, c);
+                vic20_key_down(&state.vic20, c);
+                vic20_key_up(&state.vic20, c);
             }
             break;
         case SAPP_EVENTTYPE_KEY_DOWN:
@@ -253,27 +236,113 @@ void app_input(const sapp_event* event) {
             }
             if (c) {
                 if (event->type == SAPP_EVENTTYPE_KEY_DOWN) {
-                    vic20_key_down(&vic20, c);
+                    vic20_key_down(&state.vic20, c);
                 }
                 else {
-                    vic20_key_up(&vic20, c);
+                    vic20_key_up(&state.vic20, c);
                 }
             }
-            break;
-        case SAPP_EVENTTYPE_TOUCHES_BEGAN:
-            sapp_show_keyboard(true);
             break;
         default:
             break;
     }
 }
 
-/* application cleanup callback */
 void app_cleanup(void) {
+    vic20_discard(&state.vic20);
     #ifdef CHIPS_USE_UI
-    vic20ui_discard();
+        ui_vic20_discard(&state.ui_vic20);
+        ui_discard();
     #endif
-    vic20_discard(&vic20);
     saudio_shutdown();
     gfx_shutdown();
+    sargs_shutdown();
 }
+
+static void send_keybuf_input(void) {
+    uint8_t key_code;
+    if (0 != (key_code = keybuf_get(state.frame_time_us))) {
+        /* FIXME: this is ugly */
+        vic20_joystick_type_t joy_type = state.vic20.joystick_type;
+        state.vic20.joystick_type = VIC20_JOYSTICKTYPE_NONE;
+        vic20_key_down(&state.vic20, key_code);
+        vic20_key_up(&state.vic20, key_code);
+        state.vic20.joystick_type = joy_type;
+    }
+}
+
+static void handle_file_loading(void) {
+    fs_dowork();
+    const uint32_t load_delay_frames = 180;
+    if (fs_ptr() && clock_frame_count_60hz() > load_delay_frames) {
+        bool load_success = false;
+        if (fs_ext("txt") || fs_ext("bas")) {
+            load_success = true;
+            keybuf_put((const char*)fs_ptr());
+        }
+        else if (fs_ext("tap")) {
+            load_success = vic20_insert_tape(&state.vic20, fs_ptr(), fs_size());
+        }
+        else if (fs_ext("bin") || fs_ext("prg") || fs_ext("")) {
+            if (sargs_exists("rom")) {
+                load_success = vic20_insert_rom_cartridge(&state.vic20, fs_ptr(), fs_size());
+            }
+            else {
+                load_success = vic20_quickload(&state.vic20, fs_ptr(), fs_size());
+            }
+        }
+        if (load_success) {
+            if (clock_frame_count_60hz() > (load_delay_frames + 10)) {
+                gfx_flash_success();
+            }
+            if (fs_ext("tap")) {
+                vic20_tape_play(&state.vic20);
+            }
+            if (!sargs_exists("debug")) {
+                if (sargs_exists("input")) {
+                    keybuf_put(sargs_value("input"));
+                }
+                else if (fs_ext("tap")) {
+                    keybuf_put("LOAD\n");
+                }
+                else if (fs_ext("prg")) {
+                    keybuf_put("RUN\n");
+                }
+            }
+        }
+        else {
+            gfx_flash_error();
+        }
+        fs_reset();
+    }
+}
+
+static void draw_status_bar(void) {
+    const float w = sapp_widthf();
+    const float h = sapp_heightf();
+    double frame_time_ms = state.frame_time_us / 1000.0f;
+    sdtx_canvas(w, h);
+    sdtx_color3b(255, 255, 255);
+    sdtx_pos(1.0f, (h / 8.0f) - 1.5f);
+    sdtx_printf("frame:%.2fms emu:%.2fms ticks:%d", frame_time_ms, state.exec_time_ms, state.ticks);
+}
+
+sapp_desc sokol_main(int argc, char* argv[]) {
+    sargs_setup(&(sargs_desc){
+        .argc=argc,
+        .argv=argv,
+        .buf_size = 512 * 1024,
+    });
+    return (sapp_desc) {
+        .init_cb = app_init,
+        .frame_cb = app_frame,
+        .event_cb = app_input,
+        .cleanup_cb = app_cleanup,
+        .width = 3 * vic20_std_display_width() + BORDER_LEFT + BORDER_RIGHT,
+        .height = 2 * vic20_std_display_height() + BORDER_TOP + BORDER_BOTTOM,
+        .window_title = "VIC-20",
+        .icon.sokol_default = true,
+        .enable_dragndrop = true,
+    };
+}
+

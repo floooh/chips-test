@@ -10,27 +10,9 @@
 
 #define T(b) ASSERT_TRUE(b)
 
-static uint8_t PORT_A = 0;
-static uint8_t PORT_B = 0;
-
-static uint8_t in_cb(int port_id, void* user_data) {
-    (void)user_data;
-    return (port_id == Z80PIO_PORT_A) ? PORT_A : PORT_B;
-}
-
-static void out_cb(int port_id, uint8_t data, void* user_data) {
-    (void)user_data;
-    if (port_id == Z80PIO_PORT_A) { PORT_A = data; }
-    else { PORT_B = data; }
-}
-
 UTEST(z80pio, read_write_control) {
     z80pio_t pio;
-    z80pio_init(&pio, &(z80pio_desc_t){
-        .in_cb = in_cb,
-        .out_cb = out_cb,
-        .user_data = 0
-    });
+    z80pio_init(&pio);
     /* write interrupt vector 0xEE for port A */
     T(pio.reset_active);
     _z80pio_write_ctrl(&pio, Z80PIO_PORT_A, 0xEE);

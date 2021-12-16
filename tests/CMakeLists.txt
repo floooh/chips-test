@@ -1,5 +1,3 @@
-if (NOT FIPS_UWP)
-
 include_directories(../examples/roms)
 
 fips_begin_app(chips-test cmdline)
@@ -20,17 +18,7 @@ fips_begin_app(chips-test cmdline)
         z80pio-test.c
         m6502dasm-test.c
         z80dasm-test.c
-        z80-int.c
-        z80-test.c
         m6502-test.c
-        m6502-perfect.c
-    )
-    fips_dir(perfect6502)
-    fips_files(
-        netlist_6502.h
-        netlist_sim.c netlist_sim.h
-        perfect6502.c perfect6502.h
-        types.h
     )
     fips_dir(disks)
     fipsutil_embed(fdd-test.yml fdd-test.h)
@@ -41,6 +29,21 @@ fips_begin_app(z80-zex cmdline)
     fips_files(z80-zex.c)
     fips_dir(roms)
     fipsutil_embed(zex-dump.yml zex-dump.h)
+fips_end_app()
+
+fips_begin_app(z80-int cmdline)
+    fips_vs_warning_level(3)
+    fips_files(z80-int.c)
+fips_end_app()
+
+fips_begin_app(m6502-int cmdline)
+    fips_vs_warning_level(3)
+    fips_files(m6502-int.c)
+fips_end_app()
+
+fips_begin_app(z80-timing cmdline)
+    fips_vs_warning_level(3)
+    fips_files(z80-timing.c)
 fips_end_app()
 
 fips_begin_app(m6502-nestest cmdline)
@@ -58,9 +61,16 @@ fips_begin_app(m6502-wltest cmdline)
     fipsutil_embed(dump.yml dump.h)
 fips_end_app()
 
-fips_begin_app(z80-wait cmdline)
+fips_begin_app(m6502-perfect cmdline)
     fips_vs_warning_level(3)
-    fips_files(z80-wait.c)
+    fips_files(m6502-perfect.c)
+    fips_dir(perfect6502)
+    fips_files(
+        netlist_6502.h
+        netlist_sim.c netlist_sim.h
+        perfect6502.c perfect6502.h
+        types.h
+    )    
 fips_end_app()
 
 fips_begin_app(z80-fuse cmdline)
@@ -76,4 +86,7 @@ fips_begin_app(c64-bench cmdline)
     fips_deps(roms)
 fips_end_app()
 
-endif() # FIPS_UWP
+fips_begin_app(z80-test cmdline)
+    fips_vs_warning_level(3)
+    fips_files(z80-test.c)
+fips_end_app()
