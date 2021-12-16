@@ -165,8 +165,7 @@ UTEST(z80, NMI) {
     // mread
     tick(); T(pins_none());
     tick(); T(pins_mread());  T(cpu.sp == 0x00FF);
-    // FIXME: Z80_RETI should actually be set earlier!
-    tick(); T(pins_none()); T(cpu.wzl == 0x04); T(pins & Z80_RETI);
+    tick(); T(pins_none()); T(cpu.wzl == 0x04); T(0 == (pins & Z80_RETI));
     // mread
     tick(); T(pins_none());
     tick(); T(pins_mread());  T(cpu.sp == 0x0100);
@@ -335,8 +334,7 @@ UTEST(z80, NMI_during_EI) {
     // mread
     tick(); T(pins_none());
     tick(); T(pins_mread()); T(cpu.sp == 0x00FF);
-    // FIXME: Z80_RETI should actually be set earlier!
-    tick(); T(pins_none()); T(pins & Z80_RETI);
+    tick(); T(pins_none()); T(0 == (pins & Z80_RETI));
     // mread
     tick(); T(pins_none());
     tick(); T(pins_mread()); T(cpu.sp == 0x0100);
@@ -545,7 +543,7 @@ UTEST(z80, INT_IM0) {
     // RETI mread (pop)
     im0_tick(); T(pins_none());
     im0_tick(); T(pins_mread());
-    im0_tick(); T(pins_none());
+    im0_tick(); T(pins_none()); T(pins & Z80_RETI);
     // RETI mread (pop)
     im0_tick(); T(pins_none());
     im0_tick(); T(pins_mread());
@@ -623,7 +621,7 @@ UTEST(z80, INT_IM1) {
     // RETI mread (pop)
     tick(); T(pins_none());
     tick(); T(pins_mread());
-    tick(); T(pins_none());
+    tick(); T(pins_none()); T(pins & Z80_RETI);
     // RETI mread (pop)
     tick(); T(pins_none());
     tick(); T(pins_mread());
@@ -715,7 +713,7 @@ UTEST(z80, INT_IM2) {
     // RETI mread (pop)
     tick(); T(pins_none());
     tick(); T(pins_mread());
-    tick(); T(pins_none());
+    tick(); T(pins_none()); T(pins & Z80_RETI);
     // RETI mread (pop)
     tick(); T(pins_none());
     tick(); T(pins_mread());
