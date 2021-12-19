@@ -38,6 +38,7 @@ void gfx_update_texture(void* h, void* data, int data_byte_size);
 void gfx_destroy_texture(void* h);
 void gfx_flash_success(void);
 void gfx_flash_error(void);
+void gfx_show_audio_off(bool b);
 
 #ifdef __cplusplus
 } /* extern "C" */
@@ -49,9 +50,11 @@ void gfx_flash_error(void);
 #include "sokol_gfx.h"
 #include "sokol_app.h"
 #include "sokol_debugtext.h"
+#include "sokol_gl.h"
 #include "sokol_glue.h"
 #include "shaders.glsl.h"
 #include <assert.h>
+#include <stdlib.h> // malloc/free
 
 #define _GFX_DEF(v,def) (v?v:def)
 
@@ -83,8 +86,15 @@ typedef struct {
         sg_pass_action pass_action;
         bool rot90;
     } display;
+    struct {
+        sg_image img;
+        sgl_pipeline pip;
+        int width;
+        int height;
+    } icon;
     int flash_success_count;
     int flash_error_count;
+    bool audio_off;
     
     uint32_t rgba8_buffer[GFX_MAX_FB_WIDTH * GFX_MAX_FB_HEIGHT];
     void (*draw_extra_cb)(void);
@@ -117,6 +127,70 @@ static const float gfx_verts_flipped_rot[] = {
     1.0f, 1.0f, 0.0f, 0.0f
 };
 
+// a bit-packed speaker-off icon
+static const struct {
+    int width;
+    int height;
+    int stride;
+    uint8_t pixels[350];
+} speaker_icon = {
+    .width = 50,
+    .height = 50,
+    .stride = 7,
+    .pixels = {
+        0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+        0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+        0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+        0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+        0x80,0x00,0x00,0x00,0x00,0x00,0x00,
+        0xC0,0x01,0x00,0x00,0x00,0x00,0x00,
+        0xE0,0x03,0x40,0x00,0x00,0x00,0x00,
+        0xF0,0x07,0x60,0x00,0x80,0x03,0x00,
+        0xE0,0x0F,0x70,0x00,0xC0,0x07,0x00,
+        0xC0,0x1F,0x78,0x00,0xE0,0x07,0x00,
+        0x80,0x3F,0x78,0x00,0xE0,0x0F,0x00,
+        0x00,0x7F,0x78,0x00,0xC0,0x1F,0x00,
+        0x00,0xFE,0x70,0x00,0x80,0x1F,0x00,
+        0x00,0xFC,0x61,0x00,0x8E,0x3F,0x00,
+        0x00,0xF8,0x43,0x00,0x1F,0x3F,0x00,
+        0x00,0xF0,0x07,0x80,0x1F,0x7E,0x00,
+        0x00,0xF0,0x0F,0x80,0x3F,0x7E,0x00,
+        0x00,0xF8,0x1F,0x00,0x3F,0x7C,0x00,
+        0xF0,0xFF,0x3F,0x00,0x7E,0xFC,0x00,
+        0xF8,0xFF,0x7F,0x00,0x7E,0xFC,0x00,
+        0xFC,0x7F,0xFE,0x00,0xFC,0xF8,0x00,
+        0xFC,0x3F,0xFC,0x01,0xFC,0xF8,0x00,
+        0xFC,0x1F,0xFC,0x03,0xF8,0xF8,0x00,
+        0x7C,0x00,0xFC,0x07,0xF8,0xF8,0x00,
+        0x7C,0x00,0xFC,0x0F,0xF8,0xF8,0x00,
+        0x7C,0x00,0xFC,0x1F,0xF8,0xF8,0x00,
+        0x7C,0x00,0xFC,0x3F,0xF8,0xF8,0x00,
+        0xFC,0x1F,0x7C,0x7F,0xF8,0xF8,0x00,
+        0xFC,0x3F,0x7C,0xFE,0xF0,0xF8,0x00,
+        0xFC,0x7F,0x7C,0xFC,0xE1,0xF8,0x00,
+        0xF8,0xFF,0x7C,0xF8,0x03,0xFC,0x00,
+        0xE0,0xFF,0x7D,0xF0,0x07,0xFC,0x00,
+        0x00,0xF8,0x7F,0xE0,0x0F,0x7C,0x00,
+        0x00,0xF0,0x7F,0xC0,0x1F,0x7C,0x00,
+        0x00,0xE0,0x7F,0x80,0x3F,0x7C,0x00,
+        0x00,0xC0,0x7F,0x00,0x7F,0x38,0x00,
+        0x00,0x80,0x7F,0x00,0xFE,0x30,0x00,
+        0x00,0x00,0x7F,0x00,0xFC,0x01,0x00,
+        0x00,0x00,0x7E,0x00,0xF8,0x03,0x00,
+        0x00,0x00,0x7C,0x00,0xF0,0x07,0x00,
+        0x00,0x00,0x78,0x00,0xE0,0x0F,0x00,
+        0x00,0x00,0x70,0x00,0xC0,0x1F,0x00,
+        0x00,0x00,0x60,0x00,0x80,0x3F,0x00,
+        0x00,0x00,0x40,0x00,0x00,0x1F,0x00,
+        0x00,0x00,0x00,0x00,0x00,0x0E,0x00,
+        0x00,0x00,0x00,0x00,0x00,0x04,0x00,
+        0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+        0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+        0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+        0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+    }
+};
+
 void gfx_flash_success(void) {
     assert(gfx.valid);
     gfx.flash_success_count = 20;
@@ -125,6 +199,11 @@ void gfx_flash_success(void) {
 void gfx_flash_error(void) {
     assert(gfx.valid);
     gfx.flash_error_count = 20;
+}
+
+void gfx_show_audio_off(bool b) {
+    assert(gfx.valid);
+    gfx.audio_off = b;
 }
 
 uint32_t* gfx_framebuffer(void) {
@@ -173,12 +252,18 @@ static void gfx_init_images_and_pass(void) {
 
 void gfx_init(const gfx_desc_t* desc) {
     sg_setup(&(sg_desc){
-        .buffer_pool_size = 8,
-        .image_pool_size = 128,
-        .shader_pool_size = 4,
-        .pipeline_pool_size = 4,
+        .buffer_pool_size = 16,
+        .image_pool_size = 16,
+        .shader_pool_size = 16,
+        .pipeline_pool_size = 16,
         .context_pool_size = 2,
         .context = sapp_sgcontext()
+    });
+    sgl_setup(&(sgl_desc_t){
+        .max_vertices = 16,
+        .max_commands = 16,
+        .context_pool_size = 1,
+        .pipeline_pool_size = 16,
     });
     sdtx_setup(&(sdtx_desc_t){
         .context_pool_size = 1,
@@ -239,6 +324,55 @@ void gfx_init(const gfx_desc_t* desc) {
     });
     gfx.display.rot90 = desc->rot90;
     gfx.draw_extra_cb = desc->draw_extra_cb;
+    
+    // create an unpacked speaker icon image and sokol-gl pipeline
+    {
+        gfx.icon.width = speaker_icon.width;
+        gfx.icon.height = speaker_icon.height;
+        const size_t pixel_data_size = gfx.icon.width * gfx.icon.height * sizeof(uint32_t);
+        uint32_t* pixels = malloc(pixel_data_size);
+        assert(pixels);
+        const uint8_t* src = speaker_icon.pixels;
+        uint32_t* dst = pixels;
+        for (int y = 0; y < gfx.icon.height; y++) {
+            uint8_t bits = 0;
+            for (int x = 0; x < gfx.icon.width; x++) {
+                if ((x & 7) == 0) {
+                    bits = *src++;
+                }
+                if (bits & 1) {
+                    *dst++ = 0xFFFFFFFF;
+                }
+                else {
+                    *dst++ = 0x00FFFFFF;
+                }
+                bits >>= 1;
+            }
+        }
+        assert(src == speaker_icon.pixels + speaker_icon.stride * gfx.icon.height);
+        assert(dst == pixels + (gfx.icon.width * gfx.icon.height));
+        gfx.icon.img = sg_make_image(&(sg_image_desc){
+            .pixel_format = SG_PIXELFORMAT_RGBA8,
+            .width = gfx.icon.width,
+            .height = gfx.icon.height,
+            .min_filter = SG_FILTER_LINEAR,
+            .mag_filter = SG_FILTER_LINEAR,
+            .data.subimage[0][0] = { .ptr=pixels, .size=pixel_data_size }
+        });
+        free(pixels);
+    
+        // sokol-gl pipeline for alpha-blended rendering
+        gfx.icon.pip = sgl_make_pipeline(&(sg_pipeline_desc){
+            .colors[0] = {
+                .write_mask = SG_COLORMASK_RGB,
+                .blend = {
+                    .enabled = true,
+                    .src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
+                    .dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+                }
+            }
+        });
+    }
 }
 
 /* apply a viewport rectangle to preserve the emulator's aspect ratio,
@@ -274,11 +408,36 @@ static void apply_viewport(int canvas_width, int canvas_height) {
 
 void gfx_draw(int emu_width, int emu_height) {
     assert(gfx.valid);
+    const int w = sapp_width();
+    const int h = sapp_height();
+    
     // check if emulator framebuffer size has changed, need to create new backing texture
     if ((emu_width != gfx.emufb.width) || (emu_height != gfx.emufb.height)) {
         gfx.emufb.width = emu_width;
         gfx.emufb.height = emu_height;
         gfx_init_images_and_pass();
+    }
+    
+    // if audio is off, draw speaker icon via sokol-gl
+    if (gfx.audio_off) {
+        const float x0 = w - (float)gfx.icon.width - 10.0f;
+        const float x1 = x0 + (float)gfx.icon.width;
+        const float y0 = 10.0f;
+        const float y1 = y0 + (float)gfx.icon.height;
+        const float alpha = (sapp_frame_count() & 0x20) ? 0.0f : 1.0f;
+        sgl_defaults();
+        sgl_load_pipeline(gfx.icon.pip);
+        sgl_enable_texture();
+        sgl_texture(gfx.icon.img);
+        sgl_matrix_mode_projection();
+        sgl_ortho(0.0f, (float)w, (float)h, 0.0f, -1.0f, +1.0f);
+        sgl_c4f(1.0f, 1.0f, 1.0f, alpha);
+        sgl_begin_quads();
+        sgl_v2f_t2f(x0, y0, 0.0f, 0.0f);
+        sgl_v2f_t2f(x1, y0, 1.0f, 0.0f);
+        sgl_v2f_t2f(x1, y1, 1.0f, 1.0f);
+        sgl_v2f_t2f(x0, y1, 0.0f, 1.0f);
+        sgl_end();
     }
 
     // copy emulator pixel data into emulator framebuffer texture
@@ -314,8 +473,6 @@ void gfx_draw(int emu_width, int emu_height) {
     }
 
     // draw the final pass with linear filtering
-    int w = (int) sapp_width();
-    int h = (int) sapp_height();
     sg_begin_default_pass(&gfx.display.pass_action, w, h);
     apply_viewport(w, h);
     sg_apply_pipeline(gfx.display.pip);
@@ -326,6 +483,7 @@ void gfx_draw(int emu_width, int emu_height) {
     sg_draw(0, 4, 1);
     sg_apply_viewport(0, 0, w, h, true);
     sdtx_draw();
+    sgl_draw();
     if (gfx.draw_extra_cb) {
         gfx.draw_extra_cb();
     }
@@ -335,6 +493,7 @@ void gfx_draw(int emu_width, int emu_height) {
 
 void gfx_shutdown() {
     assert(gfx.valid);
+    sgl_shutdown();
     sdtx_shutdown();
     sg_shutdown();
 }
