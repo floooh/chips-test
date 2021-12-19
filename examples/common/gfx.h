@@ -38,7 +38,6 @@ void gfx_update_texture(void* h, void* data, int data_byte_size);
 void gfx_destroy_texture(void* h);
 void gfx_flash_success(void);
 void gfx_flash_error(void);
-void gfx_show_audio_off(bool b);
 
 #ifdef __cplusplus
 } /* extern "C" */
@@ -51,6 +50,7 @@ void gfx_show_audio_off(bool b);
 #include "sokol_app.h"
 #include "sokol_debugtext.h"
 #include "sokol_gl.h"
+#include "sokol_audio.h"
 #include "sokol_glue.h"
 #include "shaders.glsl.h"
 #include <assert.h>
@@ -94,7 +94,6 @@ typedef struct {
     } icon;
     int flash_success_count;
     int flash_error_count;
-    bool audio_off;
     
     uint32_t rgba8_buffer[GFX_MAX_FB_WIDTH * GFX_MAX_FB_HEIGHT];
     void (*draw_extra_cb)(void);
@@ -199,11 +198,6 @@ void gfx_flash_success(void) {
 void gfx_flash_error(void) {
     assert(gfx.valid);
     gfx.flash_error_count = 20;
-}
-
-void gfx_show_audio_off(bool b) {
-    assert(gfx.valid);
-    gfx.audio_off = b;
 }
 
 uint32_t* gfx_framebuffer(void) {
@@ -327,16 +321,21 @@ void gfx_init(const gfx_desc_t* desc) {
     
     // create an unpacked speaker icon image and sokol-gl pipeline
     {
-        gfx.icon.width = speaker_icon.width;
-        gfx.icon.height = speaker_icon.height;
+        // textures must be 2^n for WebGL
+        gfx.icon.width = 64;
+        gfx.icon.height = 64;
+        assert(gfx.icon.width >= speaker_icon.width);
+        assert(gfx.icon.height >= speaker_icon.height);
         const size_t pixel_data_size = gfx.icon.width * gfx.icon.height * sizeof(uint32_t);
         uint32_t* pixels = malloc(pixel_data_size);
         assert(pixels);
+        memset(pixels, 0, pixel_data_size);
         const uint8_t* src = speaker_icon.pixels;
         uint32_t* dst = pixels;
-        for (int y = 0; y < gfx.icon.height; y++) {
+        for (int y = 0; y < speaker_icon.height; y++) {
             uint8_t bits = 0;
-            for (int x = 0; x < gfx.icon.width; x++) {
+            dst = pixels + (y * gfx.icon.width);
+            for (int x = 0; x < speaker_icon.width; x++) {
                 if ((x & 7) == 0) {
                     bits = *src++;
                 }
@@ -349,8 +348,8 @@ void gfx_init(const gfx_desc_t* desc) {
                 bits >>= 1;
             }
         }
-        assert(src == speaker_icon.pixels + speaker_icon.stride * gfx.icon.height);
-        assert(dst == pixels + (gfx.icon.width * gfx.icon.height));
+        assert(src == speaker_icon.pixels + speaker_icon.stride * speaker_icon.height);
+        assert(dst <= pixels + (gfx.icon.width * gfx.icon.height));
         gfx.icon.img = sg_make_image(&(sg_image_desc){
             .pixel_format = SG_PIXELFORMAT_RGBA8,
             .width = gfx.icon.width,
@@ -419,19 +418,19 @@ void gfx_draw(int emu_width, int emu_height) {
     }
     
     // if audio is off, draw speaker icon via sokol-gl
-    if (gfx.audio_off) {
+    if (saudio_suspended()) {
         const float x0 = w - (float)gfx.icon.width - 10.0f;
         const float x1 = x0 + (float)gfx.icon.width;
         const float y0 = 10.0f;
         const float y1 = y0 + (float)gfx.icon.height;
         const float alpha = (sapp_frame_count() & 0x20) ? 0.0f : 1.0f;
         sgl_defaults();
-        sgl_load_pipeline(gfx.icon.pip);
         sgl_enable_texture();
         sgl_texture(gfx.icon.img);
         sgl_matrix_mode_projection();
         sgl_ortho(0.0f, (float)w, (float)h, 0.0f, -1.0f, +1.0f);
         sgl_c4f(1.0f, 1.0f, 1.0f, alpha);
+        sgl_load_pipeline(gfx.icon.pip);
         sgl_begin_quads();
         sgl_v2f_t2f(x0, y0, 0.0f, 0.0f);
         sgl_v2f_t2f(x1, y0, 1.0f, 0.0f);
