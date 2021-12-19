@@ -4,4 +4,7 @@ fips_end_app()
 
 fips_begin_app(png2bits cmdline)
     fips_files(png2bits.c getopt.c getopt.h stb_image.h)
+    if (FIPS_LINUX)
+        fips_libs(m)
+    endif()
 fips_end_app()
