@@ -322,20 +322,18 @@ void gfx_init(const gfx_desc_t* desc) {
     // create an unpacked speaker icon image and sokol-gl pipeline
     {
         // textures must be 2^n for WebGL
-        gfx.icon.width = 64;
-        gfx.icon.height = 64;
-        assert(gfx.icon.width >= speaker_icon.width);
-        assert(gfx.icon.height >= speaker_icon.height);
+        gfx.icon.width = speaker_icon.width;
+        gfx.icon.height = speaker_icon.height;
         const size_t pixel_data_size = gfx.icon.width * gfx.icon.height * sizeof(uint32_t);
         uint32_t* pixels = malloc(pixel_data_size);
         assert(pixels);
         memset(pixels, 0, pixel_data_size);
         const uint8_t* src = speaker_icon.pixels;
         uint32_t* dst = pixels;
-        for (int y = 0; y < speaker_icon.height; y++) {
+        for (int y = 0; y < gfx.icon.height; y++) {
             uint8_t bits = 0;
             dst = pixels + (y * gfx.icon.width);
-            for (int x = 0; x < speaker_icon.width; x++) {
+            for (int x = 0; x < gfx.icon.width; x++) {
                 if ((x & 7) == 0) {
                     bits = *src++;
                 }
@@ -356,6 +354,8 @@ void gfx_init(const gfx_desc_t* desc) {
             .height = gfx.icon.height,
             .min_filter = SG_FILTER_LINEAR,
             .mag_filter = SG_FILTER_LINEAR,
+            .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
+            .wrap_v = SG_WRAP_CLAMP_TO_EDGE,
             .data.subimage[0][0] = { .ptr=pixels, .size=pixel_data_size }
         });
         free(pixels);
