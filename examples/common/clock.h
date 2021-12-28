@@ -8,28 +8,25 @@ uint32_t clock_frame_count_60hz(void);
 
 /*== IMPLEMENTATION ==========================================================*/
 #ifdef COMMON_IMPL
-#include "sokol_time.h"
+#include "sokol_app.h"
 #include <assert.h>
 
 typedef struct {
     bool valid;
     uint64_t cur_time;
-    uint64_t last_time_stamp;
 } clock_state_t;
 static clock_state_t clck;
 
 void clock_init(void) {
-    stm_setup();
     clck = (clock_state_t) {
         .valid = true,
         .cur_time = 0,
-        .last_time_stamp = stm_now(),
     };
 }
 
 uint32_t clock_frame_time(void) {
     assert(clck.valid);
-    uint32_t frame_time_us = (uint32_t) stm_us(stm_laptime(&clck.last_time_stamp));
+    uint32_t frame_time_us = (uint32_t) (sapp_frame_duration() * 1000000.0);
     // prevent death-spiral on host systems that are too slow to emulate
     // in real time, or during long frames (e.g. debugging)
     if (frame_time_us > 24000) {

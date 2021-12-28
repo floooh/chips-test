@@ -28,6 +28,7 @@ prof_stats_t prof_stats(prof_bucket_type_t type);
 /*== IMPLEMENTATION ==========================================================*/
 #ifdef COMMON_IMPL
 #include <assert.h>
+#include "sokol_time.h"
 
 #define PROF_BUCKET_SIZE (128)
 
@@ -74,6 +75,7 @@ static float prof_ring_get(prof_ring_t* ring, int index) {
 
 // public API functions
 void prof_init(void) {
+    stm_setup();
     memset(&prof, 0, sizeof(prof));
     prof.valid = true;
 }

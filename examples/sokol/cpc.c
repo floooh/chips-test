@@ -297,9 +297,7 @@ static void handle_file_loading(void) {
 }
 
 static void draw_status_bar(void) {
-    prof_push(PROF_FRAME, (float)state.frame_time_us * 0.001f);
     prof_push(PROF_EMU, (float)state.emu_time_ms);
-    prof_stats_t frame_stats = prof_stats(PROF_FRAME);
     prof_stats_t emu_stats = prof_stats(PROF_EMU);
     
     const uint32_t text_color = 0xFFFFFFFF;
@@ -349,7 +347,7 @@ static void draw_status_bar(void) {
     sdtx_font(0);
     sdtx_color1i(text_color);
     sdtx_pos(0.0f, 1.5f);
-    sdtx_printf("frame:%.2fms emu:%.2fms (min:%.2fms max:%.2fms) ticks:%d", frame_stats.avg_val, emu_stats.avg_val, emu_stats.min_val, emu_stats.max_val, state.ticks);
+    sdtx_printf("frame:%.2fms emu:%.2fms (min:%.2fms max:%.2fms) ticks:%d", (float)state.frame_time_us * 0.001f, emu_stats.avg_val, emu_stats.min_val, emu_stats.max_val, state.ticks);
 }
 
 sapp_desc sokol_main(int argc, char* argv[]) {
