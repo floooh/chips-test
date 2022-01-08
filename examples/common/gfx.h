@@ -246,8 +246,8 @@ static void gfx_init_images_and_pass(void) {
 
 void gfx_init(const gfx_desc_t* desc) {
     sg_setup(&(sg_desc){
-        .buffer_pool_size = 16,
-        .image_pool_size = 16,
+        .buffer_pool_size = 32,
+        .image_pool_size = 128,
         .shader_pool_size = 16,
         .pipeline_pool_size = 16,
         .context_pool_size = 2,
