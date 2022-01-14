@@ -9,6 +9,8 @@ from string import Template
 
 from mod import log, util, project
 
+BuildConfig = 'wasm-ninja-release'
+
 systems = [
     'kc852', 'kc852-ui',
     'kc853', 'kc853-ui',
@@ -187,8 +189,6 @@ items = [
     { 'type':'game', 'title':"Demolation (Z1013)", 'system':'z1013', 'url':'z1013.html?file=z1013/demolation.z80', 'img':'z1013/demolation_z1013.jpg', 'note':'' },
     { 'type':'test', 'title':"Pacman (Arcade)", 'system':'pacman', 'url':'pacman.html', 'img':'', 'note':'' },
 ]
-GitHubSamplesURL = 'https://github.com/floooh/chips-test/master/examples'
-BuildConfig = 'wasm-ninja-release'
 
 #-------------------------------------------------------------------------------
 def cwebp(src_path, dst_path):
@@ -202,9 +202,7 @@ def to_webp_ext(path):
 
 #-------------------------------------------------------------------------------
 def deploy_webpage(fips_dir, proj_dir, webpage_dir) :
-    """builds the final webpage under under fips-deploy/chips-webpage"""
-    ws_dir = util.get_workspace_dir(fips_dir)
-    emsc_deploy_dir = '{}/fips-deploy/chips-test/{}'.format(ws_dir, BuildConfig)
+    emsc_deploy_dir = util.get_deploy_dir(fips_dir, 'chips-test', BuildConfig)
 
     # build the thumbnail gallery
     content = ''
@@ -255,8 +253,7 @@ def deploy_webpage(fips_dir, proj_dir, webpage_dir) :
                 shutil.copy(src_path, '{}/'.format(webpage_dir))
         with open(proj_dir + '/webpage/emsc.html', 'r') as f :
             templ = Template(f.read())
-        src_url = GitHubSamplesURL + name
-        html = templ.safe_substitute(name=system, prog=system, source=src_url)
+        html = templ.safe_substitute(name=system, prog=system)
         with open('{}/{}.html'.format(webpage_dir, system), 'w') as f :
             f.write(html)
 
@@ -281,8 +278,8 @@ def deploy_webpage(fips_dir, proj_dir, webpage_dir) :
 #-------------------------------------------------------------------------------
 def build_deploy_webpage(fips_dir, proj_dir, rebuild) :
     # if webpage dir exists, clear it first
-    ws_dir = util.get_workspace_dir(fips_dir)
-    webpage_dir = '{}/fips-deploy/chips-webpage'.format(ws_dir)
+    proj_build_dir = util.get_deploy_root_dir(fips_dir, 'chips-test')
+    webpage_dir = '{}/webpage'.format(proj_build_dir)
     if rebuild :
         if os.path.isdir(webpage_dir) :
             shutil.rmtree(webpage_dir)
@@ -300,8 +297,8 @@ def build_deploy_webpage(fips_dir, proj_dir, rebuild) :
 
 #-------------------------------------------------------------------------------
 def serve_webpage(fips_dir, proj_dir) :
-    ws_dir = util.get_workspace_dir(fips_dir)
-    webpage_dir = '{}/fips-deploy/chips-webpage'.format(ws_dir)
+    proj_build_dir = util.get_deploy_root_dir(fips_dir, 'chips-test')
+    webpage_dir = '{}/webpage'.format(proj_build_dir)
     p = util.get_host_platform()
     if p == 'osx' :
         try :
