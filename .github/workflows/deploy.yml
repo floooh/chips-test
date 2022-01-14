@@ -11,7 +11,7 @@ jobs:
         run:  python fips emsdk install latest
       - name: build
         run: |
-          python set local on
+          python fips set local on
           python fips webpage build
       - name: upload-artifact
         uses: actions/upload-artifact@v2
