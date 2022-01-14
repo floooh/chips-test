@@ -22,4 +22,18 @@ jobs:
           name: webpage
           path: fips-files/deploy/webpage
           retention-days: 1
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          repository: floooh/tiny8bit
+          ssh-key: ${{ secrets.GHACTION_PUSH }}
+      - uses: actions/download-artifact@v2
+        with:
+          name: webpage
+      - name:
+        run: ls -R
+
 
