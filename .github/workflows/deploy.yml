@@ -20,7 +20,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with: 
           name: webpage
-          path: fips-files/deploy/webpage
+          path: fips-files/deploy/chips-webpage
           retention-days: 1
   deploy:
     needs: build
