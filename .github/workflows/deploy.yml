@@ -15,7 +15,8 @@ jobs:
           python fips webpage build
       - name: upload-artifact
         uses: actions/upload-artifact@v2
-        with: webpage
-        path: fips-files/deploy/webpage
-        retention-days: 1
+        with: 
+          name: webpage
+          path: fips-files/deploy/webpage
+          retention-days: 1
 
