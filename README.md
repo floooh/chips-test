@@ -20,7 +20,7 @@ cmake version 3.x
 NOTE: on Linux, additional dev packages need to be present for X11, GL and ALSA development.
 
 Create a 'workspace' directory (which will be populated with additional dependencies),
-clons and cd into ```chips-test```:
+clone and cd into ```chips-test```:
 
 ```bash
 > mkdir workspace
