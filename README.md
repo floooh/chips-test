@@ -31,6 +31,7 @@ clone and cd into ```chips-test```:
 
 Finally, build and run one of the emulators (for instance the Amstrad CPC):
 
+```bash
 > ./fips build
 > ./fips list targets
 > ./fips run cpc
