@@ -8,17 +8,32 @@ Live demos of the example emulators: https://floooh.github.io/tiny8bit
 
 To build and run on Windows, OSX or Linux (exact versions of tools shouldn't matter):
 
+Check prerequisites:
+
 ```bash
 > python --version
-Python 2.7.10
+Python 2.x or 3.x
 > cmake --version
-cmake version 3.10.0
+cmake version 3.x
+```
+
+NOTE: on Linux, additional dev packages need to be present for X11, GL and ALSA development.
+
+Create a 'workspace' directory (which will be populated with additional dependencies),
+clons and cd into ```chips-test```:
+
+```bash
+> mkdir workspace
+> cd workspace
+> git clone https://github.com/floooh/chips-test
+> cd chips-test
+```
+
+Finally, build and run one of the emulators (for instance the Amstrad CPC):
+
 > ./fips build
-...
 > ./fips list targets
-...
-> ./fips run [target]
-...
+> ./fips run cpc
 ```
 
 To get optimized builds for performance testing:
