@@ -9,7 +9,6 @@
 #define SOKOL_IMGUI_IMPL
 #include "sokol_imgui.h"
 
-static uint64_t last_time;
 static ui_draw_t ui_draw_cb;
 
 void ui_init(ui_draw_t draw_cb) {
@@ -27,7 +26,7 @@ void ui_discard(void) {
 }
 
 void ui_draw(void) {
-    simgui_new_frame(sapp_width(), sapp_height(), stm_sec(stm_laptime(&last_time)));
+    simgui_new_frame({sapp_width(), sapp_height(), sapp_frame_duration(), sapp_dpi_scale() });
     if (ui_draw_cb) {
         ui_draw_cb();
     }
