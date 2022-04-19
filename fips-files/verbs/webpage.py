@@ -107,6 +107,7 @@ items = [
     { 'type':'demo', 'title':'One-Der (C64)',       'system':'c64',     'url':'c64.html?file=c64/oneder_oxyron.prg', 'img':'c64/oneder_oxyron.jpg', 'note':'by Oxyron'},
     { 'type':'demo', 'title':'PPY (VIC20)',         'system':'vic20',   'url':'vic20.html?file=vic20/proxima_ppy.prg&exp=maxram', 'img':'vic20/proxima_ppy.jpg', 'note':'by Proxima'},
     { 'type':'demo', 'title':'Muna.Paluu (VIC20)',  'system':'vic20',   'url':'vic20.html?file=vic20/munakois.prg&exp=ram8k', 'img':'vic20/munakois.jpg', 'note':'by Dekadence'},
+    { 'type':'demo', 'title':'Quantum Leap (KC85/4)','system':'kc854',  'url':'kc854.html?file=kc85/quantumleap.kcc', 'img':'kc85/quantumleap.jpg', 'note':'by Moods Plateau'},
     { 'type':'demo', 'title':'Serious (KC85/4)',    'system':'kc854',   'url':'kc854.html?file=kc85/serious.kcc', 'img':'kc85/serious.jpg', 'note':'by Moods Plateau'},
     { 'type':'demo', 'title':'Twenty (KC85/4)',     'system':'kc854',   'url':'kc854.html?file=kc85/twenty.kcc', 'img':'kc85/twenty.jpg', 'note':'by Moods Plateau'},
     { 'type':'demo', 'title':'Ancient Civilizations (KC85/4)','system':'kc854',  'url':'kc854.html?file=kc85/ancient.kcc', 'img':'kc85/ancient.jpg', 'note':'by Moods Plateau'},
@@ -303,21 +304,21 @@ def serve_webpage(fips_dir, proj_dir) :
     if p == 'osx' :
         try :
             subprocess.call(
-                'open http://localhost:8000 ; python {}/mod/httpserver.py'.format(fips_dir),
+                'open http://localhost:8000 ; python3 {}/mod/httpserver.py'.format(fips_dir),
                 cwd = webpage_dir, shell=True)
         except KeyboardInterrupt :
             pass
     elif p == 'win':
         try:
             subprocess.call(
-                'cmd /c start http://localhost:8000 && python {}/mod/httpserver.py'.format(fips_dir),
+                'cmd /c start http://localhost:8000 && python3 {}/mod/httpserver.py'.format(fips_dir),
                 cwd = webpage_dir, shell=True)
         except KeyboardInterrupt:
             pass
     elif p == 'linux':
         try:
             subprocess.call(
-                'xdg-open http://localhost:8000; python {}/mod/httpserver.py'.format(fips_dir),
+                'xdg-open http://localhost:8000; python3 {}/mod/httpserver.py'.format(fips_dir),
                 cwd = webpage_dir, shell=True)
         except KeyboardInterrupt:
             pass
