@@ -1,5 +1,7 @@
 #pragma once
 #include "sokol_app.h"
+#include "sokol_gfx.h"
+#include "sokol_imgui.h"
 
 #ifdef __cplusplus
 extern "C" {

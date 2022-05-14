@@ -130,12 +130,12 @@ void app_init(void) {
             .update_texture_cb = gfx_update_texture,
             .destroy_texture_cb = gfx_destroy_texture,
             .dbg_keys = {
-                .cont = { .keycode = SAPP_KEYCODE_F5, .name = "F5" },
-                .stop = { .keycode = SAPP_KEYCODE_F5, .name = "F5" },
-                .step_over = { .keycode = SAPP_KEYCODE_F6, .name = "F6" },
-                .step_into = { .keycode = SAPP_KEYCODE_F7, .name = "F7" },
-                .step_tick = { .keycode = SAPP_KEYCODE_F8, .name = "F8" },
-                .toggle_breakpoint = { .keycode = SAPP_KEYCODE_F9, .name = "F9" }
+                .cont = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F5), .name = "F5" },
+                .stop = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F5), .name = "F5" },
+                .step_over = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F6), .name = "F6" },
+                .step_into = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F7), .name = "F7" },
+                .step_tick = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F8), .name = "F8" },
+                .toggle_breakpoint = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F9), .name = "F9" }
             }
         });
     #endif
