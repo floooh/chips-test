@@ -190,7 +190,7 @@ static void fs_fetch_callback(const sfetch_response_t* response) {
     assert(fs.valid);
     if (response->fetched) {
         fs.ptr = fs.buf;
-        fs.size = response->fetched_size;
+        fs.size = response->data.size;
         assert(fs.size < sizeof(fs.buf));
         // in case it's a text file, zero-terminate the data
         fs.buf[fs.size] = 0;
@@ -202,7 +202,7 @@ static void fs_fetch_callback(const sfetch_response_t* response) {
 static void fs_emsc_dropped_file_callback(const sapp_html5_fetch_response* response) {
     if (response->succeeded) {
         fs.ptr = fs.buf;
-        fs.size = response->fetched_size;
+        fs.size = response->data.size;
         assert(fs.size < sizeof(fs.buf));
         // in case it's a text file, zero-terminate the data
         fs.buf[fs.size] = 0;
@@ -218,8 +218,7 @@ void fs_start_load_file(const char* path) {
     sfetch_send(&(sfetch_request_t){
         .path = path,
         .callback = fs_fetch_callback,
-        .buffer_ptr = fs.buf,
-        .buffer_size = FS_MAX_SIZE,
+        .buffer = { .ptr = fs.buf, .size = FS_MAX_SIZE },
     });
 }
 
@@ -232,8 +231,7 @@ void fs_start_load_dropped_file(void) {
         sapp_html5_fetch_dropped_file(&(sapp_html5_fetch_request){
             .dropped_file_index = 0,
             .callback = fs_emsc_dropped_file_callback,
-            .buffer_ptr = fs.buf,
-            .buffer_size = FS_MAX_SIZE
+            .buffer = { .ptr = fs.buf, .size = FS_MAX_SIZE }
         });
     #else
         fs_start_load_file(path);
