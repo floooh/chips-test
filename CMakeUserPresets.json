@@ -1,0 +1,51 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "default",
+      "displayName": "wasm-ninja-debug",
+      "binaryDir": "/Users/floh/projects/chips-test/fips-files/build/chips-test/wasm-ninja-debug",
+      "generator": "Ninja",
+      "toolchainFile": "/Users/floh/projects/fips/cmake-toolchains/emscripten.toolchain.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "FIPS_CONFIG": "wasm-ninja-debug",
+        "FIPS_LOCAL_BUILD": "ON",
+        "FIPS_EMSCRIPTEN_USE_WASM": {
+          "type": "BOOL",
+          "value": "ON"
+        },
+        "FIPS_EMSCRIPTEN_MEM_INIT_METHOD": "0",
+        "FIPS_EMSCRIPTEN_USE_EMMALLOC": {
+          "type": "BOOL",
+          "value": "ON"
+        },
+        "FIPS_EMSCRIPTEN_RELATIVE_SHELL_HTML": "examples/common/shell.html",
+        "FIPS_AUTO_IMPORT": "OFF",
+        "EMSCRIPTEN_ROOT": "/Users/floh/projects/fips-sdks/emsdk/upstream/emscripten"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "default",
+      "configurePreset": "default",
+      "configuration": "Debug"
+    },
+    {
+      "name": "debug",
+      "configurePreset": "default",
+      "configuration": "Debug"
+    },
+    {
+      "name": "release",
+      "configurePreset": "default",
+      "configuration": "Release"
+    }
+  ]
+}

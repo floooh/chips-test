@@ -5,7 +5,6 @@ build_tool: vscode
 build_type: Release
 cmake-toolchain: emscripten.toolchain.cmake
 defines:
-    FIPS_NO_ASSERTS_IN_RELEASE: ON
     FIPS_EMSCRIPTEN_USE_WASM: ON
     FIPS_EMSCRIPTEN_MEM_INIT_METHOD: 0
     FIPS_EMSCRIPTEN_USE_CLOSURE: ON
