@@ -3,4 +3,5 @@
 fips-files/build/
 fips-files/deploy/
 .fips-*
+CMakeUserPresets.json
 *.pyc

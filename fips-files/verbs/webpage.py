@@ -1,7 +1,7 @@
 """fips verb to build the samples webpage"""
 
 import os
-import yaml 
+import yaml
 import shutil
 import subprocess
 import glob
@@ -184,7 +184,7 @@ items = [
     { 'type':'game', 'title':"Sir Fred (ZX48K)",  'system':'zx', 'url':'zx.html?type=zx48k&file=zx/sir_fred.z80&joystick=kempston', 'img':'zx/sir_fred.jpg', 'note':'select Kempston joystick!' },
     { 'type':'game', 'title':"Chucky Egg (Atom)",  'system':'atom', 'url':'atom.html?file=atom/cchuck.tap&joystick=mmc&input=%2ALOAD%0A', 'img':'atom/cchuck.jpg', 'note':'press SPACE to start!' },
     { 'type':'game', 'title':"Jet Set Willy (Atom)", 'system':'atom', 'url':'atom.html?file=atom/jsw.tap&joystick=mmc&input=%2ALOAD%0A', 'img':'atom/jsw.jpg', 'note':'select JOYMMC!'},
-    { 'type':'game', 'title':"Alien Blitz (VIC-20)", 'system':'vic20', 'url':'vic20.html?file=vic20/alienblitz_vic20.prg&joystick=true', 'img':'vic20/alienblitz_vic20.jpg', 'note':''}, 
+    { 'type':'game', 'title':"Alien Blitz (VIC-20)", 'system':'vic20', 'url':'vic20.html?file=vic20/alienblitz_vic20.prg&joystick=true', 'img':'vic20/alienblitz_vic20.jpg', 'note':''},
     { 'type':'game', 'title':"Mazogs (Z1013)",     'system':'z1013', 'url':'z1013.html?file=z1013/mazog_deutsch.z80', 'img':'z1013/mazogs_z1013.jpg', 'note':'' },
     { 'type':'game', 'title':"Galactica (Z1013)",  'system':'z1013', 'url':'z1013.html?file=z1013/galactica.z80', 'img':'z1013/galactica_z1013.jpg', 'note':'' },
     { 'type':'game', 'title':"Demolation (Z1013)", 'system':'z1013', 'url':'z1013.html?file=z1013/demolation.z80', 'img':'z1013/demolation_z1013.jpg', 'note':'' },
@@ -290,7 +290,7 @@ def build_deploy_webpage(fips_dir, proj_dir, rebuild) :
     # compile samples
     project.gen(fips_dir, proj_dir, BuildConfig)
     project.build(fips_dir, proj_dir, BuildConfig)
-    
+
     # deploy the webpage
     deploy_webpage(fips_dir, proj_dir, webpage_dir)
 
@@ -304,21 +304,21 @@ def serve_webpage(fips_dir, proj_dir) :
     if p == 'osx' :
         try :
             subprocess.call(
-                'open http://localhost:8000 ; python3 {}/mod/httpserver.py'.format(fips_dir),
+                'http-server -c-1 -g -o'.format(fips_dir),
                 cwd = webpage_dir, shell=True)
         except KeyboardInterrupt :
             pass
     elif p == 'win':
         try:
             subprocess.call(
-                'cmd /c start http://localhost:8000 && python3 {}/mod/httpserver.py'.format(fips_dir),
+                'http-server -c-1 -g -o'.format(fips_dir),
                 cwd = webpage_dir, shell=True)
         except KeyboardInterrupt:
             pass
     elif p == 'linux':
         try:
             subprocess.call(
-                'xdg-open http://localhost:8000; python3 {}/mod/httpserver.py'.format(fips_dir),
+                'http-server -c-1 -g -o'.format(fips_dir),
                 cwd = webpage_dir, shell=True)
         except KeyboardInterrupt:
             pass
@@ -345,4 +345,3 @@ def help() :
              'fips webpage serve\n' +
              log.DEF +
              '    build chips samples webpage')
-
