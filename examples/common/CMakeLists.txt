@@ -30,7 +30,6 @@ endif()
 
 # a lib of common code shared between all emulators
 fips_begin_lib(common)
-    fips_vs_warning_level(3)
     fips_files(common.c common.h)
     fips_files(clock.h fs.h gfx.h keybuf.h prof.h)
     sokol_shader(shaders.glsl ${slang})
@@ -53,8 +52,6 @@ fips_end_lib()
 
 # optional UI library (using Dear ImGui)
 fips_begin_lib(ui)
-    fips_vs_warning_level(3)
     fips_files(ui.cc ui.h)
     fips_deps(imgui)
 fips_end_lib()
-
