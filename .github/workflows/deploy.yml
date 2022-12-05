@@ -11,14 +11,14 @@ jobs:
         run: |
           sudo apt update
           sudo apt install webp
-          python fips emsdk install latest
+          python3 fips emsdk install latest
       - name: build
         run: |
-          python fips set local on
-          python fips webpage build
+          python3 fips set local on
+          python3 fips webpage build
       - name: upload-artifact
         uses: actions/upload-artifact@v2
-        with: 
+        with:
           name: webpage
           path: fips-files/deploy/chips-webpage
           retention-days: 1
@@ -39,6 +39,4 @@ jobs:
           git config user.name "GH Action"
           git add .
           git commit -m "updated (${{ github.run_number }})"
-          git push        
-
-
+          git push
