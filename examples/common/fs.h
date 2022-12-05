@@ -190,7 +190,7 @@ static void fs_fetch_callback(const sfetch_response_t* response) {
     assert(fs.valid);
     if (response->fetched) {
         fs.ptr = fs.buf;
-        fs.size = response->data.size;
+        fs.size = (uint32_t)response->data.size;
         assert(fs.size < sizeof(fs.buf));
         // in case it's a text file, zero-terminate the data
         fs.buf[fs.size] = 0;
