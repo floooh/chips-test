@@ -1,4 +1,4 @@
-include_directories(../examples/roms)
+include_directories(../src/roms)
 
 fips_begin_app(chips-test cmdline)
     fips_files(
