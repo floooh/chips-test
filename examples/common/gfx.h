@@ -414,6 +414,8 @@ static void apply_viewport(gfx_dim_t canvas) {
 void gfx_draw(const gfx_draw_t* args) {
     assert(gfx.valid);
     assert(args);
+    assert((args->fb.width > 0) && (args->fb.height > 0));
+    assert((args->view.width > 0) && (args->view.height > 0));
     const gfx_dim_t display = { .width = sapp_width(), .height = sapp_height() };
 
     gfx.offscreen.view = args->view;
@@ -461,6 +463,17 @@ void gfx_draw(const gfx_draw_t* args) {
         .vertex_buffers[0] = gfx.offscreen.vbuf,
         .fs_images[SLOT_fb_tex] = gfx.fb.img,
     });
+    const offscreen_vs_params_t vs_params = {
+        .uv_offset = {
+            (float)gfx.offscreen.view.x / (float)gfx.fb.size.width,
+            (float)gfx.offscreen.view.y / (float)gfx.fb.size.height,
+        },
+        .uv_scale = {
+            (float)gfx.offscreen.view.width / (float)gfx.fb.size.width,
+            (float)gfx.offscreen.view.height / (float)gfx.fb.size.height
+        }
+    };
+    sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_offscreen_vs_params, &SG_RANGE(vs_params));
     sg_draw(0, 4, 1);
     sg_end_pass();
 
