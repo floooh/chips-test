@@ -91,7 +91,10 @@ static void patch_snapshots(const char* snapshot_name, void* user_data) {
 // get kc85_desc_t struct for a given KC85 type
 kc85_desc_t kc85_desc(void) {
     return (kc85_desc_t) {
-        .pixel_buffer = { .ptr=gfx_framebuffer(), .size=gfx_framebuffer_size() },
+        .framebuffer = {
+            .ptr = gfx_framebuffer_ptr(),
+            .size = gfx_framebuffer_size()
+        },
         .audio = {
             .callback = { .func = push_audio },
             .sample_rate = saudio_sample_rate(),
@@ -131,10 +134,12 @@ void app_init(void) {
         #ifdef CHIPS_USE_UI
         .draw_extra_cb = ui_draw,
         #endif
-        .border_left = BORDER_LEFT,
-        .border_right = BORDER_RIGHT,
-        .border_top = BORDER_TOP,
-        .border_bottom = BORDER_BOTTOM,
+        .border = {
+            .left = BORDER_LEFT,
+            .right = BORDER_RIGHT,
+            .top = BORDER_TOP,
+            .bottom = BORDER_BOTTOM,
+        }
     });
     keybuf_init(&(keybuf_desc_t){ .key_delay_frames = 10 });
     clock_init();
@@ -217,7 +222,19 @@ void app_frame(void) {
     state.ticks = kc85_exec(&state.kc85, state.frame_time_us);
     state.emu_time_ms = stm_ms(stm_since(emu_start_time));
     draw_status_bar();
-    gfx_draw(kc85_display_width(&state.kc85), kc85_display_height(&state.kc85));
+    const kc85_display_info_t info = kc85_query_display_info(&state.kc85);
+    gfx_draw(&(gfx_draw_t){
+        .fb = {
+            .width = info.framebuffer.width,
+            .height = info.framebuffer.height,
+        },
+        .view = {
+            .x = info.screen.x,
+            .y = info.screen.y,
+            .width = info.screen.width,
+            .height = info.screen.height
+        }
+    });
     handle_file_loading();
     send_keybuf_input();
 }
@@ -261,7 +278,7 @@ void app_input(const sapp_event* event) {
                 case SAPP_KEYCODE_UP:           c = 0x0B; break;
                 case SAPP_KEYCODE_HOME:         c = 0x10; break;
                 case SAPP_KEYCODE_INSERT:       c = shift ? 0x0C : 0x1A; break; /* 0x0C: cls, 0x1A: ins */
-                case SAPP_KEYCODE_BACKSPACE:    c = shift ? 0x0C : 0x01; break; /* 0x0C: cls, 0x01: del */ 
+                case SAPP_KEYCODE_BACKSPACE:    c = shift ? 0x0C : 0x01; break; /* 0x0C: cls, 0x01: del */
                 case SAPP_KEYCODE_ESCAPE:       c = shift ? 0x13 : 0x03; break; /* 0x13: stop, 0x03: brk */
                 case SAPP_KEYCODE_F1:           c = 0xF1; break;
                 case SAPP_KEYCODE_F2:           c = 0xF2; break;
@@ -387,16 +404,16 @@ static void draw_status_bar(void) {
 
 sapp_desc sokol_main(int argc, char* argv[]) {
     sargs_setup(&(sargs_desc) { .argc = argc, .argv = argv });
+    const kc85_display_info_t info = kc85_query_display_info(0);
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,
         .event_cb = app_input,
         .cleanup_cb = app_cleanup,
-        .width = 2 * kc85_std_display_width()  + BORDER_LEFT + BORDER_RIGHT,
-        .height = 2 * kc85_std_display_height() + BORDER_TOP + BORDER_BOTTOM,
+        .width = 2 * info.screen.width  + BORDER_LEFT + BORDER_RIGHT,
+        .height = 2 * info.screen.height + BORDER_TOP + BORDER_BOTTOM,
         .window_title = KC85_TYPE_NAME,
         .icon.sokol_default = true,
         .enable_dragndrop = true,
     };
 }
-

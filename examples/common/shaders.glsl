@@ -1,4 +1,4 @@
-@vs upscale_vs
+@vs offscreen_vs
 layout(location=0) in vec2 in_pos;
 layout(location=1) in vec2 in_uv;
 out vec2 uv;
@@ -8,12 +8,12 @@ void main() {
 }
 @end
 
-@fs upscale_fs
-uniform sampler2D emufb_tex;
+@fs offscreen_fs
+uniform sampler2D fb_tex;
 in vec2 uv;
 out vec4 frag_color;
 void main() {
-    frag_color = texture(emufb_tex, uv);
+    frag_color = texture(fb_tex, uv);
 }
 @end
 
@@ -37,7 +37,5 @@ void main() {
 }
 @end
 
-@program upscale upscale_vs upscale_fs
+@program offscreen offscreen_vs offscreen_fs
 @program display display_vs display_fs
-
-
