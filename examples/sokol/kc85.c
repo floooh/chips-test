@@ -331,19 +331,20 @@ static void handle_file_loading(void) {
     fs_dowork();
     const uint32_t load_delay_frames = LOAD_DELAY_FRAMES;
     if (fs_ptr() && clock_frame_count_60hz() > load_delay_frames) {
+        const kc85_range_t file_data = { .ptr = fs_ptr(), .size = fs_size() };
         bool load_success = false;
         if (sargs_exists("mod_image")) {
             // insert the rom module
             if (state.delay_insert_module != KC85_MODULE_NONE) {
-                load_success = kc85_insert_rom_module(&state.kc85, 0x08, state.delay_insert_module, fs_ptr(), fs_size());
+                load_success = kc85_insert_rom_module(&state.kc85, 0x08, state.delay_insert_module, file_data);
             }
         }
         else if (fs_ext("txt") || fs_ext("bas")) {
             load_success = true;
-            keybuf_put((const char*)fs_ptr());
+            keybuf_put((const char*)file_data.ptr);
         }
         else {
-            load_success = kc85_quickload(&state.kc85, fs_ptr(), fs_size());
+            load_success = kc85_quickload(&state.kc85, file_data);
         }
         if (load_success) {
             if (clock_frame_count_60hz() > (load_delay_frames + 10)) {
