@@ -139,6 +139,10 @@ void app_init(void) {
             .right = BORDER_RIGHT,
             .top = BORDER_TOP,
             .bottom = BORDER_BOTTOM,
+        },
+        .palette = {
+            .ptr = kc85_display_info(0).palette.ptr,
+            .size = kc85_display_info(0).palette.size,
         }
     });
     keybuf_init(&(keybuf_desc_t){ .key_delay_frames = 10 });
@@ -222,7 +226,7 @@ void app_frame(void) {
     state.ticks = kc85_exec(&state.kc85, state.frame_time_us);
     state.emu_time_ms = stm_ms(stm_since(emu_start_time));
     draw_status_bar();
-    const kc85_display_info_t info = kc85_query_display_info(&state.kc85);
+    const kc85_display_info_t info = kc85_display_info(&state.kc85);
     gfx_draw(&(gfx_draw_t){
         .fb = {
             .width = info.framebuffer.width,
@@ -233,7 +237,7 @@ void app_frame(void) {
             .y = info.screen.y,
             .width = info.screen.width,
             .height = info.screen.height
-        }
+        },
     });
     handle_file_loading();
     send_keybuf_input();
@@ -405,7 +409,7 @@ static void draw_status_bar(void) {
 
 sapp_desc sokol_main(int argc, char* argv[]) {
     sargs_setup(&(sargs_desc) { .argc = argc, .argv = argv });
-    const kc85_display_info_t info = kc85_query_display_info(0);
+    const kc85_display_info_t info = kc85_display_info(0);
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,

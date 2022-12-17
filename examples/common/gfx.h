@@ -30,14 +30,14 @@ typedef struct {
 } gfx_rect_t;
 
 typedef struct {
-    const uint32_t* colors;     // up to 256 RGBA8 palette colors
-    uint32_t num_colors;        // number of valid colors in palette
-} gfx_palette_t;
+    const void* ptr;    // up to 256 RGBA8 colors
+    size_t size;        // palette size in bytes (4 * num_colors)
+} gfx_range_t;
 
 typedef struct {
     gfx_border_t border;
     gfx_dim_t pixel_aspect; // optional pixel aspect ratio, default is 1:1
-    gfx_palette_t palette;  // optional color palette, up to 256 entries
+    gfx_range_t palette;    // optional color palette, up to 256 entries
     bool portrait;          // true if screen is in portrait mode (e.g. most arcade machines)
     void (*draw_extra_cb)(void);
 } gfx_desc_t;
@@ -48,7 +48,7 @@ typedef struct {
 } gfx_draw_t;
 
 void gfx_init(const gfx_desc_t* desc);
-uint32_t* gfx_framebuffer_ptr(void);
+void* gfx_framebuffer_ptr(void);
 size_t gfx_framebuffer_size(void);
 void gfx_draw(const gfx_draw_t* draw_args);
 void gfx_shutdown(void);

@@ -8,6 +8,7 @@
 #include "shaders.glsl.h"
 #include <assert.h>
 #include <stdlib.h> // malloc/free
+#include <stdalign.h>
 
 #define _GFX_DEF(v,def) (v?v:def)
 
@@ -43,7 +44,8 @@ typedef struct {
     int flash_success_count;
     int flash_error_count;
 
-    uint32_t rgba8_buffer[GFX_MAX_FB_WIDTH * GFX_MAX_FB_HEIGHT];
+    uint32_t palette_buffer[256];
+    alignas(64) uint8_t pixel_buffer[GFX_MAX_FB_WIDTH * GFX_MAX_FB_HEIGHT * 4];
     void (*draw_extra_cb)(void);
 } gfx_state_t;
 static gfx_state_t state;
@@ -147,14 +149,14 @@ void gfx_flash_error(void) {
     state.flash_error_count = 20;
 }
 
-uint32_t* gfx_framebuffer_ptr(void) {
+void* gfx_framebuffer_ptr(void) {
     assert(state.valid);
-    return state.rgba8_buffer;
+    return state.pixel_buffer;
 }
 
 size_t gfx_framebuffer_size(void) {
     assert(state.valid);
-    return sizeof(state.rgba8_buffer);
+    return sizeof(state.pixel_buffer);
 }
 
 // this function will be called at init time and when the emulator framebuffer size changes
@@ -192,7 +194,6 @@ static void gfx_init_images_and_pass(void) {
 }
 
 void gfx_init(const gfx_desc_t* desc) {
-    assert((desc->palette.colors == 0) || (desc->palette.colors && (desc->palette.num_colors > 0) && (desc->palette.num_colors <= 256)));
     sg_setup(&(sg_desc){
         .buffer_pool_size = 32,
         .image_pool_size = 128,
@@ -218,9 +219,11 @@ void gfx_init(const gfx_desc_t* desc) {
     state.display.portrait = desc->portrait;
     state.draw_extra_cb = desc->draw_extra_cb;
     state.fb.size =  (gfx_dim_t){0};
-    state.fb.paletted = 0 != desc->palette.colors;
+    state.fb.paletted = 0 != desc->palette.ptr;
 
     if (state.fb.paletted) {
+        assert((desc->palette.ptr == 0) || (desc->palette.ptr && (desc->palette.size > 0) && (desc->palette.size < sizeof(state.palette_buffer))));
+        memcpy(state.palette_buffer, desc->palette.ptr, desc->palette.size);
         state.fb.pal_img = sg_make_image(&(sg_image_desc){
             .width = 256,
             .height = 1,
@@ -230,7 +233,7 @@ void gfx_init(const gfx_desc_t* desc) {
             .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
             .wrap_v = SG_WRAP_CLAMP_TO_EDGE,
             .data = {
-                .subimage[0][0] = { .ptr = desc->palette.colors, .size = desc->palette.num_colors * 4 }
+                .subimage[0][0] = { .ptr = state.palette_buffer, .size = sizeof(state.palette_buffer) },
             }
         });
     }
@@ -412,10 +415,11 @@ void gfx_draw(const gfx_draw_t* args) {
     }
 
     // copy emulator pixel data into emulator framebuffer texture
+    const size_t bytes_per_pixel = state.fb.paletted ? 1 : 4;
     sg_update_image(state.fb.img, &(sg_image_data){
         .subimage[0][0] = {
-            .ptr = state.rgba8_buffer,
-            .size = state.fb.size.width * state.fb.size.height * sizeof(uint32_t)
+            .ptr = state.pixel_buffer,
+            .size = state.fb.size.width * state.fb.size.height * bytes_per_pixel,
         }
     });
 
