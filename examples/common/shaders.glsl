@@ -23,6 +23,18 @@ void main() {
 }
 @end
 
+// offscreen shader with color palette decoding
+@fs offscreen_pal_fs
+uniform sampler2D fb_tex;
+uniform sampler2D pal_tex;
+in vec2 uv;
+out vec4 frag_color;
+void main() {
+    float pix = texture(fb_tex, uv).x;
+    frag_color = vec4(texture(pal_tex, vec2(pix,0)).xyz, 1.0);
+}
+@end
+
 @vs display_vs
 layout(location=0) in vec2 in_pos;
 layout(location=1) in vec2 in_uv;
@@ -44,4 +56,5 @@ void main() {
 @end
 
 @program offscreen offscreen_vs offscreen_fs
+@program offscreen_pal offscreen_vs offscreen_pal_fs
 @program display display_vs display_fs
