@@ -485,10 +485,10 @@ void gfx_shutdown() {
     sg_shutdown();
 }
 
-void* gfx_create_texture(gfx_dim_t size) {
+void* gfx_create_texture(int w, int h) {
     sg_image img = sg_make_image(&(sg_image_desc){
-        .width = size.width,
-        .height = size.height,
+        .width = w,
+        .height = h,
         .pixel_format = SG_PIXELFORMAT_RGBA8,
         .usage = SG_USAGE_STREAM,
         .min_filter = SG_FILTER_NEAREST,

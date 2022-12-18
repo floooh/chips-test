@@ -54,7 +54,7 @@ void gfx_draw(const gfx_draw_t* draw_args);
 void gfx_shutdown(void);
 
 // UI helper functions unrelated to actual emulator framebuffer rendering
-void* gfx_create_texture(gfx_dim_t size);
+void* gfx_create_texture(int w, int h);
 void gfx_update_texture(void* h, void* data, int data_byte_size);
 void gfx_destroy_texture(void* h);
 void gfx_flash_success(void);
