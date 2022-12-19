@@ -31,6 +31,9 @@
     #include "ui/ui_kc85.h"
 #endif
 
+#define SCREENSHOT_WIDTH (320)
+#define SCREENSHOT_HEIGHT (256)
+
 static struct {
     kc85_t kc85;
     uint32_t frame_time_us;
@@ -39,7 +42,11 @@ static struct {
     kc85_module_type_t delay_insert_module; // module to insert after ROM module image has been loaded
     #ifdef CHIPS_USE_UI
         ui_kc85_t ui;
-        kc85_t snapshots[UI_SNAPSHOT_MAX_SLOTS];
+        struct {
+            uint32_t version;
+            kc85_t kc85;
+            uint8_t fb[SCREENSHOT_HEIGHT][SCREENSHOT_WIDTH];
+        } snapshots[UI_SNAPSHOT_MAX_SLOTS];
     #endif
 } state;
 
@@ -161,6 +168,7 @@ void app_init(void) {
             .snapshot = {
                 .load_cb = ui_load_snapshot,
                 .save_cb = ui_save_snapshot,
+                .empty_slot_texture = gfx_shared_empty_snapshot_texture(),
             },
             .dbg_keys = {
                 .cont = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F5), .name = "F5" },
@@ -419,23 +427,55 @@ static void ui_boot_cb(kc85_t* sys) {
     kc85_init(sys, &desc);
 }
 
-void ui_save_snapshot(size_t slot_index) {
-    if (slot_index < UI_SNAPSHOT_MAX_SLOTS) {
-        kc85_save_snapshot(&state.kc85, &state.snapshots[slot_index]);
-        // FIXME: create screenshot texture, update slot info, destroy any previous texture
-        ui_snapshot_slot_info_t info = {0};
-        ui_snapshot_update_slot_info(&state.ui.snapshot, slot_index, &info);
+void ui_save_snapshot(size_t slot) {
+    if (slot < UI_SNAPSHOT_MAX_SLOTS) {
+        state.snapshots[slot].version = kc85_save_snapshot(&state.kc85, &state.snapshots[slot].kc85);
+
+        // copy framebuffer over and create a texture object
+        const kc85_display_info_t disp_info = kc85_display_info(&state.kc85);
+        CHIPS_ASSERT(disp_info.screen.width >= SCREENSHOT_WIDTH);
+        CHIPS_ASSERT(disp_info.screen.height >= SCREENSHOT_HEIGHT);
+        for (size_t y = 0; y < SCREENSHOT_HEIGHT; y++) {
+            uint8_t* dst = &state.snapshots[slot].fb[y][0];
+            const uint8_t* src = &state.kc85.video.fb[y * disp_info.framebuffer.width];
+            memcpy(dst, src, SCREENSHOT_WIDTH);
+        }
+        ui_snapshot_slot_info_t info = {
+            .screenshot = {
+                .texture = gfx_create_texture_u8(
+                    SCREENSHOT_WIDTH,
+                    SCREENSHOT_HEIGHT,
+                    &state.snapshots[slot].fb[0][0],
+                    disp_info.palette.ptr,
+                    disp_info.palette.size / 4),
+                .width = SCREENSHOT_WIDTH,
+                .height = SCREENSHOT_HEIGHT
+            },
+        };
+        ui_snapshot_slot_info_t old_info = ui_snapshot_update_slot_info(&state.ui.snapshot, slot, &info);
+        if (old_info.screenshot.texture) {
+            gfx_destroy_texture(old_info.screenshot.texture);
+        }
     }
 }
 
-bool ui_load_snapshot(size_t slot_index) {
-    if ((slot_index < UI_SNAPSHOT_MAX_SLOTS) && (state.ui.snapshot.slots[slot_index].valid)) {
-        // FIXME: version
-        return kc85_load_snapshot(&state.kc85, KC85_SNAPSHOT_VERSION, &state.snapshots[slot_index]);
+bool ui_load_snapshot(size_t slot) {
+    bool success = false;
+    if ((slot < UI_SNAPSHOT_MAX_SLOTS) && (state.ui.snapshot.slots[slot].valid)) {
+        success = kc85_load_snapshot(&state.kc85, state.snapshots[slot].version, &state.snapshots[slot].kc85);
+        if (success) {
+            // copy back frame buffer
+            const kc85_display_info_t disp_info = kc85_display_info(&state.kc85);
+            CHIPS_ASSERT(disp_info.screen.width >= SCREENSHOT_WIDTH);
+            CHIPS_ASSERT(disp_info.screen.height >= SCREENSHOT_HEIGHT);
+            for (size_t y = 0; y < SCREENSHOT_HEIGHT; y++) {
+                uint8_t* dst = &state.kc85.video.fb[y * disp_info.framebuffer.width];
+                const uint8_t* src = &state.snapshots[slot].fb[y][0];
+                memcpy(dst, src, SCREENSHOT_WIDTH);
+            }
+        }
     }
-    else {
-        return false;
-    }
+    return success;
 }
 #endif
 

@@ -57,6 +57,8 @@ void gfx_shutdown(void);
 void* gfx_create_texture(int w, int h);
 void gfx_update_texture(void* h, void* data, int data_byte_size);
 void gfx_destroy_texture(void* h);
+void* gfx_create_texture_u8(size_t w, size_t h, const uint8_t* pixels, const uint32_t* palette, size_t num_pal_entries);
+void* gfx_shared_empty_snapshot_texture(void);
 void gfx_flash_success(void);
 void gfx_flash_error(void);
 
