@@ -27,6 +27,7 @@
     #include "ui/ui_z80ctc.h"
     #include "ui/ui_kc85sys.h"
     #include "ui/ui_audio.h"
+    #include "ui/ui_snapshot.h"
     #include "ui/ui_kc85.h"
 #endif
 
@@ -37,12 +38,17 @@ static struct {
     double emu_time_ms;
     kc85_module_type_t delay_insert_module; // module to insert after ROM module image has been loaded
     #ifdef CHIPS_USE_UI
-        ui_kc85_t ui_kc85;
+        ui_kc85_t ui;
+        kc85_t snapshots[UI_SNAPSHOT_MAX_SLOTS];
     #endif
 } state;
 
 #ifdef CHIPS_USE_UI
 #define BORDER_TOP (24)
+static void ui_draw_cb(void);
+static void ui_boot_cb(kc85_t* sys);
+static void ui_save_snapshot(size_t slot_index);
+static bool ui_load_snapshot(size_t slot_index);
 #else
 #define BORDER_TOP (8)
 #endif
@@ -114,20 +120,10 @@ kc85_desc_t kc85_desc(void) {
             #endif
         },
         #if defined(CHIPS_USE_UI)
-        .debug = ui_kc85_get_debug(&state.ui_kc85)
+        .debug = ui_kc85_get_debug(&state.ui),
         #endif
     };
 }
-
-#if defined(CHIPS_USE_UI)
-static void ui_draw_cb(void) {
-    ui_kc85_draw(&state.ui_kc85);
-}
-static void ui_boot_cb(kc85_t* sys) {
-    kc85_desc_t desc = kc85_desc();
-    kc85_init(sys, &desc);
-}
-#endif
 
 void app_init(void) {
     gfx_init(&(gfx_desc_t) {
@@ -154,12 +150,18 @@ void app_init(void) {
     kc85_init(&state.kc85, &desc);
     #ifdef CHIPS_USE_UI
         ui_init(ui_draw_cb);
-        ui_kc85_init(&state.ui_kc85, &(ui_kc85_desc_t){
+        ui_kc85_init(&state.ui, &(ui_kc85_desc_t){
             .kc85 = &state.kc85,
             .boot_cb = ui_boot_cb,
-            .create_texture_cb = gfx_create_texture,
-            .update_texture_cb = gfx_update_texture,
-            .destroy_texture_cb = gfx_destroy_texture,
+            .dbg_texture = {
+                .create_cb = gfx_create_texture,
+                .update_cb = gfx_update_texture,
+                .destroy_cb = gfx_destroy_texture,
+            },
+            .snapshot = {
+                .load_cb = ui_load_snapshot,
+                .save_cb = ui_save_snapshot,
+            },
             .dbg_keys = {
                 .cont = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F5), .name = "F5" },
                 .stop = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F5), .name = "F5" },
@@ -315,7 +317,7 @@ void app_input(const sapp_event* event) {
 void app_cleanup(void) {
     kc85_discard(&state.kc85);
     #ifdef CHIPS_USE_UI
-        ui_kc85_discard(&state.ui_kc85);
+        ui_kc85_discard(&state.ui);
         ui_discard();
     #endif
     saudio_shutdown();
@@ -406,6 +408,36 @@ static void draw_status_bar(void) {
     sdtx_color1i(text_color);
     sdtx_printf("frame:%.2fms emu:%.2fms (min:%.2fms max:%.2fms) ticks:%d", (float)state.frame_time_us * 0.001f, emu_stats.avg_val, emu_stats.min_val, emu_stats.max_val, state.ticks);
 }
+
+#if defined(CHIPS_USE_UI)
+static void ui_draw_cb(void) {
+    ui_kc85_draw(&state.ui);
+}
+
+static void ui_boot_cb(kc85_t* sys) {
+    kc85_desc_t desc = kc85_desc();
+    kc85_init(sys, &desc);
+}
+
+void ui_save_snapshot(size_t slot_index) {
+    if (slot_index < UI_SNAPSHOT_MAX_SLOTS) {
+        kc85_save_snapshot(&state.kc85, &state.snapshots[slot_index]);
+        // FIXME: create screenshot texture, update slot info, destroy any previous texture
+        ui_snapshot_slot_info_t info = {0};
+        ui_snapshot_update_slot_info(&state.ui.snapshot, slot_index, &info);
+    }
+}
+
+bool ui_load_snapshot(size_t slot_index) {
+    if ((slot_index < UI_SNAPSHOT_MAX_SLOTS) && (state.ui.snapshot.slots[slot_index].valid)) {
+        // FIXME: version
+        return kc85_load_snapshot(&state.kc85, KC85_SNAPSHOT_VERSION, &state.snapshots[slot_index]);
+    }
+    else {
+        return false;
+    }
+}
+#endif
 
 sapp_desc sokol_main(int argc, char* argv[]) {
     sargs_setup(&(sargs_desc) { .argc = argc, .argv = argv });
