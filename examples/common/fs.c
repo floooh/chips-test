@@ -6,12 +6,16 @@
 #include <ctype.h>
 
 #define FS_EXT_SIZE (16)
-#define FS_FNAME_SIZE (32)
+#define FS_PATH_SIZE (256)
 #define FS_MAX_SIZE (1024 * 1024)
 
 typedef struct {
-    char fname[FS_FNAME_SIZE];
-    char ext[FS_EXT_SIZE];
+    char buf[FS_PATH_SIZE];
+    size_t len;
+} fs_path_t;
+
+typedef struct {
+    fs_path_t path;
     fs_result_t result;
     uint8_t* ptr;
     size_t size;
@@ -37,6 +41,31 @@ void fs_init(void) {
 void fs_dowork(void) {
     assert(state.valid);
     sfetch_dowork();
+}
+
+static void fs_path_reset(fs_path_t* path) {
+    path->len = 0;
+}
+
+static void fs_path_append(fs_path_t* path, const char* str) {
+    char c;
+    while ((c = *str++) && (path->len < (FS_MAX_SIZE-1))) {
+        path->buf[path->len++] = c;
+    }
+    path->buf[path->len] = 0;
+}
+
+static void fs_path_extract_extension(fs_path_t* path, char* buf, size_t buf_size) {
+    const char* ext = strrchr(path->buf, '.');
+    if (ext) {
+        size_t i = 0;
+        char c = 0;
+        while ((c = *++ext) && (i < (buf_size-1))) {
+            buf[i] = tolower(c);
+            i++;
+        }
+        buf[i] = 0;
+    }
 }
 
 static void fs_copy_filename_and_ext(fs_slot_t* slot, const char* path) {
@@ -132,7 +161,13 @@ static bool fs_base64_decode(fs_slot_t* slot, const char* src) {
 bool fs_ext(size_t slot_index, const char* ext) {
     assert(state.valid);
     assert(slot_index < FS_NUM_SLOTS);
-    return 0 == strcmp(ext, state.slots[slot_index].ext);
+    char buf[FS_EXT_SIZE];
+    if (fs_path_extract_extension(&state.slots[slot_index].path)) {
+        return 0 == strcmp(ext, buf);
+    }
+    else {
+        return false;
+    }
 }
 
 const char* fs_filename(size_t slot_index) {
@@ -288,4 +323,14 @@ fs_range_t fs_data(size_t slot_index) {
     else {
         return (fs_range_t){0};
     }
+}
+
+#if defined(__APPLE__)
+static const char* fs_snapshot_path(size_t snapshot_index, char* buf, size_t buf_size) {
+
+}
+#endif
+bool fs_save_snapshot(size_t snapshot_index, fs_range_t data) {
+
+
 }
