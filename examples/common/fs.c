@@ -10,12 +10,17 @@
 #define FS_MAX_SIZE (1024 * 1024)
 
 typedef struct {
-    bool valid;
     char fname[FS_FNAME_SIZE];
     char ext[FS_EXT_SIZE];
+    fs_result_t result;
     uint8_t* ptr;
-    uint32_t size;
+    size_t size;
     uint8_t buf[FS_MAX_SIZE + 1];
+} fs_slot_t;
+
+typedef struct {
+    bool valid;
+    fs_slot_t slots[FS_NUM_SLOTS];
 } fs_state_t;
 static fs_state_t state;
 
@@ -24,7 +29,7 @@ void fs_init(void) {
     state.valid = true;
     sfetch_setup(&(sfetch_desc_t){
         .max_requests = 1,
-        .num_channels = 1,
+        .num_channels = FS_NUM_SLOTS,
         .num_lanes = 1,
     });
 }
@@ -34,14 +39,9 @@ void fs_dowork(void) {
     sfetch_dowork();
 }
 
-static void fs_strcpy(char* dst, const char* src, size_t buf_size) {
-    strncpy(dst, src, buf_size);
-    state.fname[buf_size-1] = 0;
-}
-
-static void fs_copy_filename_and_ext(const char* path) {
-    state.fname[0] = 0;
-    state.ext[0] = 0;
+static void fs_copy_filename_and_ext(fs_slot_t* slot, const char* path) {
+    slot->fname[0] = 0;
+    slot->ext[0] = 0;
     const char* str = path;
     const char* slash = strrchr(str, '/');
     if (slash) {
@@ -51,22 +51,23 @@ static void fs_copy_filename_and_ext(const char* path) {
             str = slash+1;
         }
     }
-    fs_strcpy(state.fname, str, sizeof(state.fname));
+    strncpy(slot->fname, str, sizeof(slot->fname));
+    slot->fname[sizeof(slot->fname)-1] = 0;
     const char* ext = strrchr(str, '.');
     if (ext) {
         int i = 0;
         char c = 0;
         while ((c = *++ext) && (i < (FS_EXT_SIZE-1))) {
-            state.ext[i] = tolower(c);
+            slot->ext[i] = tolower(c);
             i++;
         }
-        state.ext[i] = 0;
+        slot->ext[i] = 0;
     }
 }
 
 // http://web.mit.edu/freebsd/head/contrib/wpa/src/utils/base64.c
 static const unsigned char fs_base64_table[65] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-static bool fs_base64_decode(const char* src) {
+static bool fs_base64_decode(fs_slot_t* slot, const char* src) {
     int len = (int)strlen(src);
 
     uint8_t dtable[256];
@@ -90,7 +91,7 @@ static bool fs_base64_decode(const char* src) {
 
     // output length
     int olen = (count / 4) * 3;
-    if (olen >= (int)sizeof(state.buf)) {
+    if (olen >= (int)sizeof(slot->buf)) {
         return false;
     }
 
@@ -110,12 +111,12 @@ static bool fs_base64_decode(const char* src) {
         count++;
         if (count == 4) {
             count = 0;
-            state.buf[state.size++] = (block[0] << 2) | (block[1] >> 4);
-            state.buf[state.size++] = (block[1] << 4) | (block[2] >> 2);
-            state.buf[state.size++] = (block[2] << 6) | block[3];
+            slot->buf[slot->size++] = (block[0] << 2) | (block[1] >> 4);
+            slot->buf[slot->size++] = (block[1] << 4) | (block[2] >> 2);
+            slot->buf[slot->size++] = (block[2] << 6) | block[3];
             if (pad > 0) {
                 if (pad <= 2) {
-                    state.size -= pad;
+                    slot->size -= pad;
                 }
                 else {
                     // invalid padding
@@ -128,105 +129,163 @@ static bool fs_base64_decode(const char* src) {
     return true;
 }
 
-bool fs_ext(const char* ext) {
+bool fs_ext(size_t slot_index, const char* ext) {
     assert(state.valid);
-    return 0 == strcmp(ext, state.ext);
+    assert(slot_index < FS_NUM_SLOTS);
+    return 0 == strcmp(ext, state.slots[slot_index].ext);
 }
 
-const char* fs_filename(void) {
-    return state.fname;
+const char* fs_filename(size_t slot_index) {
+    assert(state.valid);
+    assert(slot_index < FS_NUM_SLOTS);
+    return state.slots[slot_index].fname;
 }
 
-void fs_reset(void) {
+void fs_reset(size_t slot_index) {
     assert(state.valid);
-    state.ptr = 0;
-    state.size = 0;
+    assert(slot_index < FS_NUM_SLOTS);
+    fs_slot_t* slot = &state.slots[slot_index];
+    slot->result = FS_RESULT_IDLE;
+    slot->ptr = 0;
+    slot->size = 0;
 }
 
-void fs_load_mem(const char* path, const uint8_t* ptr, uint32_t size) {
+void fs_load_mem(size_t slot_index, const char* path, fs_range_t data) {
     assert(state.valid);
-    fs_reset();
-    if ((size > 0) && (size <= FS_MAX_SIZE)) {
-        fs_copy_filename_and_ext(path);
-        state.size = size;
-        state.ptr = state.buf;
-        memcpy(state.ptr, ptr, size);
+    assert(slot_index < FS_NUM_SLOTS);
+    assert(data.ptr && (data.size > 0));
+    fs_reset(slot_index);
+    fs_slot_t* slot = &state.slots[slot_index];
+    if ((data.size > 0) && (data.size <= FS_MAX_SIZE)) {
+        fs_copy_filename_and_ext(slot, path);
+        slot->result = FS_RESULT_SUCCESS;
+        slot->size = data.size;
+        slot->ptr = slot->buf;
+        memcpy(slot->ptr, data.ptr, data.size);
         /* zero-terminate in case this is a text file */
-        state.ptr[state.size] = 0;
+        slot->ptr[slot->size] = 0;
+    }
+    else {
+        slot->result = FS_RESULT_FAILED;
     }
 }
 
-bool fs_load_base64(const char* name, const char* payload) {
+bool fs_load_base64(size_t slot_index, const char* name, const char* payload) {
     assert(state.valid);
-    fs_reset();
-    fs_copy_filename_and_ext(name);
-    if (fs_base64_decode(payload)) {
-        state.ptr = state.buf;
+    assert(slot_index < FS_NUM_SLOTS);
+    fs_reset(slot_index);
+    fs_slot_t* slot = &state.slots[slot_index];
+    fs_copy_filename_and_ext(slot, name);
+    if (fs_base64_decode(slot, payload)) {
+        slot->result = FS_RESULT_SUCCESS;
+        slot->ptr = slot->buf;
         return true;
     }
     else {
+        slot->result = FS_RESULT_FAILED;
         return false;
     }
 }
 
 static void fs_fetch_callback(const sfetch_response_t* response) {
     assert(state.valid);
+    size_t slot_index = *(size_t*)response->user_data;
+    assert(slot_index < FS_NUM_SLOTS);
+    fs_slot_t* slot = &state.slots[slot_index];
     if (response->fetched) {
-        state.ptr = state.buf;
-        state.size = (uint32_t)response->data.size;
-        assert(state.size < sizeof(state.buf));
+        slot->result = FS_RESULT_SUCCESS;
+        slot->ptr = (uint8_t*)response->data.ptr;
+        slot->size = response->data.size;
+        assert(slot->size < sizeof(slot->buf));
         // in case it's a text file, zero-terminate the data
-        state.buf[state.size] = 0;
+        slot->buf[slot->size] = 0;
     }
-    // FIXME: signal failure
+    else if (response->failed) {
+        slot->result = FS_RESULT_FAILED;
+    }
 }
 
 #if defined(__EMSCRIPTEN__)
 static void fs_emsc_dropped_file_callback(const sapp_html5_fetch_response* response) {
+    size_t slot_index = *(size_t*)response->user_data;
+    assert(slot_index < FS_NUM_SLOTS);
+    fs_slot_t* slot = &state.slots[slot_index];
     if (response->succeeded) {
-        state.ptr = state.buf;
-        state.size = response->data.size;
-        assert(state.size < sizeof(state.buf));
+        slot->result = FS_RESULT_SUCCESS;
+        slot->ptr = response->data.ptr;
+        slot->size = response->data.size;
+        assert(slot->size < sizeof(slot->buf));
         // in case it's a text file, zero-terminate the data
-        state.buf[state.size] = 0;
+        slot->buf[slot->size] = 0;
     }
-    // FIXME: signal failure
+    else if (response->failed) {
+        slot->result = FS_RESULT_FAILED;
+    }
 }
 #endif
 
-void fs_start_load_file(const char* path) {
+void fs_start_load_file(size_t slot_index, const char* path) {
     assert(state.valid);
-    fs_reset();
-    fs_copy_filename_and_ext(path);
+    assert(slot_index < FS_NUM_SLOTS);
+    fs_reset(slot_index);
+    fs_slot_t* slot = &state.slots[slot_index];
+    fs_copy_filename_and_ext(slot, path);
+    slot->result = FS_RESULT_PENDING;
     sfetch_send(&(sfetch_request_t){
         .path = path,
+        .channel = slot_index,
         .callback = fs_fetch_callback,
-        .buffer = { .ptr = state.buf, .size = FS_MAX_SIZE },
+        .buffer = { .ptr = slot->buf, .size = FS_MAX_SIZE },
+        .user_data = { .ptr = &slot_index, .size = sizeof(slot_index) },
     });
 }
 
-void fs_start_load_dropped_file(void) {
+void fs_start_load_dropped_file(size_t slot_index) {
     assert(state.valid);
-    fs_reset();
+    assert(slot_index < FS_NUM_SLOTS);
+    fs_reset(slot_index);
+    fs_slot_t* slot = &state.slots[slot_index];
     const char* path = sapp_get_dropped_file_path(0);
-    fs_copy_filename_and_ext(path);
+    fs_copy_filename_and_ext(slot, path);
+    slot->result = FS_RESULT_PENDING;
     #if defined(__EMSCRIPTEN__)
         sapp_html5_fetch_dropped_file(&(sapp_html5_fetch_request){
             .dropped_file_index = 0,
             .callback = fs_emsc_dropped_file_callback,
-            .buffer = { .ptr = state.buf, .size = FS_MAX_SIZE }
+            .buffer = { .ptr = state.buf, .size = FS_MAX_SIZE },
+            .user_data = { .ptr = &slot_index, .size = sizeof(slot_index) },
         });
     #else
-        fs_start_load_file(path);
+        fs_start_load_file(slot_index, path);
     #endif
 }
 
-const uint8_t* fs_ptr(void) {
+fs_result_t fs_result(size_t slot_index) {
     assert(state.valid);
-    return state.ptr;
+    assert(slot_index < FS_NUM_SLOTS);
+    return state.slots[slot_index].result;
 }
 
-uint32_t fs_size(void) {
+bool fs_success(size_t slot_index) {
+    return fs_result(slot_index) == FS_RESULT_SUCCESS;
+}
+
+bool fs_failed(size_t slot_index) {
+    return fs_result(slot_index) == FS_RESULT_FAILED;
+}
+
+bool fs_pending(size_t slot_index) {
+    return fs_result(slot_index) == FS_RESULT_PENDING;
+}
+
+fs_range_t fs_data(size_t slot_index) {
     assert(state.valid);
-    return state.size;
+    assert(slot_index < FS_NUM_SLOTS);
+    fs_slot_t* slot = &state.slots[slot_index];
+    if (slot->result == FS_RESULT_SUCCESS) {
+        return (fs_range_t){ .ptr = slot->ptr, .size = slot->size };
+    }
+    else {
+        return (fs_range_t){0};
+    }
 }

@@ -185,10 +185,10 @@ void app_init(void) {
     // snapshot file or rom-module image
     if (sargs_exists("file")) {
         delay_input=true;
-        fs_start_load_file(sargs_value("file"));
+        fs_start_load_file(FS_SLOT_IMAGE, sargs_value("file"));
     }
     else if (sargs_exists("mod_image")) {
-        fs_start_load_file(sargs_value("mod_image"));
+        fs_start_load_file(FS_SLOT_IMAGE, sargs_value("mod_image"));
     }
     // check if any modules should be inserted
     if (sargs_exists("mod")) {
@@ -256,7 +256,7 @@ void app_frame(void) {
 void app_input(const sapp_event* event) {
     // accept dropped files also when ImGui grabs input
     if (event->type == SAPP_EVENTTYPE_FILES_DROPPED) {
-        fs_start_load_dropped_file();
+        fs_start_load_dropped_file(FS_SLOT_IMAGE);
     }
     #ifdef CHIPS_USE_UI
     if (ui_input(event)) {
@@ -344,8 +344,8 @@ static void send_keybuf_input(void) {
 static void handle_file_loading(void) {
     fs_dowork();
     const uint32_t load_delay_frames = LOAD_DELAY_FRAMES;
-    if (fs_ptr() && clock_frame_count_60hz() > load_delay_frames) {
-        const kc85_range_t file_data = { .ptr = fs_ptr(), .size = fs_size() };
+    if (fs_success(FS_SLOT_IMAGE) && clock_frame_count_60hz() > load_delay_frames) {
+        const kc85_range_t file_data = { .ptr = fs_data(FS_SLOT_IMAGE).ptr, .size = fs_data(FS_SLOT_IMAGE).size };
         bool load_success = false;
         if (sargs_exists("mod_image")) {
             // insert the rom module
@@ -353,7 +353,7 @@ static void handle_file_loading(void) {
                 load_success = kc85_insert_rom_module(&state.kc85, 0x08, state.delay_insert_module, file_data);
             }
         }
-        else if (fs_ext("txt") || fs_ext("bas")) {
+        else if (fs_ext(FS_SLOT_IMAGE, "txt") || fs_ext(FS_SLOT_IMAGE, "bas")) {
             load_success = true;
             keybuf_put((const char*)file_data.ptr);
         }
@@ -371,7 +371,7 @@ static void handle_file_loading(void) {
         else {
             gfx_flash_error();
         }
-        fs_reset();
+        fs_reset(FS_SLOT_IMAGE);
     }
 }
 
