@@ -23,7 +23,7 @@ typedef struct {
 typedef struct {
     size_t snapshot_index;
     fs_snapshot_load_callback_t callback;
-} fs_snapshot_load_userdata_t;
+} fs_snapshot_load_context_t;
 
 typedef struct {
     fs_path_t path;
@@ -329,10 +329,11 @@ fs_path_t fs_make_snapshot_path(const char* dir, const char* system_name, size_t
     return path;
 }
 
+#if !defined(__EMSCRIPTEN__)
 static void fs_snapshot_fetch_callback(const sfetch_response_t* response) {
-    const fs_snapshot_load_userdata_t* ud = (fs_snapshot_load_userdata_t*) response->user_data;
-    size_t snapshot_index = ud->snapshot_index;
-    fs_snapshot_load_callback_t callback = ud->callback;
+    const fs_snapshot_load_context_t* ctx = (fs_snapshot_load_context_t*) response->user_data;
+    size_t snapshot_index = ctx->snapshot_index;
+    fs_snapshot_load_callback_t callback = ctx->callback;
     if (response->fetched) {
         const uint32_t magic = 'CHIP';
         if ((response->data.size > sizeof(uint32_t)) && (*(uint32_t*)response->data.ptr == magic)) {
@@ -360,6 +361,7 @@ static void fs_snapshot_fetch_callback(const sfetch_response_t* response) {
         });
     }
 }
+#endif
 
 #if defined(__APPLE__)
 bool fs_save_snapshot(const char* system_name, size_t snapshot_index, fs_range_t data) {
@@ -405,25 +407,25 @@ bool fs_start_load_snapshot(size_t slot_index, const char* system_name, size_t s
 }
 #elif defined(__EMSCRIPTEN__)
 
-EM_JS(int, fs_emsc_save_snapshot, (const char* system_name_cstr, int snapshot_index, void* bytes, int num_bytes), {
+EM_JS(void, fs_js_save_snapshot, (const char* system_name_cstr, int snapshot_index, void* bytes, int num_bytes), {
     const db_name = 'chips';
     const db_store_name = 'store';
     const system_name = UTF8ToString(system_name_cstr);
-    console.log('fs_emsc_save_snapshot: called with', system_name, snapshot_index);
+    console.log('fs_js_save_snapshot: called with', system_name, snapshot_index);
     let open_request;
     try {
         open_request = window.indexedDB.open(db_name, 1);
     } catch (e) {
-        console.log('fs_emsc_save_snapshot: failed to open IndexedDB with ' + e);
-        return 0;
+        console.log('fs_js_save_snapshot: failed to open IndexedDB with ' + e);
+        return;
     }
     open_request.onupgradeneeded = () => {
-        console.log('fs_emsc_save_snapshot: creating db');
+        console.log('fs_js_save_snapshot: creating db');
         let db = open_request.result;
         db.createObjectStore(db_store_name);
     };
     open_request.onsuccess = () => {
-        console.log('fs_emsc_save_snapshot: onsuccess');
+        console.log('fs_js_save_snapshot: onsuccess');
         let db = open_request.result;
         let transaction = db.transaction([db_store_name], 'readwrite');
         let file = transaction.objectStore(db_store_name);
@@ -431,26 +433,116 @@ EM_JS(int, fs_emsc_save_snapshot, (const char* system_name_cstr, int snapshot_in
         let blob = HEAPU8.subarray(bytes, bytes + num_bytes);
         let put_request = file.put(blob, key);
         put_request.onsuccess = () => {
-            console.log('fs_emsc_save_snapshot:', key, 'successfully stored')
+            console.log('fs_js_save_snapshot:', key, 'successfully stored')
         };
         put_request.onerror = () => {
-            console.log('fs_emsc_save_snapshot: FAILED to store', key);
+            console.log('fs_js_save_snapshot: FAILED to store', key);
         };
         transaction.onerror = () => {
-            console.log('fs_emsc_save_snapshot: transaction onerror');
+            console.log('fs_js_save_snapshot: transaction onerror');
         };
     };
     open_request.onerror = () => {
-        console.log('fs_emsc_save_snapshot: open_request onerror');
+        console.log('fs_js_save_snapshot: open_request onerror');
+    }
+});
+
+EM_JS(void, fs_js_load_snapshot, (const char* system_name_cstr, int snapshot_index, fs_snapshot_load_context_t* context), {
+    const db_name = 'chips';
+    const db_store_name = 'store';
+    const system_name = UTF8ToString(system_name_cstr);
+    console.log('fs_js_load_snapshot: called with', system_name, snapshot_index);
+    let open_request;
+    try {
+        open_request = window.indexedDB.open(db_name, 1);
+    } catch (e) {
+        console.log('fs_js_load_snapshot: failed to open IndexedDB with ' + e);
+    }
+    open_request.onupgradeneeded = () => {
+        console.log('fs_js_load_snapshot: no snapshot database');
+    };
+    open_request.onsuccess = () => {
+        let db = open_request.result;
+        let transaction;
+        try {
+            transaction = db.transaction([db_store_name], 'readonly');
+        } catch (e) {
+            console.log('fs_js_load_snapshot: db.transaction failed with', e);
+            return;
+        };
+        let file = transaction.objectStore(db_store_name);
+        let key = system_name + '_' + snapshot_index;
+        let get_request = file.get(key);
+        get_request.onsuccess = () => {
+            if (get_request.result !== undefined) {
+                let num_bytes = get_request.result.length;
+                console.log('fs_js_load_snapshot:', key, 'successfully loaded', num_bytes, 'bytes');
+                let ptr = _fs_emsc_alloc(num_bytes);
+                HEAPU8.set(get_request.result, ptr);
+                _fs_emsc_load_snapshot_callback(context, ptr, num_bytes);
+            } else {
+                console.log('fs_js_load_snapshot:', key, 'does not exist');
+                _fs_emsc_load_snapshot_callback(context, 0, 0);
+            }
+        };
+        get_request.onerror = () => {
+            console.log('fs_js_load_snapshot: FAILED loading', key);
+        };
+        transaction.onerror = () => {
+            console.log('fs_js_load_snapshot: transaction onerror');
+        };
+    };
+    open_request.onerror = () => {
+        console.log('fs_js_load_snapshot: open_request onerror');
     }
 });
 
 bool fs_save_snapshot(const char* system_name, size_t snapshot_index, fs_range_t data) {
-    return 0 != fs_emsc_save_snapshot(system_name, (int)snapshot_index, data.ptr, data.size);
+    assert(system_name && data.ptr && data.size > 0);
+    fs_js_save_snapshot(system_name, (int)snapshot_index, data.ptr, data.size);
+    return true;
+}
+
+EMSCRIPTEN_KEEPALIVE void* fs_emsc_alloc(int size) {
+    return malloc((size_t)size);
+}
+
+EMSCRIPTEN_KEEPALIVE void fs_emsc_load_snapshot_callback(const fs_snapshot_load_context_t* ctx, void* bytes, int num_bytes) {
+    size_t snapshot_index = ctx->snapshot_index;
+    fs_snapshot_load_callback_t callback = ctx->callback;
+    if (bytes) {
+        callback(&(fs_snapshot_response_t){
+            .snapshot_index = snapshot_index,
+            .result = FS_RESULT_SUCCESS,
+            .data = {
+                .ptr = bytes,
+                .size = (size_t)num_bytes
+            }
+        });
+        free(bytes);
+    }
+    else {
+        callback(&(fs_snapshot_response_t){
+            .snapshot_index = snapshot_index,
+            .result = FS_RESULT_FAILED,
+        });
+    }
+    free((void*)ctx);
 }
 
 bool fs_start_load_snapshot(size_t slot_index, const char* system_name, size_t snapshot_index, fs_snapshot_load_callback_t callback) {
-    // FIXME
+    assert(slot_index < FS_NUM_SLOTS);
+    assert(system_name && callback);
+    (void)slot_index;
+
+    // allocate a 'context' struct which needs to be tunneled through JS to the fs_emsc_load_snapshot_callback() function
+    fs_snapshot_load_context_t* context = calloc(1, sizeof(fs_snapshot_load_context_t));
+    context->snapshot_index = snapshot_index;
+    context->callback = callback;
+
+    fs_js_load_snapshot(system_name, (int)snapshot_index, context);
+
+    return true;
 }
 
 #else
