@@ -1,18 +1,26 @@
 #include "sokol_fetch.h"
 #include "sokol_app.h"
 #include "fs.h"
+#include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include <ctype.h>
+#include <stdio.h>
 
 #define FS_EXT_SIZE (16)
 #define FS_PATH_SIZE (256)
 #define FS_MAX_SIZE (1024 * 1024)
 
 typedef struct {
-    char buf[FS_PATH_SIZE];
+    char cstr[FS_PATH_SIZE];
     size_t len;
+    bool clamped;
 } fs_path_t;
+
+typedef struct {
+    size_t snapshot_index;
+    fs_snapshot_load_callback_t callback;
+} fs_snapshot_load_userdata_t;
 
 typedef struct {
     fs_path_t path;
@@ -32,7 +40,7 @@ void fs_init(void) {
     memset(&state, 0, sizeof(state));
     state.valid = true;
     sfetch_setup(&(sfetch_desc_t){
-        .max_requests = 1,
+        .max_requests = 128,
         .num_channels = FS_NUM_SLOTS,
         .num_lanes = 1,
     });
@@ -48,15 +56,17 @@ static void fs_path_reset(fs_path_t* path) {
 }
 
 static void fs_path_append(fs_path_t* path, const char* str) {
+    const size_t max_len = sizeof(path->cstr) - 1;
     char c;
-    while ((c = *str++) && (path->len < (FS_MAX_SIZE-1))) {
-        path->buf[path->len++] = c;
+    while ((c = *str++) && (path->len < max_len)) {
+        path->cstr[path->len++] = c;
     }
-    path->buf[path->len] = 0;
+    path->cstr[path->len] = 0;
+    path->clamped = (c != 0);
 }
 
-static void fs_path_extract_extension(fs_path_t* path, char* buf, size_t buf_size) {
-    const char* ext = strrchr(path->buf, '.');
+static bool fs_path_extract_extension(fs_path_t* path, char* buf, size_t buf_size) {
+    const char* ext = strrchr(path->cstr, '.');
     if (ext) {
         size_t i = 0;
         char c = 0;
@@ -65,32 +75,10 @@ static void fs_path_extract_extension(fs_path_t* path, char* buf, size_t buf_siz
             i++;
         }
         buf[i] = 0;
+        return true;
     }
-}
-
-static void fs_copy_filename_and_ext(fs_slot_t* slot, const char* path) {
-    slot->fname[0] = 0;
-    slot->ext[0] = 0;
-    const char* str = path;
-    const char* slash = strrchr(str, '/');
-    if (slash) {
-        str = slash+1;
-        slash = strrchr(str, '\\');
-        if (slash) {
-            str = slash+1;
-        }
-    }
-    strncpy(slot->fname, str, sizeof(slot->fname));
-    slot->fname[sizeof(slot->fname)-1] = 0;
-    const char* ext = strrchr(str, '.');
-    if (ext) {
-        int i = 0;
-        char c = 0;
-        while ((c = *++ext) && (i < (FS_EXT_SIZE-1))) {
-            slot->ext[i] = tolower(c);
-            i++;
-        }
-        slot->ext[i] = 0;
+    else {
+        return false;
     }
 }
 
@@ -162,7 +150,7 @@ bool fs_ext(size_t slot_index, const char* ext) {
     assert(state.valid);
     assert(slot_index < FS_NUM_SLOTS);
     char buf[FS_EXT_SIZE];
-    if (fs_path_extract_extension(&state.slots[slot_index].path)) {
+    if (fs_path_extract_extension(&state.slots[slot_index].path, buf, sizeof(buf))) {
         return 0 == strcmp(ext, buf);
     }
     else {
@@ -173,13 +161,14 @@ bool fs_ext(size_t slot_index, const char* ext) {
 const char* fs_filename(size_t slot_index) {
     assert(state.valid);
     assert(slot_index < FS_NUM_SLOTS);
-    return state.slots[slot_index].fname;
+    return state.slots[slot_index].path.cstr;
 }
 
 void fs_reset(size_t slot_index) {
     assert(state.valid);
     assert(slot_index < FS_NUM_SLOTS);
     fs_slot_t* slot = &state.slots[slot_index];
+    fs_path_reset(&slot->path);
     slot->result = FS_RESULT_IDLE;
     slot->ptr = 0;
     slot->size = 0;
@@ -192,7 +181,7 @@ void fs_load_mem(size_t slot_index, const char* path, fs_range_t data) {
     fs_reset(slot_index);
     fs_slot_t* slot = &state.slots[slot_index];
     if ((data.size > 0) && (data.size <= FS_MAX_SIZE)) {
-        fs_copy_filename_and_ext(slot, path);
+        fs_path_append(&slot->path, path);
         slot->result = FS_RESULT_SUCCESS;
         slot->size = data.size;
         slot->ptr = slot->buf;
@@ -210,7 +199,7 @@ bool fs_load_base64(size_t slot_index, const char* name, const char* payload) {
     assert(slot_index < FS_NUM_SLOTS);
     fs_reset(slot_index);
     fs_slot_t* slot = &state.slots[slot_index];
-    fs_copy_filename_and_ext(slot, name);
+    fs_path_append(&slot->path, name);
     if (fs_base64_decode(slot, payload)) {
         slot->result = FS_RESULT_SUCCESS;
         slot->ptr = slot->buf;
@@ -264,7 +253,7 @@ void fs_start_load_file(size_t slot_index, const char* path) {
     assert(slot_index < FS_NUM_SLOTS);
     fs_reset(slot_index);
     fs_slot_t* slot = &state.slots[slot_index];
-    fs_copy_filename_and_ext(slot, path);
+    fs_path_append(&slot->path, path);
     slot->result = FS_RESULT_PENDING;
     sfetch_send(&(sfetch_request_t){
         .path = path,
@@ -281,7 +270,7 @@ void fs_start_load_dropped_file(size_t slot_index) {
     fs_reset(slot_index);
     fs_slot_t* slot = &state.slots[slot_index];
     const char* path = sapp_get_dropped_file_path(0);
-    fs_copy_filename_and_ext(slot, path);
+    fs_path_append(&slot->path, path);
     slot->result = FS_RESULT_PENDING;
     #if defined(__EMSCRIPTEN__)
         sapp_html5_fetch_dropped_file(&(sapp_html5_fetch_request){
@@ -325,12 +314,97 @@ fs_range_t fs_data(size_t slot_index) {
     }
 }
 
-#if defined(__APPLE__)
-static const char* fs_snapshot_path(size_t snapshot_index, char* buf, size_t buf_size) {
+fs_path_t fs_make_snapshot_path(const char* dir, const char* system_name, size_t snapshot_index) {
+    char buf[16];
+    snprintf(buf, sizeof(buf), "%zu", snapshot_index);
+    fs_path_t path = {0};
+    fs_path_append(&path, dir);
+    fs_path_append(&path, "/chips_");
+    fs_path_append(&path, system_name);
+    fs_path_append(&path, "_snapshot_");
+    fs_path_append(&path, buf);
+    return path;
+}
 
+static void fs_snapshot_fetch_callback(const sfetch_response_t* response) {
+    const fs_snapshot_load_userdata_t* ud = (fs_snapshot_load_userdata_t*) response->user_data;
+    size_t snapshot_index = ud->snapshot_index;
+    fs_snapshot_load_callback_t callback = ud->callback;
+    if (response->fetched) {
+        const uint32_t magic = 'CHIP';
+        if ((response->data.size > sizeof(uint32_t)) && (*(uint32_t*)response->data.ptr == magic)) {
+            callback(&(fs_snapshot_response_t){
+                .snapshot_index = snapshot_index,
+                .result = FS_RESULT_SUCCESS,
+                .data = {
+                    .ptr = (uint8_t*)response->data.ptr + sizeof(uint32_t),
+                    .size = response->data.size - sizeof(uint32_t)
+                }
+            });
+        }
+        else {
+            // magic number mismatch
+            callback(&(fs_snapshot_response_t){
+                .snapshot_index = snapshot_index,
+                .result = FS_RESULT_FAILED,
+            });
+        }
+    }
+    else if (response->failed) {
+        callback(&(fs_snapshot_response_t){
+            .snapshot_index = snapshot_index,
+            .result = FS_RESULT_FAILED,
+        });
+    }
+}
+
+#if defined(__APPLE__)
+bool fs_save_snapshot(const char* system_name, size_t snapshot_index, fs_range_t data) {
+    assert(system_name && data.ptr && data.size > 0);
+    fs_path_t path = fs_make_snapshot_path("/tmp", system_name, snapshot_index);
+    if (path.clamped) {
+        return false;
+    }
+    FILE* fp = fopen(path.cstr, "wb");
+    if (fp) {
+        // write magic number
+        uint32_t magic = 'CHIP';
+        fwrite(&magic, sizeof(magic), 1, fp);
+        fwrite(data.ptr, data.size, 1, fp);
+        fclose(fp);
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
+bool fs_start_load_snapshot(size_t slot_index, const char* system_name, size_t snapshot_index, fs_snapshot_load_callback_t callback) {
+    assert(slot_index < FS_NUM_SLOTS);
+    assert(system_name && callback);
+    fs_path_t path = fs_make_snapshot_path("/tmp", system_name, snapshot_index);
+    if (path.clamped) {
+        return false;
+    }
+    fs_snapshot_load_userdata_t userdata = {
+        .snapshot_index = snapshot_index,
+        .callback = callback
+    };
+    fs_slot_t* slot = &state.slots[slot_index];
+    sfetch_send(&(sfetch_request_t){
+        .path = path.cstr,
+        .channel = slot_index,
+        .callback = fs_snapshot_fetch_callback,
+        .buffer = { .ptr = slot->buf, .size = FS_MAX_SIZE },
+        .user_data = { .ptr = &userdata, .size = sizeof(userdata) }
+    });
+    return true;
+}
+#else
+bool fs_save_snapshot(const char* system_name, size_t snapshot_index, fs_range_t data) {
+    return false;
+}
+void fs_start_load_snapshot(size_t slot_index, const char* system_name, size_t snapshot_index, fs_snapshot_load_callback_t callback) {
+    return false;
 }
 #endif
-bool fs_save_snapshot(size_t snapshot_index, fs_range_t data) {
-
-
-}

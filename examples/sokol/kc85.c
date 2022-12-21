@@ -34,6 +34,12 @@
 #define SCREENSHOT_WIDTH (320)
 #define SCREENSHOT_HEIGHT (256)
 
+typedef struct {
+    uint32_t version;
+    kc85_t kc85;
+    uint8_t fb[SCREENSHOT_HEIGHT][SCREENSHOT_WIDTH];
+} kc85_snapshot_t;
+
 static struct {
     kc85_t kc85;
     uint32_t frame_time_us;
@@ -42,11 +48,7 @@ static struct {
     kc85_module_type_t delay_insert_module; // module to insert after ROM module image has been loaded
     #ifdef CHIPS_USE_UI
         ui_kc85_t ui;
-        struct {
-            uint32_t version;
-            kc85_t kc85;
-            uint8_t fb[SCREENSHOT_HEIGHT][SCREENSHOT_WIDTH];
-        } snapshots[UI_SNAPSHOT_MAX_SLOTS];
+        kc85_snapshot_t snapshots[UI_SNAPSHOT_MAX_SLOTS];
     #endif
 } state;
 
@@ -56,6 +58,7 @@ static void ui_draw_cb(void);
 static void ui_boot_cb(kc85_t* sys);
 static void ui_save_snapshot(size_t slot_index);
 static bool ui_load_snapshot(size_t slot_index);
+static void ui_load_snapshots_from_storage(void);
 #else
 #define BORDER_TOP (8)
 #endif
@@ -65,12 +68,15 @@ static bool ui_load_snapshot(size_t slot_index);
 
 #if defined(CHIPS_KC85_TYPE_2)
 #define KC85_TYPE_NAME "KC85/2"
+#define KC85_SYSTEM_NAME "kc852"
 #define LOAD_DELAY_FRAMES (480)
 #elif defined(CHIPS_KC85_TYPE_3)
 #define KC85_TYPE_NAME "KC85/3"
+#define KC85_SYSTEM_NAME "kc853"
 #define LOAD_DELAY_FRAMES (480)
 #else
 #define KC85_TYPE_NAME "KC85/4"
+#define KC85_SYSTEM_NAME "kc854"
 #define LOAD_DELAY_FRAMES (180)
 #endif
 
@@ -179,6 +185,7 @@ void app_init(void) {
                 .toggle_breakpoint = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F9), .name = "F9" }
             }
         });
+        ui_load_snapshots_from_storage();
     #endif
 
     bool delay_input = false;
@@ -249,8 +256,8 @@ void app_frame(void) {
             .height = info.screen.height
         },
     });
-    handle_file_loading();
     send_keybuf_input();
+    handle_file_loading();
 }
 
 void app_input(const sapp_event* event) {
@@ -427,7 +434,27 @@ static void ui_boot_cb(kc85_t* sys) {
     kc85_init(sys, &desc);
 }
 
-void ui_save_snapshot(size_t slot) {
+static void ui_update_snapshot_slot_info(size_t slot) {
+    const kc85_display_info_t disp_info = kc85_display_info(&state.kc85);
+    ui_snapshot_slot_info_t info = {
+        .screenshot = {
+            .texture = gfx_create_texture_u8(
+                SCREENSHOT_WIDTH,
+                SCREENSHOT_HEIGHT,
+                &state.snapshots[slot].fb[0][0],
+                disp_info.palette.ptr,
+                disp_info.palette.size / 4),
+            .width = SCREENSHOT_WIDTH,
+            .height = SCREENSHOT_HEIGHT
+        },
+    };
+    ui_snapshot_slot_info_t old_info = ui_snapshot_update_slot_info(&state.ui.snapshot, slot, &info);
+    if (old_info.screenshot.texture) {
+        gfx_destroy_texture(old_info.screenshot.texture);
+    }
+}
+
+static void ui_save_snapshot(size_t slot) {
     if (slot < UI_SNAPSHOT_MAX_SLOTS) {
         state.snapshots[slot].version = kc85_save_snapshot(&state.kc85, &state.snapshots[slot].kc85);
 
@@ -440,26 +467,14 @@ void ui_save_snapshot(size_t slot) {
             const uint8_t* src = &state.kc85.video.fb[y * disp_info.framebuffer.width];
             memcpy(dst, src, SCREENSHOT_WIDTH);
         }
-        ui_snapshot_slot_info_t info = {
-            .screenshot = {
-                .texture = gfx_create_texture_u8(
-                    SCREENSHOT_WIDTH,
-                    SCREENSHOT_HEIGHT,
-                    &state.snapshots[slot].fb[0][0],
-                    disp_info.palette.ptr,
-                    disp_info.palette.size / 4),
-                .width = SCREENSHOT_WIDTH,
-                .height = SCREENSHOT_HEIGHT
-            },
-        };
-        ui_snapshot_slot_info_t old_info = ui_snapshot_update_slot_info(&state.ui.snapshot, slot, &info);
-        if (old_info.screenshot.texture) {
-            gfx_destroy_texture(old_info.screenshot.texture);
-        }
+        ui_update_snapshot_slot_info(slot);
+
+        // save to persistent storage
+        fs_save_snapshot(KC85_SYSTEM_NAME, slot, (fs_range_t){ .ptr = &state.snapshots[slot], sizeof(kc85_snapshot_t) });
     }
 }
 
-bool ui_load_snapshot(size_t slot) {
+static bool ui_load_snapshot(size_t slot) {
     bool success = false;
     if ((slot < UI_SNAPSHOT_MAX_SLOTS) && (state.ui.snapshot.slots[slot].valid)) {
         success = kc85_load_snapshot(&state.kc85, state.snapshots[slot].version, &state.snapshots[slot].kc85);
@@ -476,6 +491,29 @@ bool ui_load_snapshot(size_t slot) {
         }
     }
     return success;
+}
+
+static void ui_fetch_snapshot_callback(const fs_snapshot_response_t* response) {
+    assert(response);
+    if (response->result != FS_RESULT_SUCCESS) {
+        return;
+    }
+    if (response->data.size != sizeof(kc85_snapshot_t)) {
+        return;
+    }
+    if (((kc85_snapshot_t*)response->data.ptr)->version != KC85_SNAPSHOT_VERSION) {
+        return;
+    }
+    size_t snapshot_slot = response->snapshot_index;
+    assert(snapshot_slot < UI_SNAPSHOT_MAX_SLOTS);
+    memcpy(&state.snapshots[snapshot_slot], response->data.ptr, response->data.size);
+    ui_update_snapshot_slot_info(snapshot_slot);
+}
+
+static void ui_load_snapshots_from_storage(void) {
+    for (size_t snapshot_slot = 0; snapshot_slot < UI_SNAPSHOT_MAX_SLOTS; snapshot_slot++) {
+        fs_start_load_snapshot(FS_SLOT_SNAPSHOTS, KC85_SYSTEM_NAME, snapshot_slot, ui_fetch_snapshot_callback);
+    }
 }
 #endif
 
