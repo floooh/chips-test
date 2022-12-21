@@ -6,6 +6,9 @@
 #include <assert.h>
 #include <ctype.h>
 #include <stdio.h>
+#if defined(__EMSCRIPTEN__)
+#include <emscripten/emscripten.h>
+#endif
 
 #define FS_EXT_SIZE (16)
 #define FS_PATH_SIZE (256)
@@ -231,18 +234,18 @@ static void fs_fetch_callback(const sfetch_response_t* response) {
 
 #if defined(__EMSCRIPTEN__)
 static void fs_emsc_dropped_file_callback(const sapp_html5_fetch_response* response) {
-    size_t slot_index = *(size_t*)response->user_data;
+    size_t slot_index = (size_t)(uintptr_t)response->user_data;
     assert(slot_index < FS_NUM_SLOTS);
     fs_slot_t* slot = &state.slots[slot_index];
     if (response->succeeded) {
         slot->result = FS_RESULT_SUCCESS;
-        slot->ptr = response->data.ptr;
+        slot->ptr = (uint8_t*)response->data.ptr;
         slot->size = response->data.size;
         assert(slot->size < sizeof(slot->buf));
         // in case it's a text file, zero-terminate the data
         slot->buf[slot->size] = 0;
     }
-    else if (response->failed) {
+    else {
         slot->result = FS_RESULT_FAILED;
     }
 }
@@ -276,8 +279,8 @@ void fs_start_load_dropped_file(size_t slot_index) {
         sapp_html5_fetch_dropped_file(&(sapp_html5_fetch_request){
             .dropped_file_index = 0,
             .callback = fs_emsc_dropped_file_callback,
-            .buffer = { .ptr = state.buf, .size = FS_MAX_SIZE },
-            .user_data = { .ptr = &slot_index, .size = sizeof(slot_index) },
+            .buffer = { .ptr = slot->buf, .size = FS_MAX_SIZE },
+            .user_data = (void*)(intptr_t)slot_index,
         });
     #else
         fs_start_load_file(slot_index, path);
@@ -400,6 +403,56 @@ bool fs_start_load_snapshot(size_t slot_index, const char* system_name, size_t s
     });
     return true;
 }
+#elif defined(__EMSCRIPTEN__)
+
+EM_JS(int, fs_emsc_save_snapshot, (const char* system_name_cstr, int snapshot_index, void* bytes, int num_bytes), {
+    const db_name = 'chips';
+    const db_store_name = 'store';
+    const system_name = UTF8ToString(system_name_cstr);
+    console.log('fs_emsc_save_snapshot: called with', system_name, snapshot_index);
+    let open_request;
+    try {
+        open_request = window.indexedDB.open(db_name, 1);
+    } catch (e) {
+        console.log('fs_emsc_save_snapshot: failed to open IndexedDB with ' + e);
+        return 0;
+    }
+    open_request.onupgradeneeded = () => {
+        console.log('fs_emsc_save_snapshot: creating db');
+        let db = open_request.result;
+        db.createObjectStore(db_store_name);
+    };
+    open_request.onsuccess = () => {
+        console.log('fs_emsc_save_snapshot: onsuccess');
+        let db = open_request.result;
+        let transaction = db.transaction([db_store_name], 'readwrite');
+        let file = transaction.objectStore(db_store_name);
+        let key = system_name + '_' + snapshot_index;
+        let blob = HEAPU8.subarray(bytes, bytes + num_bytes);
+        let put_request = file.put(blob, key);
+        put_request.onsuccess = () => {
+            console.log('fs_emsc_save_snapshot:', key, 'successfully stored')
+        };
+        put_request.onerror = () => {
+            console.log('fs_emsc_save_snapshot: FAILED to store', key);
+        };
+        transaction.onerror = () => {
+            console.log('fs_emsc_save_snapshot: transaction onerror');
+        };
+    };
+    open_request.onerror = () => {
+        console.log('fs_emsc_save_snapshot: open_request onerror');
+    }
+});
+
+bool fs_save_snapshot(const char* system_name, size_t snapshot_index, fs_range_t data) {
+    return 0 != fs_emsc_save_snapshot(system_name, (int)snapshot_index, data.ptr, data.size);
+}
+
+bool fs_start_load_snapshot(size_t slot_index, const char* system_name, size_t snapshot_index, fs_snapshot_load_callback_t callback) {
+    // FIXME
+}
+
 #else
 bool fs_save_snapshot(const char* system_name, size_t snapshot_index, fs_range_t data) {
     return false;
