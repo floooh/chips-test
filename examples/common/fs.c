@@ -459,13 +459,15 @@ EM_JS(void, fs_js_load_snapshot, (const char* system_name_cstr, int snapshot_ind
         console.log('fs_js_load_snapshot: failed to open IndexedDB with ' + e);
     }
     open_request.onupgradeneeded = () => {
-        console.log('fs_js_load_snapshot: no snapshot database');
+        console.log('fs_js_load_snapshot: creating db');
+        let db = open_request.result;
+        db.createObjectStore(db_store_name);
     };
     open_request.onsuccess = () => {
         let db = open_request.result;
         let transaction;
         try {
-            transaction = db.transaction([db_store_name], 'readonly');
+            transaction = db.transaction([db_store_name], 'readwrite');
         } catch (e) {
             console.log('fs_js_load_snapshot: db.transaction failed with', e);
             return;
