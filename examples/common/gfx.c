@@ -220,7 +220,7 @@ static sg_image gfx_create_icon_texture(const uint8_t* packed_pixels, int width,
             bits >>= 1;
         }
     }
-    assert(src == packed_pixels + stride * height);
+    assert(src == packed_pixels + stride * height); (void)stride;   // stride is unused in release mode
     assert(dst <= pixels + (width * height));
     sg_image img = sg_make_image(&(sg_image_desc){
         .pixel_format = SG_PIXELFORMAT_RGBA8,
@@ -563,6 +563,7 @@ void* gfx_create_texture(int w, int h) {
 
 void* gfx_create_texture_u8(size_t w, size_t h, const uint8_t* pixels, const uint32_t* palette, size_t num_palette_entries) {
     assert((w > 0) && (h > 0) && pixels && palette && (num_palette_entries <= 256));
+    (void)num_palette_entries; // unused in release mode
     size_t dst_num_bytes = (size_t)(w * h * 4);
     uint32_t* dst = malloc(dst_num_bytes);
     for (size_t y = 0; y < h; y++) {
