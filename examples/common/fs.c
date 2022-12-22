@@ -391,7 +391,7 @@ bool fs_start_load_snapshot(size_t slot_index, const char* system_name, size_t s
     if (path.clamped) {
         return false;
     }
-    fs_snapshot_load_userdata_t userdata = {
+    fs_snapshot_load_context_t context = {
         .snapshot_index = snapshot_index,
         .callback = callback
     };
@@ -401,7 +401,7 @@ bool fs_start_load_snapshot(size_t slot_index, const char* system_name, size_t s
         .channel = slot_index,
         .callback = fs_snapshot_fetch_callback,
         .buffer = { .ptr = slot->buf, .size = FS_MAX_SIZE },
-        .user_data = { .ptr = &userdata, .size = sizeof(userdata) }
+        .user_data = { .ptr = &context, .size = sizeof(context) }
     });
     return true;
 }
