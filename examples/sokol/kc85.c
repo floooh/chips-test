@@ -390,7 +390,7 @@ static void draw_status_bar(void) {
     const float h = sapp_heightf();
     const char* slot_c = kc85_slot_mod_short_name(&state.kc85, 0x0C);
     const char* slot_8 = kc85_slot_mod_short_name(&state.kc85, 0x08);
-    const uint8_t pio_a = state.kc85.pio_a;
+    const uint64_t pio_pins = state.kc85.pio_pins;
     const uint32_t text_color = 0xFFFFFFFF;
     const uint32_t green_active = 0xFF00EE00;
     const uint32_t green_inactive = 0xFF006600;
@@ -401,22 +401,22 @@ static void draw_status_bar(void) {
 
     sdtx_color1i(text_color);
     sdtx_puts("  BASIC: ");
-    sdtx_color1i((pio_a & KC85_PIO_A_BASIC_ROM) ? green_active : green_inactive);
+    sdtx_color1i((pio_pins & KC85_PIO_BASIC_ROM) ? green_active : green_inactive);
     sdtx_putc(0xCF);
 
     sdtx_color1i(text_color);
     sdtx_puts("  CAOS: ");
-    sdtx_color1i((pio_a & KC85_PIO_A_CAOS_ROM) ? green_active : green_inactive);
+    sdtx_color1i((pio_pins & KC85_PIO_CAOS_ROM) ? green_active : green_inactive);
     sdtx_putc(0xCF);
 
     sdtx_color1i(text_color);
     sdtx_puts("  RAM: ");
-    sdtx_color1i((pio_a & KC85_PIO_A_RAM) ? green_active : green_inactive);
+    sdtx_color1i((pio_pins & KC85_PIO_RAM) ? green_active : green_inactive);
     sdtx_putc(0xCF);
 
     sdtx_color1i(text_color);
     sdtx_puts("  IRM: ");
-    sdtx_color1i((pio_a & KC85_PIO_A_IRM) ? green_active : green_inactive);
+    sdtx_color1i((pio_pins & KC85_PIO_IRM) ? green_active : green_inactive);
     sdtx_putc(0xCF);
 
     sdtx_pos(0.0f, 1.5f);
