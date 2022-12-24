@@ -22,8 +22,18 @@
     #include "ui/ui_dbg.h"
     #include "ui/ui_z80.h"
     #include "ui/ui_z80pio.h"
+    #include "ui/ui_snapshot.h"
     #include "ui/ui_z1013.h"
 #endif
+
+#define SCREENSHOT_WIDTH (256)
+#define SCREENSHOT_HEIGHT (256)
+
+typedef struct {
+    uint32_t version;
+    z1013_t z1013;
+    uint8_t fb[SCREENSHOT_WIDTH][SCREENSHOT_HEIGHT];
+} z1013_snapshot_t;
 
 static struct {
     z1013_t z1013;
@@ -32,11 +42,14 @@ static struct {
     double emu_time_ms;
     #ifdef CHIPS_USE_UI
         ui_z1013_t ui_z1013;
+        z1013_snapshot_t snapshots[UI_SNAPSHOT_MAX_SLOTS]
     #endif
 } state;
 
 #ifdef CHIPS_USE_UI
 #define BORDER_TOP (24)
+static void ui_draw_cb(void);
+static void ui_boot_cb(z1013_t* sys, z1013_type_t type);
 #else
 #define BORDER_TOP (8)
 #endif
@@ -58,16 +71,6 @@ z1013_desc_t z1013_desc(z1013_type_t type) {
         #endif
     };
 }
-
-#if defined(CHIPS_USE_UI)
-static void ui_draw_cb(void) {
-    ui_z1013_draw(&state.ui_z1013);
-}
-static void ui_boot_cb(z1013_t* sys, z1013_type_t type) {
-    z1013_desc_t desc = z1013_desc(type);
-    z1013_init(sys, &desc);
-}
-#endif
 
 void app_init(void) {
     gfx_init(&(gfx_desc_t){
@@ -246,6 +249,16 @@ static void draw_status_bar(void) {
     sdtx_pos(1.0f, (h / 8.0f) - 1.5f);
     sdtx_printf("frame:%.2fms emu:%.2fms (min:%.2fms max:%.2fms) ticks:%d", (float)state.frame_time_us * 0.001f, emu_stats.avg_val, emu_stats.min_val, emu_stats.max_val, state.ticks);
 }
+
+#if defined(CHIPS_USE_UI)
+static void ui_draw_cb(void) {
+    ui_z1013_draw(&state.ui_z1013);
+}
+static void ui_boot_cb(z1013_t* sys, z1013_type_t type) {
+    z1013_desc_t desc = z1013_desc(type);
+    z1013_init(sys, &desc);
+}
+#endif
 
 sapp_desc sokol_main(int argc, char* argv[]) {
     sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
