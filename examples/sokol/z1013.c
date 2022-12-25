@@ -41,8 +41,8 @@ static struct {
     uint32_t ticks;
     double emu_time_ms;
     #ifdef CHIPS_USE_UI
-        ui_z1013_t ui_z1013;
-        z1013_snapshot_t snapshots[UI_SNAPSHOT_MAX_SLOTS]
+        ui_z1013_t ui;
+        z1013_snapshot_t snapshots[UI_SNAPSHOT_MAX_SLOTS];
     #endif
 } state;
 
@@ -50,6 +50,9 @@ static struct {
 #define BORDER_TOP (24)
 static void ui_draw_cb(void);
 static void ui_boot_cb(z1013_t* sys, z1013_type_t type);
+static void ui_save_snapshot(size_t slot_index);
+static bool ui_load_snapshot(size_t slot_index);
+static void ui_load_snapshots_from_storage(void);
 #else
 #define BORDER_TOP (8)
 #endif
@@ -60,14 +63,17 @@ static void ui_boot_cb(z1013_t* sys, z1013_type_t type);
 z1013_desc_t z1013_desc(z1013_type_t type) {
     return(z1013_desc_t) {
         .type = type,
-        .pixel_buffer = { .ptr = gfx_framebuffer(), .size = gfx_framebuffer_size() },
+        .framebuffer = {
+            .ptr = gfx_framebuffer_ptr(),
+            .size = gfx_framebuffer_size(),
+        },
         .roms = {
             .mon_a2 = { .ptr=dump_z1013_mon_a2_bin, .size=sizeof(dump_z1013_mon_a2_bin) },
             .mon202 = { .ptr=dump_z1013_mon202_bin, .size=sizeof(dump_z1013_mon202_bin) },
             .font = { .ptr=dump_z1013_font_bin, .size=sizeof(dump_z1013_font_bin) }
         },
         #if defined(CHIPS_USE_UI)
-        .debug = ui_z1013_get_debug(&state.ui_z1013)
+        .debug = ui_z1013_get_debug(&state.ui)
         #endif
     };
 }
@@ -77,10 +83,16 @@ void app_init(void) {
         #ifdef CHIPS_USE_UI
         .draw_extra_cb = ui_draw,
         #endif
-        .border_left = BORDER_LEFT,
-        .border_right = BORDER_RIGHT,
-        .border_top = BORDER_TOP,
-        .border_bottom = BORDER_BOTTOM,
+        .border = {
+            .left = BORDER_LEFT,
+            .right = BORDER_RIGHT,
+            .top = BORDER_TOP,
+            .bottom = BORDER_BOTTOM,
+        },
+        .palette = {
+            .ptr = z1013_display_info(0).palette.ptr,
+            .size = z1013_display_info(0).palette.size,
+        }
     });
     keybuf_init(&(keybuf_desc_t){ .key_delay_frames = 6 });
     clock_init();
@@ -99,12 +111,19 @@ void app_init(void) {
     z1013_init(&state.z1013, &desc);
     #ifdef CHIPS_USE_UI
         ui_init(ui_draw_cb);
-        ui_z1013_init(&state.ui_z1013, &(ui_z1013_desc_t){
+        ui_z1013_init(&state.ui, &(ui_z1013_desc_t){
             .z1013 = &state.z1013,
             .boot_cb = ui_boot_cb,
-            .create_texture_cb = gfx_create_texture,
-            .update_texture_cb = gfx_update_texture,
-            .destroy_texture_cb = gfx_destroy_texture,
+            .dbg_texture = {
+                .create_cb = gfx_create_texture,
+                .update_cb = gfx_update_texture,
+                .destroy_cb = gfx_destroy_texture,
+            },
+            .snapshot = {
+                .load_cb = ui_load_snapshot,
+                .save_cb = ui_save_snapshot,
+                .empty_slot_texture = gfx_shared_empty_snapshot_texture(),
+            },
             .dbg_keys = {
                 .cont = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F5), .name = "F5" },
                 .stop = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F5), .name = "F5" },
@@ -114,11 +133,12 @@ void app_init(void) {
                 .toggle_breakpoint = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F9), .name = "F9" }
             }
         });
+        ui_load_snapshots_from_storage();
     #endif
     bool delay_input = false;
     if (sargs_exists("file")) {
         delay_input = true;
-        fs_start_load_file(sargs_value("file"));
+        fs_start_load_file(FS_SLOT_IMAGE, sargs_value("file"));
     }
     if (!delay_input) {
         if (sargs_exists("input")) {
@@ -137,7 +157,19 @@ void app_frame(void) {
     state.ticks = z1013_exec(&state.z1013, state.frame_time_us);
     state.emu_time_ms = stm_ms(stm_since(emu_start_time));
     draw_status_bar();
-    gfx_draw(z1013_display_width(&state.z1013), z1013_display_height(&state.z1013));
+    const z1013_display_info_t info = z1013_display_info(&state.z1013);
+    gfx_draw(&(gfx_draw_t){
+        .fb = {
+            .width = info.framebuffer.width,
+            .height = info.framebuffer.height,
+        },
+        .view = {
+            .x = info.screen.x,
+            .y = info.screen.y,
+            .width = info.screen.width,
+            .height = info.screen.height,
+        }
+    });
     handle_file_loading();
     send_keybuf_input();
 }
@@ -145,7 +177,7 @@ void app_frame(void) {
 void app_input(const sapp_event* event) {
     // accept dropped files also when ImGui grabs input
     if (event->type == SAPP_EVENTTYPE_FILES_DROPPED) {
-        fs_start_load_dropped_file();
+        fs_start_load_dropped_file(FS_SLOT_IMAGE);
     }
     #ifdef CHIPS_USE_UI
     if (ui_input(event)) {
@@ -197,7 +229,7 @@ void app_input(const sapp_event* event) {
 void app_cleanup(void) {
     z1013_discard(&state.z1013);
     #ifdef CHIPS_USE_UI
-        ui_z1013_discard(&state.ui_z1013);
+        ui_z1013_discard(&state.ui);
         ui_discard();
     #endif
     gfx_shutdown();
@@ -215,14 +247,15 @@ static void send_keybuf_input(void) {
 static void handle_file_loading(void) {
     fs_dowork();
     const uint32_t load_delay_frames = 20;
-    if (fs_ptr() && (clock_frame_count_60hz() > load_delay_frames)) {
+    if (fs_success(FS_SLOT_IMAGE) && (clock_frame_count_60hz() > load_delay_frames)) {
+        const z1013_range_t file_data = { .ptr = fs_data(FS_SLOT_IMAGE).ptr, .size = fs_data(FS_SLOT_IMAGE).size };
         bool load_success = false;
-        if (fs_ext("txt") || fs_ext("bas")) {
+        if (fs_ext(FS_SLOT_IMAGE, "txt") || fs_ext(FS_SLOT_IMAGE, "bas")) {
             load_success = true;
-            keybuf_put((const char*)fs_ptr());
+            keybuf_put((const char*)file_data.ptr);
         }
         else {
-            load_success = z1013_quickload(&state.z1013, fs_ptr(), fs_size());
+            load_success = z1013_quickload(&state.z1013, file_data);
         }
         if (load_success) {
             if (clock_frame_count_60hz() > (load_delay_frames + 10)) {
@@ -235,7 +268,7 @@ static void handle_file_loading(void) {
         else {
             gfx_flash_error();
         }
-        fs_reset();
+        fs_reset(FS_SLOT_IMAGE);
     }
 }
 
@@ -252,23 +285,107 @@ static void draw_status_bar(void) {
 
 #if defined(CHIPS_USE_UI)
 static void ui_draw_cb(void) {
-    ui_z1013_draw(&state.ui_z1013);
+    ui_z1013_draw(&state.ui);
 }
+
 static void ui_boot_cb(z1013_t* sys, z1013_type_t type) {
     z1013_desc_t desc = z1013_desc(type);
     z1013_init(sys, &desc);
+}
+
+static void ui_update_snapshot_slot_info(size_t slot) {
+    const z1013_display_info_t disp_info = z1013_display_info(&state.z1013);
+    ui_snapshot_slot_info_t info = {
+        .screenshot = {
+            .texture = gfx_create_texture_u8(
+                SCREENSHOT_WIDTH,
+                SCREENSHOT_HEIGHT,
+                &state.snapshots[slot].fb[0][0],
+                disp_info.palette.ptr,
+                disp_info.palette.size / 4),
+            .width = SCREENSHOT_WIDTH,
+            .height = SCREENSHOT_HEIGHT
+        },
+    };
+    ui_snapshot_slot_info_t old_info = ui_snapshot_update_slot_info(&state.ui.snapshot, slot, &info);
+    if (old_info.screenshot.texture) {
+        gfx_destroy_texture(old_info.screenshot.texture);
+    }
+}
+
+static void ui_save_snapshot(size_t slot) {
+    if (slot < UI_SNAPSHOT_MAX_SLOTS) {
+        state.snapshots[slot].version = z1013_save_snapshot(&state.z1013, &state.snapshots[slot].z1013);
+
+        // copy framebuffer over and create a texture object
+        const z1013_display_info_t disp_info = z1013_display_info(&state.z1013);
+        CHIPS_ASSERT(disp_info.screen.width >= SCREENSHOT_WIDTH);
+        CHIPS_ASSERT(disp_info.screen.height >= SCREENSHOT_HEIGHT);
+        for (size_t y = 0; y < SCREENSHOT_HEIGHT; y++) {
+            uint8_t* dst = &state.snapshots[slot].fb[y][0];
+            const uint8_t* src = &state.z1013.fb[y * disp_info.framebuffer.width];
+            memcpy(dst, src, SCREENSHOT_WIDTH);
+        }
+        ui_update_snapshot_slot_info(slot);
+
+        // save to persistent storage
+        fs_save_snapshot("z1013", slot, (fs_range_t){ .ptr = &state.snapshots[slot], sizeof(z1013_snapshot_t) });
+    }
+}
+
+static bool ui_load_snapshot(size_t slot) {
+    bool success = false;
+    if ((slot < UI_SNAPSHOT_MAX_SLOTS) && (state.ui.snapshot.slots[slot].valid)) {
+        success = z1013_load_snapshot(&state.z1013, state.snapshots[slot].version, &state.snapshots[slot].z1013);
+        if (success) {
+            // copy back frame buffer
+            const z1013_display_info_t disp_info = z1013_display_info(&state.z1013);
+            CHIPS_ASSERT(disp_info.screen.width >= SCREENSHOT_WIDTH);
+            CHIPS_ASSERT(disp_info.screen.height >= SCREENSHOT_HEIGHT);
+            for (size_t y = 0; y < SCREENSHOT_HEIGHT; y++) {
+                uint8_t* dst = &state.z1013.fb[y * disp_info.framebuffer.width];
+                const uint8_t* src = &state.snapshots[slot].fb[y][0];
+                memcpy(dst, src, SCREENSHOT_WIDTH);
+            }
+        }
+    }
+    return success;
+}
+
+static void ui_fetch_snapshot_callback(const fs_snapshot_response_t* response) {
+    assert(response);
+    if (response->result != FS_RESULT_SUCCESS) {
+        return;
+    }
+    if (response->data.size != sizeof(z1013_snapshot_t)) {
+        return;
+    }
+    if (((z1013_snapshot_t*)response->data.ptr)->version != Z1013_SNAPSHOT_VERSION) {
+        return;
+    }
+    size_t snapshot_slot = response->snapshot_index;
+    assert(snapshot_slot < UI_SNAPSHOT_MAX_SLOTS);
+    memcpy(&state.snapshots[snapshot_slot], response->data.ptr, response->data.size);
+    ui_update_snapshot_slot_info(snapshot_slot);
+}
+
+static void ui_load_snapshots_from_storage(void) {
+    for (size_t snapshot_slot = 0; snapshot_slot < UI_SNAPSHOT_MAX_SLOTS; snapshot_slot++) {
+        fs_start_load_snapshot(FS_SLOT_SNAPSHOTS, "z1013", snapshot_slot, ui_fetch_snapshot_callback);
+    }
 }
 #endif
 
 sapp_desc sokol_main(int argc, char* argv[]) {
     sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
+    const z1013_display_info_t info = z1013_display_info(0);
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,
         .event_cb = app_input,
         .cleanup_cb = app_cleanup,
-        .width = 2 * z1013_std_display_width() + BORDER_LEFT + BORDER_RIGHT,
-        .height = 2 * z1013_std_display_height() + BORDER_TOP + BORDER_BOTTOM,
+        .width = 2 * info.screen.width + BORDER_LEFT + BORDER_RIGHT,
+        .height = 2 * info.screen.height + BORDER_TOP + BORDER_BOTTOM,
         .window_title = "Robotron Z1013",
         .icon.sokol_default = true,
         .enable_dragndrop = true,
