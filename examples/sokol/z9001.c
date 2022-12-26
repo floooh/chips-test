@@ -30,8 +30,18 @@
     #include "ui/ui_z80.h"
     #include "ui/ui_z80pio.h"
     #include "ui/ui_z80ctc.h"
+    #include "ui/ui_snapshot.h"
     #include "ui/ui_z9001.h"
 #endif
+
+#define SCREENSHOT_WIDTH (320)
+#define SCREENSHOT_HEIGHT (192)
+
+typedef struct {
+    uint32_t version;
+    z9001_t z9001;
+    uint8_t fb[SCREENSHOT_HEIGHT][SCREENSHOT_WIDTH];
+} z9001_snapshot_t;
 
 static struct {
     z9001_t z9001;
@@ -39,11 +49,17 @@ static struct {
     uint32_t ticks;
     double emu_time_ms;
     #ifdef CHIPS_USE_UI
-        ui_z9001_t ui_z9001;
+        ui_z9001_t ui;
+        z9001_snapshot_t snapshots[UI_SNAPSHOT_MAX_SLOTS];
     #endif
 } state;
 
 #ifdef CHIPS_USE_UI
+static void ui_draw_cb(void);
+static void ui_boot_cb(z9001_t* sys, z9001_type_t type);
+static void ui_save_snapshot(size_t slot_index);
+static bool ui_load_snapshot(size_t slot_index);
+static void ui_load_snapshots_from_storage(void);
 #define BORDER_TOP (24)
 #else
 #define BORDER_TOP (8)
@@ -51,7 +67,6 @@ static struct {
 #define BORDER_LEFT (8)
 #define BORDER_RIGHT (8)
 #define BORDER_BOTTOM (16)
-
 
 // audio-streaming callback
 static void push_audio(const float* samples, int num_samples, void* user_data) {
@@ -63,7 +78,10 @@ static void push_audio(const float* samples, int num_samples, void* user_data) {
 z9001_desc_t z9001_desc(z9001_type_t type) {
     return (z9001_desc_t) {
         .type = type,
-        .pixel_buffer = { .ptr=gfx_framebuffer(), .size=gfx_framebuffer_size() },
+        .framebuffer = {
+            .ptr = gfx_framebuffer_ptr(),
+            .size = gfx_framebuffer_size(),
+        },
         .audio = {
             .callback = { .func = push_audio },
             .sample_rate = saudio_sample_rate(),
@@ -82,30 +100,26 @@ z9001_desc_t z9001_desc(z9001_type_t type) {
             },
         },
         #if defined(CHIPS_USE_UI)
-        .debug = ui_z9001_get_debug(&state.ui_z9001)
+        .debug = ui_z9001_get_debug(&state.ui)
         #endif
     };
 }
-
-#if defined(CHIPS_USE_UI)
-static void ui_draw_cb(void) {
-    ui_z9001_draw(&state.ui_z9001);
-}
-static void ui_boot_cb(z9001_t* sys, z9001_type_t type) {
-    z9001_desc_t desc = z9001_desc(type);
-    z9001_init(sys, &desc);
-}
-#endif
 
 void app_init(void) {
     gfx_init(&(gfx_desc_t) {
         #ifdef CHIPS_USE_UI
         .draw_extra_cb = ui_draw,
         #endif
-        .border_left = BORDER_LEFT,
-        .border_right = BORDER_RIGHT,
-        .border_top = BORDER_TOP,
-        .border_bottom = BORDER_BOTTOM,
+        .border = {
+            .left = BORDER_LEFT,
+            .right = BORDER_RIGHT,
+            .top = BORDER_TOP,
+            .bottom = BORDER_BOTTOM,
+        },
+        .palette = {
+            .ptr = z9001_display_info(0).palette.ptr,
+            .size = z9001_display_info(0).palette.size,
+        }
     });
     keybuf_init(&(keybuf_desc_t){ .key_delay_frames=12 });
     clock_init();
@@ -122,12 +136,19 @@ void app_init(void) {
     z9001_init(&state.z9001, &desc);
     #ifdef CHIPS_USE_UI
         ui_init(ui_draw_cb);
-        ui_z9001_init(&state.ui_z9001, &(ui_z9001_desc_t){
+        ui_z9001_init(&state.ui, &(ui_z9001_desc_t){
             .z9001 = &state.z9001,
             .boot_cb = ui_boot_cb,
-            .create_texture_cb = gfx_create_texture,
-            .update_texture_cb = gfx_update_texture,
-            .destroy_texture_cb = gfx_destroy_texture,
+            .dbg_texture = {
+                .create_cb = gfx_create_texture,
+                .update_cb = gfx_update_texture,
+                .destroy_cb = gfx_destroy_texture,
+            },
+            .snapshot = {
+                .load_cb = ui_load_snapshot,
+                .save_cb = ui_save_snapshot,
+                .empty_slot_texture = gfx_shared_empty_snapshot_texture(),
+            },
             .dbg_keys = {
                 .cont = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F5), .name = "F5" },
                 .stop = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F5), .name = "F5" },
@@ -137,11 +158,12 @@ void app_init(void) {
                 .toggle_breakpoint = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F9), .name = "F9" }
             }
         });
+        ui_load_snapshots_from_storage();
     #endif
     bool delay_input = false;
     if (sargs_exists("file")) {
         delay_input = true;
-        fs_start_load_file(sargs_value("file"));
+        fs_start_load_file(FS_SLOT_IMAGE, sargs_value("file"));
     }
     if (!delay_input) {
         if (sargs_exists("input")) {
@@ -160,7 +182,19 @@ void app_frame(void) {
     state.ticks = z9001_exec(&state.z9001, state.frame_time_us);
     state.emu_time_ms = stm_ms(stm_since(emu_start_time));
     draw_status_bar();
-    gfx_draw(z9001_display_width(&state.z9001), z9001_display_height(&state.z9001));
+    const z9001_display_info_t info = z9001_display_info(&state.z9001);
+    gfx_draw(&(gfx_draw_t){
+        .fb = {
+            .width = info.framebuffer.width,
+            .height = info.framebuffer.height,
+        },
+        .view = {
+            .x = info.screen.x,
+            .y = info.screen.y,
+            .width = info.screen.width,
+            .height = info.screen.height,
+        },
+    });
     handle_file_loading();
     send_keybuf_input();
 }
@@ -169,7 +203,7 @@ void app_frame(void) {
 void app_input(const sapp_event* event) {
     // accept dropped files also when ImGui grabs input
     if (event->type == SAPP_EVENTTYPE_FILES_DROPPED) {
-        fs_start_load_dropped_file();
+        fs_start_load_dropped_file(FS_SLOT_IMAGE);
     }
     #ifdef CHIPS_USE_UI
     if (ui_input(event)) {
@@ -224,7 +258,7 @@ void app_input(const sapp_event* event) {
 void app_cleanup(void) {
     z9001_discard(&state.z9001);
     #ifdef CHIPS_USE_UI
-        ui_z9001_discard(&state.ui_z9001);
+        ui_z9001_discard(&state.ui);
         ui_discard();
     #endif
     saudio_shutdown();
@@ -242,14 +276,15 @@ static void send_keybuf_input(void) {
 
 static void handle_file_loading(void) {
     fs_dowork();
-    if (fs_ptr() && clock_frame_count_60hz() > 20) {
+    if (fs_success(FS_SLOT_IMAGE) && clock_frame_count_60hz() > 20) {
+        const z9001_range_t file_data = { .ptr = fs_data(FS_SLOT_IMAGE).ptr, .size = fs_data(FS_SLOT_IMAGE).size };
         bool load_success = false;
-        if (fs_ext("txt") || (fs_ext("bas"))) {
+        if (fs_ext(FS_SLOT_IMAGE, "txt") || (fs_ext(FS_SLOT_IMAGE, "bas"))) {
             load_success = true;
-            keybuf_put((const char*)fs_ptr());
+            keybuf_put((const char*)file_data.ptr);
         }
         else {
-            load_success = z9001_quickload(&state.z9001, fs_ptr(), fs_size());
+            load_success = z9001_quickload(&state.z9001, file_data);
         }
         if (load_success) {
             gfx_flash_success();
@@ -260,7 +295,7 @@ static void handle_file_loading(void) {
         else {
             gfx_flash_error();
         }
-        fs_reset();
+        fs_reset(FS_SLOT_IMAGE);
     }
 }
 
@@ -275,15 +310,109 @@ static void draw_status_bar(void) {
     sdtx_printf("frame:%.2fms emu:%.2fms (min:%.2fms max:%.2fms) ticks:%d", (float)state.frame_time_us * 0.001f, emu_stats.avg_val, emu_stats.min_val, emu_stats.max_val, state.ticks);
 }
 
+#if defined(CHIPS_USE_UI)
+static void ui_draw_cb(void) {
+    ui_z9001_draw(&state.ui);
+}
+
+static void ui_boot_cb(z9001_t* sys, z9001_type_t type) {
+    z9001_desc_t desc = z9001_desc(type);
+    z9001_init(sys, &desc);
+}
+
+static void ui_update_snapshot_slot_info(size_t slot) {
+    const z9001_display_info_t disp_info = z9001_display_info(&state.z9001);
+    ui_snapshot_slot_info_t info = {
+        .screenshot = {
+            .texture = gfx_create_texture_u8(
+                SCREENSHOT_WIDTH,
+                SCREENSHOT_HEIGHT,
+                &state.snapshots[slot].fb[0][0],
+                disp_info.palette.ptr,
+                disp_info.palette.size / 4),
+            .width = SCREENSHOT_WIDTH,
+            .height = SCREENSHOT_HEIGHT
+        },
+    };
+    ui_snapshot_slot_info_t old_info = ui_snapshot_update_slot_info(&state.ui.snapshot, slot, &info);
+    if (old_info.screenshot.texture) {
+        gfx_destroy_texture(old_info.screenshot.texture);
+    }
+}
+
+static void ui_save_snapshot(size_t slot) {
+    if (slot < UI_SNAPSHOT_MAX_SLOTS) {
+        state.snapshots[slot].version = z9001_save_snapshot(&state.z9001, &state.snapshots[slot].z9001);
+
+        // copy framebuffer over and create a texture object
+        const z9001_display_info_t disp_info = z9001_display_info(&state.z9001);
+        CHIPS_ASSERT(disp_info.screen.width >= SCREENSHOT_WIDTH);
+        CHIPS_ASSERT(disp_info.screen.height >= SCREENSHOT_HEIGHT);
+        for (size_t y = 0; y < SCREENSHOT_HEIGHT; y++) {
+            uint8_t* dst = &state.snapshots[slot].fb[y][0];
+            const uint8_t* src = &state.z9001.fb[y * disp_info.framebuffer.width];
+            memcpy(dst, src, SCREENSHOT_WIDTH);
+        }
+        ui_update_snapshot_slot_info(slot);
+
+        // save to persistent storage
+        fs_save_snapshot("z9001", slot, (fs_range_t){ .ptr = &state.snapshots[slot], sizeof(z9001_snapshot_t) });
+    }
+}
+
+static bool ui_load_snapshot(size_t slot) {
+    bool success = false;
+    if ((slot < UI_SNAPSHOT_MAX_SLOTS) && (state.ui.snapshot.slots[slot].valid)) {
+        success = z9001_load_snapshot(&state.z9001, state.snapshots[slot].version, &state.snapshots[slot].z9001);
+        if (success) {
+            // copy back frame buffer
+            const z9001_display_info_t disp_info = z9001_display_info(&state.z9001);
+            CHIPS_ASSERT(disp_info.screen.width >= SCREENSHOT_WIDTH);
+            CHIPS_ASSERT(disp_info.screen.height >= SCREENSHOT_HEIGHT);
+            for (size_t y = 0; y < SCREENSHOT_HEIGHT; y++) {
+                uint8_t* dst = &state.z9001.fb[y * disp_info.framebuffer.width];
+                const uint8_t* src = &state.snapshots[slot].fb[y][0];
+                memcpy(dst, src, SCREENSHOT_WIDTH);
+            }
+        }
+    }
+    return success;
+}
+
+static void ui_fetch_snapshot_callback(const fs_snapshot_response_t* response) {
+    assert(response);
+    if (response->result != FS_RESULT_SUCCESS) {
+        return;
+    }
+    if (response->data.size != sizeof(z9001_snapshot_t)) {
+        return;
+    }
+    if (((z9001_snapshot_t*)response->data.ptr)->version != Z9001_SNAPSHOT_VERSION) {
+        return;
+    }
+    size_t snapshot_slot = response->snapshot_index;
+    assert(snapshot_slot < UI_SNAPSHOT_MAX_SLOTS);
+    memcpy(&state.snapshots[snapshot_slot], response->data.ptr, response->data.size);
+    ui_update_snapshot_slot_info(snapshot_slot);
+}
+
+static void ui_load_snapshots_from_storage(void) {
+    for (size_t snapshot_slot = 0; snapshot_slot < UI_SNAPSHOT_MAX_SLOTS; snapshot_slot++) {
+        fs_start_load_snapshot(FS_SLOT_SNAPSHOTS, "z9001", snapshot_slot, ui_fetch_snapshot_callback);
+    }
+}
+#endif
+
 sapp_desc sokol_main(int argc, char* argv[]) {
     sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
+    const z9001_display_info_t info = z9001_display_info(0);
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,
         .event_cb = app_input,
         .cleanup_cb = app_cleanup,
-        .width = 2 * z9001_std_display_width() + BORDER_LEFT + BORDER_RIGHT,
-        .height = 2 * z9001_std_display_height() + BORDER_TOP + BORDER_BOTTOM,
+        .width = 2 * info.screen.width + BORDER_LEFT + BORDER_RIGHT,
+        .height = 2 * info.screen.height + BORDER_TOP + BORDER_BOTTOM,
         .window_title = "Robotron Z9001/KC87",
         .icon.sokol_default = true,
         .enable_dragndrop = true,

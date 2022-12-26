@@ -26,4 +26,5 @@
 #include "ui/ui_z80.h"
 #include "ui/ui_z80pio.h"
 #include "ui/ui_z80ctc.h"
+#include "ui/ui_snapshot.h"
 #include "ui/ui_z9001.h"
