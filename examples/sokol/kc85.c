@@ -5,6 +5,7 @@
 */
 #include "common.h"
 #define CHIPS_IMPL
+#include "chips/chips_common.h"
 #include "chips/z80.h"
 #include "chips/z80ctc.h"
 #include "chips/z80pio.h"
@@ -243,19 +244,7 @@ void app_frame(void) {
     state.ticks = kc85_exec(&state.kc85, state.frame_time_us);
     state.emu_time_ms = stm_ms(stm_since(emu_start_time));
     draw_status_bar();
-    const kc85_display_info_t info = kc85_display_info(&state.kc85);
-    gfx_draw(&(gfx_draw_t){
-        .fb = {
-            .width = info.framebuffer.width,
-            .height = info.framebuffer.height,
-        },
-        .view = {
-            .x = info.screen.x,
-            .y = info.screen.y,
-            .width = info.screen.width,
-            .height = info.screen.height
-        },
-    });
+    gfx_draw(kc85_display_info(&state.kc85));
     send_keybuf_input();
     handle_file_loading();
 }
@@ -352,7 +341,7 @@ static void handle_file_loading(void) {
     fs_dowork();
     const uint32_t load_delay_frames = LOAD_DELAY_FRAMES;
     if (fs_success(FS_SLOT_IMAGE) && clock_frame_count_60hz() > load_delay_frames) {
-        const kc85_range_t file_data = { .ptr = fs_data(FS_SLOT_IMAGE).ptr, .size = fs_data(FS_SLOT_IMAGE).size };
+        const chips_range_t file_data = fs_data(FS_SLOT_IMAGE);
         bool load_success = false;
         if (sargs_exists("mod_image")) {
             // insert the rom module
@@ -435,7 +424,7 @@ static void ui_boot_cb(kc85_t* sys) {
 }
 
 static void ui_update_snapshot_slot_info(size_t slot) {
-    const kc85_display_info_t disp_info = kc85_display_info(&state.kc85);
+    const chips_display_info_t disp_info = kc85_display_info(&state.kc85);
     ui_snapshot_slot_info_t info = {
         .screenshot = {
             .texture = gfx_create_texture_u8(
@@ -459,18 +448,18 @@ static void ui_save_snapshot(size_t slot) {
         state.snapshots[slot].version = kc85_save_snapshot(&state.kc85, &state.snapshots[slot].kc85);
 
         // copy framebuffer over and create a texture object
-        const kc85_display_info_t disp_info = kc85_display_info(&state.kc85);
+        const chips_display_info_t disp_info = kc85_display_info(&state.kc85);
         CHIPS_ASSERT(disp_info.screen.width >= SCREENSHOT_WIDTH);
         CHIPS_ASSERT(disp_info.screen.height >= SCREENSHOT_HEIGHT);
         for (size_t y = 0; y < SCREENSHOT_HEIGHT; y++) {
             uint8_t* dst = &state.snapshots[slot].fb[y][0];
-            const uint8_t* src = &state.kc85.video.fb[y * disp_info.framebuffer.width];
+            const uint8_t* src = &state.kc85.video.fb[y * disp_info.framebuffer.dim.width];
             memcpy(dst, src, SCREENSHOT_WIDTH);
         }
         ui_update_snapshot_slot_info(slot);
 
         // save to persistent storage
-        fs_save_snapshot(KC85_SYSTEM_NAME, slot, (fs_range_t){ .ptr = &state.snapshots[slot], sizeof(kc85_snapshot_t) });
+        fs_save_snapshot(KC85_SYSTEM_NAME, slot, (chips_range_t){ .ptr = &state.snapshots[slot], sizeof(kc85_snapshot_t) });
     }
 }
 
@@ -480,11 +469,11 @@ static bool ui_load_snapshot(size_t slot) {
         success = kc85_load_snapshot(&state.kc85, state.snapshots[slot].version, &state.snapshots[slot].kc85);
         if (success) {
             // copy back frame buffer
-            const kc85_display_info_t disp_info = kc85_display_info(&state.kc85);
+            const chips_display_info_t disp_info = kc85_display_info(&state.kc85);
             CHIPS_ASSERT(disp_info.screen.width >= SCREENSHOT_WIDTH);
             CHIPS_ASSERT(disp_info.screen.height >= SCREENSHOT_HEIGHT);
             for (size_t y = 0; y < SCREENSHOT_HEIGHT; y++) {
-                uint8_t* dst = &state.kc85.video.fb[y * disp_info.framebuffer.width];
+                uint8_t* dst = &state.kc85.video.fb[y * disp_info.framebuffer.dim.width];
                 const uint8_t* src = &state.snapshots[slot].fb[y][0];
                 memcpy(dst, src, SCREENSHOT_WIDTH);
             }
@@ -519,7 +508,7 @@ static void ui_load_snapshots_from_storage(void) {
 
 sapp_desc sokol_main(int argc, char* argv[]) {
     sargs_setup(&(sargs_desc) { .argc = argc, .argv = argv });
-    const kc85_display_info_t info = kc85_display_info(0);
+    const chips_display_info_t info = kc85_display_info(0);
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,

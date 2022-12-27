@@ -20,12 +20,12 @@ typedef struct {
     struct {
         sg_image img;       // framebuffer texture, RGBA8 or R8 if paletted
         sg_image pal_img;   // optional color palette texture
-        gfx_dim_t size;
+        chips_dim_t dim;
         bool paletted;
     } fb;
     struct {
-        gfx_rect_t view;
-        gfx_dim_t pixel_aspect;
+        chips_rect_t view;
+        chips_dim_t pixel_aspect;
         sg_image img;
         sg_buffer vbuf;
         sg_pipeline pip;
@@ -41,7 +41,7 @@ typedef struct {
     struct {
         sg_image img;
         sgl_pipeline pip;
-        gfx_dim_t size;
+        chips_dim_t dim;
     } icon;
     int flash_success_count;
     int flash_error_count;
@@ -245,8 +245,8 @@ static void gfx_init_images_and_pass(void) {
 
     // a texture with the emulator's raw pixel data
     state.fb.img = sg_make_image(&(sg_image_desc){
-        .width = state.fb.size.width,
-        .height = state.fb.size.height,
+        .width = state.fb.dim.width,
+        .height = state.fb.dim.height,
         .pixel_format = state.fb.paletted ? SG_PIXELFORMAT_R8 : SG_PIXELFORMAT_RGBA8,
         .usage = SG_USAGE_STREAM,
         .min_filter = SG_FILTER_NEAREST,
@@ -295,7 +295,7 @@ void gfx_init(const gfx_desc_t* desc) {
     state.border = desc->border;
     state.display.portrait = desc->portrait;
     state.draw_extra_cb = desc->draw_extra_cb;
-    state.fb.size =  (gfx_dim_t){0};
+    state.fb.dim =  (chips_dim_t){0};
     state.fb.paletted = 0 != desc->palette.ptr;
 
     if (state.fb.paletted) {
@@ -369,8 +369,8 @@ void gfx_init(const gfx_desc_t* desc) {
     // create an unpacked speaker icon image and sokol-gl pipeline
     {
         // textures must be 2^n for WebGL
-        state.icon.size.width = speaker_icon.width;
-        state.icon.size.height = speaker_icon.height;
+        state.icon.dim.width = speaker_icon.width;
+        state.icon.dim.height = speaker_icon.height;
         state.icon.img = gfx_create_icon_texture(
             speaker_icon.pixels,
             speaker_icon.width,
@@ -404,56 +404,54 @@ void gfx_init(const gfx_desc_t* desc) {
    and for 'portrait' orientations, keep the emulator display at the
    top, to make room at the bottom for mobile virtual keyboard
 */
-static void apply_viewport(gfx_dim_t canvas) {
-    float cw = (float) (canvas.width - state.border.left - state.border.right);
+static void apply_viewport(chips_dim_t canvas, chips_rect_t view, chips_dim_t pixel_aspect, gfx_border_t border) {
+    float cw = (float) (canvas.width - border.left - border.right);
     if (cw < 1.0f) {
         cw = 1.0f;
     }
-    float ch = (float) (canvas.height - state.border.top - state.border.bottom);
+    float ch = (float) (canvas.height - border.top - border.bottom);
     if (ch < 1.0f) {
         ch = 1.0f;
     }
     const float canvas_aspect = (float)cw / (float)ch;
-    const gfx_rect_t view = state.offscreen.view;
-    const gfx_dim_t aspect = state.offscreen.pixel_aspect;
+    const chips_dim_t aspect = pixel_aspect;
     const float emu_aspect = (float)(view.width * aspect.width) / (float)(view.height * aspect.height);
     float vp_x, vp_y, vp_w, vp_h;
     if (emu_aspect < canvas_aspect) {
-        vp_y = (float)state.border.top;
+        vp_y = (float)border.top;
         vp_h = ch;
         vp_w = (ch * emu_aspect);
-        vp_x = state.border.left + (cw - vp_w) / 2;
+        vp_x = border.left + (cw - vp_w) / 2;
     }
     else {
-        vp_x = (float)state.border.left;
+        vp_x = (float)border.left;
         vp_w = cw;
         vp_h = (cw / emu_aspect);
-        vp_y = (float)state.border.top;
+        vp_y = (float)border.top;
     }
     sg_apply_viewportf(vp_x, vp_y, vp_w, vp_h, true);
 }
 
-void gfx_draw(const gfx_draw_t* args) {
+void gfx_draw(chips_display_info_t display_info) {
     assert(state.valid);
-    assert(args);
-    assert((args->fb.width > 0) && (args->fb.height > 0));
-    assert((args->view.width > 0) && (args->view.height > 0));
-    const gfx_dim_t display = { .width = sapp_width(), .height = sapp_height() };
+    assert((display_info.framebuffer.dim.width > 0) && (display_info.framebuffer.dim.height > 0));
+    assert((display_info.screen.width > 0) && (display_info.screen.height > 0));
+    const chips_dim_t display = { .width = sapp_width(), .height = sapp_height() };
 
-    state.offscreen.view = args->view;
+    state.offscreen.view = display_info.screen;
 
     // check if emulator framebuffer size has changed, need to create new backing texture
-    if ((args->fb.width != state.fb.size.width) || (args->fb.height != state.fb.size.height)) {
-        state.fb.size = args->fb;
+    if ((display_info.framebuffer.dim.width != state.fb.dim.width) || (display_info.framebuffer.dim.height != state.fb.dim.height)) {
+        state.fb.dim = display_info.framebuffer.dim;
         gfx_init_images_and_pass();
     }
 
     // if audio is off, draw speaker icon via sokol-gl
     if (saudio_suspended()) {
-        const float x0 = display.width - (float)state.icon.size.width - 10.0f;
-        const float x1 = x0 + (float)state.icon.size.width;
+        const float x0 = display.width - (float)state.icon.dim.width - 10.0f;
+        const float x1 = x0 + (float)state.icon.dim.width;
         const float y0 = 10.0f;
-        const float y1 = y0 + (float)state.icon.size.height;
+        const float y1 = y0 + (float)state.icon.dim.height;
         const float alpha = (sapp_frame_count() & 0x20) ? 0.0f : 1.0f;
         sgl_defaults();
         sgl_enable_texture();
@@ -471,11 +469,10 @@ void gfx_draw(const gfx_draw_t* args) {
     }
 
     // copy emulator pixel data into emulator framebuffer texture
-    const size_t bytes_per_pixel = state.fb.paletted ? 1 : 4;
     sg_update_image(state.fb.img, &(sg_image_data){
         .subimage[0][0] = {
             .ptr = state.pixel_buffer,
-            .size = state.fb.size.width * state.fb.size.height * bytes_per_pixel,
+            .size = display_info.framebuffer.size_bytes
         }
     });
 
@@ -489,12 +486,12 @@ void gfx_draw(const gfx_draw_t* args) {
     });
     const offscreen_vs_params_t vs_params = {
         .uv_offset = {
-            (float)state.offscreen.view.x / (float)state.fb.size.width,
-            (float)state.offscreen.view.y / (float)state.fb.size.height,
+            (float)state.offscreen.view.x / (float)state.fb.dim.width,
+            (float)state.offscreen.view.y / (float)state.fb.dim.height,
         },
         .uv_scale = {
-            (float)state.offscreen.view.width / (float)state.fb.size.width,
-            (float)state.offscreen.view.height / (float)state.fb.size.height
+            (float)state.offscreen.view.width / (float)state.fb.dim.width,
+            (float)state.offscreen.view.height / (float)state.fb.dim.height
         }
     };
     sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_offscreen_vs_params, &SG_RANGE(vs_params));
@@ -517,7 +514,7 @@ void gfx_draw(const gfx_draw_t* args) {
 
     // draw the final pass with linear filtering
     sg_begin_default_pass(&state.display.pass_action, display.width, display.height);
-    apply_viewport(display);
+    apply_viewport(display, display_info.screen, state.offscreen.pixel_aspect, state.border);
     sg_apply_pipeline(state.display.pip);
     sg_apply_bindings(&(sg_bindings){
         .vertex_buffers[0] = state.display.vbuf,

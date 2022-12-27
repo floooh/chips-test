@@ -177,7 +177,7 @@ void fs_reset(size_t slot_index) {
     slot->size = 0;
 }
 
-void fs_load_mem(size_t slot_index, const char* path, fs_range_t data) {
+void fs_load_mem(size_t slot_index, const char* path, chips_range_t data) {
     assert(state.valid);
     assert(slot_index < FS_NUM_SLOTS);
     assert(data.ptr && (data.size > 0));
@@ -305,15 +305,15 @@ bool fs_pending(size_t slot_index) {
     return fs_result(slot_index) == FS_RESULT_PENDING;
 }
 
-fs_range_t fs_data(size_t slot_index) {
+chips_range_t fs_data(size_t slot_index) {
     assert(state.valid);
     assert(slot_index < FS_NUM_SLOTS);
     fs_slot_t* slot = &state.slots[slot_index];
     if (slot->result == FS_RESULT_SUCCESS) {
-        return (fs_range_t){ .ptr = slot->ptr, .size = slot->size };
+        return (chips_range_t){ .ptr = slot->ptr, .size = slot->size };
     }
     else {
-        return (fs_range_t){0};
+        return (chips_range_t){0};
     }
 }
 
@@ -364,7 +364,7 @@ static void fs_snapshot_fetch_callback(const sfetch_response_t* response) {
 #endif
 
 #if defined(__APPLE__)
-bool fs_save_snapshot(const char* system_name, size_t snapshot_index, fs_range_t data) {
+bool fs_save_snapshot(const char* system_name, size_t snapshot_index, chips_range_t data) {
     assert(system_name && data.ptr && data.size > 0);
     fs_path_t path = fs_make_snapshot_path("/tmp", system_name, snapshot_index);
     if (path.clamped) {
@@ -499,7 +499,7 @@ EM_JS(void, fs_js_load_snapshot, (const char* system_name_cstr, int snapshot_ind
     }
 });
 
-bool fs_save_snapshot(const char* system_name, size_t snapshot_index, fs_range_t data) {
+bool fs_save_snapshot(const char* system_name, size_t snapshot_index, chips_range_t data) {
     assert(system_name && data.ptr && data.size > 0);
     fs_js_save_snapshot(system_name, (int)snapshot_index, data.ptr, data.size);
     return true;
@@ -548,7 +548,7 @@ bool fs_start_load_snapshot(size_t slot_index, const char* system_name, size_t s
 }
 
 #else
-bool fs_save_snapshot(const char* system_name, size_t snapshot_index, fs_range_t data) {
+bool fs_save_snapshot(const char* system_name, size_t snapshot_index, chips_range_t data) {
     return false;
 }
 void fs_start_load_snapshot(size_t slot_index, const char* system_name, size_t snapshot_index, fs_snapshot_load_callback_t callback) {

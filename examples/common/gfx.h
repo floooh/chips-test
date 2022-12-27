@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include "chips/chips_common.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,35 +23,17 @@ typedef struct {
 } gfx_border_t;
 
 typedef struct {
-    int width, height;
-} gfx_dim_t;
-
-typedef struct {
-    int x, y, width, height;
-} gfx_rect_t;
-
-typedef struct {
-    const void* ptr;    // up to 256 RGBA8 colors
-    size_t size;        // palette size in bytes (4 * num_colors)
-} gfx_range_t;
-
-typedef struct {
     gfx_border_t border;
-    gfx_dim_t pixel_aspect; // optional pixel aspect ratio, default is 1:1
-    gfx_range_t palette;    // optional color palette, up to 256 entries
-    bool portrait;          // true if screen is in portrait mode (e.g. most arcade machines)
+    chips_dim_t pixel_aspect;   // optional pixel aspect ratio, default is 1:1
+    chips_range_t palette;      // optional color palette, up to 256 entries
+    bool portrait;              // true if screen is in portrait mode (e.g. most arcade machines)
     void (*draw_extra_cb)(void);
 } gfx_desc_t;
-
-typedef struct {
-    gfx_dim_t fb;           // the framebuffer width and height
-    gfx_rect_t view;        // the visible screen rectangle inside the framebuffer
-} gfx_draw_t;
 
 void gfx_init(const gfx_desc_t* desc);
 void* gfx_framebuffer_ptr(void);
 size_t gfx_framebuffer_size(void);
-void gfx_draw(const gfx_draw_t* draw_args);
+void gfx_draw(chips_display_info_t display_info);
 void gfx_shutdown(void);
 
 // UI helper functions unrelated to actual emulator framebuffer rendering
