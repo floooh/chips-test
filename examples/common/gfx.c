@@ -8,7 +8,6 @@
 #include "shaders.glsl.h"
 #include <assert.h>
 #include <stdlib.h> // malloc/free
-#include <stdalign.h>
 
 #define GFX_DEF(v,def) (v?v:def)
 
@@ -50,9 +49,6 @@ typedef struct {
         sg_image images[GFX_DELETE_STACK_SIZE];
         size_t cur_slot;
     } delete_stack;
-
-    uint32_t palette_buffer[256];
-    alignas(64) uint8_t pixel_buffer[GFX_MAX_FB_WIDTH * GFX_MAX_FB_HEIGHT * 4];
     void (*draw_extra_cb)(void);
 } gfx_state_t;
 static gfx_state_t state;
@@ -186,11 +182,6 @@ void gfx_flash_error(void) {
     state.flash_error_count = 20;
 }
 
-chips_range_t gfx_framebuffer(void) {
-    assert(state.valid);
-    return (chips_range_t) { .ptr = state.pixel_buffer, .size = sizeof(state.pixel_buffer) };
-}
-
 static sg_image gfx_create_icon_texture(const uint8_t* packed_pixels, int width, int height, int stride, sg_filter filter) {
     // textures must be 2^n for WebGL
     const size_t pixel_data_size = width * height * sizeof(uint32_t);
@@ -239,6 +230,7 @@ static void gfx_init_images_and_pass(void) {
     sg_destroy_pass(state.offscreen.pass);
 
     // a texture with the emulator's raw pixel data
+    assert((state.fb.dim.width > 0) && (state.fb.dim.height > 0));
     state.fb.img = sg_make_image(&(sg_image_desc){
         .width = state.fb.dim.width,
         .height = state.fb.dim.height,
@@ -251,6 +243,7 @@ static void gfx_init_images_and_pass(void) {
     });
 
     // 2x-upscaling render target textures and passes
+    assert((state.offscreen.view.width > 0) && (state.offscreen.view.height > 0));
     state.offscreen.img = sg_make_image(&(sg_image_desc){
         .render_target = true,
         .width = 2 * state.offscreen.view.width,
@@ -258,7 +251,8 @@ static void gfx_init_images_and_pass(void) {
         .min_filter = SG_FILTER_LINEAR,
         .mag_filter = SG_FILTER_LINEAR,
         .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
-        .wrap_v = SG_WRAP_CLAMP_TO_EDGE
+        .wrap_v = SG_WRAP_CLAMP_TO_EDGE,
+        .sample_count = 1,
     });
     state.offscreen.pass = sg_make_pass(&(sg_pass_desc){
         .color_attachments[0].image = state.offscreen.img
@@ -290,12 +284,16 @@ void gfx_init(const gfx_desc_t* desc) {
     state.border = desc->border;
     state.display.portrait = desc->portrait;
     state.draw_extra_cb = desc->draw_extra_cb;
-    state.fb.dim =  (chips_dim_t){0};
-    state.fb.paletted = 0 != desc->palette.ptr;
+    state.fb.dim =  desc->display_info.frame.dim;
+    state.fb.paletted = 0 != desc->display_info.palette.ptr;
+    state.offscreen.pixel_aspect.width = GFX_DEF(desc->pixel_aspect.width, 1);
+    state.offscreen.pixel_aspect.height = GFX_DEF(desc->pixel_aspect.height, 1);
+    state.offscreen.view = desc->display_info.screen;
 
     if (state.fb.paletted) {
-        assert((desc->palette.ptr == 0) || (desc->palette.ptr && (desc->palette.size > 0) && (desc->palette.size < sizeof(state.palette_buffer))));
-        memcpy(state.palette_buffer, desc->palette.ptr, desc->palette.size);
+        static uint32_t palette_buf[256];
+        assert((desc->display_info.palette.size > 0) && (desc->display_info.palette.size <= sizeof(palette_buf)));
+        memcpy(palette_buf, desc->display_info.palette.ptr, desc->display_info.palette.size);
         state.fb.pal_img = sg_make_image(&(sg_image_desc){
             .width = 256,
             .height = 1,
@@ -305,13 +303,14 @@ void gfx_init(const gfx_desc_t* desc) {
             .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
             .wrap_v = SG_WRAP_CLAMP_TO_EDGE,
             .data = {
-                .subimage[0][0] = { .ptr = state.palette_buffer, .size = sizeof(state.palette_buffer) },
+                .subimage[0][0] = {
+                    .ptr = palette_buf,
+                    .size = sizeof(palette_buf)
+                }
             }
         });
     }
 
-    state.offscreen.pixel_aspect.width = GFX_DEF(desc->pixel_aspect.width, 1);
-    state.offscreen.pixel_aspect.height = GFX_DEF(desc->pixel_aspect.height, 1);
     state.offscreen.pass_action = (sg_pass_action) {
         .colors[0] = { .action = SG_ACTION_DONTCARE }
     };
@@ -393,6 +392,9 @@ void gfx_init(const gfx_desc_t* desc) {
         empty_snapshot_icon.height,
         empty_snapshot_icon.stride,
         SG_FILTER_NEAREST);
+
+    // create image and pass resources
+    gfx_init_images_and_pass();
 }
 
 /* apply a viewport rectangle to preserve the emulator's aspect ratio,
@@ -429,15 +431,16 @@ static void apply_viewport(chips_dim_t canvas, chips_rect_t view, chips_dim_t pi
 
 void gfx_draw(chips_display_info_t display_info) {
     assert(state.valid);
-    assert((display_info.framebuffer.dim.width > 0) && (display_info.framebuffer.dim.height > 0));
+    assert((display_info.frame.dim.width > 0) && (display_info.frame.dim.height > 0));
+    assert(display_info.frame.buffer.ptr && (display_info.frame.buffer.size > 0));
     assert((display_info.screen.width > 0) && (display_info.screen.height > 0));
     const chips_dim_t display = { .width = sapp_width(), .height = sapp_height() };
 
     state.offscreen.view = display_info.screen;
 
     // check if emulator framebuffer size has changed, need to create new backing texture
-    if ((display_info.framebuffer.dim.width != state.fb.dim.width) || (display_info.framebuffer.dim.height != state.fb.dim.height)) {
-        state.fb.dim = display_info.framebuffer.dim;
+    if ((display_info.frame.dim.width != state.fb.dim.width) || (display_info.frame.dim.height != state.fb.dim.height)) {
+        state.fb.dim = display_info.frame.dim;
         gfx_init_images_and_pass();
     }
 
@@ -466,8 +469,8 @@ void gfx_draw(chips_display_info_t display_info) {
     // copy emulator pixel data into emulator framebuffer texture
     sg_update_image(state.fb.img, &(sg_image_data){
         .subimage[0][0] = {
-            .ptr = state.pixel_buffer,
-            .size = display_info.framebuffer.size_bytes
+            .ptr = display_info.frame.buffer.ptr,
+            .size = display_info.frame.buffer.size,
         }
     });
 
@@ -553,21 +556,28 @@ void* gfx_create_texture(int w, int h) {
     return (void*)(uintptr_t)img.id;
 }
 
-void* gfx_create_texture_u8(size_t w, size_t h, const uint8_t* pixels, const uint32_t* palette, size_t num_palette_entries) {
-    assert((w > 0) && (h > 0) && pixels && palette && (num_palette_entries <= 256));
-    (void)num_palette_entries; // unused in release mode
-    size_t dst_num_bytes = (size_t)(w * h * 4);
+void* gfx_create_screenshot_texture(chips_display_info_t info) {
+    assert(info.frame.buffer.ptr);
+
+    const size_t dst_num_bytes = (size_t)(info.screen.width * info.screen.height * 4);
     uint32_t* dst = malloc(dst_num_bytes);
-    for (size_t y = 0; y < h; y++) {
-        for (size_t x = 0; x < w; x++) {
-            uint8_t p = pixels[y * w + x];
+    assert(info.frame.bytes_per_pixel == 1);
+
+    const uint8_t* pixels = (uint8_t*) info.frame.buffer.ptr;
+    const uint32_t* palette = (uint32_t*) info.palette.ptr;
+    const size_t num_palette_entries = info.palette.size / sizeof(uint32_t);
+
+    for (size_t y = 0; y < (size_t)info.screen.height; y++) {
+        for (size_t x = 0; x < (size_t)info.screen.width; x++) {
+            uint8_t p = pixels[(y + info.screen.y) * info.frame.dim.width + (x + info.screen.x)];
             assert(p < num_palette_entries);
-            dst[y * w + x] = palette[p];
+            dst[y * info.screen.width + x] = palette[p];
         }
     }
+
     sg_image img = sg_make_image(&(sg_image_desc){
-        .width = (int)w,
-        .height = (int)h,
+        .width = info.screen.width,
+        .height = info.screen.height,
         .pixel_format = SG_PIXELFORMAT_RGBA8,
         .min_filter = SG_FILTER_LINEAR,
         .mag_filter = SG_FILTER_LINEAR,

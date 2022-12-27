@@ -32,13 +32,9 @@
     #include "ui/ui_kc85.h"
 #endif
 
-#define SCREENSHOT_WIDTH (320)
-#define SCREENSHOT_HEIGHT (256)
-
 typedef struct {
     uint32_t version;
     kc85_t kc85;
-    uint8_t fb[SCREENSHOT_HEIGHT][SCREENSHOT_WIDTH];
 } kc85_snapshot_t;
 
 static struct {
@@ -111,10 +107,6 @@ static void patch_snapshots(const char* snapshot_name, void* user_data) {
 // get kc85_desc_t struct for a given KC85 type
 kc85_desc_t kc85_desc(void) {
     return (kc85_desc_t) {
-        .framebuffer = {
-            .ptr = gfx_framebuffer_ptr(),
-            .size = gfx_framebuffer_size()
-        },
         .audio = {
             .callback = { .func = push_audio },
             .sample_rate = saudio_sample_rate(),
@@ -150,7 +142,7 @@ void app_init(void) {
             .top = BORDER_TOP,
             .bottom = BORDER_BOTTOM,
         },
-        .palette = kc85_display_info(0).palette,
+        .display_info = kc85_display_info(0)
     });
     keybuf_init(&(keybuf_desc_t){ .key_delay_frames = 10 });
     clock_init();
@@ -420,42 +412,19 @@ static void ui_boot_cb(kc85_t* sys) {
     kc85_init(sys, &desc);
 }
 
-static void ui_update_snapshot_slot_info(size_t slot) {
-    const chips_display_info_t disp_info = kc85_display_info(&state.kc85);
-    ui_snapshot_slot_info_t info = {
-        .screenshot = {
-            .texture = gfx_create_texture_u8(
-                SCREENSHOT_WIDTH,
-                SCREENSHOT_HEIGHT,
-                &state.snapshots[slot].fb[0][0],
-                disp_info.palette.ptr,
-                disp_info.palette.size / 4),
-            .width = SCREENSHOT_WIDTH,
-            .height = SCREENSHOT_HEIGHT
-        },
-    };
-    ui_snapshot_slot_info_t old_info = ui_snapshot_update_slot_info(&state.ui.snapshot, slot, &info);
-    if (old_info.screenshot.texture) {
-        gfx_destroy_texture(old_info.screenshot.texture);
+static void ui_update_snapshot_screenshot(size_t slot) {
+    const chips_display_info_t disp_info = kc85_display_info(&state.snapshots[slot].kc85);
+    void* screenshot = gfx_create_screenshot_texture(disp_info);
+    void* old_screenshot = ui_snapshot_update_screenshot(&state.ui.snapshot, slot, screenshot);
+    if (old_screenshot) {
+        gfx_destroy_texture(old_screenshot);
     }
 }
 
 static void ui_save_snapshot(size_t slot) {
     if (slot < UI_SNAPSHOT_MAX_SLOTS) {
         state.snapshots[slot].version = kc85_save_snapshot(&state.kc85, &state.snapshots[slot].kc85);
-
-        // copy framebuffer over and create a texture object
-        const chips_display_info_t disp_info = kc85_display_info(&state.kc85);
-        CHIPS_ASSERT(disp_info.screen.width >= SCREENSHOT_WIDTH);
-        CHIPS_ASSERT(disp_info.screen.height >= SCREENSHOT_HEIGHT);
-        for (size_t y = 0; y < SCREENSHOT_HEIGHT; y++) {
-            uint8_t* dst = &state.snapshots[slot].fb[y][0];
-            const uint8_t* src = &state.kc85.video.fb[y * disp_info.framebuffer.dim.width];
-            memcpy(dst, src, SCREENSHOT_WIDTH);
-        }
         ui_update_snapshot_slot_info(slot);
-
-        // save to persistent storage
         fs_save_snapshot(KC85_SYSTEM_NAME, slot, (chips_range_t){ .ptr = &state.snapshots[slot], sizeof(kc85_snapshot_t) });
     }
 }
@@ -464,17 +433,6 @@ static bool ui_load_snapshot(size_t slot) {
     bool success = false;
     if ((slot < UI_SNAPSHOT_MAX_SLOTS) && (state.ui.snapshot.slots[slot].valid)) {
         success = kc85_load_snapshot(&state.kc85, state.snapshots[slot].version, &state.snapshots[slot].kc85);
-        if (success) {
-            // copy back frame buffer
-            const chips_display_info_t disp_info = kc85_display_info(&state.kc85);
-            CHIPS_ASSERT(disp_info.screen.width >= SCREENSHOT_WIDTH);
-            CHIPS_ASSERT(disp_info.screen.height >= SCREENSHOT_HEIGHT);
-            for (size_t y = 0; y < SCREENSHOT_HEIGHT; y++) {
-                uint8_t* dst = &state.kc85.video.fb[y * disp_info.framebuffer.dim.width];
-                const uint8_t* src = &state.snapshots[slot].fb[y][0];
-                memcpy(dst, src, SCREENSHOT_WIDTH);
-            }
-        }
     }
     return success;
 }
@@ -493,7 +451,7 @@ static void ui_fetch_snapshot_callback(const fs_snapshot_response_t* response) {
     size_t snapshot_slot = response->snapshot_index;
     assert(snapshot_slot < UI_SNAPSHOT_MAX_SLOTS);
     memcpy(&state.snapshots[snapshot_slot], response->data.ptr, response->data.size);
-    ui_update_snapshot_slot_info(snapshot_slot);
+    ui_update_snapshot_screenshot(snapshot_slot);
 }
 
 static void ui_load_snapshots_from_storage(void) {
