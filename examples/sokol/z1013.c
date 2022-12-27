@@ -274,10 +274,9 @@ static void ui_boot_cb(z1013_t* sys, z1013_type_t type) {
     z1013_init(sys, &desc);
 }
 
-static void ui_update_snapshot_slot_info(size_t slot) {
-    const chips_display_info_t disp_info = z1013_display_info(&state.z1013);
-    void* screenshot = gfx_create_screenshot_texture(disp_info);
-    void* prev_screenshot = ui_snapshot_update_screenshot(&state.ui.snapshot, slot, screenshot);
+static void ui_update_snapshot_screenshot(size_t slot) {
+    void* screenshot = gfx_create_screenshot_texture(z1013_display_info(&state.snapshots[slot].z1013));
+    void* prev_screenshot = ui_snapshot_set_screenshot(&state.ui.snapshot, slot, screenshot);
     if (prev_screenshot) {
         gfx_destroy_texture(prev_screenshot);
     }
@@ -286,7 +285,7 @@ static void ui_update_snapshot_slot_info(size_t slot) {
 static void ui_save_snapshot(size_t slot) {
     if (slot < UI_SNAPSHOT_MAX_SLOTS) {
         state.snapshots[slot].version = z1013_save_snapshot(&state.z1013, &state.snapshots[slot].z1013);
-        ui_update_snapshot_slot_info(slot);
+        ui_update_snapshot_screenshot(slot);
         fs_save_snapshot("z1013", slot, (chips_range_t){ .ptr = &state.snapshots[slot], sizeof(z1013_snapshot_t) });
     }
 }
@@ -313,7 +312,7 @@ static void ui_fetch_snapshot_callback(const fs_snapshot_response_t* response) {
     size_t snapshot_slot = response->snapshot_index;
     assert(snapshot_slot < UI_SNAPSHOT_MAX_SLOTS);
     memcpy(&state.snapshots[snapshot_slot], response->data.ptr, response->data.size);
-    ui_update_snapshot_slot_info(snapshot_slot);
+    ui_update_snapshot_screenshot(snapshot_slot);
 }
 
 static void ui_load_snapshots_from_storage(void) {

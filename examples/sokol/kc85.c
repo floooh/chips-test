@@ -413,9 +413,8 @@ static void ui_boot_cb(kc85_t* sys) {
 }
 
 static void ui_update_snapshot_screenshot(size_t slot) {
-    const chips_display_info_t disp_info = kc85_display_info(&state.snapshots[slot].kc85);
-    void* screenshot = gfx_create_screenshot_texture(disp_info);
-    void* prev_screenshot = ui_snapshot_update_screenshot(&state.ui.snapshot, slot, screenshot);
+    void* screenshot = gfx_create_screenshot_texture(kc85_display_info(&state.snapshots[slot].kc85));
+    void* prev_screenshot = ui_snapshot_set_screenshot(&state.ui.snapshot, slot, screenshot);
     if (prev_screenshot) {
         gfx_destroy_texture(prev_screenshot);
     }
