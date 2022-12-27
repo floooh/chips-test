@@ -33,7 +33,6 @@
 typedef struct {
     uint32_t version;
     z1013_t z1013;
-    uint8_t fb[SCREENSHOT_WIDTH][SCREENSHOT_HEIGHT];
 } z1013_snapshot_t;
 
 static struct {
@@ -64,7 +63,6 @@ static void ui_load_snapshots_from_storage(void);
 z1013_desc_t z1013_desc(z1013_type_t type) {
     return(z1013_desc_t) {
         .type = type,
-        .framebuffer = gfx_framebuffer(),
         .roms = {
             .mon_a2 = { .ptr=dump_z1013_mon_a2_bin, .size=sizeof(dump_z1013_mon_a2_bin) },
             .mon202 = { .ptr=dump_z1013_mon202_bin, .size=sizeof(dump_z1013_mon202_bin) },
@@ -87,7 +85,7 @@ void app_init(void) {
             .top = BORDER_TOP,
             .bottom = BORDER_BOTTOM,
         },
-        .palette = z1013_display_info(0).palette,
+        .display_info = z1013_display_info(0),
     });
     keybuf_init(&(keybuf_desc_t){ .key_delay_frames = 6 });
     clock_init();
@@ -278,40 +276,17 @@ static void ui_boot_cb(z1013_t* sys, z1013_type_t type) {
 
 static void ui_update_snapshot_slot_info(size_t slot) {
     const chips_display_info_t disp_info = z1013_display_info(&state.z1013);
-    ui_snapshot_slot_info_t info = {
-        .screenshot = {
-            .texture = gfx_create_texture_u8(
-                SCREENSHOT_WIDTH,
-                SCREENSHOT_HEIGHT,
-                &state.snapshots[slot].fb[0][0],
-                disp_info.palette.ptr,
-                disp_info.palette.size / 4),
-            .width = SCREENSHOT_WIDTH,
-            .height = SCREENSHOT_HEIGHT
-        },
-    };
-    ui_snapshot_slot_info_t old_info = ui_snapshot_update_slot_info(&state.ui.snapshot, slot, &info);
-    if (old_info.screenshot.texture) {
-        gfx_destroy_texture(old_info.screenshot.texture);
+    void* screenshot = gfx_create_screenshot_texture(disp_info);
+    void* prev_screenshot = ui_snapshot_update_screenshot(&state.ui.snapshot, slot, screenshot);
+    if (prev_screenshot) {
+        gfx_destroy_texture(prev_screenshot);
     }
 }
 
 static void ui_save_snapshot(size_t slot) {
     if (slot < UI_SNAPSHOT_MAX_SLOTS) {
         state.snapshots[slot].version = z1013_save_snapshot(&state.z1013, &state.snapshots[slot].z1013);
-
-        // copy framebuffer over and create a texture object
-        const chips_display_info_t disp_info = z1013_display_info(&state.z1013);
-        CHIPS_ASSERT(disp_info.screen.width >= SCREENSHOT_WIDTH);
-        CHIPS_ASSERT(disp_info.screen.height >= SCREENSHOT_HEIGHT);
-        for (size_t y = 0; y < SCREENSHOT_HEIGHT; y++) {
-            uint8_t* dst = &state.snapshots[slot].fb[y][0];
-            const uint8_t* src = &state.z1013.fb[y * disp_info.framebuffer.dim.width];
-            memcpy(dst, src, SCREENSHOT_WIDTH);
-        }
         ui_update_snapshot_slot_info(slot);
-
-        // save to persistent storage
         fs_save_snapshot("z1013", slot, (chips_range_t){ .ptr = &state.snapshots[slot], sizeof(z1013_snapshot_t) });
     }
 }
@@ -320,17 +295,6 @@ static bool ui_load_snapshot(size_t slot) {
     bool success = false;
     if ((slot < UI_SNAPSHOT_MAX_SLOTS) && (state.ui.snapshot.slots[slot].valid)) {
         success = z1013_load_snapshot(&state.z1013, state.snapshots[slot].version, &state.snapshots[slot].z1013);
-        if (success) {
-            // copy back frame buffer
-            const chips_display_info_t disp_info = z1013_display_info(&state.z1013);
-            CHIPS_ASSERT(disp_info.screen.width >= SCREENSHOT_WIDTH);
-            CHIPS_ASSERT(disp_info.screen.height >= SCREENSHOT_HEIGHT);
-            for (size_t y = 0; y < SCREENSHOT_HEIGHT; y++) {
-                uint8_t* dst = &state.z1013.fb[y * disp_info.framebuffer.dim.width];
-                const uint8_t* src = &state.snapshots[slot].fb[y][0];
-                memcpy(dst, src, SCREENSHOT_WIDTH);
-            }
-        }
     }
     return success;
 }
