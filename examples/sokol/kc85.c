@@ -415,16 +415,16 @@ static void ui_boot_cb(kc85_t* sys) {
 static void ui_update_snapshot_screenshot(size_t slot) {
     const chips_display_info_t disp_info = kc85_display_info(&state.snapshots[slot].kc85);
     void* screenshot = gfx_create_screenshot_texture(disp_info);
-    void* old_screenshot = ui_snapshot_update_screenshot(&state.ui.snapshot, slot, screenshot);
-    if (old_screenshot) {
-        gfx_destroy_texture(old_screenshot);
+    void* prev_screenshot = ui_snapshot_update_screenshot(&state.ui.snapshot, slot, screenshot);
+    if (prev_screenshot) {
+        gfx_destroy_texture(prev_screenshot);
     }
 }
 
 static void ui_save_snapshot(size_t slot) {
     if (slot < UI_SNAPSHOT_MAX_SLOTS) {
         state.snapshots[slot].version = kc85_save_snapshot(&state.kc85, &state.snapshots[slot].kc85);
-        ui_update_snapshot_slot_info(slot);
+        ui_update_snapshot_screenshot(slot);
         fs_save_snapshot(KC85_SYSTEM_NAME, slot, (chips_range_t){ .ptr = &state.snapshots[slot], sizeof(kc85_snapshot_t) });
     }
 }
