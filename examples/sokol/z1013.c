@@ -5,6 +5,7 @@
 */
 #include "common.h"
 #define CHIPS_IMPL
+#include "chips/chips_common.h"
 #include "chips/z80.h"
 #include "chips/z80pio.h"
 #include "chips/kbd.h"
@@ -63,10 +64,7 @@ static void ui_load_snapshots_from_storage(void);
 z1013_desc_t z1013_desc(z1013_type_t type) {
     return(z1013_desc_t) {
         .type = type,
-        .framebuffer = {
-            .ptr = gfx_framebuffer_ptr(),
-            .size = gfx_framebuffer_size(),
-        },
+        .framebuffer = gfx_framebuffer(),
         .roms = {
             .mon_a2 = { .ptr=dump_z1013_mon_a2_bin, .size=sizeof(dump_z1013_mon_a2_bin) },
             .mon202 = { .ptr=dump_z1013_mon202_bin, .size=sizeof(dump_z1013_mon202_bin) },
@@ -89,10 +87,7 @@ void app_init(void) {
             .top = BORDER_TOP,
             .bottom = BORDER_BOTTOM,
         },
-        .palette = {
-            .ptr = z1013_display_info(0).palette.ptr,
-            .size = z1013_display_info(0).palette.size,
-        }
+        .palette = z1013_display_info(0).palette,
     });
     keybuf_init(&(keybuf_desc_t){ .key_delay_frames = 6 });
     clock_init();
@@ -157,19 +152,7 @@ void app_frame(void) {
     state.ticks = z1013_exec(&state.z1013, state.frame_time_us);
     state.emu_time_ms = stm_ms(stm_since(emu_start_time));
     draw_status_bar();
-    const z1013_display_info_t info = z1013_display_info(&state.z1013);
-    gfx_draw(&(gfx_draw_t){
-        .fb = {
-            .width = info.framebuffer.width,
-            .height = info.framebuffer.height,
-        },
-        .view = {
-            .x = info.screen.x,
-            .y = info.screen.y,
-            .width = info.screen.width,
-            .height = info.screen.height,
-        }
-    });
+    gfx_draw(z1013_display_info(&state.z1013));
     handle_file_loading();
     send_keybuf_input();
 }
@@ -248,7 +231,7 @@ static void handle_file_loading(void) {
     fs_dowork();
     const uint32_t load_delay_frames = 20;
     if (fs_success(FS_SLOT_IMAGE) && (clock_frame_count_60hz() > load_delay_frames)) {
-        const z1013_range_t file_data = { .ptr = fs_data(FS_SLOT_IMAGE).ptr, .size = fs_data(FS_SLOT_IMAGE).size };
+        const chips_range_t file_data = fs_data(FS_SLOT_IMAGE);
         bool load_success = false;
         if (fs_ext(FS_SLOT_IMAGE, "txt") || fs_ext(FS_SLOT_IMAGE, "bas")) {
             load_success = true;
@@ -294,7 +277,7 @@ static void ui_boot_cb(z1013_t* sys, z1013_type_t type) {
 }
 
 static void ui_update_snapshot_slot_info(size_t slot) {
-    const z1013_display_info_t disp_info = z1013_display_info(&state.z1013);
+    const chips_display_info_t disp_info = z1013_display_info(&state.z1013);
     ui_snapshot_slot_info_t info = {
         .screenshot = {
             .texture = gfx_create_texture_u8(
@@ -318,18 +301,18 @@ static void ui_save_snapshot(size_t slot) {
         state.snapshots[slot].version = z1013_save_snapshot(&state.z1013, &state.snapshots[slot].z1013);
 
         // copy framebuffer over and create a texture object
-        const z1013_display_info_t disp_info = z1013_display_info(&state.z1013);
+        const chips_display_info_t disp_info = z1013_display_info(&state.z1013);
         CHIPS_ASSERT(disp_info.screen.width >= SCREENSHOT_WIDTH);
         CHIPS_ASSERT(disp_info.screen.height >= SCREENSHOT_HEIGHT);
         for (size_t y = 0; y < SCREENSHOT_HEIGHT; y++) {
             uint8_t* dst = &state.snapshots[slot].fb[y][0];
-            const uint8_t* src = &state.z1013.fb[y * disp_info.framebuffer.width];
+            const uint8_t* src = &state.z1013.fb[y * disp_info.framebuffer.dim.width];
             memcpy(dst, src, SCREENSHOT_WIDTH);
         }
         ui_update_snapshot_slot_info(slot);
 
         // save to persistent storage
-        fs_save_snapshot("z1013", slot, (fs_range_t){ .ptr = &state.snapshots[slot], sizeof(z1013_snapshot_t) });
+        fs_save_snapshot("z1013", slot, (chips_range_t){ .ptr = &state.snapshots[slot], sizeof(z1013_snapshot_t) });
     }
 }
 
@@ -339,11 +322,11 @@ static bool ui_load_snapshot(size_t slot) {
         success = z1013_load_snapshot(&state.z1013, state.snapshots[slot].version, &state.snapshots[slot].z1013);
         if (success) {
             // copy back frame buffer
-            const z1013_display_info_t disp_info = z1013_display_info(&state.z1013);
+            const chips_display_info_t disp_info = z1013_display_info(&state.z1013);
             CHIPS_ASSERT(disp_info.screen.width >= SCREENSHOT_WIDTH);
             CHIPS_ASSERT(disp_info.screen.height >= SCREENSHOT_HEIGHT);
             for (size_t y = 0; y < SCREENSHOT_HEIGHT; y++) {
-                uint8_t* dst = &state.z1013.fb[y * disp_info.framebuffer.width];
+                uint8_t* dst = &state.z1013.fb[y * disp_info.framebuffer.dim.width];
                 const uint8_t* src = &state.snapshots[slot].fb[y][0];
                 memcpy(dst, src, SCREENSHOT_WIDTH);
             }
@@ -378,7 +361,7 @@ static void ui_load_snapshots_from_storage(void) {
 
 sapp_desc sokol_main(int argc, char* argv[]) {
     sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
-    const z1013_display_info_t info = z1013_display_info(0);
+    const chips_display_info_t info = z1013_display_info(0);
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,

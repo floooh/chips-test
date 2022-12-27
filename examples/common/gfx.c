@@ -186,14 +186,9 @@ void gfx_flash_error(void) {
     state.flash_error_count = 20;
 }
 
-void* gfx_framebuffer_ptr(void) {
+chips_range_t gfx_framebuffer(void) {
     assert(state.valid);
-    return state.pixel_buffer;
-}
-
-size_t gfx_framebuffer_size(void) {
-    assert(state.valid);
-    return sizeof(state.pixel_buffer);
+    return (chips_range_t) { .ptr = state.pixel_buffer, .size = sizeof(state.pixel_buffer) };
 }
 
 static sg_image gfx_create_icon_texture(const uint8_t* packed_pixels, int width, int height, int stride, sg_filter filter) {

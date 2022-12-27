@@ -150,10 +150,7 @@ void app_init(void) {
             .top = BORDER_TOP,
             .bottom = BORDER_BOTTOM,
         },
-        .palette = {
-            .ptr = kc85_display_info(0).palette.ptr,
-            .size = kc85_display_info(0).palette.size,
-        }
+        .palette = kc85_display_info(0).palette,
     });
     keybuf_init(&(keybuf_desc_t){ .key_delay_frames = 10 });
     clock_init();

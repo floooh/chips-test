@@ -31,8 +31,7 @@ typedef struct {
 } gfx_desc_t;
 
 void gfx_init(const gfx_desc_t* desc);
-void* gfx_framebuffer_ptr(void);
-size_t gfx_framebuffer_size(void);
+chips_range_t gfx_framebuffer(void);
 void gfx_draw(chips_display_info_t display_info);
 void gfx_shutdown(void);
 
