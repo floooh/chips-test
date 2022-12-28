@@ -570,7 +570,7 @@ void* gfx_create_screenshot_texture(chips_display_info_t info) {
     for (size_t y = 0; y < (size_t)info.screen.height; y++) {
         for (size_t x = 0; x < (size_t)info.screen.width; x++) {
             uint8_t p = pixels[(y + info.screen.y) * info.frame.dim.width + (x + info.screen.x)];
-            assert(p < num_palette_entries);
+            assert(p < num_palette_entries); (void)num_palette_entries;
             uint32_t c = palette[p];
             if (info.portrait) {
                 dst[x * info.screen.height + (info.screen.height - y - 1)] = c;
