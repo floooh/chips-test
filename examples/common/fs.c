@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <stdio.h>
+#include <stdalign.h>
 #if defined(__EMSCRIPTEN__)
 #include <emscripten/emscripten.h>
 #endif
@@ -30,7 +31,7 @@ typedef struct {
     fs_result_t result;
     uint8_t* ptr;
     size_t size;
-    uint8_t buf[FS_MAX_SIZE + 1];
+    alignas(64) uint8_t buf[FS_MAX_SIZE + 1];
 } fs_slot_t;
 
 typedef struct {
@@ -335,24 +336,14 @@ static void fs_snapshot_fetch_callback(const sfetch_response_t* response) {
     size_t snapshot_index = ctx->snapshot_index;
     fs_snapshot_load_callback_t callback = ctx->callback;
     if (response->fetched) {
-        const uint32_t magic = 'CHIP';
-        if ((response->data.size > sizeof(uint32_t)) && (*(uint32_t*)response->data.ptr == magic)) {
-            callback(&(fs_snapshot_response_t){
-                .snapshot_index = snapshot_index,
-                .result = FS_RESULT_SUCCESS,
-                .data = {
-                    .ptr = (uint8_t*)response->data.ptr + sizeof(uint32_t),
-                    .size = response->data.size - sizeof(uint32_t)
-                }
-            });
-        }
-        else {
-            // magic number mismatch
-            callback(&(fs_snapshot_response_t){
-                .snapshot_index = snapshot_index,
-                .result = FS_RESULT_FAILED,
-            });
-        }
+        callback(&(fs_snapshot_response_t){
+            .snapshot_index = snapshot_index,
+            .result = FS_RESULT_SUCCESS,
+            .data = {
+                .ptr = (uint8_t*)response->data.ptr,
+                .size = response->data.size
+            }
+        });
     }
     else if (response->failed) {
         callback(&(fs_snapshot_response_t){
@@ -372,9 +363,6 @@ bool fs_save_snapshot(const char* system_name, size_t snapshot_index, chips_rang
     }
     FILE* fp = fopen(path.cstr, "wb");
     if (fp) {
-        // write magic number
-        uint32_t magic = 'CHIP';
-        fwrite(&magic, sizeof(magic), 1, fp);
         fwrite(data.ptr, data.size, 1, fp);
         fclose(fp);
         return true;
