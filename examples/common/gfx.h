@@ -23,7 +23,6 @@ typedef struct {
     gfx_border_t border;
     chips_display_info_t display_info;
     chips_dim_t pixel_aspect;   // optional pixel aspect ratio, default is 1:1
-    bool portrait;              // true if screen is in portrait mode (e.g. most arcade machines)
     void (*draw_extra_cb)(void);
 } gfx_desc_t;
 

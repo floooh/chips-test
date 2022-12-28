@@ -164,7 +164,9 @@ void app_init(void) {
             .snapshot = {
                 .load_cb = ui_load_snapshot,
                 .save_cb = ui_save_snapshot,
-                .empty_slot_texture = gfx_shared_empty_snapshot_texture(),
+                .empty_slot_screenshot = {
+                    .texture = gfx_shared_empty_snapshot_texture()
+                }
             },
             .dbg_keys = {
                 .cont = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F5), .name = "F5" },
@@ -425,10 +427,12 @@ static void ui_boot_cb(kc85_t* sys) {
 }
 
 static void ui_update_snapshot_screenshot(size_t slot) {
-    void* screenshot = gfx_create_screenshot_texture(kc85_display_info(&state.snapshots[slot].kc85));
-    void* prev_screenshot = ui_snapshot_set_screenshot(&state.ui.snapshot, slot, screenshot);
-    if (prev_screenshot) {
-        gfx_destroy_texture(prev_screenshot);
+    ui_snapshot_screenshot_t screenshot = {
+        .texture = gfx_create_screenshot_texture(kc85_display_info(&state.snapshots[slot].kc85))
+    };
+    ui_snapshot_screenshot_t prev_screenshot = ui_snapshot_set_screenshot(&state.ui.snapshot, slot, screenshot);
+    if (prev_screenshot.texture) {
+        gfx_destroy_texture(prev_screenshot.texture);
     }
 }
 

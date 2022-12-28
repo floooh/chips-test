@@ -282,7 +282,7 @@ void gfx_init(const gfx_desc_t* desc) {
 
     state.valid = true;
     state.border = desc->border;
-    state.display.portrait = desc->portrait;
+    state.display.portrait = desc->display_info.portrait;
     state.draw_extra_cb = desc->draw_extra_cb;
     state.fb.dim =  desc->display_info.frame.dim;
     state.fb.paletted = 0 != desc->display_info.palette.ptr;
@@ -571,13 +571,19 @@ void* gfx_create_screenshot_texture(chips_display_info_t info) {
         for (size_t x = 0; x < (size_t)info.screen.width; x++) {
             uint8_t p = pixels[(y + info.screen.y) * info.frame.dim.width + (x + info.screen.x)];
             assert(p < num_palette_entries);
-            dst[y * info.screen.width + x] = palette[p];
+            uint32_t c = palette[p];
+            if (info.portrait) {
+                dst[x * info.screen.height + (info.screen.height - y - 1)] = c;
+            }
+            else {
+                dst[y * info.screen.width + x] = c;
+            }
         }
     }
 
     sg_image img = sg_make_image(&(sg_image_desc){
-        .width = info.screen.width,
-        .height = info.screen.height,
+        .width = info.portrait ? info.screen.height : info.screen.width,
+        .height = info.portrait ? info.screen.width : info.screen.height,
         .pixel_format = SG_PIXELFORMAT_RGBA8,
         .min_filter = SG_FILTER_LINEAR,
         .mag_filter = SG_FILTER_LINEAR,
