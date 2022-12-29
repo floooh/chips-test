@@ -556,11 +556,16 @@ void* gfx_create_texture(int w, int h) {
     return (void*)(uintptr_t)img.id;
 }
 
+// creates a 2x downscaled screenshot texture of the emulator framebuffer
 void* gfx_create_screenshot_texture(chips_display_info_t info) {
     assert(info.frame.buffer.ptr);
+    assert((info.screen.width & 1) == 0);
+    assert((info.screen.height & 1) == 0);
 
-    const size_t dst_num_bytes = (size_t)(info.screen.width * info.screen.height * 4);
-    uint32_t* dst = malloc(dst_num_bytes);
+    size_t dst_w = info.screen.width >> 1;
+    size_t dst_h = info.screen.height >> 1;
+    size_t dst_num_bytes = (size_t)(dst_w * dst_h * 4);
+    uint32_t* dst = calloc(1, dst_num_bytes);
 
     if (info.palette.ptr) {
         assert(info.frame.bytes_per_pixel == 1);
@@ -571,12 +576,14 @@ void* gfx_create_screenshot_texture(chips_display_info_t info) {
             for (size_t x = 0; x < (size_t)info.screen.width; x++) {
                 uint8_t p = pixels[(y + info.screen.y) * info.frame.dim.width + (x + info.screen.x)];
                 assert(p < num_palette_entries); (void)num_palette_entries;
-                uint32_t c = palette[p];
+                uint32_t c = (palette[p] >> 2) & 0x3F3F3F3F;
+                size_t dst_x = x >> 1;
+                size_t dst_y = y >> 1;
                 if (info.portrait) {
-                    dst[x * info.screen.height + (info.screen.height - y - 1)] = c;
+                    dst[dst_x * dst_w + (dst_h - dst_y - 1)] += c;
                 }
                 else {
-                    dst[y * info.screen.width + x] = c;
+                    dst[dst_y * dst_w + dst_x] += c;
                 }
             }
         }
@@ -587,19 +594,22 @@ void* gfx_create_screenshot_texture(chips_display_info_t info) {
         for (size_t y = 0; y < (size_t)info.screen.height; y++) {
             for (size_t x = 0; x < (size_t)info.screen.width; x++) {
                 uint32_t c = pixels[(y + info.screen.y) * info.frame.dim.width + (x + info.screen.x)];
+                c = (c >> 2) & 0x3F3F3F3F;
+                size_t dst_x = x >> 1;
+                size_t dst_y = y >> 1;
                 if (info.portrait) {
-                    dst[x * info.screen.height + (info.screen.height - y - 1)] = c;
+                    dst[dst_x * dst_w + (dst_h - dst_y - 1)] += c;
                 }
                 else {
-                    dst[y * info.screen.width + x] = c;
+                    dst[dst_y * dst_w + dst_x] += c;
                 }
             }
         }
     }
 
     sg_image img = sg_make_image(&(sg_image_desc){
-        .width = info.portrait ? info.screen.height : info.screen.width,
-        .height = info.portrait ? info.screen.width : info.screen.height,
+        .width = (int) (info.portrait ? dst_h : dst_w),
+        .height = (int) (info.portrait ? dst_w : dst_h),
         .pixel_format = SG_PIXELFORMAT_RGBA8,
         .min_filter = SG_FILTER_LINEAR,
         .mag_filter = SG_FILTER_LINEAR,
