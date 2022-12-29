@@ -561,22 +561,38 @@ void* gfx_create_screenshot_texture(chips_display_info_t info) {
 
     const size_t dst_num_bytes = (size_t)(info.screen.width * info.screen.height * 4);
     uint32_t* dst = malloc(dst_num_bytes);
-    assert(info.frame.bytes_per_pixel == 1);
 
-    const uint8_t* pixels = (uint8_t*) info.frame.buffer.ptr;
-    const uint32_t* palette = (uint32_t*) info.palette.ptr;
-    const size_t num_palette_entries = info.palette.size / sizeof(uint32_t);
-
-    for (size_t y = 0; y < (size_t)info.screen.height; y++) {
-        for (size_t x = 0; x < (size_t)info.screen.width; x++) {
-            uint8_t p = pixels[(y + info.screen.y) * info.frame.dim.width + (x + info.screen.x)];
-            assert(p < num_palette_entries); (void)num_palette_entries;
-            uint32_t c = palette[p];
-            if (info.portrait) {
-                dst[x * info.screen.height + (info.screen.height - y - 1)] = c;
+    if (info.palette.ptr) {
+        assert(info.frame.bytes_per_pixel == 1);
+        const uint8_t* pixels = (uint8_t*) info.frame.buffer.ptr;
+        const uint32_t* palette = (uint32_t*) info.palette.ptr;
+        const size_t num_palette_entries = info.palette.size / sizeof(uint32_t);
+        for (size_t y = 0; y < (size_t)info.screen.height; y++) {
+            for (size_t x = 0; x < (size_t)info.screen.width; x++) {
+                uint8_t p = pixels[(y + info.screen.y) * info.frame.dim.width + (x + info.screen.x)];
+                assert(p < num_palette_entries); (void)num_palette_entries;
+                uint32_t c = palette[p];
+                if (info.portrait) {
+                    dst[x * info.screen.height + (info.screen.height - y - 1)] = c;
+                }
+                else {
+                    dst[y * info.screen.width + x] = c;
+                }
             }
-            else {
-                dst[y * info.screen.width + x] = c;
+        }
+    }
+    else {
+        assert(info.frame.bytes_per_pixel == 4);
+        const uint32_t* pixels = (uint32_t*) info.frame.buffer.ptr;
+        for (size_t y = 0; y < (size_t)info.screen.height; y++) {
+            for (size_t x = 0; x < (size_t)info.screen.width; x++) {
+                uint32_t c = pixels[(y + info.screen.y) * info.frame.dim.width + (x + info.screen.x)];
+                if (info.portrait) {
+                    dst[x * info.screen.height + (info.screen.height - y - 1)] = c;
+                }
+                else {
+                    dst[y * info.screen.width + x] = c;
+                }
             }
         }
     }
