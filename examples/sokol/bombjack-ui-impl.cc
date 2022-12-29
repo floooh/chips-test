@@ -1,6 +1,7 @@
 //------------------------------------------------------------------------------
 //  bombjack-ui.cc
 //------------------------------------------------------------------------------
+#include "chips/chips_common.h"
 #include "chips/z80.h"
 #include "chips/ay38910.h"
 #include "chips/clk.h"
@@ -21,4 +22,5 @@
 #include "ui/ui_z80.h"
 #include "ui/ui_ay38910.h"
 #include "ui/ui_audio.h"
+#include "ui/ui_snapshot.h"
 #include "ui/ui_bombjack.h"
