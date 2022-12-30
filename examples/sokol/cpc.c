@@ -5,6 +5,7 @@
 */
 #include "common.h"
 #define CHIPS_IMPL
+#include "chips/chips_common.h"
 #include "chips/z80.h"
 #include "chips/ay38910.h"
 #include "chips/i8255.h"
@@ -44,11 +45,13 @@ static struct {
     uint32_t ticks;
     double emu_time_ms;
     #if defined(CHIPS_USE_UI)
-        ui_cpc_t ui_cpc;
+        ui_cpc_t ui;
     #endif
 } state;
 
 #ifdef CHIPS_USE_UI
+static void ui_draw_cb(void);
+static void ui_boot_cb(cpc_t* sys, cpc_type_t type);
 #define BORDER_TOP (24)
 #else
 #define BORDER_TOP (8)
@@ -68,7 +71,6 @@ cpc_desc_t cpc_desc(cpc_type_t type, cpc_joystick_type_t joy_type) {
     return (cpc_desc_t) {
         .type = type,
         .joystick_type = joy_type,
-        .pixel_buffer = { .ptr=gfx_framebuffer(), .size=gfx_framebuffer_size() },
         .audio = {
             .callback = { .func=push_audio },
             .sample_rate = saudio_sample_rate(),
@@ -94,32 +96,7 @@ cpc_desc_t cpc_desc(cpc_type_t type, cpc_joystick_type_t joy_type) {
     };
 }
 
-#if defined(CHIPS_USE_UI)
-void ui_draw_cb(void) {
-    ui_cpc_draw(&state.ui_cpc);
-}
-static void ui_boot_cb(cpc_t* sys, cpc_type_t type) {
-    cpc_desc_t desc = cpc_desc(type, sys->joystick_type);
-    cpc_init(sys, &desc);
-}
-#endif
-
 void app_init(void) {
-    gfx_init(&(gfx_desc_t){
-        #ifdef CHIPS_USE_UI
-        .draw_extra_cb = ui_draw,
-        #endif
-        .border_left = BORDER_LEFT,
-        .border_right = BORDER_RIGHT,
-        .border_top = BORDER_TOP,
-        .border_bottom = BORDER_BOTTOM,
-        .emu_aspect_y = 2
-    });
-    keybuf_init(&(keybuf_desc_t) { .key_delay_frames=7 });
-    clock_init();
-    prof_init();
-    saudio_setup(&(saudio_desc){0});
-    fs_init();
     cpc_type_t type = CPC_TYPE_6128;
     if (sargs_exists("type")) {
         if (sargs_equals("type", "cpc464")) {
@@ -135,6 +112,27 @@ void app_init(void) {
     }
     cpc_desc_t desc = cpc_desc(type, joy_type);
     cpc_init(&state.cpc, &desc);
+    gfx_init(&(gfx_desc_t){
+        #ifdef CHIPS_USE_UI
+        .draw_extra_cb = ui_draw,
+        #endif
+        .border = {
+            .left = BORDER_LEFT,
+            .right = BORDER_RIGHT,
+            .top = BORDER_TOP,
+            .bottom = BORDER_BOTTOM,
+        },
+        .display_info = cpc_display_info(&state.cpc),
+        .pixel_aspect = {
+            .width = 1,
+            .height = 2,
+        }
+    });
+    keybuf_init(&(keybuf_desc_t) { .key_delay_frames=7 });
+    clock_init();
+    prof_init();
+    saudio_setup(&(saudio_desc){0});
+    fs_init();
     #ifdef CHIPS_USE_UI
         ui_init(ui_draw_cb);
         ui_cpc_init(&state.ui_cpc, &(ui_cpc_desc_t){
@@ -157,7 +155,7 @@ void app_init(void) {
     bool delay_input = false;
     if (sargs_exists("file")) {
         delay_input = true;
-        fs_start_load_file(sargs_value("file"));
+        fs_start_load_file(FS_SLOT_IMAGE, sargs_value("file"));
     }
     if (!delay_input) {
         if (sargs_exists("input")) {
@@ -176,7 +174,7 @@ void app_frame(void) {
     state.ticks = cpc_exec(&state.cpc, state.frame_time_us);
     state.emu_time_ms = stm_ms(stm_since(emu_start_time));
     draw_status_bar();
-    gfx_draw(cpc_display_width(&state.cpc), cpc_display_height(&state.cpc));
+    gfx_draw(cpc_display_info(&state.cpc));
     handle_file_loading();
     send_keybuf_input();
 }
@@ -184,7 +182,7 @@ void app_frame(void) {
 void app_input(const sapp_event* event) {
     // accept dropped files also when ImGui grabs input
     if (event->type == SAPP_EVENTTYPE_FILES_DROPPED) {
-        fs_start_load_dropped_file();
+        fs_start_load_dropped_file(FS_SLOT_IMAGE);
     }
     #ifdef CHIPS_USE_UI
     if (ui_input(event)) {
@@ -264,22 +262,22 @@ static void send_keybuf_input(void) {
 static void handle_file_loading(void) {
     fs_dowork();
     const uint32_t load_delay_frames = 120;
-    if (fs_ptr() && ((clock_frame_count_60hz() > load_delay_frames) || fs_ext("sna"))) {
+    if (fs_success(FS_SLOT_IMAGE) && ((clock_frame_count_60hz() > load_delay_frames) || fs_ext(FS_SLOT_IMAGE, "sna"))) {
         bool load_success = false;
-        if (fs_ext("txt") || fs_ext("bas")) {
+        if (fs_ext(FS_SLOT_IMAGE, "txt") || fs_ext(FS_SLOT_IMAGE, "bas")) {
             load_success = true;
-            keybuf_put((const char*)fs_ptr());
+            keybuf_put((const char*)fs_data(FS_SLOT_IMAGE).ptr);
         }
         /*
         else if (fs_ext("tap")) {
             load_success = cpc_insert_tape(&state.cpc, fs_ptr(), fs_size());
         }
         */
-        else if (fs_ext("dsk")) {
-            load_success = cpc_insert_disc(&state.cpc, fs_ptr(), fs_size());
+        else if (fs_ext(FS_SLOT_IMAGE, "dsk")) {
+            load_success = cpc_insert_disc(&state.cpc, fs_data(FS_SLOT_IMAGE));
         }
-        else if (fs_ext("sna") || fs_ext("bin")) {
-            load_success = cpc_quickload(&state.cpc, fs_ptr(), fs_size());
+        else if (fs_ext(FS_SLOT_IMAGE, "sna") || fs_ext(FS_SLOT_IMAGE, "bin")) {
+            load_success = cpc_quickload(&state.cpc, fs_data(FS_SLOT_IMAGE));
         }
         if (load_success) {
             if (clock_frame_count_60hz() > (load_delay_frames + 10)) {
@@ -292,14 +290,14 @@ static void handle_file_loading(void) {
         else {
             gfx_flash_error();
         }
-        fs_reset();
+        fs_reset(FS_SLOT_IMAGE);
     }
 }
 
 static void draw_status_bar(void) {
     prof_push(PROF_EMU, (float)state.emu_time_ms);
     prof_stats_t emu_stats = prof_stats(PROF_EMU);
-    
+
     const uint32_t text_color = 0xFFFFFFFF;
     const uint32_t disc_active = 0xFF00EE00;
     const uint32_t disc_inactive = 0xFF006600;
@@ -307,7 +305,7 @@ static void draw_status_bar(void) {
     const uint32_t motor_inactive = 0xFF004466;
     const uint32_t joy_active = 0xFFFFEE00;
     const uint32_t joy_inactive = 0xFF886600;
-    
+
     const float w = sapp_widthf();
     const float h = sapp_heightf();
     sdtx_canvas(w, h);
@@ -340,25 +338,36 @@ static void draw_status_bar(void) {
     sdtx_puts("  MOTOR: ");
     sdtx_color1i(state.cpc.fdd.motor_on ? motor_active : motor_inactive);
     sdtx_putc(0xCF);
-    
+
     sdtx_color1i(text_color);
     sdtx_printf("  TRACK:%d", state.cpc.fdd.cur_track_index);
-    
+
     sdtx_font(0);
     sdtx_color1i(text_color);
     sdtx_pos(0.0f, 1.5f);
     sdtx_printf("frame:%.2fms emu:%.2fms (min:%.2fms max:%.2fms) ticks:%d", (float)state.frame_time_us * 0.001f, emu_stats.avg_val, emu_stats.min_val, emu_stats.max_val, state.ticks);
 }
 
+#if defined(CHIPS_USE_UI)
+static void ui_draw_cb(void) {
+    ui_cpc_draw(&state.ui_cpc);
+}
+static void ui_boot_cb(cpc_t* sys, cpc_type_t type) {
+    cpc_desc_t desc = cpc_desc(type, sys->joystick_type);
+    cpc_init(sys, &desc);
+}
+#endif
+
 sapp_desc sokol_main(int argc, char* argv[]) {
     sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
+    const chips_display_info_t info = cpc_display_info(0);
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,
         .event_cb = app_input,
         .cleanup_cb = app_cleanup,
-        .width = cpc_std_display_width() + BORDER_LEFT + BORDER_RIGHT,
-        .height = 2 * cpc_std_display_height() + BORDER_TOP + BORDER_BOTTOM,
+        .width = info.screen.width + BORDER_LEFT + BORDER_RIGHT,
+        .height = 2 * info.screen.height + BORDER_TOP + BORDER_BOTTOM,
         .window_title = "CPC",
         .icon.sokol_default = true,
         .enable_dragndrop = true,
