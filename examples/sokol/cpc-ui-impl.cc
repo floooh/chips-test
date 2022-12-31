@@ -1,6 +1,7 @@
 /*
     UI implementation for cpc.c, this must live in its own .cc file.
 */
+#include "chips/chips_common.h"
 #include "chips/z80.h"
 #include "chips/ay38910.h"
 #include "chips/i8255.h"
@@ -34,4 +35,5 @@
 #include "ui/ui_audio.h"
 #include "ui/ui_kbd.h"
 #include "ui/ui_fdd.h"
+#include "ui/ui_snapshot.h"
 #include "ui/ui_cpc.h"

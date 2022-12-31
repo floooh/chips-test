@@ -13,7 +13,7 @@
 
 #define FS_EXT_SIZE (16)
 #define FS_PATH_SIZE (256)
-#define FS_MAX_SIZE (1024 * 1024)
+#define FS_MAX_SIZE (2024 * 1024)
 
 typedef struct {
     char cstr[FS_PATH_SIZE];

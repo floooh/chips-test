@@ -36,8 +36,14 @@
     #include "ui/ui_audio.h"
     #include "ui/ui_kbd.h"
     #include "ui/ui_fdd.h"
+    #include "ui/ui_snapshot.h"
     #include "ui/ui_cpc.h"
 #endif
+
+typedef struct {
+    uint32_t version;
+    cpc_t cpc;
+} cpc_snapshot_t;
 
 static struct {
     cpc_t cpc;
@@ -46,12 +52,16 @@ static struct {
     double emu_time_ms;
     #if defined(CHIPS_USE_UI)
         ui_cpc_t ui;
+        cpc_snapshot_t snapshots[UI_SNAPSHOT_MAX_SLOTS];
     #endif
 } state;
 
 #ifdef CHIPS_USE_UI
 static void ui_draw_cb(void);
 static void ui_boot_cb(cpc_t* sys, cpc_type_t type);
+static void ui_save_snapshot(size_t slot_index);
+static bool ui_load_snapshot(size_t slot_index);
+static void ui_load_snapshots_from_storage(void);
 #define BORDER_TOP (24)
 #else
 #define BORDER_TOP (8)
@@ -91,7 +101,7 @@ cpc_desc_t cpc_desc(cpc_type_t type, cpc_joystick_type_t joy_type) {
             },
         },
         #if defined(CHIPS_USE_UI)
-        .debug = ui_cpc_get_debug(&state.ui_cpc),
+        .debug = ui_cpc_get_debug(&state.ui),
         #endif
     };
 }
@@ -135,12 +145,21 @@ void app_init(void) {
     fs_init();
     #ifdef CHIPS_USE_UI
         ui_init(ui_draw_cb);
-        ui_cpc_init(&state.ui_cpc, &(ui_cpc_desc_t){
+        ui_cpc_init(&state.ui, &(ui_cpc_desc_t){
             .cpc = &state.cpc,
             .boot_cb = ui_boot_cb,
-            .create_texture_cb = gfx_create_texture,
-            .update_texture_cb = gfx_update_texture,
-            .destroy_texture_cb = gfx_destroy_texture,
+            .dbg_texture = {
+                .create_cb = gfx_create_texture,
+                .update_cb = gfx_update_texture,
+                .destroy_cb = gfx_destroy_texture,
+            },
+            .snapshot = {
+                .load_cb = ui_load_snapshot,
+                .save_cb = ui_save_snapshot,
+                .empty_slot_screenshot = {
+                    .texture = gfx_shared_empty_snapshot_texture(),
+                }
+            },
             .dbg_keys = {
                 .cont = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F5), .name = "F5" },
                 .stop = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F5), .name = "F5" },
@@ -150,6 +169,7 @@ void app_init(void) {
                 .toggle_breakpoint = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F9), .name = "F9" }
             }
         });
+        ui_load_snapshots_from_storage();
     #endif
 
     bool delay_input = false;
@@ -243,7 +263,7 @@ void app_input(const sapp_event* event) {
 void app_cleanup(void) {
     cpc_discard(&state.cpc);
     #ifdef CHIPS_USE_UI
-        ui_cpc_discard(&state.ui_cpc);
+        ui_cpc_discard(&state.ui);
         ui_discard();
     #endif
     saudio_shutdown();
@@ -350,11 +370,60 @@ static void draw_status_bar(void) {
 
 #if defined(CHIPS_USE_UI)
 static void ui_draw_cb(void) {
-    ui_cpc_draw(&state.ui_cpc);
+    ui_cpc_draw(&state.ui);
 }
 static void ui_boot_cb(cpc_t* sys, cpc_type_t type) {
     cpc_desc_t desc = cpc_desc(type, sys->joystick_type);
     cpc_init(sys, &desc);
+}
+
+static void ui_update_snapshot_screenshot(size_t slot) {
+    ui_snapshot_screenshot_t screenshot = {
+        .texture = gfx_create_screenshot_texture(cpc_display_info(&state.snapshots[slot].cpc))
+    };
+    ui_snapshot_screenshot_t prev_screenshot = ui_snapshot_set_screenshot(&state.ui.snapshot, slot, screenshot);
+    if (prev_screenshot.texture) {
+        gfx_destroy_texture(prev_screenshot.texture);
+    }
+}
+
+static void ui_save_snapshot(size_t slot) {
+    if (slot < UI_SNAPSHOT_MAX_SLOTS) {
+        state.snapshots[slot].version = cpc_save_snapshot(&state.cpc, &state.snapshots[slot].cpc);
+        ui_update_snapshot_screenshot(slot);
+        fs_save_snapshot("cpc", slot, (chips_range_t){ .ptr = &state.snapshots[slot], sizeof(cpc_snapshot_t) });
+    }
+}
+
+static bool ui_load_snapshot(size_t slot) {
+    bool success = false;
+    if ((slot < UI_SNAPSHOT_MAX_SLOTS) && (state.ui.snapshot.slots[slot].valid)) {
+        success = cpc_load_snapshot(&state.cpc, state.snapshots[slot].version, &state.snapshots[slot].cpc);
+    }
+    return success;
+}
+
+static void ui_fetch_snapshot_callback(const fs_snapshot_response_t* response) {
+    assert(response);
+    if (response->result != FS_RESULT_SUCCESS) {
+        return;
+    }
+    if (response->data.size != sizeof(cpc_snapshot_t)) {
+        return;
+    }
+    if (((cpc_snapshot_t*)response->data.ptr)->version != CPC_SNAPSHOT_VERSION) {
+        return;
+    }
+    size_t snapshot_slot = response->snapshot_index;
+    assert(snapshot_slot < UI_SNAPSHOT_MAX_SLOTS);
+    memcpy(&state.snapshots[snapshot_slot], response->data.ptr, response->data.size);
+    ui_update_snapshot_screenshot(snapshot_slot);
+}
+
+static void ui_load_snapshots_from_storage(void) {
+    for (size_t snapshot_slot = 0; snapshot_slot < UI_SNAPSHOT_MAX_SLOTS; snapshot_slot++) {
+        fs_start_load_snapshot(FS_SLOT_SNAPSHOTS, "cpc", snapshot_slot, ui_fetch_snapshot_callback);
+    }
 }
 #endif
 
