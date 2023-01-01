@@ -560,8 +560,8 @@ void* gfx_create_texture(int w, int h) {
 void* gfx_create_screenshot_texture(chips_display_info_t info) {
     assert(info.frame.buffer.ptr);
 
-    size_t dst_w = info.screen.width >> 1;
-    size_t dst_h = info.screen.height >> 1;
+    size_t dst_w = (info.screen.width + 1) >> 1;
+    size_t dst_h = (info.screen.height + 1) >> 1;
     size_t dst_num_bytes = (size_t)(dst_w * dst_h * 4);
     uint32_t* dst = calloc(1, dst_num_bytes);
 
