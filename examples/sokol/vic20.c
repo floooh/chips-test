@@ -3,6 +3,7 @@
 */
 #include "common.h"
 #define CHIPS_IMPL
+#include "chips/chips_common.h"
 #include "chips/m6502.h"
 #include "chips/m6522.h"
 #include "chips/m6561.h"
@@ -26,6 +27,7 @@
     #include "ui/ui_audio.h"
     #include "ui/ui_kbd.h"
     #include "ui/ui_c1530.h"
+    #include "ui/ui_snapshot.h"
     #include "ui/ui_vic20.h"
 #endif
 
@@ -64,10 +66,6 @@ vic20_desc_t vic20_desc(vic20_joystick_type_t joy_type, vic20_memory_config_t me
             .callback = { .func=push_audio },
             .sample_rate = saudio_sample_rate(),
             .volume = 0.3f,
-        },
-        .pixel_buffer = {
-            .ptr = gfx_framebuffer(),
-            .size = gfx_framebuffer_size()
         },
         .roms = {
             .chars = { .ptr=dump_vic20_characters_901460_03_bin, .size=sizeof(dump_vic20_characters_901460_03_bin) },
@@ -184,7 +182,7 @@ void app_frame(void) {
     handle_file_loading();
     send_keybuf_input();
 }
-    
+
 void app_input(const sapp_event* event) {
     // accept dropped files also when ImGui grabs input
     if (event->type == SAPP_EVENTTYPE_FILES_DROPPED) {
@@ -345,4 +343,3 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .enable_dragndrop = true,
     };
 }
-
