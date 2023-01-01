@@ -559,8 +559,6 @@ void* gfx_create_texture(int w, int h) {
 // creates a 2x downscaled screenshot texture of the emulator framebuffer
 void* gfx_create_screenshot_texture(chips_display_info_t info) {
     assert(info.frame.buffer.ptr);
-    assert((info.screen.width & 1) == 0);
-    assert((info.screen.height & 1) == 0);
 
     size_t dst_w = info.screen.width >> 1;
     size_t dst_h = info.screen.height >> 1;
