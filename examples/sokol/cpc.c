@@ -212,46 +212,58 @@ void app_input(const sapp_event* event) {
     #endif
     const bool shift = event->modifiers & SAPP_MODIFIER_SHIFT;
     switch (event->type) {
-        int c;
         case SAPP_EVENTTYPE_CHAR:
-            c = (int) event->char_code;
-            if ((c > 0x20) && (c < 0x7F)) {
-                cpc_key_down(&state.cpc, c);
-                cpc_key_up(&state.cpc, c);
+            {
+                int c = (int) event->char_code;
+                if ((c > 0x20) && (c < 0x7F)) {
+                    cpc_key_down(&state.cpc, c);
+                    cpc_key_up(&state.cpc, c);
+                }
             }
             break;
         case SAPP_EVENTTYPE_KEY_DOWN:
         case SAPP_EVENTTYPE_KEY_UP:
-            switch (event->key_code) {
-                case SAPP_KEYCODE_SPACE:        c = 0x20; break;
-                case SAPP_KEYCODE_LEFT:         c = 0x08; break;
-                case SAPP_KEYCODE_RIGHT:        c = 0x09; break;
-                case SAPP_KEYCODE_DOWN:         c = 0x0A; break;
-                case SAPP_KEYCODE_UP:           c = 0x0B; break;
-                case SAPP_KEYCODE_ENTER:        c = 0x0D; break;
-                case SAPP_KEYCODE_LEFT_SHIFT:   c = 0x02; break;
-                case SAPP_KEYCODE_BACKSPACE:    c = shift ? 0x0C : 0x01; break; // 0x0C: clear screen
-                case SAPP_KEYCODE_ESCAPE:       c = shift ? 0x13 : 0x03; break; // 0x13: break
-                case SAPP_KEYCODE_F1:           c = 0xF1; break;
-                case SAPP_KEYCODE_F2:           c = 0xF2; break;
-                case SAPP_KEYCODE_F3:           c = 0xF3; break;
-                case SAPP_KEYCODE_F4:           c = 0xF4; break;
-                case SAPP_KEYCODE_F5:           c = 0xF5; break;
-                case SAPP_KEYCODE_F6:           c = 0xF6; break;
-                case SAPP_KEYCODE_F7:           c = 0xF7; break;
-                case SAPP_KEYCODE_F8:           c = 0xF8; break;
-                case SAPP_KEYCODE_F9:           c = 0xF9; break;
-                case SAPP_KEYCODE_F10:          c = 0xFA; break;
-                case SAPP_KEYCODE_F11:          c = 0xFB; break;
-                case SAPP_KEYCODE_F12:          c = 0xFC; break;
-                default:                        c = 0; break;
-            }
-            if (c) {
-                if (event->type == SAPP_EVENTTYPE_KEY_DOWN) {
-                    cpc_key_down(&state.cpc, c);
+            {
+                int c = 0;
+                int shift_c = 0;
+                switch (event->key_code) {
+                    case SAPP_KEYCODE_SPACE:        c = 0x20; break;
+                    case SAPP_KEYCODE_LEFT:         c = 0x08; break;
+                    case SAPP_KEYCODE_RIGHT:        c = 0x09; break;
+                    case SAPP_KEYCODE_DOWN:         c = 0x0A; break;
+                    case SAPP_KEYCODE_UP:           c = 0x0B; break;
+                    case SAPP_KEYCODE_ENTER:        c = 0x0D; break;
+                    case SAPP_KEYCODE_LEFT_SHIFT:   c = 0x02; break;
+                    case SAPP_KEYCODE_BACKSPACE:    c = 0x01; shift_c = 0x0C; break; // 0x0C: clear screen
+                    case SAPP_KEYCODE_ESCAPE:       c = 0x03; shift_c = 0x13; break; // 0x13: break
+                    case SAPP_KEYCODE_F1:           c = 0xF1; break;
+                    case SAPP_KEYCODE_F2:           c = 0xF2; break;
+                    case SAPP_KEYCODE_F3:           c = 0xF3; break;
+                    case SAPP_KEYCODE_F4:           c = 0xF4; break;
+                    case SAPP_KEYCODE_F5:           c = 0xF5; break;
+                    case SAPP_KEYCODE_F6:           c = 0xF6; break;
+                    case SAPP_KEYCODE_F7:           c = 0xF7; break;
+                    case SAPP_KEYCODE_F8:           c = 0xF8; break;
+                    case SAPP_KEYCODE_F9:           c = 0xF9; break;
+                    case SAPP_KEYCODE_F10:          c = 0xFA; break;
+                    case SAPP_KEYCODE_F11:          c = 0xFB; break;
+                    case SAPP_KEYCODE_F12:          c = 0xFC; break;
+                    default:                        c = 0; break;
                 }
-                else {
-                    cpc_key_up(&state.cpc, c);
+                if (c) {
+                    if (event->type == SAPP_EVENTTYPE_KEY_DOWN) {
+                        if (shift_c == 0) {
+                            shift_c = c;
+                        }
+                        cpc_key_down(&state.cpc, shift ? shift_c : c);
+                    }
+                    else {
+                        // see: https://github.com/floooh/chips-test/issues/20
+                        cpc_key_up(&state.cpc, c);
+                        if (shift_c) {
+                            cpc_key_up(&state.cpc, shift_c);
+                        }
+                    }
                 }
             }
             break;
