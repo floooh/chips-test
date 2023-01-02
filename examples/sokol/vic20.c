@@ -35,7 +35,7 @@ static struct {
     vic20_t vic20;
     uint32_t frame_time_us;
     uint32_t ticks;
-    double exec_time_ms;
+    double emu_time_ms;
     #ifdef CHIPS_USE_UI
         ui_vic20_t ui_vic20;
     #endif
@@ -89,21 +89,6 @@ static void ui_boot_cb(vic20_t* sys) {
 #endif
 
 void app_init(void) {
-    gfx_init(&(gfx_desc_t){
-        #ifdef CHIPS_USE_UI
-        .draw_extra_cb = ui_draw,
-        #endif
-        .border_left = BORDER_LEFT,
-        .border_right = BORDER_RIGHT,
-        .border_top = BORDER_TOP,
-        .border_bottom = BORDER_BOTTOM,
-        .emu_aspect_x = 3,
-        .emu_aspect_y = 2
-    });
-    keybuf_init(&(keybuf_desc_t){ .key_delay_frames=5 });
-    clock_init();
-    fs_init();
-    saudio_setup(&(saudio_desc){0});
     vic20_joystick_type_t joy_type = VIC20_JOYSTICKTYPE_NONE;
     if (sargs_exists("joystick")) {
         joy_type = VIC20_JOYSTICKTYPE_DIGITAL;
@@ -129,6 +114,27 @@ void app_init(void) {
     bool c1530_enabled = sargs_exists("c1530");
     vic20_desc_t desc = vic20_desc(joy_type, mem_config, c1530_enabled);
     vic20_init(&state.vic20, &desc);
+    gfx_init(&(gfx_desc_t){
+        #ifdef CHIPS_USE_UI
+        .draw_extra_cb = ui_draw,
+        #endif
+        .border = {
+            .left = BORDER_LEFT,
+            .right = BORDER_RIGHT,
+            .top = BORDER_TOP,
+            .bottom = BORDER_BOTTOM,
+        },
+        .display_info = vic20_display_info(&state.vic20),
+        .pixel_aspect = {
+            .width = 3,
+            .height = 2
+        }
+    });
+    keybuf_init(&(keybuf_desc_t){ .key_delay_frames=5 });
+    clock_init();
+    prof_init();
+    fs_init();
+    saudio_setup(&(saudio_desc){0});
     #ifdef CHIPS_USE_UI
         ui_init(ui_draw_cb);
         ui_vic20_init(&state.ui_vic20, &(ui_vic20_desc_t){
@@ -150,13 +156,13 @@ void app_init(void) {
     bool delay_input = false;
     if (sargs_exists("file")) {
         delay_input = true;
-        fs_start_load_file(sargs_value("file"));
+        fs_start_load_file(FS_SLOT_IMAGE, sargs_value("file"));
     }
     if (sargs_exists("rom")) {
-        fs_start_load_file(sargs_value("rom"));
+        fs_start_load_file(FS_SLOT_IMAGE, sargs_value("rom"));
     }
     if (sargs_exists("prg")) {
-        if (!fs_load_base64("url.prg", sargs_value("prg"))) {
+        if (!fs_load_base64(FS_SLOT_IMAGE, "url.prg", sargs_value("prg"))) {
             gfx_flash_error();
         }
     }
@@ -174,11 +180,11 @@ static void draw_status_bar(void);
 // per frame stuff, tick the emulator, handle input, decode and draw emulator display
 void app_frame(void) {
     state.frame_time_us = clock_frame_time();
-    const uint64_t exec_start_time = stm_now();
+    const uint64_t emu_start_time = stm_now();
     state.ticks = vic20_exec(&state.vic20, state.frame_time_us);
-    state.exec_time_ms = stm_ms(stm_since(exec_start_time));
+    state.emu_time_ms = stm_ms(stm_since(emu_start_time));
     draw_status_bar();
-    gfx_draw(vic20_display_width(&state.vic20), vic20_display_height(&state.vic20));
+    gfx_draw(vic20_display_info(&state.vic20));
     handle_file_loading();
     send_keybuf_input();
 }
@@ -186,7 +192,7 @@ void app_frame(void) {
 void app_input(const sapp_event* event) {
     // accept dropped files also when ImGui grabs input
     if (event->type == SAPP_EVENTTYPE_FILES_DROPPED) {
-        fs_start_load_dropped_file();
+        fs_start_load_dropped_file(FS_SLOT_IMAGE);
     }
     #ifdef CHIPS_USE_UI
     if (ui_input(event)) {
@@ -272,38 +278,38 @@ static void send_keybuf_input(void) {
 static void handle_file_loading(void) {
     fs_dowork();
     const uint32_t load_delay_frames = 180;
-    if (fs_ptr() && clock_frame_count_60hz() > load_delay_frames) {
+    if (fs_success(FS_SLOT_IMAGE) && clock_frame_count_60hz() > load_delay_frames) {
         bool load_success = false;
-        if (fs_ext("txt") || fs_ext("bas")) {
+        if (fs_ext(FS_SLOT_IMAGE, "txt") || fs_ext(FS_SLOT_IMAGE, "bas")) {
             load_success = true;
-            keybuf_put((const char*)fs_ptr());
+            keybuf_put((const char*)fs_data(FS_SLOT_IMAGE).ptr);
         }
-        else if (fs_ext("tap")) {
-            load_success = vic20_insert_tape(&state.vic20, fs_ptr(), fs_size());
+        else if (fs_ext(FS_SLOT_IMAGE, "tap")) {
+            load_success = vic20_insert_tape(&state.vic20, fs_data(FS_SLOT_IMAGE));
         }
-        else if (fs_ext("bin") || fs_ext("prg") || fs_ext("")) {
+        else if (fs_ext(FS_SLOT_IMAGE, "bin") || fs_ext(FS_SLOT_IMAGE, "prg") || fs_ext(FS_SLOT_IMAGE, "")) {
             if (sargs_exists("rom")) {
-                load_success = vic20_insert_rom_cartridge(&state.vic20, fs_ptr(), fs_size());
+                load_success = vic20_insert_rom_cartridge(&state.vic20, fs_data(FS_SLOT_IMAGE));
             }
             else {
-                load_success = vic20_quickload(&state.vic20, fs_ptr(), fs_size());
+                load_success = vic20_quickload(&state.vic20, fs_data(FS_SLOT_IMAGE));
             }
         }
         if (load_success) {
             if (clock_frame_count_60hz() > (load_delay_frames + 10)) {
                 gfx_flash_success();
             }
-            if (fs_ext("tap")) {
+            if (fs_ext(FS_SLOT_IMAGE, "tap")) {
                 vic20_tape_play(&state.vic20);
             }
             if (!sargs_exists("debug")) {
                 if (sargs_exists("input")) {
                     keybuf_put(sargs_value("input"));
                 }
-                else if (fs_ext("tap")) {
+                else if (fs_ext(FS_SLOT_IMAGE, "tap")) {
                     keybuf_put("LOAD\n");
                 }
-                else if (fs_ext("prg")) {
+                else if (fs_ext(FS_SLOT_IMAGE, "prg")) {
                     keybuf_put("RUN\n");
                 }
             }
@@ -311,18 +317,19 @@ static void handle_file_loading(void) {
         else {
             gfx_flash_error();
         }
-        fs_reset();
+        fs_reset(FS_SLOT_IMAGE);
     }
 }
 
 static void draw_status_bar(void) {
+    prof_push(PROF_EMU, (float)state.emu_time_ms);
+    prof_stats_t emu_stats = prof_stats(PROF_EMU);
     const float w = sapp_widthf();
     const float h = sapp_heightf();
-    double frame_time_ms = state.frame_time_us / 1000.0f;
     sdtx_canvas(w, h);
     sdtx_color3b(255, 255, 255);
     sdtx_pos(1.0f, (h / 8.0f) - 1.5f);
-    sdtx_printf("frame:%.2fms emu:%.2fms ticks:%d", frame_time_ms, state.exec_time_ms, state.ticks);
+    sdtx_printf("frame:%.2fms emu:%.2fms (min:%.2fms max:%.2fms) ticks:%d", (float)state.frame_time_us * 0.001f, emu_stats.avg_val, emu_stats.min_val, emu_stats.max_val, state.ticks);
 }
 
 sapp_desc sokol_main(int argc, char* argv[]) {
@@ -331,13 +338,14 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .argv=argv,
         .buf_size = 512 * 1024,
     });
+    const chips_display_info_t info = vic20_display_info(0);
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,
         .event_cb = app_input,
         .cleanup_cb = app_cleanup,
-        .width = 3 * vic20_std_display_width() + BORDER_LEFT + BORDER_RIGHT,
-        .height = 2 * vic20_std_display_height() + BORDER_TOP + BORDER_BOTTOM,
+        .width = 3 * info.screen.width + BORDER_LEFT + BORDER_RIGHT,
+        .height = 2 * info.screen.height + BORDER_TOP + BORDER_BOTTOM,
         .window_title = "VIC-20",
         .icon.sokol_default = true,
         .enable_dragndrop = true,
