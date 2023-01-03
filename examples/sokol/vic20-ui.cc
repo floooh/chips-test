@@ -1,6 +1,7 @@
 /*
     UI implementaion for vic20.c
 */
+#include "chips/chips_common.h"
 #include "chips/m6502.h"
 #include "chips/m6522.h"
 #include "chips/m6561.h"
@@ -28,4 +29,5 @@
 #include "ui/ui_audio.h"
 #include "ui/ui_kbd.h"
 #include "ui/ui_c1530.h"
+#include "ui/ui_snapshot.h"
 #include "ui/ui_vic20.h"
