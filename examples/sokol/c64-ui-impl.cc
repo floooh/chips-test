@@ -1,6 +1,7 @@
 /*
     UI implementation for c64.c, this must live in a .cc file.
 */
+#include "chips/chips_common.h"
 #include "chips/m6502.h"
 #include "chips/m6526.h"
 #include "chips/m6569.h"
@@ -30,4 +31,5 @@
 #include "ui/ui_m6569.h"
 #include "ui/ui_audio.h"
 #include "ui/ui_kbd.h"
+#include "ui/ui_snapshot.h"
 #include "ui/ui_c64.h"

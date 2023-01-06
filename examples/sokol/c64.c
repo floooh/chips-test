@@ -31,8 +31,14 @@
     #include "ui/ui_m6569.h"
     #include "ui/ui_audio.h"
     #include "ui/ui_kbd.h"
+    #include "ui/ui_snapshot.h"
     #include "ui/ui_c64.h"
 #endif
+
+typedef struct {
+    uint32_t version;
+    c64_t c64;
+} c64_snapshot_t;
 
 static struct {
     c64_t c64;
@@ -41,12 +47,16 @@ static struct {
     double emu_time_ms;
     #ifdef CHIPS_USE_UI
         ui_c64_t ui;
+        c64_snapshot_t snapshots[UI_SNAPSHOT_MAX_SLOTS];
     #endif
 } state;
 
 #ifdef CHIPS_USE_UI
 static void ui_draw_cb(void);
 static void ui_boot_cb(c64_t* sys);
+static void ui_save_snapshot(size_t slot_index);
+static bool ui_load_snapshot(size_t slot_index);
+static void ui_load_snapshots_from_storage(void);
 #define BORDER_TOP (24)
 #else
 #define BORDER_TOP (8)
@@ -81,7 +91,7 @@ c64_desc_t c64_desc(c64_joystick_type_t joy_type, bool c1530_enabled, bool c1541
             }
         },
         #if defined(CHIPS_USE_UI)
-        .debug = ui_c64_get_debug(&state.ui_c64)
+        .debug = ui_c64_get_debug(&state.ui)
         #endif
     };
 }
@@ -122,12 +132,21 @@ void app_init(void) {
     saudio_setup(&(saudio_desc){0});
     #ifdef CHIPS_USE_UI
         ui_init(ui_draw_cb);
-        ui_c64_init(&state.ui_c64, &(ui_c64_desc_t){
+        ui_c64_init(&state.ui, &(ui_c64_desc_t){
             .c64 = &state.c64,
             .boot_cb = ui_boot_cb,
-            .create_texture_cb = gfx_create_texture,
-            .update_texture_cb = gfx_update_texture,
-            .destroy_texture_cb = gfx_destroy_texture,
+            .dbg_texture = {
+                .create_cb = gfx_create_texture,
+                .update_cb = gfx_update_texture,
+                .destroy_cb = gfx_destroy_texture,
+            },
+            .snapshot = {
+                .load_cb = ui_load_snapshot,
+                .save_cb = ui_save_snapshot,
+                .empty_slot_screenshot = {
+                    .texture = gfx_shared_empty_snapshot_texture(),
+                },
+            },
             .dbg_keys = {
                 .cont = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F5), .name = "F5" },
                 .stop = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F5), .name = "F5" },
@@ -137,6 +156,7 @@ void app_init(void) {
                 .toggle_breakpoint = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F9), .name = "F9" }
             }
         });
+        ui_load_snapshots_from_storage();
     #endif
     bool delay_input = false;
     if (sargs_exists("file")) {
@@ -234,7 +254,7 @@ void app_input(const sapp_event* event) {
 void app_cleanup(void) {
     c64_discard(&state.c64);
     #ifdef CHIPS_USE_UI
-        ui_c64_discard(&state.ui_c64);
+        ui_c64_discard(&state.ui);
         ui_discard();
     #endif
     saudio_shutdown();
@@ -308,11 +328,60 @@ static void draw_status_bar(void) {
 
 #if defined(CHIPS_USE_UI)
 static void ui_draw_cb(void) {
-    ui_c64_draw(&state.ui_c64);
+    ui_c64_draw(&state.ui);
 }
 static void ui_boot_cb(c64_t* sys) {
     c64_desc_t desc = c64_desc(sys->joystick_type, sys->c1530.valid, sys->c1541.valid);
     c64_init(sys, &desc);
+}
+
+static void ui_update_snapshot_screenshot(size_t slot) {
+    ui_snapshot_screenshot_t screenshot = {
+        .texture = gfx_create_screenshot_texture(c64_display_info(&state.snapshots[slot].c64))
+    };
+    ui_snapshot_screenshot_t prev_screenshot = ui_snapshot_set_screenshot(&state.ui.snapshot, slot, screenshot);
+    if (prev_screenshot.texture) {
+        gfx_destroy_texture(prev_screenshot.texture);
+    }
+}
+
+static void ui_save_snapshot(size_t slot) {
+    if (slot < UI_SNAPSHOT_MAX_SLOTS) {
+        state.snapshots[slot].version = c64_save_snapshot(&state.c64, &state.snapshots[slot].c64);
+        ui_update_snapshot_screenshot(slot);
+        fs_save_snapshot("c64", slot, (chips_range_t){ .ptr = &state.snapshots[slot], sizeof(c64_snapshot_t) });
+    }
+}
+
+static bool ui_load_snapshot(size_t slot) {
+    bool success = false;
+    if ((slot < UI_SNAPSHOT_MAX_SLOTS) && (state.ui.snapshot.slots[slot].valid)) {
+        success = c64_load_snapshot(&state.c64, state.snapshots[slot].version, &state.snapshots[slot].c64);
+    }
+    return success;
+}
+
+static void ui_fetch_snapshot_callback(const fs_snapshot_response_t* response) {
+    assert(response);
+    if (response->result != FS_RESULT_SUCCESS) {
+        return;
+    }
+    if (response->data.size != sizeof(c64_snapshot_t)) {
+        return;
+    }
+    if (((c64_snapshot_t*)response->data.ptr)->version != C64_SNAPSHOT_VERSION) {
+        return;
+    }
+    size_t snapshot_slot = response->snapshot_index;
+    assert(snapshot_slot < UI_SNAPSHOT_MAX_SLOTS);
+    memcpy(&state.snapshots[snapshot_slot], response->data.ptr, response->data.size);
+    ui_update_snapshot_screenshot(snapshot_slot);
+}
+
+static void ui_load_snapshots_from_storage(void) {
+    for (size_t snapshot_slot = 0; snapshot_slot < UI_SNAPSHOT_MAX_SLOTS; snapshot_slot++) {
+        fs_start_load_snapshot(FS_SLOT_SNAPSHOTS, "c64", snapshot_slot, ui_fetch_snapshot_callback);
+    }
 }
 #endif
 
