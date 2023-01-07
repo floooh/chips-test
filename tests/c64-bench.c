@@ -6,6 +6,7 @@
 #define SOKOL_IMPL
 #include "sokol_time.h"
 #define CHIPS_IMPL
+#include "chips/chips_common.h"
 #include "chips/m6502.h"
 #include "chips/m6526.h"
 #include "chips/m6569.h"
@@ -22,7 +23,6 @@
 
 static struct {
     c64_t c64;
-    uint8_t dummy_pixel_buffer[1024*1024];
 } state;
 
 #define NUM_USEC (5*1000000)
@@ -39,7 +39,6 @@ int main() {
        emulator
     */
     c64_init(&state.c64, &(c64_desc_t){
-        .pixel_buffer = { .ptr = state.dummy_pixel_buffer, .size = sizeof(state.dummy_pixel_buffer) },
         .audio.callback.func = dummy_audio_callback,
         .roms = {
             .chars = { .ptr=dump_c64_char_bin, .size=sizeof(dump_c64_char_bin) },

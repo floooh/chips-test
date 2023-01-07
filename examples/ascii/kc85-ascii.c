@@ -11,12 +11,12 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <signal.h>
-#define COMMON_IMPL
 #include "keybuf.h"
-#define SOKOL_IMPL
+#define SOKOL_ARGS_IMPL
 #include "sokol_args.h"
 #define CHIPS_IMPL
 #define CHIPS_KC85_TYPE_4
+#include "chips/chips_common.h"
 #include "chips/z80.h"
 #include "chips/z80ctc.h"
 #include "chips/z80pio.h"
@@ -35,7 +35,7 @@ static uint32_t frame_count;
 // run the emulator and render-loop at 30fps
 #define FRAME_USEC (33333)
 
-// a signal handler for Ctrl-C, for proper cleanup 
+// a signal handler for Ctrl-C, for proper cleanup
 static int quit_requested = 0;
 static void catch_sigint(int signo) {
     (void)signo;
@@ -114,7 +114,7 @@ int main(int argc, char* argv[]) {
     keypad(stdscr, TRUE);
     attron(A_BOLD);
 
-    // run the emulation/input/render loop 
+    // run the emulation/input/render loop
     while (!quit_requested) {
         frame_count++;
 
@@ -187,7 +187,7 @@ int main(int argc, char* argv[]) {
                 if ((x == cursor_x) && (y == cursor_y)) {
                     attron(A_UNDERLINE);
                 }
-                // character 
+                // character
                 mvaddch(y, x*2+1, chr);
                 // cursor off?
                 if ((x == cursor_x) && (y == cursor_y)) {

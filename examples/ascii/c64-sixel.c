@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 //  c64-sixel.c
 //
-//  A C64 emulator for the terminal, using Sixel graphics for the video 
+//  A C64 emulator for the terminal, using Sixel graphics for the video
 //  output:
 //
 //  https://en.wikipedia.org/wiki/Sixel
@@ -17,6 +17,7 @@
 #define SOKOL_IMPL
 #include "sokol_time.h"
 #define CHIPS_IMPL
+#include "chips/chips_common.h"
 #include "chips/m6502.h"
 #include "chips/m6526.h"
 #include "chips/m6569.h"
@@ -33,13 +34,12 @@
 
 static struct {
     c64_t c64;
-    uint32_t pixels[256*1024];  // RGBA8 buffer for emulator's video output
     char chrs[256*1024];        // the video output converted to Sixel ASCII characters
 } state;
 
 #define FRAME_USEC (33333)
 
-// a signal handler for Ctrl-C, for proper cleanup 
+// a signal handler for Ctrl-C, for proper cleanup
 static int quit_requested = 0;
 static void catch_sigint(int signo) {
     (void)signo;
@@ -53,8 +53,9 @@ static void term_home(void) {
 
 // Esc sequence to switch terminal into Sixel mode
 static void term_sixel_begin(void) {
-    const int w = 2 * c64_display_width(&state.c64);
-    const int h = 2 * c64_display_height(&state.c64);
+    const chips_display_info_t info = c64_display_info(&state.c64);
+    const int w = 2 * info.screen.width;
+    const int h = 2 * info.screen.height;
     printf("\033Pq\"1;1;%d;%d", w, h);
 }
 
@@ -71,16 +72,18 @@ static void term_flush(void) {
 
 // decode the pixel buffer into a sixel character sequence and send to terminal
 static void term_sixel_pixels(void) {
-    const int w = c64_display_width(&state.c64);
-    const int h = c64_display_height(&state.c64);
+    const chips_display_info_t info = c64_display_info(&state.c64);
+    const int w = info.screen.width;
+    const int h = info.screen.height;
+    const int row_pitch = info.frame.dim.width;
     int chr_pos = 0;
     for (int y = 0; y < h; y += 3) {
         for (int x = 0; x < w; x++) {
             char chr = 0;
             for (int i = 0; i < 3; i++) {
-                uint32_t p = state.pixels[(y+i)*w + x];
+                uint8_t p = state.c64.vic.crt.fb[(y + i) * row_pitch + x] & 0xF;
                 // FIXME: convert pixel color back to terminal color
-                if (p == _m6569_colors[6]) {
+                if (p == 6) {
                     chr |= (3<<(i*2));
                 }
             }
@@ -94,8 +97,8 @@ static void term_sixel_pixels(void) {
     printf("%s", state.chrs);
 }
 
-int main() {    
-    
+int main() {
+
     // install a Ctrl-C signal handler
     signal(SIGINT, catch_sigint);
 
@@ -112,7 +115,6 @@ int main() {
 
     // setup the C64 emulator
     c64_init(&state.c64, &(c64_desc_t){
-        .pixel_buffer = { .ptr = state.pixels, .size = sizeof(state.pixels) },
         .roms = {
             .chars = { .ptr=dump_c64_char_bin, .size=sizeof(dump_c64_char_bin) },
             .basic = { .ptr=dump_c64_basic_bin, .size=sizeof(dump_c64_basic_bin) },
@@ -125,7 +127,7 @@ int main() {
 
         // run emulation for one frame
         c64_exec(&state.c64, FRAME_USEC);
-        
+
         // keyboard input
         int ch = getch();
         if (ch != ERR) {

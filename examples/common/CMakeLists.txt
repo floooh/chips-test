@@ -61,3 +61,8 @@ fips_begin_lib(ui)
     fips_files(ui.cc ui.h)
     fips_deps(imgui)
 fips_end_lib()
+
+# a separate library with just keybuf (for the ASCII emulators)
+fips_begin_lib(keybuf)
+    fips_files(keybuf.c keybuf.h)
+fips_end_lib()

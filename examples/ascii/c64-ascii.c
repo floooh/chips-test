@@ -10,6 +10,7 @@
 #include <ctype.h>
 #include <signal.h>
 #define CHIPS_IMPL
+#include "chips/chips_common.h"
 #include "chips/m6502.h"
 #include "chips/m6526.h"
 #include "chips/m6569.h"
@@ -32,7 +33,7 @@ static c64_t c64;
 #define BORDER_HORI (5)
 #define BORDER_VERT (3)
 
-// a signal handler for Ctrl-C, for proper cleanup 
+// a signal handler for Ctrl-C, for proper cleanup
 static int quit_requested = 0;
 static void catch_sigint(int signo) {
     (void)signo;
@@ -95,7 +96,7 @@ int main(int argc, char* argv[]) {
     keypad(stdscr, TRUE);
     attron(A_BOLD);
 
-    // run the emulation/input/render loop 
+    // run the emulation/input/render loop
     while (!quit_requested) {
         // tick the emulator for 1 frame
         c64_exec(&c64, FRAME_USEC);
@@ -127,8 +128,8 @@ int main(int argc, char* argv[]) {
         }
         // render the PETSCII buffer
         int cur_color_pair = -1;
-        int bg = c64.vic.gunit.bg_index[0];
-        int bc = c64.vic.brd.bc_index;
+        int bg = c64.vic.gunit.bg[0] & 0xF;
+        int bc = c64.vic.brd.bc & 0xF;
         for (uint32_t yy = 0; yy < 25+2*BORDER_VERT; yy++) {
             for (uint32_t xx = 0; xx < 40+2*BORDER_HORI; xx++) {
                 if ((xx < BORDER_HORI) || (xx >= 40+BORDER_HORI) ||
@@ -166,7 +167,7 @@ int main(int argc, char* argv[]) {
                     }
                     // padding to get proper aspect ratio
                     mvaddch(yy, xx*2, ' ');
-                    // character 
+                    // character
                     mvaddch(yy, xx*2+1, chr);
                     // invert upper half of character set
                     if (font_code > 127) {
