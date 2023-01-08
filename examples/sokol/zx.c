@@ -5,9 +5,9 @@
     - video decoding works with scanline accuracy, not cycle accuracy
     - no tape or disc emulation
 */
-#include "common.h"
 #define CHIPS_IMPL
 #include "chips/chips_common.h"
+#include "common.h"
 #include "chips/z80.h"
 #include "chips/beeper.h"
 #include "chips/ay38910.h"

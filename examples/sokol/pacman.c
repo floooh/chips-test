@@ -3,9 +3,9 @@
 
     Pacman arcade machine emulator.
 */
-#include "common.h"
 #define CHIPS_IMPL
 #include "chips/chips_common.h"
+#include "common.h"
 #include "chips/z80.h"
 #include "chips/clk.h"
 #include "chips/mem.h"

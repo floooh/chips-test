@@ -1,7 +1,6 @@
 /*
     UI implementation for pacman.c, this must live in its own .cc file.
 */
-#include "common.h"
 #include "imgui.h"
 #include "chips/chips_common.h"
 #include "chips/z80.h"

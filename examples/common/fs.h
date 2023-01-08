@@ -1,7 +1,6 @@
 #pragma once
 #include <stdint.h>
 #include <stddef.h>
-#include "chips/chips_common.h"
 
 // standard loading slots
 #define FS_SLOT_IMAGE (0)

@@ -4,6 +4,7 @@
 #include "sokol_gl.h"
 #include "sokol_audio.h"
 #include "sokol_glue.h"
+#include "chips/chips_common.h"
 #include "gfx.h"
 #include "shaders.glsl.h"
 #include <assert.h>
@@ -578,7 +579,7 @@ void* gfx_create_screenshot_texture(chips_display_info_t info) {
                 size_t dst_x = x >> 1;
                 size_t dst_y = y >> 1;
                 if (info.portrait) {
-                    dst[dst_x * dst_w + (dst_h - dst_y - 1)] += c;
+                    dst[dst_x * dst_h + (dst_h - dst_y - 1)] += c;
                 }
                 else {
                     dst[dst_y * dst_w + dst_x] += c;
@@ -596,7 +597,7 @@ void* gfx_create_screenshot_texture(chips_display_info_t info) {
                 size_t dst_x = x >> 1;
                 size_t dst_y = y >> 1;
                 if (info.portrait) {
-                    dst[dst_x * dst_w + (dst_h - dst_y - 1)] += c;
+                    dst[dst_x * dst_h + (dst_h - dst_y - 1)] += c;
                 }
                 else {
                     dst[dst_y * dst_w + dst_x] += c;

@@ -6,9 +6,9 @@
 //
 //  not emulated: beeper sound, border color, 40x20 video mode
 //------------------------------------------------------------------------------
-#include "common.h"
 #define CHIPS_IMPL
 #include "chips/chips_common.h"
+#include "common.h"
 #include "chips/z80.h"
 #include "chips/z80pio.h"
 #include "chips/z80ctc.h"

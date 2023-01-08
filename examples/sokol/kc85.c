@@ -3,9 +3,9 @@
 
     KC85/2, /3 and /4.
 */
-#include "common.h"
 #define CHIPS_IMPL
 #include "chips/chips_common.h"
+#include "common.h"
 #include "chips/z80.h"
 #include "chips/z80ctc.h"
 #include "chips/z80pio.h"

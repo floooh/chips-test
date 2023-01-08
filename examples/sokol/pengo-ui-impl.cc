@@ -1,9 +1,9 @@
 /*
     UI implementation for pengo.c, this must live in its own .cc file.
 */
-#include "common.h"
 #include "imgui.h"
 #include "chips/chips_common.h"
+#include "common.h"
 #include "chips/z80.h"
 #include "chips/clk.h"
 #include "chips/mem.h"

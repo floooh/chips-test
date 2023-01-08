@@ -1,7 +1,6 @@
 /*
     lc80.c
 */
-#include "common.h"
 #include "sokol_app.h"
 #include "sokol_gfx.h"
 #include "sokol_args.h"
@@ -11,6 +10,7 @@
 #include "clock.h"
 #define CHIPS_IMPL
 #include "chips/chips_common.h"
+#include "common.h"
 #include "chips/z80.h"
 #include "chips/z80ctc.h"
 #include "chips/z80pio.h"

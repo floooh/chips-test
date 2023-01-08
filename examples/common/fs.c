@@ -1,5 +1,6 @@
 #include "sokol_fetch.h"
 #include "sokol_app.h"
+#include "chips/chips_common.h"
 #include "fs.h"
 #include <stdlib.h>
 #include <string.h>

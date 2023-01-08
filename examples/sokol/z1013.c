@@ -3,9 +3,9 @@
 
     The Robotron Z1013, see chips/systems/z1013.h for details!
 */
-#include "common.h"
 #define CHIPS_IMPL
 #include "chips/chips_common.h"
+#include "common.h"
 #include "chips/z80.h"
 #include "chips/z80pio.h"
 #include "chips/kbd.h"

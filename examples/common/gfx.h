@@ -9,7 +9,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include "chips/chips_common.h"
 
 #ifdef __cplusplus
 extern "C" {
