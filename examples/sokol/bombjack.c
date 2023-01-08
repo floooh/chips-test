@@ -3,9 +3,9 @@
 
     Bomb Jack arcade machine emulation (MAME used as reference).
 */
-#include "common.h"
 #define CHIPS_IMPL
 #include "chips/chips_common.h"
+#include "common.h"
 #include "chips/z80.h"
 #include "chips/ay38910.h"
 #include "chips/clk.h"
