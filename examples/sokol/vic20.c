@@ -1,9 +1,9 @@
 /*
     vic20.c
 */
-#include "common.h"
 #define CHIPS_IMPL
 #include "chips/chips_common.h"
+#include "common.h"
 #include "chips/m6502.h"
 #include "chips/m6522.h"
 #include "chips/m6561.h"

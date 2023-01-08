@@ -1,9 +1,9 @@
 /*
     c64.c
 */
-#include "common.h"
 #define CHIPS_IMPL
 #include "chips/chips_common.h"
+#include "common.h"
 #include "chips/m6502.h"
 #include "chips/m6526.h"
 #include "chips/m6569.h"

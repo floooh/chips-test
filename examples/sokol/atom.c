@@ -10,9 +10,9 @@
     NOT EMULATED:
         - REPT key (and some other special keys)
 */
-#include "common.h"
 #define CHIPS_IMPL
 #include "chips/chips_common.h"
+#include "common.h"
 #include "chips/m6502.h"
 #include "chips/mc6847.h"
 #include "chips/i8255.h"
