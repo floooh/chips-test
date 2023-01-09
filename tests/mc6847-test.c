@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 //  mc6847-test.c
 //------------------------------------------------------------------------------
-#define CHIPS_IMPL
 #include "chips/chips_common.h"
+#define CHIPS_IMPL
 #include "chips/mc6847.h"
 #include "utest.h"
 

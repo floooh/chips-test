@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------
 //  fdd-test.c
 //------------------------------------------------------------------------------
-#define CHIPS_IMPL
 #include "chips/chips_common.h"
+#define CHIPS_IMPL
 #include "chips/fdd.h"
 #include "chips/fdd_cpc.h"
 #include "disks/fdd-test.h"
