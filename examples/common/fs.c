@@ -11,6 +11,9 @@
 #if defined(__EMSCRIPTEN__)
 #include <emscripten/emscripten.h>
 #endif
+#if defined(WIN32)
+#include <windows.h>
+#endif
 
 #define FS_EXT_SIZE (16)
 #define FS_PATH_SIZE (256)
@@ -355,29 +358,52 @@ static void fs_snapshot_fetch_callback(const sfetch_response_t* response) {
 }
 #endif
 
-#if defined(__APPLE__)
+#if defined (WIN32)
+fs_path_t fs_win32_make_snapshot_path_utf8(const char* system_name, size_t snapshot_index) {
+    WCHAR wc_tmp_path[1024];
+    if (0 == GetTempPathW(sizeof(wc_tmp_path), wc_tmp_path)) {
+        return (fs_path_t){0};
+    }
+    char utf8_tmp_path[2048];
+    if (0 == WideCharToMultiByte(CP_UTF8, 0, wc_tmp_path, -1, utf8_tmp_path, sizeof(utf8_tmp_path), NULL, NULL)) {
+        return (fs_path_t){0};
+    }
+    return fs_make_snapshot_path(utf8_tmp_path, system_name, snapshot_index);
+}
+
+bool fs_win32_make_snapshot_path_wide(const char* system_name, size_t snapshot_index, WCHAR* out_buf, size_t out_buf_size_bytes) {
+    const fs_path_t path = fs_win32_make_snapshot_path_utf8(system_name, snapshot_index);
+    if ((path.len == 0) || (path.clamped)) {
+        return false;
+    }
+    if (0 == MultiByteToWideChar(CP_UTF8, 0, path.cstr, -1, out_buf, out_buf_size_bytes)) {
+        return false;
+    }
+    return true;
+}
+
 bool fs_save_snapshot(const char* system_name, size_t snapshot_index, chips_range_t data) {
-    assert(system_name && data.ptr && data.size > 0);
-    fs_path_t path = fs_make_snapshot_path("/tmp", system_name, snapshot_index);
-    if (path.clamped) {
+    WCHAR wc_path[1024];
+    if (!fs_win32_make_snapshot_path_wide(system_name, snapshot_index, wc_path, sizeof(wc_path)/sizeof(WCHAR))) {
         return false;
     }
-    FILE* fp = fopen(path.cstr, "wb");
-    if (fp) {
-        fwrite(data.ptr, data.size, 1, fp);
-        fclose(fp);
-        return true;
-    }
-    else {
+    HANDLE fp = CreateFileW(wc_path, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (fp == INVALID_HANDLE_VALUE) {
         return false;
     }
+    if (!WriteFile(fp, data.ptr, data.size, NULL, NULL)) {
+        CloseHandle(fp);
+        return false;
+    }
+    CloseHandle(fp);
+    return true;
 }
 
 bool fs_start_load_snapshot(size_t slot_index, const char* system_name, size_t snapshot_index, fs_snapshot_load_callback_t callback) {
     assert(slot_index < FS_NUM_SLOTS);
     assert(system_name && callback);
-    fs_path_t path = fs_make_snapshot_path("/tmp", system_name, snapshot_index);
-    if (path.clamped) {
+    fs_path_t path = fs_win32_make_snapshot_path_utf8(system_name, snapshot_index);
+    if ((path.len == 0) || path.clamped) {
         return false;
     }
     fs_snapshot_load_context_t context = {
@@ -394,6 +420,7 @@ bool fs_start_load_snapshot(size_t slot_index, const char* system_name, size_t s
     });
     return true;
 }
+
 #elif defined(__EMSCRIPTEN__)
 
 EM_JS(void, fs_js_save_snapshot, (const char* system_name_cstr, int snapshot_index, void* bytes, int num_bytes), {
@@ -535,12 +562,44 @@ bool fs_start_load_snapshot(size_t slot_index, const char* system_name, size_t s
 
     return true;
 }
+#else // Apple or Linux
 
-#else
 bool fs_save_snapshot(const char* system_name, size_t snapshot_index, chips_range_t data) {
-    return false;
+    assert(system_name && data.ptr && data.size > 0);
+    fs_path_t path = fs_make_snapshot_path("/tmp", system_name, snapshot_index);
+    if (path.clamped) {
+        return false;
+    }
+    FILE* fp = fopen(path.cstr, "wb");
+    if (fp) {
+        fwrite(data.ptr, data.size, 1, fp);
+        fclose(fp);
+        return true;
+    }
+    else {
+        return false;
+    }
 }
-void fs_start_load_snapshot(size_t slot_index, const char* system_name, size_t snapshot_index, fs_snapshot_load_callback_t callback) {
-    return false;
+
+bool fs_start_load_snapshot(size_t slot_index, const char* system_name, size_t snapshot_index, fs_snapshot_load_callback_t callback) {
+    assert(slot_index < FS_NUM_SLOTS);
+    assert(system_name && callback);
+    fs_path_t path = fs_make_snapshot_path("/tmp", system_name, snapshot_index);
+    if (path.clamped) {
+        return false;
+    }
+    fs_snapshot_load_context_t context = {
+        .snapshot_index = snapshot_index,
+        .callback = callback
+    };
+    fs_slot_t* slot = &state.slots[slot_index];
+    sfetch_send(&(sfetch_request_t){
+        .path = path.cstr,
+        .channel = slot_index,
+        .callback = fs_snapshot_fetch_callback,
+        .buffer = { .ptr = slot->buf, .size = FS_MAX_SIZE },
+        .user_data = { .ptr = &context, .size = sizeof(context) }
+    });
+    return true;
 }
 #endif
