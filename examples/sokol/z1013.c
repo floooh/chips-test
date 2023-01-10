@@ -3,8 +3,9 @@
 
     The Robotron Z1013, see chips/systems/z1013.h for details!
 */
-#include "common.h"
 #define CHIPS_IMPL
+#include "chips/chips_common.h"
+#include "common.h"
 #include "chips/z80.h"
 #include "chips/z80pio.h"
 #include "chips/kbd.h"
@@ -22,8 +23,17 @@
     #include "ui/ui_dbg.h"
     #include "ui/ui_z80.h"
     #include "ui/ui_z80pio.h"
+    #include "ui/ui_snapshot.h"
     #include "ui/ui_z1013.h"
 #endif
+
+#define SCREENSHOT_WIDTH (256)
+#define SCREENSHOT_HEIGHT (256)
+
+typedef struct {
+    uint32_t version;
+    z1013_t z1013;
+} z1013_snapshot_t;
 
 static struct {
     z1013_t z1013;
@@ -31,12 +41,18 @@ static struct {
     uint32_t ticks;
     double emu_time_ms;
     #ifdef CHIPS_USE_UI
-        ui_z1013_t ui_z1013;
+        ui_z1013_t ui;
+        z1013_snapshot_t snapshots[UI_SNAPSHOT_MAX_SLOTS];
     #endif
 } state;
 
 #ifdef CHIPS_USE_UI
 #define BORDER_TOP (24)
+static void ui_draw_cb(void);
+static void ui_boot_cb(z1013_t* sys, z1013_type_t type);
+static void ui_save_snapshot(size_t slot_index);
+static bool ui_load_snapshot(size_t slot_index);
+static void ui_load_snapshots_from_storage(void);
 #else
 #define BORDER_TOP (8)
 #endif
@@ -47,37 +63,29 @@ static struct {
 z1013_desc_t z1013_desc(z1013_type_t type) {
     return(z1013_desc_t) {
         .type = type,
-        .pixel_buffer = { .ptr = gfx_framebuffer(), .size = gfx_framebuffer_size() },
         .roms = {
             .mon_a2 = { .ptr=dump_z1013_mon_a2_bin, .size=sizeof(dump_z1013_mon_a2_bin) },
             .mon202 = { .ptr=dump_z1013_mon202_bin, .size=sizeof(dump_z1013_mon202_bin) },
             .font = { .ptr=dump_z1013_font_bin, .size=sizeof(dump_z1013_font_bin) }
         },
         #if defined(CHIPS_USE_UI)
-        .debug = ui_z1013_get_debug(&state.ui_z1013)
+        .debug = ui_z1013_get_debug(&state.ui)
         #endif
     };
 }
-
-#if defined(CHIPS_USE_UI)
-static void ui_draw_cb(void) {
-    ui_z1013_draw(&state.ui_z1013);
-}
-static void ui_boot_cb(z1013_t* sys, z1013_type_t type) {
-    z1013_desc_t desc = z1013_desc(type);
-    z1013_init(sys, &desc);
-}
-#endif
 
 void app_init(void) {
     gfx_init(&(gfx_desc_t){
         #ifdef CHIPS_USE_UI
         .draw_extra_cb = ui_draw,
         #endif
-        .border_left = BORDER_LEFT,
-        .border_right = BORDER_RIGHT,
-        .border_top = BORDER_TOP,
-        .border_bottom = BORDER_BOTTOM,
+        .border = {
+            .left = BORDER_LEFT,
+            .right = BORDER_RIGHT,
+            .top = BORDER_TOP,
+            .bottom = BORDER_BOTTOM,
+        },
+        .display_info = z1013_display_info(0),
     });
     keybuf_init(&(keybuf_desc_t){ .key_delay_frames = 6 });
     clock_init();
@@ -96,12 +104,21 @@ void app_init(void) {
     z1013_init(&state.z1013, &desc);
     #ifdef CHIPS_USE_UI
         ui_init(ui_draw_cb);
-        ui_z1013_init(&state.ui_z1013, &(ui_z1013_desc_t){
+        ui_z1013_init(&state.ui, &(ui_z1013_desc_t){
             .z1013 = &state.z1013,
             .boot_cb = ui_boot_cb,
-            .create_texture_cb = gfx_create_texture,
-            .update_texture_cb = gfx_update_texture,
-            .destroy_texture_cb = gfx_destroy_texture,
+            .dbg_texture = {
+                .create_cb = gfx_create_texture,
+                .update_cb = gfx_update_texture,
+                .destroy_cb = gfx_destroy_texture,
+            },
+            .snapshot = {
+                .load_cb = ui_load_snapshot,
+                .save_cb = ui_save_snapshot,
+                .empty_slot_screenshot = {
+                    .texture = gfx_shared_empty_snapshot_texture()
+                }
+            },
             .dbg_keys = {
                 .cont = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F5), .name = "F5" },
                 .stop = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F5), .name = "F5" },
@@ -111,11 +128,12 @@ void app_init(void) {
                 .toggle_breakpoint = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F9), .name = "F9" }
             }
         });
+        ui_load_snapshots_from_storage();
     #endif
     bool delay_input = false;
     if (sargs_exists("file")) {
         delay_input = true;
-        fs_start_load_file(sargs_value("file"));
+        fs_start_load_file(FS_SLOT_IMAGE, sargs_value("file"));
     }
     if (!delay_input) {
         if (sargs_exists("input")) {
@@ -134,7 +152,7 @@ void app_frame(void) {
     state.ticks = z1013_exec(&state.z1013, state.frame_time_us);
     state.emu_time_ms = stm_ms(stm_since(emu_start_time));
     draw_status_bar();
-    gfx_draw(z1013_display_width(&state.z1013), z1013_display_height(&state.z1013));
+    gfx_draw(z1013_display_info(&state.z1013));
     handle_file_loading();
     send_keybuf_input();
 }
@@ -142,7 +160,7 @@ void app_frame(void) {
 void app_input(const sapp_event* event) {
     // accept dropped files also when ImGui grabs input
     if (event->type == SAPP_EVENTTYPE_FILES_DROPPED) {
-        fs_start_load_dropped_file();
+        fs_start_load_dropped_file(FS_SLOT_IMAGE);
     }
     #ifdef CHIPS_USE_UI
     if (ui_input(event)) {
@@ -194,7 +212,7 @@ void app_input(const sapp_event* event) {
 void app_cleanup(void) {
     z1013_discard(&state.z1013);
     #ifdef CHIPS_USE_UI
-        ui_z1013_discard(&state.ui_z1013);
+        ui_z1013_discard(&state.ui);
         ui_discard();
     #endif
     gfx_shutdown();
@@ -212,14 +230,15 @@ static void send_keybuf_input(void) {
 static void handle_file_loading(void) {
     fs_dowork();
     const uint32_t load_delay_frames = 20;
-    if (fs_ptr() && (clock_frame_count_60hz() > load_delay_frames)) {
+    if (fs_success(FS_SLOT_IMAGE) && (clock_frame_count_60hz() > load_delay_frames)) {
+        const chips_range_t file_data = fs_data(FS_SLOT_IMAGE);
         bool load_success = false;
-        if (fs_ext("txt") || fs_ext("bas")) {
+        if (fs_ext(FS_SLOT_IMAGE, "txt") || fs_ext(FS_SLOT_IMAGE, "bas")) {
             load_success = true;
-            keybuf_put((const char*)fs_ptr());
+            keybuf_put((const char*)file_data.ptr);
         }
         else {
-            load_success = z1013_quickload(&state.z1013, fs_ptr(), fs_size());
+            load_success = z1013_quickload(&state.z1013, file_data);
         }
         if (load_success) {
             if (clock_frame_count_60hz() > (load_delay_frames + 10)) {
@@ -232,7 +251,7 @@ static void handle_file_loading(void) {
         else {
             gfx_flash_error();
         }
-        fs_reset();
+        fs_reset(FS_SLOT_IMAGE);
     }
 }
 
@@ -247,15 +266,76 @@ static void draw_status_bar(void) {
     sdtx_printf("frame:%.2fms emu:%.2fms (min:%.2fms max:%.2fms) ticks:%d", (float)state.frame_time_us * 0.001f, emu_stats.avg_val, emu_stats.min_val, emu_stats.max_val, state.ticks);
 }
 
+#if defined(CHIPS_USE_UI)
+static void ui_draw_cb(void) {
+    ui_z1013_draw(&state.ui);
+}
+
+static void ui_boot_cb(z1013_t* sys, z1013_type_t type) {
+    z1013_desc_t desc = z1013_desc(type);
+    z1013_init(sys, &desc);
+}
+
+static void ui_update_snapshot_screenshot(size_t slot) {
+    ui_snapshot_screenshot_t screenshot = {
+        .texture = gfx_create_screenshot_texture(z1013_display_info(&state.snapshots[slot].z1013))
+    };
+    ui_snapshot_screenshot_t prev_screenshot = ui_snapshot_set_screenshot(&state.ui.snapshot, slot, screenshot);
+    if (prev_screenshot.texture) {
+        gfx_destroy_texture(prev_screenshot.texture);
+    }
+}
+
+static void ui_save_snapshot(size_t slot) {
+    if (slot < UI_SNAPSHOT_MAX_SLOTS) {
+        state.snapshots[slot].version = z1013_save_snapshot(&state.z1013, &state.snapshots[slot].z1013);
+        ui_update_snapshot_screenshot(slot);
+        fs_save_snapshot("z1013", slot, (chips_range_t){ .ptr = &state.snapshots[slot], sizeof(z1013_snapshot_t) });
+    }
+}
+
+static bool ui_load_snapshot(size_t slot) {
+    bool success = false;
+    if ((slot < UI_SNAPSHOT_MAX_SLOTS) && (state.ui.snapshot.slots[slot].valid)) {
+        success = z1013_load_snapshot(&state.z1013, state.snapshots[slot].version, &state.snapshots[slot].z1013);
+    }
+    return success;
+}
+
+static void ui_fetch_snapshot_callback(const fs_snapshot_response_t* response) {
+    assert(response);
+    if (response->result != FS_RESULT_SUCCESS) {
+        return;
+    }
+    if (response->data.size != sizeof(z1013_snapshot_t)) {
+        return;
+    }
+    if (((z1013_snapshot_t*)response->data.ptr)->version != Z1013_SNAPSHOT_VERSION) {
+        return;
+    }
+    size_t snapshot_slot = response->snapshot_index;
+    assert(snapshot_slot < UI_SNAPSHOT_MAX_SLOTS);
+    memcpy(&state.snapshots[snapshot_slot], response->data.ptr, response->data.size);
+    ui_update_snapshot_screenshot(snapshot_slot);
+}
+
+static void ui_load_snapshots_from_storage(void) {
+    for (size_t snapshot_slot = 0; snapshot_slot < UI_SNAPSHOT_MAX_SLOTS; snapshot_slot++) {
+        fs_start_load_snapshot(FS_SLOT_SNAPSHOTS, "z1013", snapshot_slot, ui_fetch_snapshot_callback);
+    }
+}
+#endif
+
 sapp_desc sokol_main(int argc, char* argv[]) {
     sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
+    const chips_display_info_t info = z1013_display_info(0);
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,
         .event_cb = app_input,
         .cleanup_cb = app_cleanup,
-        .width = 2 * z1013_std_display_width() + BORDER_LEFT + BORDER_RIGHT,
-        .height = 2 * z1013_std_display_height() + BORDER_TOP + BORDER_BOTTOM,
+        .width = 2 * info.screen.width + BORDER_LEFT + BORDER_RIGHT,
+        .height = 2 * info.screen.height + BORDER_TOP + BORDER_BOTTOM,
         .window_title = "Robotron Z1013",
         .icon.sokol_default = true,
         .enable_dragndrop = true,

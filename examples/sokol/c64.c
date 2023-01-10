@@ -1,8 +1,9 @@
 /*
     c64.c
 */
-#include "common.h"
 #define CHIPS_IMPL
+#include "chips/chips_common.h"
+#include "common.h"
 #include "chips/m6502.h"
 #include "chips/m6526.h"
 #include "chips/m6569.h"
@@ -30,8 +31,14 @@
     #include "ui/ui_m6569.h"
     #include "ui/ui_audio.h"
     #include "ui/ui_kbd.h"
+    #include "ui/ui_snapshot.h"
     #include "ui/ui_c64.h"
 #endif
+
+typedef struct {
+    uint32_t version;
+    c64_t c64;
+} c64_snapshot_t;
 
 static struct {
     c64_t c64;
@@ -39,11 +46,17 @@ static struct {
     uint32_t ticks;
     double emu_time_ms;
     #ifdef CHIPS_USE_UI
-        ui_c64_t ui_c64;
+        ui_c64_t ui;
+        c64_snapshot_t snapshots[UI_SNAPSHOT_MAX_SLOTS];
     #endif
 } state;
 
 #ifdef CHIPS_USE_UI
+static void ui_draw_cb(void);
+static void ui_boot_cb(c64_t* sys);
+static void ui_save_snapshot(size_t slot_index);
+static bool ui_load_snapshot(size_t slot_index);
+static void ui_load_snapshots_from_storage(void);
 #define BORDER_TOP (24)
 #else
 #define BORDER_TOP (8)
@@ -68,10 +81,6 @@ c64_desc_t c64_desc(c64_joystick_type_t joy_type, bool c1530_enabled, bool c1541
             .callback = { .func = push_audio },
             .sample_rate = saudio_sample_rate(),
         },
-        .pixel_buffer = {
-            .ptr = gfx_framebuffer(),
-            .size = gfx_framebuffer_size(),
-        },
         .roms = {
             .chars = { .ptr=dump_c64_char_bin, .size=sizeof(dump_c64_char_bin) },
             .basic = { .ptr=dump_c64_basic_bin, .size=sizeof(dump_c64_basic_bin) },
@@ -82,36 +91,12 @@ c64_desc_t c64_desc(c64_joystick_type_t joy_type, bool c1530_enabled, bool c1541
             }
         },
         #if defined(CHIPS_USE_UI)
-        .debug = ui_c64_get_debug(&state.ui_c64)
+        .debug = ui_c64_get_debug(&state.ui)
         #endif
     };
 }
 
-#if defined(CHIPS_USE_UI)
-static void ui_draw_cb(void) {
-    ui_c64_draw(&state.ui_c64);
-}
-static void ui_boot_cb(c64_t* sys) {
-    c64_desc_t desc = c64_desc(sys->joystick_type, sys->c1530.valid, sys->c1541.valid);
-    c64_init(sys, &desc);
-}
-#endif
-
 void app_init(void) {
-    gfx_init(&(gfx_desc_t){
-        #ifdef CHIPS_USE_UI
-        .draw_extra_cb = ui_draw,
-        #endif
-        .border_left = BORDER_LEFT,
-        .border_right = BORDER_RIGHT,
-        .border_top = BORDER_TOP,
-        .border_bottom = BORDER_BOTTOM,
-    });
-    keybuf_init(&(keybuf_desc_t){ .key_delay_frames=5 });
-    clock_init();
-    prof_init();
-    fs_init();
-    saudio_setup(&(saudio_desc){0});
     c64_joystick_type_t joy_type = C64_JOYSTICKTYPE_NONE;
     if (sargs_exists("joystick")) {
         if (sargs_equals("joystick", "digital_1")) {
@@ -128,14 +113,40 @@ void app_init(void) {
     bool c1541_enabled = sargs_exists("c1541");
     c64_desc_t desc = c64_desc(joy_type, c1530_enabled, c1541_enabled);
     c64_init(&state.c64, &desc);
+    gfx_init(&(gfx_desc_t){
+        #ifdef CHIPS_USE_UI
+        .draw_extra_cb = ui_draw,
+        #endif
+        .border = {
+            .left = BORDER_LEFT,
+            .right = BORDER_RIGHT,
+            .top = BORDER_TOP,
+            .bottom = BORDER_BOTTOM,
+        },
+        .display_info = c64_display_info(&state.c64),
+    });
+    keybuf_init(&(keybuf_desc_t){ .key_delay_frames=5 });
+    clock_init();
+    prof_init();
+    fs_init();
+    saudio_setup(&(saudio_desc){0});
     #ifdef CHIPS_USE_UI
         ui_init(ui_draw_cb);
-        ui_c64_init(&state.ui_c64, &(ui_c64_desc_t){
+        ui_c64_init(&state.ui, &(ui_c64_desc_t){
             .c64 = &state.c64,
             .boot_cb = ui_boot_cb,
-            .create_texture_cb = gfx_create_texture,
-            .update_texture_cb = gfx_update_texture,
-            .destroy_texture_cb = gfx_destroy_texture,
+            .dbg_texture = {
+                .create_cb = gfx_create_texture,
+                .update_cb = gfx_update_texture,
+                .destroy_cb = gfx_destroy_texture,
+            },
+            .snapshot = {
+                .load_cb = ui_load_snapshot,
+                .save_cb = ui_save_snapshot,
+                .empty_slot_screenshot = {
+                    .texture = gfx_shared_empty_snapshot_texture(),
+                },
+            },
             .dbg_keys = {
                 .cont = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F5), .name = "F5" },
                 .stop = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F5), .name = "F5" },
@@ -145,14 +156,15 @@ void app_init(void) {
                 .toggle_breakpoint = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F9), .name = "F9" }
             }
         });
+        ui_load_snapshots_from_storage();
     #endif
     bool delay_input = false;
     if (sargs_exists("file")) {
         delay_input = true;
-        fs_start_load_file(sargs_value("file"));
+        fs_start_load_file(FS_SLOT_IMAGE, sargs_value("file"));
     }
     if (sargs_exists("prg")) {
-        fs_load_base64("url.prg", sargs_value("prg"));
+        fs_load_base64(FS_SLOT_IMAGE, "url.prg", sargs_value("prg"));
     }
     if (!delay_input) {
         if (sargs_exists("input")) {
@@ -171,7 +183,7 @@ void app_frame(void) {
     state.ticks = c64_exec(&state.c64, state.frame_time_us);
     state.emu_time_ms = stm_ms(stm_since(emu_start_time));
     draw_status_bar();
-    gfx_draw(c64_display_width(&state.c64), c64_display_height(&state.c64));
+    gfx_draw(c64_display_info(&state.c64));
     handle_file_loading();
     send_keybuf_input();
 }
@@ -179,7 +191,7 @@ void app_frame(void) {
 void app_input(const sapp_event* event) {
     // accept dropped files also when ImGui grabs input
     if (event->type == SAPP_EVENTTYPE_FILES_DROPPED) {
-        fs_start_load_dropped_file();
+        fs_start_load_dropped_file(FS_SLOT_IMAGE);
     }
     #ifdef CHIPS_USE_UI
     if (ui_input(event)) {
@@ -242,7 +254,7 @@ void app_input(const sapp_event* event) {
 void app_cleanup(void) {
     c64_discard(&state.c64);
     #ifdef CHIPS_USE_UI
-        ui_c64_discard(&state.ui_c64);
+        ui_c64_discard(&state.ui);
         ui_discard();
     #endif
     saudio_shutdown();
@@ -265,33 +277,33 @@ static void send_keybuf_input(void) {
 static void handle_file_loading(void) {
     fs_dowork();
     const uint32_t load_delay_frames = 180;
-    if (fs_ptr() && clock_frame_count_60hz() > load_delay_frames) {
+    if (fs_success(FS_SLOT_IMAGE) && clock_frame_count_60hz() > load_delay_frames) {
         bool load_success = false;
-        if (fs_ext("txt") || fs_ext("bas")) {
+        if (fs_ext(FS_SLOT_IMAGE, "txt") || fs_ext(FS_SLOT_IMAGE, "bas")) {
             load_success = true;
-            keybuf_put((const char*)fs_ptr());
+            keybuf_put((const char*)fs_data(FS_SLOT_IMAGE).ptr);
         }
-        else if (fs_ext("tap")) {
-            load_success = c64_insert_tape(&state.c64, fs_ptr(), fs_size());
+        else if (fs_ext(FS_SLOT_IMAGE, "tap")) {
+            load_success = c64_insert_tape(&state.c64, fs_data(FS_SLOT_IMAGE));
         }
-        else if (fs_ext("bin") || fs_ext("prg") || fs_ext("")) {
-            load_success = c64_quickload(&state.c64, fs_ptr(), fs_size());
+        else if (fs_ext(FS_SLOT_IMAGE, "bin") || fs_ext(FS_SLOT_IMAGE, "prg") || fs_ext(FS_SLOT_IMAGE, "")) {
+            load_success = c64_quickload(&state.c64, fs_data(FS_SLOT_IMAGE));
         }
         if (load_success) {
             if (clock_frame_count_60hz() > (load_delay_frames + 10)) {
                 gfx_flash_success();
             }
-            if (fs_ext("tap")) {
+            if (fs_ext(FS_SLOT_IMAGE, "tap")) {
                 c64_tape_play(&state.c64);
             }
             if (!sargs_exists("debug")) {
                 if (sargs_exists("input")) {
                     keybuf_put(sargs_value("input"));
                 }
-                else if (fs_ext("tap")) {
+                else if (fs_ext(FS_SLOT_IMAGE, "tap")) {
                     keybuf_put("LOAD\n");
                 }
-                else if (fs_ext("prg")) {
+                else if (fs_ext(FS_SLOT_IMAGE, "prg")) {
                     keybuf_put("RUN\n");
                 }
             }
@@ -299,7 +311,7 @@ static void handle_file_loading(void) {
         else {
             gfx_flash_error();
         }
-        fs_reset();
+        fs_reset(FS_SLOT_IMAGE);
     }
 }
 
@@ -314,22 +326,81 @@ static void draw_status_bar(void) {
     sdtx_printf("frame:%.2fms emu:%.2fms (min:%.2fms max:%.2fms) ticks:%d", (float)state.frame_time_us * 0.001f, emu_stats.avg_val, emu_stats.min_val, emu_stats.max_val, state.ticks);
 }
 
+#if defined(CHIPS_USE_UI)
+static void ui_draw_cb(void) {
+    ui_c64_draw(&state.ui);
+}
+static void ui_boot_cb(c64_t* sys) {
+    c64_desc_t desc = c64_desc(sys->joystick_type, sys->c1530.valid, sys->c1541.valid);
+    c64_init(sys, &desc);
+}
+
+static void ui_update_snapshot_screenshot(size_t slot) {
+    ui_snapshot_screenshot_t screenshot = {
+        .texture = gfx_create_screenshot_texture(c64_display_info(&state.snapshots[slot].c64))
+    };
+    ui_snapshot_screenshot_t prev_screenshot = ui_snapshot_set_screenshot(&state.ui.snapshot, slot, screenshot);
+    if (prev_screenshot.texture) {
+        gfx_destroy_texture(prev_screenshot.texture);
+    }
+}
+
+static void ui_save_snapshot(size_t slot) {
+    if (slot < UI_SNAPSHOT_MAX_SLOTS) {
+        state.snapshots[slot].version = c64_save_snapshot(&state.c64, &state.snapshots[slot].c64);
+        ui_update_snapshot_screenshot(slot);
+        fs_save_snapshot("c64", slot, (chips_range_t){ .ptr = &state.snapshots[slot], sizeof(c64_snapshot_t) });
+    }
+}
+
+static bool ui_load_snapshot(size_t slot) {
+    bool success = false;
+    if ((slot < UI_SNAPSHOT_MAX_SLOTS) && (state.ui.snapshot.slots[slot].valid)) {
+        success = c64_load_snapshot(&state.c64, state.snapshots[slot].version, &state.snapshots[slot].c64);
+    }
+    return success;
+}
+
+static void ui_fetch_snapshot_callback(const fs_snapshot_response_t* response) {
+    assert(response);
+    if (response->result != FS_RESULT_SUCCESS) {
+        return;
+    }
+    if (response->data.size != sizeof(c64_snapshot_t)) {
+        return;
+    }
+    if (((c64_snapshot_t*)response->data.ptr)->version != C64_SNAPSHOT_VERSION) {
+        return;
+    }
+    size_t snapshot_slot = response->snapshot_index;
+    assert(snapshot_slot < UI_SNAPSHOT_MAX_SLOTS);
+    memcpy(&state.snapshots[snapshot_slot], response->data.ptr, response->data.size);
+    ui_update_snapshot_screenshot(snapshot_slot);
+}
+
+static void ui_load_snapshots_from_storage(void) {
+    for (size_t snapshot_slot = 0; snapshot_slot < UI_SNAPSHOT_MAX_SLOTS; snapshot_slot++) {
+        fs_start_load_snapshot(FS_SLOT_SNAPSHOTS, "c64", snapshot_slot, ui_fetch_snapshot_callback);
+    }
+}
+#endif
+
 sapp_desc sokol_main(int argc, char* argv[]) {
     sargs_setup(&(sargs_desc){
         .argc=argc,
         .argv=argv,
         .buf_size = 512 * 1024,
     });
+    const chips_display_info_t info = c64_display_info(0);
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,
         .event_cb = app_input,
         .cleanup_cb = app_cleanup,
-        .width = 2 * c64_std_display_width() + BORDER_LEFT + BORDER_RIGHT,
-        .height = 2 * c64_std_display_height() + BORDER_TOP + BORDER_BOTTOM,
+        .width = 2 * info.screen.width + BORDER_LEFT + BORDER_RIGHT,
+        .height = 2 * info.screen.height + BORDER_TOP + BORDER_BOTTOM,
         .window_title = "C64",
         .icon.sokol_default = true,
         .enable_dragndrop = true,
     };
 }
-

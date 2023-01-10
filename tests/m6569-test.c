@@ -1,13 +1,14 @@
 //------------------------------------------------------------------------------
 //  m6569-test.c
 //------------------------------------------------------------------------------
+#include "chips/chips_common.h"
 #define CHIPS_IMPL
 #include "chips/m6569.h"
 #include "utest.h"
 
 #define T(b) ASSERT_TRUE(b)
 
-static uint32_t rgba8_buffer[262144];
+static uint8_t framebuffer[M6569_FRAMEBUFFER_SIZE_BYTES];
 
 static uint16_t fetch(uint16_t addr, void* user_data) {
     // FIXME
@@ -19,15 +20,19 @@ static uint16_t fetch(uint16_t addr, void* user_data) {
 UTEST(m6569, rw) {
     m6569_t vic;
     m6569_init(&vic, &(m6569_desc_t){
-        .rgba8_buffer = rgba8_buffer,
-        .rgba8_buffer_size = sizeof(rgba8_buffer),
+        .framebuffer = {
+            .ptr = framebuffer,
+            .size = sizeof(framebuffer)
+        },
         .fetch_cb = fetch,
         .user_data = 0,
-        .vis_x = 64,
-        .vis_y = 24,
-        .vis_w = 392,
-        .vis_h = 272,
+        .screen = {
+            .x = 64,
+            .y = 24,
+            .width = 392,
+            .height = 272,
+        }
     });
-    T(m6569_display_width(&vic) == 392);
-    T(m6569_display_height(&vic) == 272);
+    T(m6569_screen(&vic).width == 392);
+    T(m6569_screen(&vic).height == 272);
 }

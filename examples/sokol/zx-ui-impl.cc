@@ -1,6 +1,7 @@
 /*
     UI implementation for zx.c, this must live in its own C++ file.
 */
+#include "chips/chips_common.h"
 #include "chips/z80.h"
 #include "chips/beeper.h"
 #include "chips/ay38910.h"
@@ -24,4 +25,5 @@
 #include "ui/ui_z80.h"
 #include "ui/ui_ay38910.h"
 #include "ui/ui_audio.h"
+#include "ui/ui_snapshot.h"
 #include "ui/ui_zx.h"

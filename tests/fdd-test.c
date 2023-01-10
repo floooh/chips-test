@@ -1,6 +1,7 @@
 //------------------------------------------------------------------------------
 //  fdd-test.c
 //------------------------------------------------------------------------------
+#include "chips/chips_common.h"
 #define CHIPS_IMPL
 #include "chips/fdd.h"
 #include "chips/fdd_cpc.h"
@@ -12,7 +13,7 @@
 UTEST(fdd, load_cpc_dsk) {
     fdd_t fdd;
     fdd_init(&fdd);
-    bool load_successful = fdd_cpc_insert_dsk(&fdd, dump_boulderdash_cpc_dsk, sizeof(dump_boulderdash_cpc_dsk));
+    bool load_successful = fdd_cpc_insert_dsk(&fdd, (chips_range_t){ .ptr=dump_boulderdash_cpc_dsk, .size=sizeof(dump_boulderdash_cpc_dsk) });
     T(load_successful);
     T(fdd.has_disc);
     T(fdd.disc.formatted);
@@ -41,7 +42,7 @@ UTEST(fdd, load_cpc_dsk) {
 UTEST(fdd, load_cpc_extdsk) {
     fdd_t fdd;
     fdd_init(&fdd);
-    bool load_success = fdd_cpc_insert_dsk(&fdd, dump_dtc_cpc_dsk, sizeof(dump_dtc_cpc_dsk));
+    bool load_success = fdd_cpc_insert_dsk(&fdd, (chips_range_t){ .ptr=dump_dtc_cpc_dsk, .size=sizeof(dump_dtc_cpc_dsk) });
     T(load_success);
     T(fdd.has_disc);
     T(fdd.disc.formatted);

@@ -10,8 +10,9 @@
     NOT EMULATED:
         - REPT key (and some other special keys)
 */
-#include "common.h"
 #define CHIPS_IMPL
+#include "chips/chips_common.h"
+#include "common.h"
 #include "chips/m6502.h"
 #include "chips/mc6847.h"
 #include "chips/i8255.h"
@@ -36,8 +37,14 @@
     #include "ui/ui_i8255.h"
     #include "ui/ui_audio.h"
     #include "ui/ui_kbd.h"
+    #include "ui/ui_snapshot.h"
     #include "ui/ui_atom.h"
 #endif
+
+typedef struct {
+    uint32_t version;
+    atom_t atom;
+} atom_snapshot_t;
 
 static struct {
     atom_t atom;
@@ -45,11 +52,17 @@ static struct {
     uint32_t ticks;
     double emu_time_ms;
     #ifdef CHIPS_USE_UI
-        ui_atom_t ui_atom;
+        ui_atom_t ui;
+        atom_snapshot_t snapshots[UI_SNAPSHOT_MAX_SLOTS];
     #endif
 } state;
 
 #ifdef CHIPS_USE_UI
+static void ui_draw_cb(void);
+static void ui_boot_cb(atom_t* sys);
+static void ui_save_snapshot(size_t slot_index);
+static bool ui_load_snapshot(size_t slot_index);
+static void ui_load_snapshots_from_storage(void);
 #define BORDER_TOP (24)
 #else
 #define BORDER_TOP (8)
@@ -70,46 +83,18 @@ atom_desc_t atom_desc(atom_joystick_type_t joy_type) {
             .callback = { .func = push_audio },
             .sample_rate = saudio_sample_rate(),
         },
-        .pixel_buffer = {
-            .ptr = gfx_framebuffer(),
-            .size = gfx_framebuffer_size(),
-        },
         .roms = {
             .abasic = { .ptr=dump_abasic_ic20, .size = sizeof(dump_abasic_ic20) },
             .afloat = { .ptr=dump_afloat_ic21, .size = sizeof(dump_afloat_ic21) },
             .dosrom = { .ptr=dump_dosrom_u15, .size = sizeof(dump_dosrom_u15) }
         },
         #if defined(CHIPS_USE_UI)
-        .debug = ui_atom_get_debug(&state.ui_atom)
+        .debug = ui_atom_get_debug(&state.ui)
         #endif
     };
 }
 
-#if defined(CHIPS_USE_UI)
-static void ui_draw_cb(void) {
-    ui_atom_draw(&state.ui_atom);
-}
-static void ui_boot_cb(atom_t* sys) {
-    atom_desc_t desc = atom_desc(sys->joystick_type);
-    atom_init(sys, &desc);
-}
-#endif
-
 void app_init(void) {
-    gfx_init(&(gfx_desc_t) {
-        #ifdef CHIPS_USE_UI
-        .draw_extra_cb = ui_draw,
-        #endif
-        .border_left = BORDER_LEFT,
-        .border_right = BORDER_RIGHT,
-        .border_top = BORDER_TOP,
-        .border_bottom = BORDER_BOTTOM,
-    });
-    keybuf_init(&(keybuf_desc_t){ .key_delay_frames = 10 });
-    clock_init();
-    prof_init();
-    fs_init();
-    saudio_setup(&(saudio_desc){0});
     atom_joystick_type_t joy_type = ATOM_JOYSTICKTYPE_NONE;
     if (sargs_exists("joystick")) {
         if (sargs_equals("joystick", "mmc") || sargs_equals("joystick", "yes")) {
@@ -118,14 +103,40 @@ void app_init(void) {
     }
     atom_desc_t desc = atom_desc(joy_type);
     atom_init(&state.atom, &desc);
+    gfx_init(&(gfx_desc_t) {
+        #ifdef CHIPS_USE_UI
+        .draw_extra_cb = ui_draw,
+        #endif
+        .border = {
+            .left = BORDER_LEFT,
+            .right = BORDER_RIGHT,
+            .top = BORDER_TOP,
+            .bottom = BORDER_BOTTOM,
+        },
+        .display_info = atom_display_info(&state.atom)
+    });
+    keybuf_init(&(keybuf_desc_t){ .key_delay_frames = 10 });
+    clock_init();
+    prof_init();
+    fs_init();
+    saudio_setup(&(saudio_desc){0});
     #ifdef CHIPS_USE_UI
         ui_init(ui_draw_cb);
-        ui_atom_init(&state.ui_atom, &(ui_atom_desc_t){
+        ui_atom_init(&state.ui, &(ui_atom_desc_t){
             .atom = &state.atom,
             .boot_cb = ui_boot_cb,
-            .create_texture_cb = gfx_create_texture,
-            .update_texture_cb = gfx_update_texture,
-            .destroy_texture_cb = gfx_destroy_texture,
+            .dbg_texture = {
+                .create_cb = gfx_create_texture,
+                .update_cb = gfx_update_texture,
+                .destroy_cb = gfx_destroy_texture,
+            },
+            .snapshot = {
+                .load_cb = ui_load_snapshot,
+                .save_cb = ui_save_snapshot,
+                .empty_slot_screenshot = {
+                    .texture = gfx_shared_empty_snapshot_texture()
+                }
+            },
             .dbg_keys = {
                 .cont = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F5), .name = "F5" },
                 .stop = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F5), .name = "F5" },
@@ -135,11 +146,12 @@ void app_init(void) {
                 .toggle_breakpoint = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F9), .name = "F9" }
             }
         });
+        ui_load_snapshots_from_storage();
     #endif
     bool delay_input = false;
     if (sargs_exists("file")) {
         delay_input = true;
-        fs_start_load_file(sargs_value("file"));
+        fs_start_load_file(FS_SLOT_IMAGE, sargs_value("file"));
     }
     if (!delay_input) {
         if (sargs_exists("input")) {
@@ -158,7 +170,7 @@ void app_frame(void) {
     state.ticks = atom_exec(&state.atom, state.frame_time_us);
     state.emu_time_ms = stm_ms(stm_since(emu_start_time));
     draw_status_bar();
-    gfx_draw(atom_display_width(&state.atom), atom_display_height(&state.atom));
+    gfx_draw(atom_display_info(&state.atom));
     handle_file_loading();
     send_keybuf_input();
 }
@@ -167,7 +179,7 @@ void app_frame(void) {
 void app_input(const sapp_event* event) {
     // accept dropped files also when ImGui grabs input
     if (event->type == SAPP_EVENTTYPE_FILES_DROPPED) {
-        fs_start_load_dropped_file();
+        fs_start_load_dropped_file(FS_SLOT_IMAGE);
     }
     #ifdef CHIPS_USE_UI
     if (ui_input(event)) {
@@ -224,7 +236,7 @@ void app_input(const sapp_event* event) {
 void app_cleanup(void) {
     atom_discard(&state.atom);
     #ifdef CHIPS_USE_UI
-        ui_atom_discard(&state.ui_atom);
+        ui_atom_discard(&state.ui);
         ui_discard();
     #endif
     saudio_shutdown();
@@ -243,14 +255,14 @@ static void send_keybuf_input(void) {
 static void handle_file_loading(void) {
     fs_dowork();
     const uint32_t load_delay_frames = 48;
-    if (fs_ptr() && clock_frame_count_60hz() > load_delay_frames) {
+    if (fs_success(FS_SLOT_IMAGE) && clock_frame_count_60hz() > load_delay_frames) {
         bool load_success = false;
-        if (fs_ext("txt") || fs_ext("bas")) {
+        if (fs_ext(FS_SLOT_IMAGE, "txt") || fs_ext(FS_SLOT_IMAGE, "bas")) {
             load_success = true;
-            keybuf_put((const char*)fs_ptr());
+            keybuf_put((const char*)fs_data(FS_SLOT_IMAGE).ptr);
         }
-        if (fs_ext("tap")) {
-            load_success = atom_insert_tape(&state.atom, fs_ptr(), fs_size());
+        if (fs_ext(FS_SLOT_IMAGE, "tap")) {
+            load_success = atom_insert_tape(&state.atom, fs_data(FS_SLOT_IMAGE));
         }
         if (load_success) {
             if (clock_frame_count_60hz() > (load_delay_frames + 10)) {
@@ -263,7 +275,7 @@ static void handle_file_loading(void) {
         else {
             gfx_flash_error();
         }
-        fs_reset();
+        fs_reset(FS_SLOT_IMAGE);
     }
 }
 
@@ -278,18 +290,77 @@ static void draw_status_bar(void) {
     sdtx_printf("frame:%.2fms emu:%.2fms (min:%.2fms max:%.2fms) ticks:%d", (float)state.frame_time_us * 0.001f, emu_stats.avg_val, emu_stats.min_val, emu_stats.max_val, state.ticks);
 }
 
+#if defined(CHIPS_USE_UI)
+static void ui_draw_cb(void) {
+    ui_atom_draw(&state.ui);
+}
+static void ui_boot_cb(atom_t* sys) {
+    atom_desc_t desc = atom_desc(sys->joystick_type);
+    atom_init(sys, &desc);
+}
+
+static void ui_update_snapshot_screenshot(size_t slot) {
+    ui_snapshot_screenshot_t screenshot = {
+        .texture = gfx_create_screenshot_texture(atom_display_info(&state.snapshots[slot].atom))
+    };
+    ui_snapshot_screenshot_t prev_screenshot = ui_snapshot_set_screenshot(&state.ui.snapshot, slot, screenshot);
+    if (prev_screenshot.texture) {
+        gfx_destroy_texture(prev_screenshot.texture);
+    }
+}
+
+static void ui_save_snapshot(size_t slot) {
+    if (slot < UI_SNAPSHOT_MAX_SLOTS) {
+        state.snapshots[slot].version = atom_save_snapshot(&state.atom, &state.snapshots[slot].atom);
+        ui_update_snapshot_screenshot(slot);
+        fs_save_snapshot("atom", slot, (chips_range_t){ .ptr = &state.snapshots[slot], sizeof(atom_snapshot_t) });
+    }
+}
+
+static bool ui_load_snapshot(size_t slot) {
+    bool success = false;
+    if ((slot < UI_SNAPSHOT_MAX_SLOTS) && (state.ui.snapshot.slots[slot].valid)) {
+        success = atom_load_snapshot(&state.atom, state.snapshots[slot].version, &state.snapshots[slot].atom);
+    }
+    return success;
+}
+
+static void ui_fetch_snapshot_callback(const fs_snapshot_response_t* response) {
+    assert(response);
+    if (response->result != FS_RESULT_SUCCESS) {
+        return;
+    }
+    if (response->data.size != sizeof(atom_snapshot_t)) {
+        return;
+    }
+    if (((atom_snapshot_t*)response->data.ptr)->version != ATOM_SNAPSHOT_VERSION) {
+        return;
+    }
+    size_t snapshot_slot = response->snapshot_index;
+    assert(snapshot_slot < UI_SNAPSHOT_MAX_SLOTS);
+    memcpy(&state.snapshots[snapshot_slot], response->data.ptr, response->data.size);
+    ui_update_snapshot_screenshot(snapshot_slot);
+}
+
+static void ui_load_snapshots_from_storage(void) {
+    for (size_t snapshot_slot = 0; snapshot_slot < UI_SNAPSHOT_MAX_SLOTS; snapshot_slot++) {
+        fs_start_load_snapshot(FS_SLOT_SNAPSHOTS, "atom", snapshot_slot, ui_fetch_snapshot_callback);
+    }
+}
+#endif
+
 sapp_desc sokol_main(int argc, char* argv[]) {
     sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
+    const chips_display_info_t info = atom_display_info(0);
     return (sapp_desc) {
         .init_cb = app_init,
         .frame_cb = app_frame,
         .event_cb = app_input,
         .cleanup_cb = app_cleanup,
-        .width = 2 * atom_std_display_width() + BORDER_LEFT + BORDER_RIGHT,
-        .height = 2 * atom_std_display_height() + BORDER_TOP + BORDER_BOTTOM,
+        .width = 2 * info.screen.width + BORDER_LEFT + BORDER_RIGHT,
+        .height = 2 * info.screen.height + BORDER_TOP + BORDER_BOTTOM,
         .window_title = "Acorn Atom",
         .icon.sokol_default = true,
         .enable_dragndrop = true,
     };
 }
-

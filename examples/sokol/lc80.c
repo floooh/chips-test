@@ -1,7 +1,6 @@
 /*
     lc80.c
 */
-#include "common.h"
 #include "sokol_app.h"
 #include "sokol_gfx.h"
 #include "sokol_args.h"
@@ -10,6 +9,8 @@
 #include "sokol_glue.h"
 #include "clock.h"
 #define CHIPS_IMPL
+#include "chips/chips_common.h"
+#include "common.h"
 #include "chips/z80.h"
 #include "chips/z80ctc.h"
 #include "chips/z80pio.h"
@@ -29,15 +30,28 @@
 #include "ui/ui_z80.h"
 #include "ui/ui_z80pio.h"
 #include "ui/ui_z80ctc.h"
+#include "ui/ui_snapshot.h"
 #include "ui/ui_lc80.h"
+
+typedef struct {
+    uint32_t version;
+    lc80_t lc80;
+} lc80_snapshot_t;
 
 static struct {
     lc80_t lc80;
     uint32_t frame_time_us;
     uint32_t ticks;
     double emu_time_ms;
-    ui_lc80_t ui_lc80;
+    ui_lc80_t ui;
+    lc80_snapshot_t snapshots[UI_SNAPSHOT_MAX_SLOTS];
 } state;
+
+static void ui_boot_cb(lc80_t* sys);
+static void ui_draw_cb(void);
+static void ui_save_snapshot(size_t slot_index);
+static bool ui_load_snapshot(size_t slot_index);
+static void ui_load_snapshots_from_storage(void);
 
 static void push_audio(const float* samples, int num_samples, void* user_data) {
     (void)user_data;
@@ -51,17 +65,8 @@ static lc80_desc_t lc80_desc(void) {
             .sample_rate = saudio_sample_rate(),
         },
         .rom = { .ptr = dump_lc80_2k_bin, .size = sizeof(dump_lc80_2k_bin) },
-        .debug = ui_lc80_get_debug(&state.ui_lc80),
+        .debug = ui_lc80_get_debug(&state.ui),
     };
-}
-
-static void ui_boot_cb(lc80_t* sys) {
-    lc80_desc_t desc = lc80_desc();
-    lc80_init(sys, &desc);
-}
-
-static void ui_draw_cb(void) {
-    ui_lc80_draw(&state.ui_lc80);
 }
 
 void app_init(void) {
@@ -73,17 +78,24 @@ void app_init(void) {
     clock_init();
     prof_init();
     saudio_setup(&(saudio_desc){0});
+    fs_init();
 
     lc80_desc_t desc = lc80_desc();
     lc80_init(&state.lc80, &desc);
 
     ui_init(ui_draw_cb);
-    ui_lc80_init(&state.ui_lc80, &(ui_lc80_desc_t){
+    ui_lc80_init(&state.ui, &(ui_lc80_desc_t){
         .sys = &state.lc80,
         .boot_cb = ui_boot_cb,
-        .create_texture_cb = gfx_create_texture,
-        .update_texture_cb = gfx_update_texture,
-        .destroy_texture_cb = gfx_destroy_texture,
+        .dbg_texture = {
+            .create_cb = gfx_create_texture,
+            .update_cb = gfx_update_texture,
+            .destroy_cb = gfx_destroy_texture,
+        },
+        .snapshot = {
+            .load_cb = ui_load_snapshot,
+            .save_cb = ui_save_snapshot,
+        },
         .dbg_keys = {
             .cont = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F5), .name = "F5" },
             .stop = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F5), .name = "F5" },
@@ -93,6 +105,7 @@ void app_init(void) {
             .toggle_breakpoint = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F9), .name = "F9" }
         }
     });
+    ui_load_snapshots_from_storage();
 }
 
 static void draw_status_bar(void);
@@ -108,6 +121,7 @@ void app_frame(void) {
     sdtx_draw();
     sg_end_pass();
     sg_commit();
+    fs_dowork();
 }
 
 void app_input(const sapp_event* event) {
@@ -116,7 +130,7 @@ void app_input(const sapp_event* event) {
 
 void app_cleanup(void) {
     lc80_discard(&state.lc80);
-    ui_lc80_discard(&state.ui_lc80);
+    ui_lc80_discard(&state.ui);
     saudio_shutdown();
     sdtx_shutdown();
     sg_shutdown();
@@ -132,6 +146,54 @@ static void draw_status_bar(void) {
     sdtx_color3b(255, 255, 255);
     sdtx_pos(1.0f, (h / 8.0f) - 1.5f);
     sdtx_printf("frame:%.2fms emu:%.2fms (min:%.2fms max:%.2fms) ticks:%d", (float)state.frame_time_us * 0.001f, emu_stats.avg_val, emu_stats.min_val, emu_stats.max_val, state.ticks);
+}
+
+static void ui_boot_cb(lc80_t* sys) {
+    lc80_desc_t desc = lc80_desc();
+    lc80_init(sys, &desc);
+}
+
+static void ui_draw_cb(void) {
+    ui_lc80_draw(&state.ui);
+}
+
+static void ui_save_snapshot(size_t slot) {
+    if (slot < UI_SNAPSHOT_MAX_SLOTS) {
+        state.snapshots[slot].version = lc80_save_snapshot(&state.lc80, &state.snapshots[slot].lc80);
+        state.ui.win.snapshot.slots[slot].valid = true;
+        fs_save_snapshot("lc80", slot, (chips_range_t){ .ptr = &state.snapshots[slot], sizeof(lc80_snapshot_t) });
+    }
+}
+
+static bool ui_load_snapshot(size_t slot) {
+    bool success = false;
+    if ((slot < UI_SNAPSHOT_MAX_SLOTS) && (state.ui.win.snapshot.slots[slot].valid)) {
+        success = lc80_load_snapshot(&state.lc80, state.snapshots[slot].version, &state.snapshots[slot].lc80);
+    }
+    return success;
+}
+
+static void ui_fetch_snapshot_callback(const fs_snapshot_response_t* response) {
+    assert(response);
+    if (response->result != FS_RESULT_SUCCESS) {
+        return;
+    }
+    if (response->data.size != sizeof(lc80_snapshot_t)) {
+        return;
+    }
+    if (((lc80_snapshot_t*)response->data.ptr)->version != LC80_SNAPSHOT_VERSION) {
+        return;
+    }
+    size_t snapshot_slot = response->snapshot_index;
+    assert(snapshot_slot < UI_SNAPSHOT_MAX_SLOTS);
+    memcpy(&state.snapshots[snapshot_slot], response->data.ptr, response->data.size);
+    state.ui.win.snapshot.slots[snapshot_slot].valid = true;
+}
+
+static void ui_load_snapshots_from_storage(void) {
+    for (size_t snapshot_slot = 0; snapshot_slot < UI_SNAPSHOT_MAX_SLOTS; snapshot_slot++) {
+        fs_start_load_snapshot(FS_SLOT_SNAPSHOTS, "lc80", snapshot_slot, ui_fetch_snapshot_callback);
+    }
 }
 
 sapp_desc sokol_main(int argc, char* argv[]) {

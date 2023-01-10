@@ -1,6 +1,7 @@
 /*
     Compiles the UI header implementations as C++.
 */
+#include "chips/chips_common.h"
 #include "chips/z80.h"
 #include "chips/z80pio.h"
 #include "chips/kbd.h"
@@ -21,4 +22,5 @@
 #include "ui/ui_dbg.h"
 #include "ui/ui_z80.h"
 #include "ui/ui_z80pio.h"
+#include "ui/ui_snapshot.h"
 #include "ui/ui_z1013.h"

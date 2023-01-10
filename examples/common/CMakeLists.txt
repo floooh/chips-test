@@ -30,8 +30,13 @@ endif()
 
 # a lib of common code shared between all emulators
 fips_begin_lib(common)
-    fips_files(common.c common.h)
-    fips_files(clock.h fs.h gfx.h keybuf.h prof.h)
+    fips_files(
+        common.h
+        clock.c clock.h
+        fs.c fs.h
+        gfx.c gfx.h
+        keybuf.c keybuf.h
+        prof.c prof.h)
     sokol_shader(shaders.glsl ${slang})
     if (FIPS_OSX)
         fips_files(sokol.m)
@@ -55,4 +60,9 @@ fips_end_lib()
 fips_begin_lib(ui)
     fips_files(ui.cc ui.h)
     fips_deps(imgui)
+fips_end_lib()
+
+# a separate library with just keybuf (for the ASCII emulators)
+fips_begin_lib(keybuf)
+    fips_files(keybuf.c keybuf.h)
 fips_end_lib()

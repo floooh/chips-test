@@ -1,6 +1,7 @@
 /*
     UI implementation for kc85.c, this must live in its own .cc file.
 */
+#include "chips/chips_common.h"
 #include "chips/z80.h"
 #include "chips/z80ctc.h"
 #include "chips/z80pio.h"
@@ -26,4 +27,5 @@
 #include "ui/ui_z80ctc.h"
 #include "ui/ui_kc85sys.h"
 #include "ui/ui_audio.h"
+#include "ui/ui_snapshot.h"
 #include "ui/ui_kc85.h"
