@@ -34,6 +34,7 @@ asset_dirs = [ 'kc85', 'zx', 'c64', 'vic20', 'cpc', 'atom', 'z1013', 'z9001', 'b
 items = [
     { 'type':'ext',  'title':'Visual 6502 Remix', 'system':'none',  'url':'https://floooh.github.io/visual6502remix', 'img':'ext/visual6502remix.jpg', 'note':''},
     { 'type':'ext',  'title':'Visual Z80 Remix', 'system':'none',   'url':'https://floooh.github.io/visualz80remix', 'img':'ext/visualz80remix.jpg', 'note':''},
+    { 'type':'ext',  'title':'Visual 2A03 Remix', 'system':'none',  'url':'https://floooh.github.io/visual2a03remix', 'img':'ext/visual2a03remix.jpg', 'note':'' },
     { 'type':'emu',  'title':'KC85/2', 'system':'kc852',            'url':'kc852.html', 'img':'kc85/kc85_2.jpg', 'note':'' },
     { 'type':'emu',  'title':'KC85/3', 'system':'kc853',            'url':'kc853.html', 'img':'kc85/kc85_3.jpg', 'note':'' },
     { 'type':'emu',  'title':'KC85/4', 'system':'kc854',            'url':'kc854.html', 'img':'kc85/kc85_4.jpg', 'note':'' },
