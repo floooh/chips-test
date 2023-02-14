@@ -104,7 +104,9 @@ void app_init(void) {
     keybuf_init(&(keybuf_desc_t){ .key_delay_frames=6 });
     clock_init();
     prof_init();
-    saudio_setup(&(saudio_desc){0});
+    saudio_setup(&(saudio_desc){
+        .logger.func = slog_func,
+    });
     fs_init();
     zx_type_t type = ZX_TYPE_128;
     if (sargs_exists("type")) {
@@ -361,5 +363,6 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .window_title = "ZX Spectrum",
         .icon.sokol_default = true,
         .enable_dragndrop = true,
+        .logger.func = slog_func,
     };
 }

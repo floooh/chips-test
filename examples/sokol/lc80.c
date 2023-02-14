@@ -6,6 +6,7 @@
 #include "sokol_args.h"
 #include "sokol_audio.h"
 #include "sokol_debugtext.h"
+#include "sokol_log.h"
 #include "sokol_glue.h"
 #include "clock.h"
 #define CHIPS_IMPL
@@ -70,14 +71,20 @@ static lc80_desc_t lc80_desc(void) {
 }
 
 void app_init(void) {
-    sg_setup(&(sg_desc){ .context = sapp_sgcontext() });
+    sg_setup(&(sg_desc){
+        .context = sapp_sgcontext(),
+        .logger.func = slog_func,
+    });
     sdtx_setup(&(sdtx_desc_t){
         .context_pool_size = 1,
-        .fonts[0] = sdtx_font_oric()
+        .fonts[0] = sdtx_font_oric(),
+        .logger.func = slog_func,
     });
     clock_init();
     prof_init();
-    saudio_setup(&(saudio_desc){0});
+    saudio_setup(&(saudio_desc){
+        .logger.func = slog_func,
+    });
     fs_init();
 
     lc80_desc_t desc = lc80_desc();
@@ -207,5 +214,6 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .height = 720,
         .window_title = "LC-80",
         .icon.sokol_default = true,
+        .logger.func = slog_func,
     };
 }

@@ -1,5 +1,6 @@
 #include "sokol_fetch.h"
 #include "sokol_app.h"
+#include "sokol_log.h"
 #include "chips/chips_common.h"
 #include "fs.h"
 #include <stdlib.h>
@@ -51,6 +52,7 @@ void fs_init(void) {
         .max_requests = 128,
         .num_channels = FS_NUM_SLOTS,
         .num_lanes = 1,
+        .logger.func = slog_func,
     });
 }
 

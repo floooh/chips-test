@@ -339,5 +339,6 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .window_title = "Robotron Z1013",
         .icon.sokol_default = true,
         .enable_dragndrop = true,
+        .logger.func = slog_func,
     };
 }

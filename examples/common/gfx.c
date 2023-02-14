@@ -3,6 +3,7 @@
 #include "sokol_debugtext.h"
 #include "sokol_gl.h"
 #include "sokol_audio.h"
+#include "sokol_log.h"
 #include "sokol_glue.h"
 #include "chips/chips_common.h"
 #include "gfx.h"
@@ -267,18 +268,21 @@ void gfx_init(const gfx_desc_t* desc) {
         .shader_pool_size = 16,
         .pipeline_pool_size = 16,
         .context_pool_size = 2,
-        .context = sapp_sgcontext()
+        .context = sapp_sgcontext(),
+        .logger.func = slog_func,
     });
     sgl_setup(&(sgl_desc_t){
         .max_vertices = 16,
         .max_commands = 16,
         .context_pool_size = 1,
         .pipeline_pool_size = 16,
+        .logger.func = slog_func,
     });
     sdtx_setup(&(sdtx_desc_t){
         .context_pool_size = 1,
         .fonts[0] = sdtx_font_z1013(),
-        .fonts[1] = sdtx_font_kc853()
+        .fonts[1] = sdtx_font_kc853(),
+        .logger.func = slog_func,
     });
 
     state.valid = true;

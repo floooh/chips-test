@@ -104,7 +104,9 @@ static void app_init(void) {
     });
     clock_init();
     prof_init();
-    saudio_setup(&(saudio_desc){0});
+    saudio_setup(&(saudio_desc){
+        .logger.func = slog_func,
+    });
     fs_init();
     #ifdef CHIPS_USE_UI
         ui_init(ui_draw_cb);
@@ -273,5 +275,6 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .height = 3 * info.screen.height + BORDER_TOP + BORDER_BOTTOM,
         .window_title = "Pacman Arcade",
         .icon.sokol_default = true,
+        .logger.func = slog_func,
     };
 }

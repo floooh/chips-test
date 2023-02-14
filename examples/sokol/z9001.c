@@ -118,7 +118,9 @@ void app_init(void) {
     clock_init();
     prof_init();
     fs_init();
-    saudio_setup(&(saudio_desc){0});
+    saudio_setup(&(saudio_desc){
+        .logger.func = slog_func,
+    });
     z9001_type_t type = Z9001_TYPE_Z9001;
     if (sargs_exists("type")) {
         if (sargs_equals("type", "kc87")) {
@@ -366,5 +368,6 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .window_title = "Robotron Z9001/KC87",
         .icon.sokol_default = true,
         .enable_dragndrop = true,
+        .logger.func = slog_func,
     };
 }

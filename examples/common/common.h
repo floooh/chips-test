@@ -5,6 +5,7 @@
 #include "sokol_args.h"
 #include "sokol_time.h"
 #include "sokol_debugtext.h"
+#include "sokol_log.h"
 #include "clock.h"
 #include "prof.h"
 #include "fs.h"

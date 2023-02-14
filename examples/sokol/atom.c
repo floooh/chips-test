@@ -119,7 +119,9 @@ void app_init(void) {
     clock_init();
     prof_init();
     fs_init();
-    saudio_setup(&(saudio_desc){0});
+    saudio_setup(&(saudio_desc){
+        .logger.func = slog_func,
+    });
     #ifdef CHIPS_USE_UI
         ui_init(ui_draw_cb);
         ui_atom_init(&state.ui, &(ui_atom_desc_t){
@@ -362,5 +364,6 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .window_title = "Acorn Atom",
         .icon.sokol_default = true,
         .enable_dragndrop = true,
+        .logger.func = slog_func,
     };
 }
