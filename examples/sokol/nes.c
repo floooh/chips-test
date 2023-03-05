@@ -108,7 +108,6 @@ static void draw_status_bar(void) {
     prof_stats_t emu_stats = prof_stats(PROF_EMU);
 
     const uint32_t text_color = 0xFFFFFFFF;
-
     const float w = sapp_widthf();
     const float h = sapp_heightf();
     sdtx_canvas(w, h);
@@ -122,10 +121,20 @@ static void draw_status_bar(void) {
 
 static void handle_file_loading(void) {
     fs_dowork();
-    if (fs_success(FS_SLOT_IMAGE)) {
+    const uint32_t load_delay_frames = 120;
+    if (fs_success(FS_SLOT_IMAGE) && clock_frame_count_60hz() > load_delay_frames) {
+        
         bool load_success = false;
         if (fs_ext(FS_SLOT_IMAGE, "nes")) {
             load_success = nes_insert_cart(&state.nes, fs_data(FS_SLOT_IMAGE));
+        }
+        if (load_success) {
+            if (clock_frame_count_60hz() > (load_delay_frames + 10)) {
+                gfx_flash_success();
+            }
+        }
+        else {
+            gfx_flash_error();
         }
         fs_reset(FS_SLOT_IMAGE);
     }
@@ -136,12 +145,40 @@ void app_input(const sapp_event* event) {
     if (event->type == SAPP_EVENTTYPE_FILES_DROPPED) {
         fs_start_load_dropped_file(FS_SLOT_IMAGE);
     }
-    #ifdef CHIPS_USE_UI
+#ifdef CHIPS_USE_UI
     if (ui_input(event)) {
-       // input was handled by UI
-       return;
+        // input was handled by UI
+        return;
     }
-    #endif
+#endif
+    switch (event->type) {
+        case SAPP_EVENTTYPE_KEY_DOWN:
+        case SAPP_EVENTTYPE_KEY_UP: {
+            int c;
+            switch (event->key_code) {
+                case SAPP_KEYCODE_LEFT:         c = 0x01; break;
+                case SAPP_KEYCODE_RIGHT:        c = 0x02; break;
+                case SAPP_KEYCODE_DOWN:         c = 0x03; break;
+                case SAPP_KEYCODE_UP:           c = 0x04; break;
+                case SAPP_KEYCODE_ENTER:        c = 0x05; break;
+                case SAPP_KEYCODE_F:            c = 0x06; break;
+                case SAPP_KEYCODE_D:            c = 0x07; break;
+                case SAPP_KEYCODE_S:            c = 0x08; break;
+                default:                        c = 0x00; break;
+            }
+            if (c) {
+                if (event->type == SAPP_EVENTTYPE_KEY_DOWN) {
+                    nes_key_down(&state.nes, c);
+                }
+                else {
+                    nes_key_up(&state.nes, c);
+                }
+            }
+            break;
+        default:
+            break;
+        }
+    }
 }
 
 #if defined(CHIPS_USE_UI)
@@ -164,6 +201,7 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .height = 600,
         .window_title = "NES",
         .icon.sokol_default = true,
+        .enable_dragndrop = true,
         .logger.func = slog_func,
     };
 }
