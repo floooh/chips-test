@@ -8,7 +8,6 @@
 #include "chips/chips_common.h"
 #include "common.h"
 #include "chips/clk.h"
-#include "chips/mem.h"
 #include "chips/m6502.h"
 #include "chips/r2c02.h"
 #include "systems/nes.h"
@@ -189,14 +188,11 @@ static void ui_draw_cb(void) {
 
 sapp_desc sokol_main(int argc, char* argv[]) {
     sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
-    //const chips_display_info_t info = nes_display_info(0);
     return (sapp_desc) {
         .init_cb = app_init,
         .event_cb = app_input,
         .frame_cb = app_frame,
         .cleanup_cb = app_cleanup,
-        // .width = info.screen.width,
-        // .height = info.screen.height,
         .width = 800,
         .height = 600,
         .window_title = "NES",
