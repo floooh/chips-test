@@ -27,7 +27,8 @@ int main() {
     });
     /* patch the test start address into the RESET vector */
     nes.cart.rom[0x3FFC] = 0x00;
-    dump_nestest_nes[0x3FFD] = 0xC0;
+    dump_nestest_nes[0x3FFD] = 0xc0;
+    nes.cart.rom[0x3FFD] = 0xC0;
      /* set RESET vector and run through RESET sequence */
     uint64_t pins = nes.pins;
     for (int i = 0; i < 7; i++) {
