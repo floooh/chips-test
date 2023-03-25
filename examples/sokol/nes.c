@@ -123,10 +123,42 @@ static void draw_status_bar(void) {
     prof_stats_t emu_stats = prof_stats(PROF_EMU);
 
     const uint32_t text_color = 0xFFFFFFFF;
+    const uint32_t cart_active = 0xFF00EE00;
+    const uint32_t cart_inactive = 0xFF006600;
+    const uint32_t pad_active = 0xFFFFEE00;
+    const uint32_t pad_inactive = 0xFF886600;
+
     const float w = sapp_widthf();
     const float h = sapp_heightf();
     sdtx_canvas(w, h);
     sdtx_origin(1.0f, (h / 8.0f) - 3.5f);
+
+    sdtx_puts("PAD: ");
+    sdtx_font(1);
+    const uint8_t padmask = nes_pad_mask(&state.nes);
+    sdtx_color1i((padmask & NES_PAD_LEFT) ? pad_active : pad_inactive);
+    sdtx_putc(0x88); // arrow left
+    sdtx_color1i((padmask & NES_PAD_RIGHT) ? pad_active : pad_inactive);
+    sdtx_putc(0x89); // arrow right
+    sdtx_color1i((padmask & NES_PAD_UP) ? pad_active : pad_inactive);
+    sdtx_putc(0x8B); // arrow up
+    sdtx_color1i((padmask & NES_PAD_DOWN) ? pad_active : pad_inactive);
+    sdtx_putc(0x8A); // arrow down
+    sdtx_color1i((padmask & NES_PAD_START) ? pad_active : pad_inactive);
+    sdtx_putc(0x87); // btn
+    sdtx_color1i((padmask & NES_PAD_SEL) ? pad_active : pad_inactive);
+    sdtx_putc(0x87); // btn
+    sdtx_color1i((padmask & NES_PAD_B) ? pad_active : pad_inactive);
+    sdtx_putc(0x87); // btn
+    sdtx_color1i((padmask & NES_PAD_A) ? pad_active : pad_inactive);
+    sdtx_putc(0x87); // btn
+    sdtx_font(0);
+
+    // cartridge inserted LED
+    sdtx_color1i(text_color);
+    sdtx_puts(" CART: ");
+    sdtx_color1i(nes_cartridge_inserted(&state.nes) ? cart_active : cart_inactive);
+    sdtx_putc(0xCF);    // filled circle
 
     sdtx_font(0);
     sdtx_color1i(text_color);
@@ -138,7 +170,7 @@ static void handle_file_loading(void) {
     fs_dowork();
     const uint32_t load_delay_frames = 120;
     if (fs_success(FS_SLOT_IMAGE) && clock_frame_count_60hz() > load_delay_frames) {
-        
+
         bool load_success = false;
         if (fs_ext(FS_SLOT_IMAGE, "nes")) {
             load_success = nes_insert_cart(&state.nes, fs_data(FS_SLOT_IMAGE));
