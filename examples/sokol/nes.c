@@ -22,8 +22,14 @@
     #include "ui/ui_dasm.h"
     #include "ui/ui_dbg.h"
     #include "ui/ui_m6502.h"
+    #include "ui/ui_snapshot.h"
     #include "ui/ui_nes.h"
 #endif
+
+typedef struct {
+    uint32_t version;
+    nes_t nes;
+} nes_snapshot_t;
 
 static struct {
     nes_t nes;
@@ -32,11 +38,14 @@ static struct {
     double emu_time_ms;
     #if defined(CHIPS_USE_UI)
         ui_nes_t ui;
+        nes_snapshot_t snapshots[UI_SNAPSHOT_MAX_SLOTS];
     #endif
 } state;
 
 #ifdef CHIPS_USE_UI
 static void ui_draw_cb(void);
+static bool ui_load_snapshot(size_t slot_index);
+static void ui_save_snapshot(size_t slot_index);
 #endif
 
 static void draw_status_bar(void);
@@ -78,6 +87,13 @@ static void app_init(void) {
             .create_cb = gfx_create_texture,
             .update_cb = gfx_update_texture,
             .destroy_cb = gfx_destroy_texture,
+        },
+        .snapshot = {
+            .load_cb = ui_load_snapshot,
+            .save_cb = ui_save_snapshot,
+            .empty_slot_screenshot = {
+                .texture = gfx_shared_empty_snapshot_texture(),
+            }
         },
         .dbg_keys = {
            .cont = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F5), .name = "F5" },
@@ -231,6 +247,32 @@ void app_input(const sapp_event* event) {
 #if defined(CHIPS_USE_UI)
 static void ui_draw_cb(void) {
     ui_nes_draw(&state.ui);
+}
+
+static void ui_update_snapshot_screenshot(size_t slot) {
+    ui_snapshot_screenshot_t screenshot = {
+        .texture = gfx_create_screenshot_texture(nes_display_info(&state.snapshots[slot].nes))
+    };
+    ui_snapshot_screenshot_t prev_screenshot = ui_snapshot_set_screenshot(&state.ui.snapshot, slot, screenshot);
+    if (prev_screenshot.texture) {
+        gfx_destroy_texture(prev_screenshot.texture);
+    }
+}
+
+static bool ui_load_snapshot(size_t slot) {
+    bool success = false;
+    if ((slot < UI_SNAPSHOT_MAX_SLOTS) && (state.ui.snapshot.slots[slot].valid)) {
+        success = nes_load_snapshot(&state.nes, state.snapshots[slot].version, &state.snapshots[slot].nes);
+    }
+    return success;
+}
+
+static void ui_save_snapshot(size_t slot) {
+    if (slot < UI_SNAPSHOT_MAX_SLOTS) {
+        state.snapshots[slot].version = nes_save_snapshot(&state.nes, &state.snapshots[slot].nes);
+        ui_update_snapshot_screenshot(slot);
+        fs_save_snapshot("nes", slot, (chips_range_t){ .ptr = &state.snapshots[slot], sizeof(nes_snapshot_t) });
+    }
 }
 #endif
 

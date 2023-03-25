@@ -22,4 +22,5 @@
 #include "ui/ui_dasm.h"
 #include "ui/ui_dbg.h"
 #include "ui/ui_m6502.h"
+#include "ui/ui_snapshot.h"
 #include "ui/ui_nes.h"
