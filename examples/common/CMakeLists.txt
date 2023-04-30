@@ -1,7 +1,7 @@
 # select the sokol-gfx backend depending on platform
-if(FIPS_EMSCRIPTEN OR FIPS_RASPBERRYPI)
-    add_definitions(-DSOKOL_GLES2)
-    set(slang "glsl100")
+if(FIPS_EMSCRIPTEN)
+    add_definitions(-DSOKOL_GLES3)
+    set(slang "glsl300es")
 elseif(FIPS_ANDROID)
     add_definitions(-DSOKOL_GLES3)
     set(slang "glsl300es")
