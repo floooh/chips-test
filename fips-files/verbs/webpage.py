@@ -110,6 +110,7 @@ items = [
     { 'type':'demo', 'title':'Muna.Paluu (VIC20)',  'system':'vic20',   'url':'vic20.html?file=vic20/munakois.prg&exp=ram8k', 'img':'vic20/munakois.jpg', 'note':'by Dekadence'},
     { 'type':'demo', 'title':'SotB Intro (KC85/4)', 'system':'kc854',   'url':'kc854.html?file=kc85/sotb_intro.kcc', 'img':'kc85/sotb_intro.jpg', 'note':'by Moods Plateau'},
     { 'type':'demo', 'title':'SotB Game (KC85/4)',  'system':'kc854',   'url':'kc854.html?file=kc85/sotb_game.kcc', 'img':'kc85/sotb_game.jpg', 'note':'by Moods Plateau'},
+    { 'type':'demo', 'title':'Quantum Leap (KC85/4)','system':'kc854',  'url':'kc854.html?file=kc85/quantumleap.kcc', 'img':'kc85/quantumleap.jpg', 'note':'by Moods Plateau'},
     { 'type':'demo', 'title':'Serious (KC85/4)',    'system':'kc854',   'url':'kc854.html?file=kc85/serious.kcc', 'img':'kc85/serious.jpg', 'note':'by Moods Plateau'},
     { 'type':'demo', 'title':'Twenty (KC85/4)',     'system':'kc854',   'url':'kc854.html?file=kc85/twenty.kcc', 'img':'kc85/twenty.jpg', 'note':'by Moods Plateau'},
     { 'type':'demo', 'title':'Ancient Civilizations (KC85/4)','system':'kc854',  'url':'kc854.html?file=kc85/ancient.kcc', 'img':'kc85/ancient.jpg', 'note':'by Moods Plateau'},
