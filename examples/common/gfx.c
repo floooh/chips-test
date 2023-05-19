@@ -317,7 +317,7 @@ void gfx_init(const gfx_desc_t* desc) {
     }
 
     state.offscreen.pass_action = (sg_pass_action) {
-        .colors[0] = { .action = SG_ACTION_DONTCARE }
+        .colors[0] = { .load_action = SG_LOADACTION_DONTCARE }
     };
     state.offscreen.vbuf = sg_make_buffer(&(sg_buffer_desc){
         .data = SG_RANGE(gfx_verts)
@@ -343,7 +343,7 @@ void gfx_init(const gfx_desc_t* desc) {
     });
 
     state.display.pass_action = (sg_pass_action) {
-        .colors[0] = { .action = SG_ACTION_CLEAR, .value = { 0.05f, 0.05f, 0.05f, 1.0f } }
+        .colors[0] = { .load_action = SG_LOADACTION_CLEAR, .clear_value = { 0.05f, 0.05f, 0.05f, 1.0f } }
     };
     state.display.vbuf = sg_make_buffer(&(sg_buffer_desc){
         .data = {
@@ -504,15 +504,15 @@ void gfx_draw(chips_display_info_t display_info) {
     // tint the clear color red or green if flash feedback is requested
     if (state.flash_error_count > 0) {
         state.flash_error_count--;
-        state.display.pass_action.colors[0].value.r = 0.7f;
+        state.display.pass_action.colors[0].clear_value.r = 0.7f;
     }
     else if (state.flash_success_count > 0) {
         state.flash_success_count--;
-        state.display.pass_action.colors[0].value.g = 0.7f;
+        state.display.pass_action.colors[0].clear_value.g = 0.7f;
     }
     else {
-        state.display.pass_action.colors[0].value.r = 0.05f;
-        state.display.pass_action.colors[0].value.g = 0.05f;
+        state.display.pass_action.colors[0].clear_value.r = 0.05f;
+        state.display.pass_action.colors[0].clear_value.g = 0.05f;
     }
 
     // draw the final pass with linear filtering
