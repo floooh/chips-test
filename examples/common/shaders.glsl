@@ -15,23 +15,25 @@ void main() {
 @end
 
 @fs offscreen_fs
-uniform sampler2D fb_tex;
+uniform texture2D fb_tex;
+uniform sampler smp;
 in vec2 uv;
 out vec4 frag_color;
 void main() {
-    frag_color = texture(fb_tex, uv);
+    frag_color = texture(sampler2D(fb_tex, smp), uv);
 }
 @end
 
 // offscreen shader with color palette decoding
 @fs offscreen_pal_fs
-uniform sampler2D fb_tex;
-uniform sampler2D pal_tex;
+uniform texture2D fb_tex;
+uniform texture2D pal_tex;
+uniform sampler smp;
 in vec2 uv;
 out vec4 frag_color;
 void main() {
-    float pix = texture(fb_tex, uv).x;
-    frag_color = vec4(texture(pal_tex, vec2(pix,0)).xyz, 1.0);
+    float pix = texture(sampler2D(fb_tex, smp), uv).x;
+    frag_color = vec4(texture(sampler2D(pal_tex, smp), vec2(pix,0)).xyz, 1.0);
 }
 @end
 
@@ -46,12 +48,13 @@ void main() {
 @end
 
 @fs display_fs
-uniform sampler2D tex;
+uniform texture2D tex;
+uniform sampler smp;
 in vec2 uv;
 out vec4 frag_color;
 
 void main() {
-    frag_color = vec4(texture(tex, uv).xyz, 1.0);
+    frag_color = vec4(texture(sampler2D(tex, smp), uv).xyz, 1.0);
 }
 @end
 

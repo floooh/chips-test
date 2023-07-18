@@ -21,6 +21,7 @@ typedef struct {
     struct {
         sg_image img;       // framebuffer texture, RGBA8 or R8 if paletted
         sg_image pal_img;   // optional color palette texture
+        sg_sampler smp;
         chips_dim_t dim;
         bool paletted;
     } fb;
@@ -28,6 +29,7 @@ typedef struct {
         chips_rect_t view;
         chips_dim_t pixel_aspect;
         sg_image img;
+        sg_sampler smp;
         sg_buffer vbuf;
         sg_pipeline pip;
         sg_pass pass;
@@ -41,6 +43,7 @@ typedef struct {
     } display;
     struct {
         sg_image img;
+        sg_sampler smp;
         sgl_pipeline pip;
         chips_dim_t dim;
     } icon;
@@ -184,8 +187,7 @@ void gfx_flash_error(void) {
     state.flash_error_count = 20;
 }
 
-static sg_image gfx_create_icon_texture(const uint8_t* packed_pixels, int width, int height, int stride, sg_filter filter) {
-    // textures must be 2^n for WebGL
+static sg_image gfx_create_icon_texture(const uint8_t* packed_pixels, int width, int height, int stride) {
     const size_t pixel_data_size = width * height * sizeof(uint32_t);
     uint32_t* pixels = malloc(pixel_data_size);
     assert(pixels);
@@ -214,10 +216,6 @@ static sg_image gfx_create_icon_texture(const uint8_t* packed_pixels, int width,
         .pixel_format = SG_PIXELFORMAT_RGBA8,
         .width = width,
         .height = height,
-        .min_filter = filter,
-        .mag_filter = filter,
-        .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
-        .wrap_v = SG_WRAP_CLAMP_TO_EDGE,
         .data.subimage[0][0] = { .ptr=pixels, .size=pixel_data_size }
     });
     free(pixels);
@@ -238,23 +236,29 @@ static void gfx_init_images_and_pass(void) {
         .height = state.fb.dim.height,
         .pixel_format = state.fb.paletted ? SG_PIXELFORMAT_R8 : SG_PIXELFORMAT_RGBA8,
         .usage = SG_USAGE_STREAM,
+    });
+
+    // a sampler for sampling the emulators raw pixel data
+    state.fb.smp = sg_make_sampler(&(sg_sampler_desc){
         .min_filter = SG_FILTER_NEAREST,
         .mag_filter = SG_FILTER_NEAREST,
         .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
         .wrap_v = SG_WRAP_CLAMP_TO_EDGE
     });
 
-    // 2x-upscaling render target textures and passes
+    // 2x-upscaling render target texture, sampler and pass
     assert((state.offscreen.view.width > 0) && (state.offscreen.view.height > 0));
     state.offscreen.img = sg_make_image(&(sg_image_desc){
         .render_target = true,
         .width = 2 * state.offscreen.view.width,
         .height = 2 * state.offscreen.view.height,
+        .sample_count = 1,
+    });
+    state.offscreen.smp = sg_make_sampler(&(sg_sampler_desc){
         .min_filter = SG_FILTER_LINEAR,
         .mag_filter = SG_FILTER_LINEAR,
         .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
         .wrap_v = SG_WRAP_CLAMP_TO_EDGE,
-        .sample_count = 1,
     });
     state.offscreen.pass = sg_make_pass(&(sg_pass_desc){
         .color_attachments[0].image = state.offscreen.img
@@ -303,10 +307,6 @@ void gfx_init(const gfx_desc_t* desc) {
             .width = 256,
             .height = 1,
             .pixel_format = SG_PIXELFORMAT_RGBA8,
-            .min_filter = SG_FILTER_NEAREST,
-            .mag_filter = SG_FILTER_NEAREST,
-            .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
-            .wrap_v = SG_WRAP_CLAMP_TO_EDGE,
             .data = {
                 .subimage[0][0] = {
                     .ptr = palette_buf,
@@ -374,8 +374,13 @@ void gfx_init(const gfx_desc_t* desc) {
             speaker_icon.pixels,
             speaker_icon.width,
             speaker_icon.height,
-            speaker_icon.stride,
-            SG_FILTER_LINEAR);
+            speaker_icon.stride);
+        state.icon.smp = sg_make_sampler(&(sg_sampler_desc){
+            .min_filter = SG_FILTER_LINEAR,
+            .mag_filter = SG_FILTER_LINEAR,
+            .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
+            .wrap_v = SG_WRAP_CLAMP_TO_EDGE,
+        });
 
         // sokol-gl pipeline for alpha-blended rendering
         state.icon.pip = sgl_make_pipeline(&(sg_pipeline_desc){
@@ -395,8 +400,7 @@ void gfx_init(const gfx_desc_t* desc) {
         empty_snapshot_icon.pixels,
         empty_snapshot_icon.width,
         empty_snapshot_icon.height,
-        empty_snapshot_icon.stride,
-        SG_FILTER_NEAREST);
+        empty_snapshot_icon.stride);
 
     // create image and pass resources
     gfx_init_images_and_pass();
@@ -458,7 +462,7 @@ void gfx_draw(chips_display_info_t display_info) {
         const float alpha = (sapp_frame_count() & 0x20) ? 0.0f : 1.0f;
         sgl_defaults();
         sgl_enable_texture();
-        sgl_texture(state.icon.img);
+        sgl_texture(state.icon.img, state.icon.smp);
         sgl_matrix_mode_projection();
         sgl_ortho(0.0f, (float)display.width, (float)display.height, 0.0f, -1.0f, +1.0f);
         sgl_c4f(1.0f, 1.0f, 1.0f, alpha);
@@ -484,8 +488,13 @@ void gfx_draw(chips_display_info_t display_info) {
     sg_apply_pipeline(state.offscreen.pip);
     sg_apply_bindings(&(sg_bindings){
         .vertex_buffers[0] = state.offscreen.vbuf,
-        .fs_images[SLOT_fb_tex] = state.fb.img,
-        .fs_images[SLOT_pal_tex] = state.fb.pal_img,
+        .fs = {
+            .images = {
+                [SLOT_fb_tex] = state.fb.img,
+                [SLOT_pal_tex] = state.fb.pal_img,
+            },
+            .samplers[SLOT_smp] = state.fb.smp,
+        }
     });
     const offscreen_vs_params_t vs_params = {
         .uv_offset = {
@@ -521,7 +530,10 @@ void gfx_draw(chips_display_info_t display_info) {
     sg_apply_pipeline(state.display.pip);
     sg_apply_bindings(&(sg_bindings){
         .vertex_buffers[0] = state.display.vbuf,
-        .fs_images[SLOT_tex] = state.offscreen.img,
+        .fs = {
+            .images[SLOT_tex] = state.offscreen.img,
+            .samplers[SLOT_smp] = state.offscreen.smp,
+        }
     });
     sg_draw(0, 4, 1);
     sg_apply_viewport(0, 0, display.width, display.height, true);
@@ -553,10 +565,6 @@ void* gfx_create_texture(int w, int h) {
         .height = h,
         .pixel_format = SG_PIXELFORMAT_RGBA8,
         .usage = SG_USAGE_STREAM,
-        .min_filter = SG_FILTER_NEAREST,
-        .mag_filter = SG_FILTER_NEAREST,
-        .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
-        .wrap_v = SG_WRAP_CLAMP_TO_EDGE
     });
     return (void*)(uintptr_t)img.id;
 }
@@ -614,10 +622,6 @@ void* gfx_create_screenshot_texture(chips_display_info_t info) {
         .width = (int) (info.portrait ? dst_h : dst_w),
         .height = (int) (info.portrait ? dst_w : dst_h),
         .pixel_format = SG_PIXELFORMAT_RGBA8,
-        .min_filter = SG_FILTER_LINEAR,
-        .mag_filter = SG_FILTER_LINEAR,
-        .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
-        .wrap_v = SG_WRAP_CLAMP_TO_EDGE,
         .data.subimage[0][0] = {
             .ptr = dst,
             .size = dst_num_bytes,
