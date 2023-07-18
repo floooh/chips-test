@@ -226,7 +226,9 @@ static sg_image gfx_create_icon_texture(const uint8_t* packed_pixels, int width,
 static void gfx_init_images_and_pass(void) {
     // destroy previous resources (if exist)
     sg_destroy_image(state.fb.img);
+    sg_destroy_sampler(state.fb.smp);
     sg_destroy_image(state.offscreen.img);
+    sg_destroy_sampler(state.offscreen.smp);
     sg_destroy_pass(state.offscreen.pass);
 
     // a texture with the emulator's raw pixel data
