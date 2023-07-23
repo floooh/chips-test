@@ -74,7 +74,7 @@ void ui_init(ui_draw_t draw_cb) {
     style.Alpha = 1.0f;
     state.draw_cb = draw_cb;
 
-    sg_add_commit_listener((sg_commit_listener){ .func = commit_listener });
+    sg_add_commit_listener({ .func = commit_listener });
 
     state.nearest_sampler = sg_make_sampler({
         .min_filter = SG_FILTER_NEAREST,
@@ -94,7 +94,7 @@ void ui_init(ui_draw_t draw_cb) {
 void ui_discard(void) {
     sg_destroy_sampler(state.nearest_sampler);
     sg_destroy_sampler(state.linear_sampler);
-    sg_remove_commit_listener((sg_commit_listener){ .func = commit_listener });
+    sg_remove_commit_listener({ .func = commit_listener });
     simgui_shutdown();
 }
 
