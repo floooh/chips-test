@@ -4,6 +4,7 @@
 #include "sokol_gl.h"
 #include "sokol_audio.h"
 #include "sokol_log.h"
+#include "sokol_imgui.h"
 #include "sokol_glue.h"
 #include "chips/chips_common.h"
 #include "gfx.h"
@@ -12,8 +13,6 @@
 #include <stdlib.h> // malloc/free
 
 #define GFX_DEF(v,def) (v?v:def)
-
-#define GFX_DELETE_STACK_SIZE (32)
 
 typedef struct {
     bool valid;
@@ -49,11 +48,6 @@ typedef struct {
     } icon;
     int flash_success_count;
     int flash_error_count;
-    sg_image empty_snapshot_texture;
-    struct {
-        sg_image images[GFX_DELETE_STACK_SIZE];
-        size_t cur_slot;
-    } delete_stack;
     void (*draw_extra_cb)(void);
 } gfx_state_t;
 static gfx_state_t state;
@@ -147,36 +141,6 @@ static const struct {
     }
 };
 
-static const struct {
-    int width;
-    int height;
-    int stride;
-    uint8_t pixels[32];
-} empty_snapshot_icon = {
-    .width = 16,
-    .height = 16,
-    .stride = 2,
-    .pixels = {
-        0xFF,0xFF,
-        0x03,0xC0,
-        0x05,0xA0,
-        0x09,0x90,
-        0x11,0x88,
-        0x21,0x84,
-        0x41,0x82,
-        0x81,0x81,
-        0x81,0x81,
-        0x41,0x82,
-        0x21,0x84,
-        0x11,0x88,
-        0x09,0x90,
-        0x05,0xA0,
-        0x03,0xC0,
-        0xFF,0xFF,
-
-    }
-};
-
 void gfx_flash_success(void) {
     assert(state.valid);
     state.flash_success_count = 20;
@@ -187,7 +151,7 @@ void gfx_flash_error(void) {
     state.flash_error_count = 20;
 }
 
-static sg_image gfx_create_icon_texture(const uint8_t* packed_pixels, int width, int height, int stride) {
+sg_image gfx_create_icon_texture(const uint8_t* packed_pixels, int width, int height, int stride) {
     const size_t pixel_data_size = width * height * sizeof(uint32_t);
     uint32_t* pixels = malloc(pixel_data_size);
     assert(pixels);
@@ -397,13 +361,6 @@ void gfx_init(const gfx_desc_t* desc) {
         });
     }
 
-    // create an icon texture for an empty snapshot
-    state.empty_snapshot_texture = gfx_create_icon_texture(
-        empty_snapshot_icon.pixels,
-        empty_snapshot_icon.width,
-        empty_snapshot_icon.height,
-        empty_snapshot_icon.stride);
-
     // create image and pass resources
     gfx_init_images_and_pass();
 }
@@ -547,11 +504,6 @@ void gfx_draw(chips_display_info_t display_info) {
     sg_end_pass();
     sg_commit();
 
-    // garbage collect images
-    for (size_t i = 0; i < state.delete_stack.cur_slot; i++) {
-        sg_destroy_image(state.delete_stack.images[i]);
-    }
-    state.delete_stack.cur_slot = 0;
 }
 
 void gfx_shutdown() {
@@ -559,92 +511,4 @@ void gfx_shutdown() {
     sgl_shutdown();
     sdtx_shutdown();
     sg_shutdown();
-}
-
-void* gfx_create_texture(int w, int h) {
-    sg_image img = sg_make_image(&(sg_image_desc){
-        .width = w,
-        .height = h,
-        .pixel_format = SG_PIXELFORMAT_RGBA8,
-        .usage = SG_USAGE_STREAM,
-    });
-    return (void*)(uintptr_t)img.id;
-}
-
-// creates a 2x downscaled screenshot texture of the emulator framebuffer
-void* gfx_create_screenshot_texture(chips_display_info_t info) {
-    assert(info.frame.buffer.ptr);
-
-    size_t dst_w = (info.screen.width + 1) >> 1;
-    size_t dst_h = (info.screen.height + 1) >> 1;
-    size_t dst_num_bytes = (size_t)(dst_w * dst_h * 4);
-    uint32_t* dst = calloc(1, dst_num_bytes);
-
-    if (info.palette.ptr) {
-        assert(info.frame.bytes_per_pixel == 1);
-        const uint8_t* pixels = (uint8_t*) info.frame.buffer.ptr;
-        const uint32_t* palette = (uint32_t*) info.palette.ptr;
-        const size_t num_palette_entries = info.palette.size / sizeof(uint32_t);
-        for (size_t y = 0; y < (size_t)info.screen.height; y++) {
-            for (size_t x = 0; x < (size_t)info.screen.width; x++) {
-                uint8_t p = pixels[(y + info.screen.y) * info.frame.dim.width + (x + info.screen.x)];
-                assert(p < num_palette_entries); (void)num_palette_entries;
-                uint32_t c = (palette[p] >> 2) & 0x3F3F3F3F;
-                size_t dst_x = x >> 1;
-                size_t dst_y = y >> 1;
-                if (info.portrait) {
-                    dst[dst_x * dst_h + (dst_h - dst_y - 1)] += c;
-                }
-                else {
-                    dst[dst_y * dst_w + dst_x] += c;
-                }
-            }
-        }
-    }
-    else {
-        assert(info.frame.bytes_per_pixel == 4);
-        const uint32_t* pixels = (uint32_t*) info.frame.buffer.ptr;
-        for (size_t y = 0; y < (size_t)info.screen.height; y++) {
-            for (size_t x = 0; x < (size_t)info.screen.width; x++) {
-                uint32_t c = pixels[(y + info.screen.y) * info.frame.dim.width + (x + info.screen.x)];
-                c = (c >> 2) & 0x3F3F3F3F;
-                size_t dst_x = x >> 1;
-                size_t dst_y = y >> 1;
-                if (info.portrait) {
-                    dst[dst_x * dst_h + (dst_h - dst_y - 1)] += c;
-                }
-                else {
-                    dst[dst_y * dst_w + dst_x] += c;
-                }
-            }
-        }
-    }
-
-    sg_image img = sg_make_image(&(sg_image_desc){
-        .width = (int) (info.portrait ? dst_h : dst_w),
-        .height = (int) (info.portrait ? dst_w : dst_h),
-        .pixel_format = SG_PIXELFORMAT_RGBA8,
-        .data.subimage[0][0] = {
-            .ptr = dst,
-            .size = dst_num_bytes,
-        }
-    });
-    free(dst);
-    return (void*)(uintptr_t)img.id;
-}
-
-void gfx_update_texture(void* h, void* data, int data_byte_size) {
-    sg_image img = { .id=(uint32_t)(uintptr_t)h };
-    sg_update_image(img, &(sg_image_data){.subimage[0][0] = { .ptr = data, .size=data_byte_size } });
-}
-
-void gfx_destroy_texture(void* h) {
-    sg_image img = { .id=(uint32_t)(uintptr_t)h };
-    if (state.delete_stack.cur_slot < GFX_DELETE_STACK_SIZE) {
-        state.delete_stack.images[state.delete_stack.cur_slot++] = img;
-    }
-}
-
-void* gfx_shared_empty_snapshot_texture(void) {
-    return (void*)(uintptr_t)state.empty_snapshot_texture.id;
 }

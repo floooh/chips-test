@@ -9,6 +9,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include "sokol_gfx.h"
+#include "chips/chips_common.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,15 +30,9 @@ typedef struct {
 void gfx_init(const gfx_desc_t* desc);
 void gfx_draw(chips_display_info_t display_info);
 void gfx_shutdown(void);
-
-// UI helper functions unrelated to actual emulator framebuffer rendering
-void* gfx_create_texture(int w, int h);
-void gfx_update_texture(void* h, void* data, int data_byte_size);
-void gfx_destroy_texture(void* h);
-void* gfx_create_screenshot_texture(chips_display_info_t display_info);
-void* gfx_shared_empty_snapshot_texture(void);
 void gfx_flash_success(void);
 void gfx_flash_error(void);
+sg_image gfx_create_icon_texture(const uint8_t* packed_pixels, int width, int height, int stride);
 
 #ifdef __cplusplus
 } /* extern "C" */

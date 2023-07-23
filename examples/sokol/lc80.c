@@ -95,9 +95,9 @@ void app_init(void) {
         .sys = &state.lc80,
         .boot_cb = ui_boot_cb,
         .dbg_texture = {
-            .create_cb = gfx_create_texture,
-            .update_cb = gfx_update_texture,
-            .destroy_cb = gfx_destroy_texture,
+            .create_cb = ui_create_texture,
+            .update_cb = ui_update_texture,
+            .destroy_cb = ui_destroy_texture,
         },
         .snapshot = {
             .load_cb = ui_load_snapshot,

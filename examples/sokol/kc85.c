@@ -159,15 +159,15 @@ void app_init(void) {
             .kc85 = &state.kc85,
             .boot_cb = ui_boot_cb,
             .dbg_texture = {
-                .create_cb = gfx_create_texture,
-                .update_cb = gfx_update_texture,
-                .destroy_cb = gfx_destroy_texture,
+                .create_cb = ui_create_texture,
+                .update_cb = ui_update_texture,
+                .destroy_cb = ui_destroy_texture,
             },
             .snapshot = {
                 .load_cb = ui_load_snapshot,
                 .save_cb = ui_save_snapshot,
                 .empty_slot_screenshot = {
-                    .texture = gfx_shared_empty_snapshot_texture()
+                    .texture = ui_shared_empty_snapshot_texture()
                 }
             },
             .dbg_keys = {
@@ -430,11 +430,11 @@ static void ui_boot_cb(kc85_t* sys) {
 
 static void ui_update_snapshot_screenshot(size_t slot) {
     ui_snapshot_screenshot_t screenshot = {
-        .texture = gfx_create_screenshot_texture(kc85_display_info(&state.snapshots[slot].kc85))
+        .texture = ui_create_screenshot_texture(kc85_display_info(&state.snapshots[slot].kc85))
     };
     ui_snapshot_screenshot_t prev_screenshot = ui_snapshot_set_screenshot(&state.ui.snapshot, slot, screenshot);
     if (prev_screenshot.texture) {
-        gfx_destroy_texture(prev_screenshot.texture);
+        ui_destroy_texture(prev_screenshot.texture);
     }
 }
 
