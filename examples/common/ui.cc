@@ -115,8 +115,8 @@ void* ui_create_texture(int w, int h) {
         .image = sg_make_image({
             .width = w,
             .height = h,
-            .pixel_format = SG_PIXELFORMAT_RGBA8,
             .usage = SG_USAGE_STREAM,
+            .pixel_format = SG_PIXELFORMAT_RGBA8,
         }),
         .sampler = state.nearest_sampler,
     }));
@@ -125,7 +125,9 @@ void* ui_create_texture(int w, int h) {
 void ui_update_texture(void* h, void* data, int data_byte_size) {
     simgui_image_t img = simgui_image_from_imtextureid(h);
     const simgui_image_desc_t desc = simgui_query_image_desc(img);
-    sg_update_image(desc.image, {.subimage[0][0] = { .ptr = data, .size=(size_t)data_byte_size } });
+    sg_image_data img_data = { };
+    img_data.subimage[0][0] = { .ptr = data, .size = (size_t) data_byte_size };
+    sg_update_image(desc.image, img_data);
 }
 
 void ui_destroy_texture(void* h) {
