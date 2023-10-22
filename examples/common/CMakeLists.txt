@@ -59,7 +59,7 @@ fips_end_lib()
 # optional UI library (using Dear ImGui)
 fips_begin_lib(ui)
     fips_files(ui.cc ui.h)
-    fips_deps(imgui common)
+    fips_deps(imgui)
 fips_end_lib()
 
 # a separate library with just keybuf (for the ASCII emulators)
