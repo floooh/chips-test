@@ -267,7 +267,7 @@ void fs_start_load_file(size_t slot_index, const char* path) {
     slot->result = FS_RESULT_PENDING;
     sfetch_send(&(sfetch_request_t){
         .path = path,
-        .channel = slot_index,
+        .channel = (int)slot_index,
         .callback = fs_fetch_callback,
         .buffer = { .ptr = slot->buf, .size = FS_MAX_SIZE },
         .user_data = { .ptr = &slot_index, .size = sizeof(slot_index) },
@@ -597,7 +597,7 @@ bool fs_start_load_snapshot(size_t slot_index, const char* system_name, size_t s
     fs_slot_t* slot = &state.slots[slot_index];
     sfetch_send(&(sfetch_request_t){
         .path = path.cstr,
-        .channel = slot_index,
+        .channel = (int)slot_index,
         .callback = fs_snapshot_fetch_callback,
         .buffer = { .ptr = slot->buf, .size = FS_MAX_SIZE },
         .user_data = { .ptr = &context, .size = sizeof(context) }
