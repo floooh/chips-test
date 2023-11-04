@@ -13,6 +13,10 @@
 
 #define UI_DELETE_STACK_SIZE (32)
 
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
+#endif
+
 static struct {
     ui_draw_t draw_cb;
     sg_sampler nearest_sampler;
