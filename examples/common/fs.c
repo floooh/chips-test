@@ -75,8 +75,16 @@ static void fs_path_append(fs_path_t* path, const char* str) {
     path->clamped = (c != 0);
 }
 
-static bool fs_path_extract_extension(fs_path_t* path, char* buf, size_t buf_size) {
-    const char* ext = strrchr(path->cstr, '.');
+static void fs_path_extract_extension(fs_path_t* path, char* buf, size_t buf_size) {
+    const char* tail = strrchr(path->cstr, '\\');
+    if (0 == tail) {
+        tail = strrchr(path->cstr, '/');
+    }
+    if (0 == tail) {
+        tail = path->cstr;
+    }
+    const char* ext = strrchr(tail, '.');
+    buf[0] = 0;
     if (ext) {
         size_t i = 0;
         char c = 0;
@@ -85,10 +93,6 @@ static bool fs_path_extract_extension(fs_path_t* path, char* buf, size_t buf_siz
             i++;
         }
         buf[i] = 0;
-        return true;
-    }
-    else {
-        return false;
     }
 }
 
@@ -160,12 +164,8 @@ bool fs_ext(size_t slot_index, const char* ext) {
     assert(state.valid);
     assert(slot_index < FS_NUM_SLOTS);
     char buf[FS_EXT_SIZE];
-    if (fs_path_extract_extension(&state.slots[slot_index].path, buf, sizeof(buf))) {
-        return 0 == strcmp(ext, buf);
-    }
-    else {
-        return false;
-    }
+    fs_path_extract_extension(&state.slots[slot_index].path, buf, sizeof(buf));
+    return 0 == strcmp(ext, buf);
 }
 
 const char* fs_filename(size_t slot_index) {
