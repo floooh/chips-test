@@ -77,6 +77,10 @@ static void ui_load_snapshots_from_storage(void);
 #define LOAD_DELAY_FRAMES (180)
 #endif
 
+static void web_boot(void);
+static void web_reset(void);
+static bool web_quickload(chips_range_t data);
+
 // audio-streaming callback
 static void push_audio(const float* samples, int num_samples, void* user_data) {
     (void)user_data;
@@ -153,6 +157,13 @@ void app_init(void) {
     fs_init();
     const kc85_desc_t desc = kc85_desc();
     kc85_init(&state.kc85, &desc);
+    webapi_init(&(webapi_desc_t){
+        .funcs = {
+            .boot = web_boot,
+            .reset = web_reset,
+            .quickload = web_quickload,
+        }
+    });
     #ifdef CHIPS_USE_UI
         ui_init(ui_draw_cb);
         ui_kc85_init(&state.ui, &(ui_kc85_desc_t){
@@ -477,6 +488,26 @@ static void ui_load_snapshots_from_storage(void) {
     }
 }
 #endif
+
+// webapi wrappers
+static void web_boot(void) {
+    kc85_desc_t desc = kc85_desc();
+    kc85_init(&state.kc85, &desc);
+    #if defined(CHIPS_USE_UI)
+        ui_dbg_reset(&state.ui.dbg);
+    #endif
+}
+
+static void web_reset(void) {
+    kc85_reset(&state.kc85);
+    #if defined(CHIPS_USE_UI)
+        ui_dbg_reset(&state.ui.dbg);
+    #endif
+}
+
+static bool web_quickload(chips_range_t data) {
+    return kc85_quickload(&state.kc85, data);
+}
 
 sapp_desc sokol_main(int argc, char* argv[]) {
     sargs_setup(&(sargs_desc) { .argc = argc, .argv = argv });
