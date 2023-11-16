@@ -114,6 +114,7 @@ void app_init(void) {
     c64_desc_t desc = c64_desc(joy_type, c1530_enabled, c1541_enabled);
     c64_init(&state.c64, &desc);
     gfx_init(&(gfx_desc_t){
+        .disable_speaker_icon = sargs_exists("disable-speaker-icon"),
         #ifdef CHIPS_USE_UI
         .draw_extra_cb = ui_draw,
         #endif

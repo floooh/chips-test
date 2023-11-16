@@ -90,6 +90,7 @@ zx_desc_t zx_desc(zx_type_t type, zx_joystick_type_t joy_type) {
 
 void app_init(void) {
     gfx_init(&(gfx_desc_t){
+        .disable_speaker_icon = sargs_exists("disable-speaker-icon"),
         #ifdef CHIPS_USE_UI
         .draw_extra_cb = ui_draw,
         #endif
