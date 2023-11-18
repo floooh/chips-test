@@ -77,9 +77,13 @@ static void ui_load_snapshots_from_storage(void);
 #define LOAD_DELAY_FRAMES (180)
 #endif
 
+static void web_enable_external_debugger(void);
 static void web_boot(void);
 static void web_reset(void);
 static bool web_quickload(chips_range_t data, bool start, bool stop_on_entry);
+static void web_dbg_add_breakpoint(uint16_t addr);
+static void web_dbg_remove_breakpoint(uint16_t addr);
+static void web_dbg_continue(void);
 
 // audio-streaming callback
 static void push_audio(const float* samples, int num_samples, void* user_data) {
@@ -158,13 +162,6 @@ void app_init(void) {
     fs_init();
     const kc85_desc_t desc = kc85_desc();
     kc85_init(&state.kc85, &desc);
-    webapi_init(&(webapi_desc_t){
-        .funcs = {
-            .boot = web_boot,
-            .reset = web_reset,
-            .quickload = web_quickload,
-        }
-    });
     #ifdef CHIPS_USE_UI
         ui_init(ui_draw_cb);
         ui_kc85_init(&state.ui, &(ui_kc85_desc_t){
@@ -174,6 +171,10 @@ void app_init(void) {
                 .create_cb = ui_create_texture,
                 .update_cb = ui_update_texture,
                 .destroy_cb = ui_destroy_texture,
+            },
+            .dbg_debug = {
+                .stopped_cb = webapi_event_stopped,
+                .continued_cb = webapi_event_continued,
             },
             .snapshot = {
                 .load_cb = ui_load_snapshot,
@@ -193,6 +194,18 @@ void app_init(void) {
         });
         ui_load_snapshots_from_storage();
     #endif
+    // important: initialize webapi after ui
+    webapi_init(&(webapi_desc_t){
+        .funcs = {
+            .enable_external_debugger = web_enable_external_debugger,
+            .boot = web_boot,
+            .reset = web_reset,
+            .quickload = web_quickload,
+            .dbg_add_breakpoint = web_dbg_add_breakpoint,
+            .dbg_remove_breakpoint = web_dbg_remove_breakpoint,
+            .dbg_continue = web_dbg_continue,
+        }
+    });
 
     bool delay_input = false;
     // snapshot file or rom-module image
@@ -491,6 +504,13 @@ static void ui_load_snapshots_from_storage(void) {
 #endif
 
 // webapi wrappers
+static void web_enable_external_debugger(void) {
+    gfx_disable_speaker_icon();
+    #if defined(CHIPS_USE_UI)
+        ui_dbg_open_debugger_on_stop(&state.ui.dbg, false);
+    #endif
+}
+
 static void web_boot(void) {
     kc85_desc_t desc = kc85_desc();
     kc85_init(&state.kc85, &desc);
@@ -513,8 +533,32 @@ static bool web_quickload(chips_range_t data, bool start, bool stop_on_entry) {
         uint16_t addr = kc85_kcc_exec_addr(data);
         ui_dbg_add_breakpoint(&state.ui.dbg, addr);
     }
+    #else
+        (void)data; (void)start; (void)stop_on_entry;
     #endif
     return loaded;
+}
+
+static void web_dbg_add_breakpoint(uint16_t addr) {
+    #if defined(CHIPS_USE_UI)
+        ui_dbg_add_breakpoint(&state.ui.dbg, addr);
+    #else
+        (void)addr;
+    #endif
+}
+
+static void web_dbg_remove_breakpoint(uint16_t addr) {
+    #if defined(CHIPS_USE_UI)
+        ui_dbg_remove_breakpoint(&state.ui.dbg, addr);
+    #else
+        (void)addr;
+    #endif
+}
+
+static void web_dbg_continue(void) {
+    #if defined(CHIPS_USE_UI)
+        ui_dbg_continue(&state.ui.dbg, false);
+    #endif
 }
 
 sapp_desc sokol_main(int argc, char* argv[]) {
