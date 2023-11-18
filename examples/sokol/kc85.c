@@ -83,7 +83,10 @@ static void web_reset(void);
 static bool web_quickload(chips_range_t data, bool start, bool stop_on_entry);
 static void web_dbg_add_breakpoint(uint16_t addr);
 static void web_dbg_remove_breakpoint(uint16_t addr);
+static void web_dbg_break(void);
 static void web_dbg_continue(void);
+static void web_dbg_step_next(void);
+static void web_dbg_step_into(void);
 
 // audio-streaming callback
 static void push_audio(const float* samples, int num_samples, void* user_data) {
@@ -203,7 +206,10 @@ void app_init(void) {
             .quickload = web_quickload,
             .dbg_add_breakpoint = web_dbg_add_breakpoint,
             .dbg_remove_breakpoint = web_dbg_remove_breakpoint,
+            .dbg_break = web_dbg_break,
             .dbg_continue = web_dbg_continue,
+            .dbg_step_next = web_dbg_step_next,
+            .dbg_step_into = web_dbg_step_into,
         }
     });
 
@@ -555,9 +561,27 @@ static void web_dbg_remove_breakpoint(uint16_t addr) {
     #endif
 }
 
+static void web_dbg_break(void) {
+    #if defined(CHIPS_USE_UI)
+        ui_dbg_break(&state.ui.dbg);
+    #endif
+}
+
 static void web_dbg_continue(void) {
     #if defined(CHIPS_USE_UI)
         ui_dbg_continue(&state.ui.dbg, false);
+    #endif
+}
+
+static void web_dbg_step_next(void) {
+    #if defined(CHIPS_USE_UI)
+        ui_dbg_step_next(&state.ui.dbg);
+    #endif
+}
+
+static void web_dbg_step_into(void) {
+    #if defined(CHIPS_USE_UI)
+        ui_dbg_step_into(&state.ui.dbg);
     #endif
 }
 

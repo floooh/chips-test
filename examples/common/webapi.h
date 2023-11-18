@@ -10,7 +10,10 @@ typedef struct {
     bool (*quickload)(chips_range_t data, bool start, bool stop_on_entry);
     void (*dbg_add_breakpoint)(uint16_t addr);
     void (*dbg_remove_breakpoint)(uint16_t addr);
+    void (*dbg_break)(void);
     void (*dbg_continue)(void);
+    void (*dbg_step_next)(void);
+    void (*dbg_step_into)(void);
 } webapi_interface_t;
 
 typedef struct {

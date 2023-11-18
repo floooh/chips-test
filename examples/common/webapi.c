@@ -62,63 +62,58 @@ EMSCRIPTEN_KEEPALIVE void webapi_free(void* ptr) {
 }
 
 EMSCRIPTEN_KEEPALIVE void webapi_boot(void) {
-    if (!state.inited) {
-        return;
+    if (state.inited && state.funcs.boot) {
+        state.funcs.boot();
     }
-    assert(state.funcs.boot);
-    state.funcs.boot();
 }
 
 EMSCRIPTEN_KEEPALIVE void webapi_reset(void) {
-    if (!state.inited) {
-        return;
+    if (state.inited && state.funcs.reset) {
+        state.funcs.reset();
     }
-    assert(state.funcs.reset);
-    state.funcs.reset();
 }
 
 EMSCRIPTEN_KEEPALIVE void webapi_quickload(void* ptr, int size, int start, int stop_on_entry) {
-    if (!state.inited) {
-        return;
-    }
-    if (!state.funcs.quickload) {
-        return;
-    }
-    if (ptr && (size > 0)) {
-        assert(state.funcs.quickload);
+    if (state.inited && state.funcs.quickload && ptr && (size > 0)) {
         const chips_range_t data = { .ptr = ptr, .size = (size_t) size };
         state.funcs.quickload(data, start, stop_on_entry);
     }
 }
 
 EMSCRIPTEN_KEEPALIVE void webapi_dbg_add_breakpoint(uint16_t addr) {
-    if (!state.inited) {
-        return;
+    if (state.inited && state.funcs.dbg_add_breakpoint) {
+        state.funcs.dbg_add_breakpoint(addr);
     }
-    if (!state.funcs.dbg_add_breakpoint) {
-        return;
-    }
-    state.funcs.dbg_add_breakpoint(addr);
 }
 
 EMSCRIPTEN_KEEPALIVE void webapi_dbg_remove_breakpoint(uint16_t addr) {
-    if (!state.inited) {
-        return;
+    if (state.inited && state.funcs.dbg_remove_breakpoint) {
+        state.funcs.dbg_remove_breakpoint(addr);
     }
-    if (!state.funcs.dbg_remove_breakpoint) {
-        return;
+}
+
+EMSCRIPTEN_KEEPALIVE void webapi_dbg_break(void) {
+    if (state.inited && state.funcs.dbg_break) {
+        state.funcs.dbg_break();
     }
-    state.funcs.dbg_remove_breakpoint(addr);
 }
 
 EMSCRIPTEN_KEEPALIVE void webapi_dbg_continue(void) {
-    if (!state.inited) {
-        return;
+    if (state.inited && state.funcs.dbg_continue) {
+        state.funcs.dbg_continue();
     }
-    if (!state.funcs.dbg_continue) {
-        return;
+}
+
+EMSCRIPTEN_KEEPALIVE void webapi_dbg_step_next(void) {
+    if (state.inited && state.funcs.dbg_step_next) {
+        state.funcs.dbg_step_next();
     }
-    state.funcs.dbg_continue();
+}
+
+EMSCRIPTEN_KEEPALIVE void webapi_dbg_step_into(void) {
+    if (state.inited && state.funcs.dbg_step_into) {
+        state.funcs.dbg_step_into();
+    }
 }
 #endif // __EMSCRIPTEN__
 
