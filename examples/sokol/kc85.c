@@ -79,7 +79,7 @@ static void ui_load_snapshots_from_storage(void);
 
 static void web_boot(void);
 static void web_reset(void);
-static bool web_quickload(chips_range_t data);
+static bool web_quickload(chips_range_t data, bool start, bool stop_on_entry);
 
 // audio-streaming callback
 static void push_audio(const float* samples, int num_samples, void* user_data) {
@@ -371,7 +371,7 @@ static void handle_file_loading(void) {
             keybuf_put((const char*)file_data.ptr);
         }
         else {
-            load_success = kc85_quickload(&state.kc85, file_data);
+            load_success = kc85_quickload(&state.kc85, file_data, true);
         }
         if (load_success) {
             if (clock_frame_count_60hz() > (load_delay_frames + 10)) {
@@ -506,8 +506,15 @@ static void web_reset(void) {
     #endif
 }
 
-static bool web_quickload(chips_range_t data) {
-    return kc85_quickload(&state.kc85, data);
+static bool web_quickload(chips_range_t data, bool start, bool stop_on_entry) {
+    bool loaded = kc85_quickload(&state.kc85, data, start);
+    #if defined(CHIPS_USE_UI)
+    if (stop_on_entry) {
+        uint16_t addr = kc85_kcc_exec_addr(data);
+        ui_dbg_add_breakpoint(&state.ui.dbg, addr);
+    }
+    #endif
+    return loaded;
 }
 
 sapp_desc sokol_main(int argc, char* argv[]) {

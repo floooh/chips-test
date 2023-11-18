@@ -49,14 +49,14 @@ EMSCRIPTEN_KEEPALIVE void webapi_reset(void) {
     state.funcs.reset();
 }
 
-EMSCRIPTEN_KEEPALIVE void webapi_quickload(void* ptr, int size) {
+EMSCRIPTEN_KEEPALIVE void webapi_quickload(void* ptr, int size, int start, int stop_on_entry) {
     if (!state.inited) {
         return;
     }
     if (ptr && (size > 0)) {
         assert(state.funcs.quickload);
         const chips_range_t data = { .ptr = ptr, .size = (size_t) size };
-        state.funcs.quickload(data);
+        state.funcs.quickload(data, start, stop_on_entry);
     }
 }
 

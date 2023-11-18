@@ -3,12 +3,10 @@
 #include <stddef.h>
 #include "chips/chips_common.h"
 
-typedef bool (*webapi_quickload_t)(chips_range_t);
-
 typedef struct {
     void (*boot)(void);
     void (*reset)(void);
-    bool (*quickload)(chips_range_t);
+    bool (*quickload)(chips_range_t data, bool start, bool stop_on_entry);
 } webapi_interface_t;
 
 typedef struct {
