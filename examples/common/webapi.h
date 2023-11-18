@@ -21,6 +21,6 @@ typedef struct {
 } webapi_desc_t;
 
 void webapi_init(const webapi_desc_t* desc);
-// break_type: UI_DBG_BREAKTYPE_EXEC
-void webapi_event_stopped(int break_type, uint16_t addr);
+// stop_reason: UI_DBG_STOP_REASON_xxx
+void webapi_event_stopped(int stop_reason, uint16_t addr);
 void webapi_event_continued(void);

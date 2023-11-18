@@ -25,10 +25,10 @@ void webapi_init(const webapi_desc_t* desc) {
 
 #if defined(__EMSCRIPTEN__)
 
-EM_JS(void, webapi_js_event_stopped, (int break_type, uint16_t addr), {
+EM_JS(void, webapi_js_event_stopped, (int stop_reason, uint16_t addr), {
     console.log("webapi_js_event_stopped()");
     if (Module['webapi_onStopped']) {
-        Module['webapi_onStopped'](break_type, addr);
+        Module['webapi_onStopped'](stop_reason, addr);
     } else {
         console.log("no Module.webapi.onStopped function");
     }
@@ -117,12 +117,12 @@ EMSCRIPTEN_KEEPALIVE void webapi_dbg_step_into(void) {
 }
 #endif // __EMSCRIPTEN__
 
-// break_type is UI_DBG_BREAKTYPE_EXEC
-void webapi_event_stopped(int break_type, uint16_t addr) {
+// stop_reason is UI_DBG_STOP_REASON_xxx
+void webapi_event_stopped(int stop_reason, uint16_t addr) {
     #if defined(__EMSCRIPTEN__)
-        webapi_js_event_stopped(break_type, addr);
+        webapi_js_event_stopped(stop_reason, addr);
     #else
-    (void)break_type; (void)addr;
+        (void)stop_reason; (void)addr;
     #endif
 }
 
