@@ -1,5 +1,6 @@
 #include "webapi.h"
 #include <assert.h>
+#include <string.h>
 #if defined(__EMSCRIPTEN__)
 #include <emscripten/emscripten.h>
 #endif
@@ -115,6 +116,18 @@ EMSCRIPTEN_KEEPALIVE void webapi_dbg_step_into(void) {
         state.funcs.dbg_step_into();
     }
 }
+
+// return emulator state as JSON-formatted string pointer into WASM heap
+EMSCRIPTEN_KEEPALIVE uint16_t* webapi_dbg_cpu_state(void) {
+    static webapi_cpu_state_t res;
+    if (state.inited && state.funcs.dbg_cpu_state) {
+        res = state.funcs.dbg_cpu_state();
+    } else {
+        memset(&res, 0, sizeof(res));
+    }
+    return &res.items[0];
+}
+
 #endif // __EMSCRIPTEN__
 
 // stop_reason is UI_DBG_STOP_REASON_xxx

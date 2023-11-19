@@ -87,6 +87,7 @@ static void web_dbg_break(void);
 static void web_dbg_continue(void);
 static void web_dbg_step_next(void);
 static void web_dbg_step_into(void);
+static webapi_cpu_state_t web_dbg_cpu_state(void);
 
 // audio-streaming callback
 static void push_audio(const float* samples, int num_samples, void* user_data) {
@@ -210,6 +211,7 @@ void app_init(void) {
             .dbg_continue = web_dbg_continue,
             .dbg_step_next = web_dbg_step_next,
             .dbg_step_into = web_dbg_step_into,
+            .dbg_cpu_state = web_dbg_cpu_state,
         }
     });
 
@@ -583,6 +585,30 @@ static void web_dbg_step_into(void) {
     #if defined(CHIPS_USE_UI)
         ui_dbg_step_into(&state.ui.dbg);
     #endif
+}
+
+static webapi_cpu_state_t web_dbg_cpu_state(void) {
+    const z80_t* cpu = &state.kc85.cpu;
+    return (webapi_cpu_state_t){
+        .items = {
+            [WEBAPI_CPUSTATE_TYPE] = WEBAPI_CPUTYPE_Z80,
+            [WEBAPI_CPUSTATE_AF]   = cpu->af,
+            [WEBAPI_CPUSTATE_BC]   = cpu->bc,
+            [WEBAPI_CPUSTATE_DE]   = cpu->de,
+            [WEBAPI_CPUSTATE_HL]   = cpu->hl,
+            [WEBAPI_CPUSTATE_IX]   = cpu->ix,
+            [WEBAPI_CPUSTATE_IY]   = cpu->iy,
+            [WEBAPI_CPUSTATE_SP]   = cpu->sp,
+            [WEBAPI_CPUSTATE_PC]   = cpu->pc,
+            [WEBAPI_CPUSTATE_AF2]  = cpu->af2,
+            [WEBAPI_CPUSTATE_BC2]  = cpu->bc2,
+            [WEBAPI_CPUSTATE_DE2]  = cpu->de2,
+            [WEBAPI_CPUSTATE_HL2]  = cpu->hl2,
+            [WEBAPI_CPUSTATE_IM]   = cpu->im,
+            [WEBAPI_CPUSTATE_IR]   = cpu->ir,
+            [WEBAPI_CPUSTATE_IFF]  = (cpu->iff1 ? 1 : 0) | (cpu->iff2 ? 2 : 0),
+        }
+    };
 }
 
 sapp_desc sokol_main(int argc, char* argv[]) {
