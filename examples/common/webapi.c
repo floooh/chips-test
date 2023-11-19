@@ -28,8 +28,8 @@ void webapi_init(const webapi_desc_t* desc) {
 
 EM_JS(void, webapi_js_event_stopped, (int stop_reason, uint16_t addr), {
     console.log("webapi_js_event_stopped()");
-    if (Module['webapi_onStopped']) {
-        Module['webapi_onStopped'](stop_reason, addr);
+    if (Module["webapi_onStopped"]) {
+        Module["webapi_onStopped"](stop_reason, addr);
     } else {
         console.log("no Module.webapi.onStopped function");
     }
@@ -37,8 +37,8 @@ EM_JS(void, webapi_js_event_stopped, (int stop_reason, uint16_t addr), {
 
 EM_JS(void, webapi_js_event_continued, (), {
     console.log("webapi_js_event_continued()");
-    if (Module['webapi_onContinued']) {
-        Module['webapi_onContinued']();
+    if (Module["webapi_onContinued"]) {
+        Module["webapi_onContinued"]();
     } else {
         console.log("no Module.webapi.onContinued function");
     }
@@ -71,6 +71,14 @@ EMSCRIPTEN_KEEPALIVE void webapi_boot(void) {
 EMSCRIPTEN_KEEPALIVE void webapi_reset(void) {
     if (state.inited && state.funcs.reset) {
         state.funcs.reset();
+    }
+}
+
+EMSCRIPTEN_KEEPALIVE bool webapi_ready(void) {
+    if (state.inited && state.funcs.ready) {
+        return state.funcs.ready();
+    } else {
+        return false;
     }
 }
 

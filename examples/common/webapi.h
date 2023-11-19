@@ -34,6 +34,7 @@ typedef struct {
     void (*enable_external_debugger)(void);
     void (*boot)(void);
     void (*reset)(void);
+    bool (*ready)(void);
     bool (*quickload)(chips_range_t data, bool start, bool stop_on_entry);
     void (*dbg_add_breakpoint)(uint16_t addr);
     void (*dbg_remove_breakpoint)(uint16_t addr);

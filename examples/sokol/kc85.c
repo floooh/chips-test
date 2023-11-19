@@ -80,6 +80,7 @@ static void ui_load_snapshots_from_storage(void);
 static void web_enable_external_debugger(void);
 static void web_boot(void);
 static void web_reset(void);
+static bool web_ready(void);
 static bool web_quickload(chips_range_t data, bool start, bool stop_on_entry);
 static void web_dbg_add_breakpoint(uint16_t addr);
 static void web_dbg_remove_breakpoint(uint16_t addr);
@@ -204,6 +205,7 @@ void app_init(void) {
             .enable_external_debugger = web_enable_external_debugger,
             .boot = web_boot,
             .reset = web_reset,
+            .ready = web_ready,
             .quickload = web_quickload,
             .dbg_add_breakpoint = web_dbg_add_breakpoint,
             .dbg_remove_breakpoint = web_dbg_remove_breakpoint,
@@ -457,6 +459,7 @@ static void ui_draw_cb(void) {
 }
 
 static void ui_boot_cb(kc85_t* sys) {
+    clock_init();
     kc85_desc_t desc = kc85_desc();
     kc85_init(sys, &desc);
 }
@@ -520,6 +523,7 @@ static void web_enable_external_debugger(void) {
 }
 
 static void web_boot(void) {
+    clock_init();
     kc85_desc_t desc = kc85_desc();
     kc85_init(&state.kc85, &desc);
     #if defined(CHIPS_USE_UI)
@@ -532,6 +536,10 @@ static void web_reset(void) {
     #if defined(CHIPS_USE_UI)
         ui_dbg_reset(&state.ui.dbg);
     #endif
+}
+
+static bool web_ready(void) {
+    return clock_frame_count_60hz() > LOAD_DELAY_FRAMES;
 }
 
 static bool web_quickload(chips_range_t data, bool start, bool stop_on_entry) {
