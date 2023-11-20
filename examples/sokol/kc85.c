@@ -77,11 +77,12 @@ static void ui_load_snapshots_from_storage(void);
 #define LOAD_DELAY_FRAMES (180)
 #endif
 
-static void web_enable_external_debugger(void);
 static void web_boot(void);
 static void web_reset(void);
 static bool web_ready(void);
 static bool web_quickload(chips_range_t data, bool start, bool stop_on_entry);
+static void web_dbg_connect(void);
+static void web_dbg_disconnect(void);
 static void web_dbg_add_breakpoint(uint16_t addr);
 static void web_dbg_remove_breakpoint(uint16_t addr);
 static void web_dbg_break(void);
@@ -202,11 +203,12 @@ void app_init(void) {
     // important: initialize webapi after ui
     webapi_init(&(webapi_desc_t){
         .funcs = {
-            .enable_external_debugger = web_enable_external_debugger,
             .boot = web_boot,
             .reset = web_reset,
             .ready = web_ready,
             .quickload = web_quickload,
+            .dbg_connect = web_dbg_connect,
+            .dbg_disconnect = web_dbg_disconnect,
             .dbg_add_breakpoint = web_dbg_add_breakpoint,
             .dbg_remove_breakpoint = web_dbg_remove_breakpoint,
             .dbg_break = web_dbg_break,
@@ -515,13 +517,6 @@ static void ui_load_snapshots_from_storage(void) {
 #endif
 
 // webapi wrappers
-static void web_enable_external_debugger(void) {
-    gfx_disable_speaker_icon();
-    #if defined(CHIPS_USE_UI)
-        ui_dbg_open_debugger_on_stop(&state.ui.dbg, false);
-    #endif
-}
-
 static void web_boot(void) {
     clock_init();
     kc85_desc_t desc = kc85_desc();
@@ -553,6 +548,19 @@ static bool web_quickload(chips_range_t data, bool start, bool stop_on_entry) {
         (void)data; (void)start; (void)stop_on_entry;
     #endif
     return loaded;
+}
+
+static void web_dbg_connect(void) {
+    gfx_disable_speaker_icon();
+    #if defined(CHIPS_USE_UI)
+        ui_dbg_external_debugger_connected(&state.ui.dbg);
+    #endif
+}
+
+static void web_dbg_disconnect(void) {
+    #if defined(CHIPS_USE_UI)
+        ui_dbg_external_debugger_disconnected(&state.ui.dbg);
+    #endif
 }
 
 static void web_dbg_add_breakpoint(uint16_t addr) {

@@ -7,7 +7,7 @@
 #include "gfx.h"
 
 static struct {
-    bool enable_external_debugger;
+    bool dbg_connect_requested;
 } before_init_state;
 
 static struct {
@@ -19,8 +19,8 @@ void webapi_init(const webapi_desc_t* desc) {
     assert(desc);
     state.inited = true;
     state.funcs = desc->funcs;
-    if (before_init_state.enable_external_debugger && state.funcs.enable_external_debugger) {
-        state.funcs.enable_external_debugger();
+    if (before_init_state.dbg_connect_requested && state.funcs.dbg_connect) {
+        state.funcs.dbg_connect();
     }
 }
 
@@ -44,13 +44,19 @@ EM_JS(void, webapi_js_event_continued, (), {
     }
 });
 
-EMSCRIPTEN_KEEPALIVE void webapi_enable_external_debugger(void) {
+EMSCRIPTEN_KEEPALIVE void webapi_dbg_connect(void) {
     if (state.inited) {
-        if (state.funcs.enable_external_debugger) {
-            state.funcs.enable_external_debugger();
+        if (state.funcs.dbg_connect) {
+            state.funcs.dbg_connect();
         }
     } else {
-        before_init_state.enable_external_debugger = true;
+        before_init_state.dbg_connect_requested = true;
+    }
+}
+
+EMSCRIPTEN_KEEPALIVE void webapi_dbg_disconnect(void) {
+    if (state.inited && state.funcs.dbg_disconnect) {
+        state.funcs.dbg_disconnect();
     }
 }
 
