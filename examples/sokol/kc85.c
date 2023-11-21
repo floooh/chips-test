@@ -617,18 +617,18 @@ static void web_dbg_step_into(void) {
 
 static void web_dbg_on_stopped(int stop_reason, uint16_t addr) {
     int webapi_stop_reason;
-    if (stop_reason == UI_DBG_STOP_REASON_BREAK) {
+    // stopping on the entry or exit breakpoints always
+    // overrides the incoming stop_reason
+    if ((state.dbg.entry_addr + 1) == state.kc85.cpu.pc) {
+        webapi_stop_reason = WEBAPI_STOPREASON_ENTRY;
+    } else if ((state.dbg.exit_addr + 1) == state.kc85.cpu.pc) {
+        webapi_stop_reason = WEBAPI_STOPREASON_EXIT;
+    } else if (stop_reason == UI_DBG_STOP_REASON_BREAK) {
         webapi_stop_reason = WEBAPI_STOPREASON_BREAK;
     } else if (stop_reason == UI_DBG_STOP_REASON_STEP) {
         webapi_stop_reason = WEBAPI_STOPREASON_STEP;
     } else if (stop_reason == UI_DBG_STOP_REASON_BREAKPOINT) {
-        if ((state.dbg.entry_addr + 1) == state.kc85.cpu.pc) {
-            webapi_stop_reason = WEBAPI_STOPREASON_ENTRY;
-        } else if ((state.dbg.exit_addr + 1) == state.kc85.cpu.pc) {
-            webapi_stop_reason = WEBAPI_STOPREASON_EXIT;
-        } else {
-            webapi_stop_reason = WEBAPI_STOPREASON_BREAKPOINT;
-        }
+        webapi_stop_reason = WEBAPI_STOPREASON_BREAKPOINT;
     } else {
         webapi_stop_reason = WEBAPI_STOPREASON_UNKNOWN;
     }
