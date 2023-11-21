@@ -45,6 +45,10 @@ static struct {
     kc85_module_type_t delay_insert_module; // module to insert after ROM module image has been loaded
     #ifdef CHIPS_USE_UI
         ui_kc85_t ui;
+        struct {
+            uint32_t entry_addr;
+            uint32_t exit_addr;
+        } dbg;
         kc85_snapshot_t snapshots[UI_SNAPSHOT_MAX_SLOTS];
     #endif
 } state;
@@ -89,6 +93,8 @@ static void web_dbg_break(void);
 static void web_dbg_continue(void);
 static void web_dbg_step_next(void);
 static void web_dbg_step_into(void);
+static void web_dbg_on_stopped(int stop_reason, uint16_t addr);
+static void web_dbg_on_continued(void);
 static webapi_cpu_state_t web_dbg_cpu_state(void);
 
 // audio-streaming callback
@@ -179,8 +185,8 @@ void app_init(void) {
                 .destroy_cb = ui_destroy_texture,
             },
             .dbg_debug = {
-                .stopped_cb = webapi_event_stopped,
-                .continued_cb = webapi_event_continued,
+                .stopped_cb = web_dbg_on_stopped,
+                .continued_cb = web_dbg_on_continued,
             },
             .snapshot = {
                 .load_cb = ui_load_snapshot,
@@ -533,6 +539,23 @@ static void web_reset(void) {
     #endif
 }
 
+static void web_dbg_connect(void) {
+    state.dbg.entry_addr = 0xFFFFFFFF;
+    state.dbg.exit_addr = 0xFFFFFFFF;
+    gfx_disable_speaker_icon();
+    #if defined(CHIPS_USE_UI)
+        ui_dbg_external_debugger_connected(&state.ui.dbg);
+    #endif
+}
+
+static void web_dbg_disconnect(void) {
+    state.dbg.entry_addr = 0xFFFFFFFF;
+    state.dbg.exit_addr = 0xFFFFFFFF;
+    #if defined(CHIPS_USE_UI)
+        ui_dbg_external_debugger_disconnected(&state.ui.dbg);
+    #endif
+}
+
 static bool web_ready(void) {
     return clock_frame_count_60hz() > LOAD_DELAY_FRAMES;
 }
@@ -541,26 +564,15 @@ static bool web_quickload(chips_range_t data, bool start, bool stop_on_entry) {
     bool loaded = kc85_quickload(&state.kc85, data, start);
     #if defined(CHIPS_USE_UI)
     if (stop_on_entry) {
-        uint16_t addr = kc85_kcc_exec_addr(data);
-        ui_dbg_add_breakpoint(&state.ui.dbg, addr);
+        state.dbg.entry_addr = kc85_kcc_exec_addr(data);
+        state.dbg.exit_addr = kc85_quickload_return_addr();
+        ui_dbg_add_breakpoint(&state.ui.dbg, state.dbg.entry_addr);
+        ui_dbg_add_breakpoint(&state.ui.dbg, state.dbg.exit_addr);
     }
     #else
         (void)data; (void)start; (void)stop_on_entry;
     #endif
     return loaded;
-}
-
-static void web_dbg_connect(void) {
-    gfx_disable_speaker_icon();
-    #if defined(CHIPS_USE_UI)
-        ui_dbg_external_debugger_connected(&state.ui.dbg);
-    #endif
-}
-
-static void web_dbg_disconnect(void) {
-    #if defined(CHIPS_USE_UI)
-        ui_dbg_external_debugger_disconnected(&state.ui.dbg);
-    #endif
 }
 
 static void web_dbg_add_breakpoint(uint16_t addr) {
@@ -601,6 +613,30 @@ static void web_dbg_step_into(void) {
     #if defined(CHIPS_USE_UI)
         ui_dbg_step_into(&state.ui.dbg);
     #endif
+}
+
+static void web_dbg_on_stopped(int stop_reason, uint16_t addr) {
+    int webapi_stop_reason;
+    if (stop_reason == UI_DBG_STOP_REASON_BREAK) {
+        webapi_stop_reason = WEBAPI_STOPREASON_BREAK;
+    } else if (stop_reason == UI_DBG_STOP_REASON_STEP) {
+        webapi_stop_reason = WEBAPI_STOPREASON_STEP;
+    } else if (stop_reason == UI_DBG_STOP_REASON_BREAKPOINT) {
+        if ((state.dbg.entry_addr + 1) == state.kc85.cpu.pc) {
+            webapi_stop_reason = WEBAPI_STOPREASON_ENTRY;
+        } else if ((state.dbg.exit_addr + 1) == state.kc85.cpu.pc) {
+            webapi_stop_reason = WEBAPI_STOPREASON_EXIT;
+        } else {
+            webapi_stop_reason = WEBAPI_STOPREASON_BREAKPOINT;
+        }
+    } else {
+        webapi_stop_reason = WEBAPI_STOPREASON_UNKNOWN;
+    }
+    webapi_event_stopped(webapi_stop_reason, addr);
+}
+
+static void web_dbg_on_continued(void) {
+    webapi_event_continued();
 }
 
 static webapi_cpu_state_t web_dbg_cpu_state(void) {

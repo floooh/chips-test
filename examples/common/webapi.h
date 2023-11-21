@@ -3,6 +3,13 @@
 #include <stddef.h>
 #include "chips/chips_common.h"
 
+#define WEBAPI_STOPREASON_UNKNOWN       (0)
+#define WEBAPI_STOPREASON_BREAK         (1)
+#define WEBAPI_STOPREASON_BREAKPOINT    (2)
+#define WEBAPI_STOPREASON_STEP          (3)
+#define WEBAPI_STOPREASON_ENTRY         (4)
+#define WEBAPI_STOPREASON_EXIT          (5)
+
 #define WEBAPI_CPUTYPE_INVALID (0)
 #define WEBAPI_CPUTYPE_Z80     (1)
 #define WEBAPI_CPUTYPE_6502    (2)
@@ -51,6 +58,6 @@ typedef struct {
 } webapi_desc_t;
 
 void webapi_init(const webapi_desc_t* desc);
-// stop_reason: UI_DBG_STOP_REASON_xxx
+// stop_reason: WEBAPI_STOPREASON_xxx
 void webapi_event_stopped(int stop_reason, uint16_t addr);
 void webapi_event_continued(void);
