@@ -568,6 +568,10 @@ static bool web_quickload(chips_range_t data, bool start, bool stop_on_entry) {
         state.dbg.exit_addr = kc85_quickload_return_addr();
         ui_dbg_add_breakpoint(&state.ui.dbg, state.dbg.entry_addr);
         ui_dbg_add_breakpoint(&state.ui.dbg, state.dbg.exit_addr);
+        // if debugger is stopped, unstuck it
+        if (ui_dbg_stopped(&state.ui.dbg)) {
+            ui_dbg_continue(&state.ui.dbg, false);
+        }
     }
     #else
         (void)data; (void)start; (void)stop_on_entry;
