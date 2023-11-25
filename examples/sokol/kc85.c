@@ -31,6 +31,7 @@
     #include "ui/ui_snapshot.h"
     #include "ui/ui_kc85.h"
 #endif
+#include <stdlib.h>
 
 typedef struct {
     uint32_t version;
@@ -96,6 +97,7 @@ static void web_dbg_step_into(void);
 static void web_dbg_on_stopped(int stop_reason, uint16_t addr);
 static void web_dbg_on_continued(void);
 static webapi_cpu_state_t web_dbg_cpu_state(void);
+static void web_dbg_request_disassemly(uint16_t addr, int offset_lines, int num_lines, webapi_dasm_line_t* result);
 
 // audio-streaming callback
 static void push_audio(const float* samples, int num_samples, void* user_data) {
@@ -222,6 +224,7 @@ void app_init(void) {
             .dbg_step_next = web_dbg_step_next,
             .dbg_step_into = web_dbg_step_into,
             .dbg_cpu_state = web_dbg_cpu_state,
+            .dbg_request_disassembly = web_dbg_request_disassemly,
         }
     });
 
@@ -665,6 +668,27 @@ static webapi_cpu_state_t web_dbg_cpu_state(void) {
             [WEBAPI_CPUSTATE_IFF]  = (cpu->iff1 ? 1 : 0) | (cpu->iff2 ? 2 : 0),
         }
     };
+}
+
+static void web_dbg_request_disassemly(uint16_t addr, int offset_lines, int num_lines, webapi_dasm_line_t* result) {
+    assert(num_lines > 0);
+    ui_dbg_dasm_line_t* lines = calloc((size_t)num_lines, sizeof(ui_dbg_dasm_line_t));
+    ui_dbg_disassemble(&state.ui.dbg, &(ui_dbg_dasm_request_t){
+        .addr = addr,
+        .num_lines = num_lines,
+        .offset_lines = offset_lines,
+        .out_lines = lines,
+    });
+    for (int line_idx = 0; line_idx < num_lines; line_idx++) {
+        const ui_dbg_dasm_line_t* src = &lines[line_idx];
+        webapi_dasm_line_t* dst = &result[line_idx];
+        dst->addr = src->addr;
+        dst->num_bytes = (src->num_bytes <= WEBAPI_DASM_LINE_MAX_BYTES) ? src->num_bytes : WEBAPI_DASM_LINE_MAX_BYTES;
+        dst->num_chars = (src->num_chars <= WEBAPI_DASM_LINE_MAX_CHARS) ? src->num_chars : WEBAPI_DASM_LINE_MAX_CHARS;
+        memcpy(dst->bytes, src->bytes, dst->num_bytes);
+        memcpy(dst->chars, src->chars, dst->num_chars);
+    }
+    free(lines);
 }
 
 sapp_desc sokol_main(int argc, char* argv[]) {

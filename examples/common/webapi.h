@@ -37,6 +37,17 @@ typedef struct webapi_cpu_state_t {
     uint16_t items[WEBAPI_CPUSTATE_MAX];
 } webapi_cpu_state_t;
 
+#define WEBAPI_DASM_LINE_MAX_BYTES (8)
+#define WEBAPI_DASM_LINE_MAX_CHARS (32)
+
+typedef struct {
+    uint16_t addr;
+    uint8_t num_bytes;
+    uint8_t num_chars;
+    uint8_t bytes[WEBAPI_DASM_LINE_MAX_BYTES];
+    char chars[WEBAPI_DASM_LINE_MAX_CHARS];
+} webapi_dasm_line_t;
+
 typedef struct {
     void (*boot)(void);
     void (*reset)(void);
@@ -51,6 +62,7 @@ typedef struct {
     void (*dbg_step_next)(void);
     void (*dbg_step_into)(void);
     webapi_cpu_state_t (*dbg_cpu_state)(void);
+    void (*dbg_request_disassembly)(uint16_t addr, int offset_lines, int num_lines, webapi_dasm_line_t* out_lines);
 } webapi_interface_t;
 
 typedef struct {
