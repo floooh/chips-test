@@ -143,7 +143,7 @@ EMSCRIPTEN_KEEPALIVE uint16_t* webapi_dbg_cpu_state(void) {
 }
 
 // request a disassembly, returns point to heap-allocated array of 'num_lines' webapi_dasm_line_t structs
-EMSCRIPTEN_KEEPALIVE webapi_dasm_line_t* webapi_request_disassembly(uint16_t addr, int offset_lines, int num_lines) {
+EMSCRIPTEN_KEEPALIVE webapi_dasm_line_t* webapi_dbg_request_disassembly(uint16_t addr, int offset_lines, int num_lines) {
     if (num_lines <= 0) {
         return 0;
     }
@@ -157,7 +157,7 @@ EMSCRIPTEN_KEEPALIVE webapi_dasm_line_t* webapi_request_disassembly(uint16_t add
 }
 
 // free the memory allocated in webapi_request_disassembly
-EMSCRIPTEN_KEEPALIVE void webapi_release_disassembly(webapi_dasm_line_t* ptr) {
+EMSCRIPTEN_KEEPALIVE void webapi_dbg_release_disassembly(webapi_dasm_line_t* ptr) {
     if (ptr != 0) {
         free(ptr);
     }
