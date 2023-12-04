@@ -98,6 +98,7 @@ static void web_dbg_on_stopped(int stop_reason, uint16_t addr);
 static void web_dbg_on_continued(void);
 static webapi_cpu_state_t web_dbg_cpu_state(void);
 static void web_dbg_request_disassemly(uint16_t addr, int offset_lines, int num_lines, webapi_dasm_line_t* result);
+static void web_dbg_read_memory(uint16_t addr, int num_bytes, uint8_t* dst_ptr);
 
 // audio-streaming callback
 static void push_audio(const float* samples, int num_samples, void* user_data) {
@@ -225,6 +226,7 @@ void app_init(void) {
             .dbg_step_into = web_dbg_step_into,
             .dbg_cpu_state = web_dbg_cpu_state,
             .dbg_request_disassembly = web_dbg_request_disassemly,
+            .dbg_read_memory = web_dbg_read_memory,
         }
     });
 
@@ -689,6 +691,12 @@ static void web_dbg_request_disassemly(uint16_t addr, int offset_lines, int num_
         memcpy(dst->chars, src->chars, dst->num_chars);
     }
     free(lines);
+}
+
+static void web_dbg_read_memory(uint16_t addr, int num_bytes, uint8_t* dst_ptr) {
+    for (int i = 0; i < num_bytes; i++) {
+        *dst_ptr++ = mem_rd(&state.kc85.mem, addr++);
+    }
 }
 
 sapp_desc sokol_main(int argc, char* argv[]) {

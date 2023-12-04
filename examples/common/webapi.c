@@ -65,7 +65,9 @@ EMSCRIPTEN_KEEPALIVE void* webapi_alloc(int size) {
 }
 
 EMSCRIPTEN_KEEPALIVE void webapi_free(void* ptr) {
-    free(ptr);
+    if (ptr) {
+        free(ptr);
+    }
 }
 
 EMSCRIPTEN_KEEPALIVE void webapi_boot(void) {
@@ -142,7 +144,8 @@ EMSCRIPTEN_KEEPALIVE uint16_t* webapi_dbg_cpu_state(void) {
     return &res.items[0];
 }
 
-// request a disassembly, returns point to heap-allocated array of 'num_lines' webapi_dasm_line_t structs
+// request a disassembly, returns ptr to heap-allocated array of 'num_lines' webapi_dasm_line_t structs which must be freed with webapi_free()
+// NOTE: may return 0!
 EMSCRIPTEN_KEEPALIVE webapi_dasm_line_t* webapi_dbg_request_disassembly(uint16_t addr, int offset_lines, int num_lines) {
     if (num_lines <= 0) {
         return 0;
@@ -156,10 +159,15 @@ EMSCRIPTEN_KEEPALIVE webapi_dasm_line_t* webapi_dbg_request_disassembly(uint16_t
     }
 }
 
-// free the memory allocated in webapi_request_disassembly
-EMSCRIPTEN_KEEPALIVE void webapi_dbg_release_disassembly(webapi_dasm_line_t* ptr) {
-    if (ptr != 0) {
-        free(ptr);
+// reads a memory chunk, returns heap-allocated buffer which must be freed with webapi_free()
+// NOTE: may return 0!
+EMSCRIPTEN_KEEPALIVE uint8_t* webapi_dbg_read_memory(uint16_t addr, int num_bytes) {
+    if (state.inited && state.funcs.dbg_read_memory) {
+        uint8_t* ptr = calloc((size_t)num_bytes, 1);
+        state.funcs.dbg_read_memory(addr, num_bytes, ptr);
+        return ptr;
+    } else {
+        return 0;
     }
 }
 

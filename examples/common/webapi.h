@@ -62,7 +62,8 @@ typedef struct {
     void (*dbg_step_next)(void);
     void (*dbg_step_into)(void);
     webapi_cpu_state_t (*dbg_cpu_state)(void);
-    void (*dbg_request_disassembly)(uint16_t addr, int offset_lines, int num_lines, webapi_dasm_line_t* out_lines);
+    void (*dbg_request_disassembly)(uint16_t addr, int offset_lines, int num_lines, webapi_dasm_line_t* dst_lines);
+    void (*dbg_read_memory)(uint16_t addr, int num_bytes, uint8_t* dst_ptr);
 } webapi_interface_t;
 
 typedef struct {
