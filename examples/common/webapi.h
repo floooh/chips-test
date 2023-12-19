@@ -74,3 +74,5 @@ void webapi_init(const webapi_desc_t* desc);
 // stop_reason: WEBAPI_STOPREASON_xxx
 void webapi_event_stopped(int stop_reason, uint16_t addr);
 void webapi_event_continued(void);
+void webapi_event_reboot(void);
+void webapi_event_reset(void);

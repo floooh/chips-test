@@ -31,7 +31,7 @@ EM_JS(void, webapi_js_event_stopped, (int stop_reason, uint16_t addr), {
     if (Module["webapi_onStopped"]) {
         Module["webapi_onStopped"](stop_reason, addr);
     } else {
-        console.log("no Module.webapi.onStopped function");
+        console.log("no Module.webapi_onStopped function");
     }
 });
 
@@ -40,7 +40,25 @@ EM_JS(void, webapi_js_event_continued, (), {
     if (Module["webapi_onContinued"]) {
         Module["webapi_onContinued"]();
     } else {
-        console.log("no Module.webapi.onContinued function");
+        console.log("no Module.webapi_onContinued function");
+    }
+});
+
+EM_JS(void, webapi_js_event_reboot, (), {
+    console.log("webapi_js_event_reboot()");
+    if (Module["webapi_onReboot"]) {
+        Module["webapi_onReboot"]();
+    } else {
+        console.log("no Module.webapi_onReboot function");
+    }
+});
+
+EM_JS(void, webapi_js_event_reset, (), {
+    console.log("webapi_js_event_reset()");
+    if (Module["webapi_onReset"]) {
+        Module["webapi_onReset"]();
+    } else {
+        console.log("no Module.webapi_onReset function");
     }
 });
 
@@ -185,5 +203,17 @@ void webapi_event_stopped(int stop_reason, uint16_t addr) {
 void webapi_event_continued(void) {
     #if defined(__EMSCRIPTEN__)
         webapi_js_event_continued();
+    #endif
+}
+
+void webapi_event_reboot(void) {
+    #if defined(__EMSCRIPTEN__)
+        webapi_js_event_reboot();
+    #endif
+}
+
+void webapi_event_reset(void) {
+    #if defined(__EMSCRIPTEN__)
+        webapi_js_event_reset();
     #endif
 }

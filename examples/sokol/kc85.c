@@ -96,6 +96,8 @@ static void web_dbg_step_next(void);
 static void web_dbg_step_into(void);
 static void web_dbg_on_stopped(int stop_reason, uint16_t addr);
 static void web_dbg_on_continued(void);
+static void web_dbg_on_reboot(void);
+static void web_dbg_on_reset(void);
 static webapi_cpu_state_t web_dbg_cpu_state(void);
 static void web_dbg_request_disassemly(uint16_t addr, int offset_lines, int num_lines, webapi_dasm_line_t* result);
 static void web_dbg_read_memory(uint16_t addr, int num_bytes, uint8_t* dst_ptr);
@@ -188,6 +190,8 @@ void app_init(void) {
                 .destroy_cb = ui_destroy_texture,
             },
             .dbg_debug = {
+                .reboot_cb = web_dbg_on_reboot,
+                .reset_cb = web_dbg_on_reset,
                 .stopped_cb = web_dbg_on_stopped,
                 .continued_cb = web_dbg_on_continued,
             },
@@ -533,7 +537,7 @@ static void web_boot(void) {
     kc85_desc_t desc = kc85_desc();
     kc85_init(&state.kc85, &desc);
     #if defined(CHIPS_USE_UI)
-        ui_dbg_reset(&state.ui.dbg);
+        ui_dbg_reboot(&state.ui.dbg);
     #endif
 }
 
@@ -646,6 +650,14 @@ static void web_dbg_on_stopped(int stop_reason, uint16_t addr) {
 
 static void web_dbg_on_continued(void) {
     webapi_event_continued();
+}
+
+static void web_dbg_on_reboot(void) {
+    webapi_event_reboot();
+}
+
+static void web_dbg_on_reset(void) {
+    webapi_event_reset();
 }
 
 static webapi_cpu_state_t web_dbg_cpu_state(void) {
