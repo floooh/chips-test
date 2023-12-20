@@ -61,6 +61,26 @@ static void ui_boot_cb(kc85_t* sys);
 static void ui_save_snapshot(size_t slot_index);
 static bool ui_load_snapshot(size_t slot_index);
 static void ui_load_snapshots_from_storage(void);
+static void web_boot(void);
+static void web_reset(void);
+static bool web_ready(void);
+static bool web_quickload(chips_range_t data, bool start, bool stop_on_entry);
+static void web_dbg_connect(void);
+static void web_dbg_disconnect(void);
+static void web_dbg_add_breakpoint(uint16_t addr);
+static void web_dbg_remove_breakpoint(uint16_t addr);
+static void web_dbg_break(void);
+static void web_dbg_continue(void);
+static void web_dbg_step_next(void);
+static void web_dbg_step_into(void);
+static void web_dbg_on_stopped(int stop_reason, uint16_t addr);
+static void web_dbg_on_continued(void);
+static void web_dbg_on_reboot(void);
+static void web_dbg_on_reset(void);
+static webapi_cpu_state_t web_dbg_cpu_state(void);
+static void web_dbg_request_disassemly(uint16_t addr, int offset_lines, int num_lines, webapi_dasm_line_t* result);
+static void web_dbg_read_memory(uint16_t addr, int num_bytes, uint8_t* dst_ptr);
+
 #else
 #define BORDER_TOP (8)
 #endif
@@ -81,26 +101,6 @@ static void ui_load_snapshots_from_storage(void);
 #define KC85_SYSTEM_NAME "kc854"
 #define LOAD_DELAY_FRAMES (180)
 #endif
-
-static void web_boot(void);
-static void web_reset(void);
-static bool web_ready(void);
-static bool web_quickload(chips_range_t data, bool start, bool stop_on_entry);
-static void web_dbg_connect(void);
-static void web_dbg_disconnect(void);
-static void web_dbg_add_breakpoint(uint16_t addr);
-static void web_dbg_remove_breakpoint(uint16_t addr);
-static void web_dbg_break(void);
-static void web_dbg_continue(void);
-static void web_dbg_step_next(void);
-static void web_dbg_step_into(void);
-static void web_dbg_on_stopped(int stop_reason, uint16_t addr);
-static void web_dbg_on_continued(void);
-static void web_dbg_on_reboot(void);
-static void web_dbg_on_reset(void);
-static webapi_cpu_state_t web_dbg_cpu_state(void);
-static void web_dbg_request_disassemly(uint16_t addr, int offset_lines, int num_lines, webapi_dasm_line_t* result);
-static void web_dbg_read_memory(uint16_t addr, int num_bytes, uint8_t* dst_ptr);
 
 // audio-streaming callback
 static void push_audio(const float* samples, int num_samples, void* user_data) {
@@ -212,27 +212,27 @@ void app_init(void) {
             }
         });
         ui_load_snapshots_from_storage();
+        // important: initialize webapi after ui
+        webapi_init(&(webapi_desc_t){
+            .funcs = {
+                .boot = web_boot,
+                .reset = web_reset,
+                .ready = web_ready,
+                .quickload = web_quickload,
+                .dbg_connect = web_dbg_connect,
+                .dbg_disconnect = web_dbg_disconnect,
+                .dbg_add_breakpoint = web_dbg_add_breakpoint,
+                .dbg_remove_breakpoint = web_dbg_remove_breakpoint,
+                .dbg_break = web_dbg_break,
+                .dbg_continue = web_dbg_continue,
+                .dbg_step_next = web_dbg_step_next,
+                .dbg_step_into = web_dbg_step_into,
+                .dbg_cpu_state = web_dbg_cpu_state,
+                .dbg_request_disassembly = web_dbg_request_disassemly,
+                .dbg_read_memory = web_dbg_read_memory,
+            }
+        });
     #endif
-    // important: initialize webapi after ui
-    webapi_init(&(webapi_desc_t){
-        .funcs = {
-            .boot = web_boot,
-            .reset = web_reset,
-            .ready = web_ready,
-            .quickload = web_quickload,
-            .dbg_connect = web_dbg_connect,
-            .dbg_disconnect = web_dbg_disconnect,
-            .dbg_add_breakpoint = web_dbg_add_breakpoint,
-            .dbg_remove_breakpoint = web_dbg_remove_breakpoint,
-            .dbg_break = web_dbg_break,
-            .dbg_continue = web_dbg_continue,
-            .dbg_step_next = web_dbg_step_next,
-            .dbg_step_into = web_dbg_step_into,
-            .dbg_cpu_state = web_dbg_cpu_state,
-            .dbg_request_disassembly = web_dbg_request_disassemly,
-            .dbg_read_memory = web_dbg_read_memory,
-        }
-    });
 
     bool delay_input = false;
     // snapshot file or rom-module image
@@ -529,40 +529,31 @@ static void ui_load_snapshots_from_storage(void) {
         fs_start_load_snapshot(FS_SLOT_SNAPSHOTS, KC85_SYSTEM_NAME, snapshot_slot, ui_fetch_snapshot_callback);
     }
 }
-#endif
 
 // webapi wrappers
 static void web_boot(void) {
     clock_init();
     kc85_desc_t desc = kc85_desc();
     kc85_init(&state.kc85, &desc);
-    #if defined(CHIPS_USE_UI)
-        ui_dbg_reboot(&state.ui.dbg);
-    #endif
+    ui_dbg_reboot(&state.ui.dbg);
 }
 
 static void web_reset(void) {
     kc85_reset(&state.kc85);
-    #if defined(CHIPS_USE_UI)
-        ui_dbg_reset(&state.ui.dbg);
-    #endif
+    ui_dbg_reset(&state.ui.dbg);
 }
 
 static void web_dbg_connect(void) {
+    gfx_disable_speaker_icon();
     state.dbg.entry_addr = 0xFFFFFFFF;
     state.dbg.exit_addr = 0xFFFFFFFF;
-    gfx_disable_speaker_icon();
-    #if defined(CHIPS_USE_UI)
-        ui_dbg_external_debugger_connected(&state.ui.dbg);
-    #endif
+    ui_dbg_external_debugger_connected(&state.ui.dbg);
 }
 
 static void web_dbg_disconnect(void) {
     state.dbg.entry_addr = 0xFFFFFFFF;
     state.dbg.exit_addr = 0xFFFFFFFF;
-    #if defined(CHIPS_USE_UI)
-        ui_dbg_external_debugger_disconnected(&state.ui.dbg);
-    #endif
+    ui_dbg_external_debugger_disconnected(&state.ui.dbg);
 }
 
 static bool web_ready(void) {
@@ -571,7 +562,6 @@ static bool web_ready(void) {
 
 static bool web_quickload(chips_range_t data, bool start, bool stop_on_entry) {
     bool loaded = kc85_quickload(&state.kc85, data, start);
-    #if defined(CHIPS_USE_UI)
     if (stop_on_entry) {
         state.dbg.entry_addr = kc85_kcc_exec_addr(data);
         state.dbg.exit_addr = kc85_quickload_return_addr();
@@ -582,54 +572,34 @@ static bool web_quickload(chips_range_t data, bool start, bool stop_on_entry) {
             ui_dbg_continue(&state.ui.dbg, false);
         }
     }
-    #else
-        (void)data; (void)start; (void)stop_on_entry;
-    #endif
     return loaded;
 }
 
 static void web_dbg_add_breakpoint(uint16_t addr) {
-    #if defined(CHIPS_USE_UI)
-        ui_dbg_add_breakpoint(&state.ui.dbg, addr);
-    #else
-        (void)addr;
-    #endif
+    ui_dbg_add_breakpoint(&state.ui.dbg, addr);
 }
 
 static void web_dbg_remove_breakpoint(uint16_t addr) {
-    #if defined(CHIPS_USE_UI)
-        ui_dbg_remove_breakpoint(&state.ui.dbg, addr);
-    #else
-        (void)addr;
-    #endif
+    ui_dbg_remove_breakpoint(&state.ui.dbg, addr);
 }
 
 static void web_dbg_break(void) {
-    #if defined(CHIPS_USE_UI)
-        ui_dbg_break(&state.ui.dbg);
-    #endif
+    ui_dbg_break(&state.ui.dbg);
 }
 
 static void web_dbg_continue(void) {
-    #if defined(CHIPS_USE_UI)
-        ui_dbg_continue(&state.ui.dbg, false);
-    #endif
+    ui_dbg_continue(&state.ui.dbg, false);
 }
 
 static void web_dbg_step_next(void) {
-    #if defined(CHIPS_USE_UI)
-        ui_dbg_step_next(&state.ui.dbg);
-    #endif
+    ui_dbg_step_next(&state.ui.dbg);
 }
 
 static void web_dbg_step_into(void) {
-    #if defined(CHIPS_USE_UI)
-        ui_dbg_step_into(&state.ui.dbg);
-    #endif
+    ui_dbg_step_into(&state.ui.dbg);
 }
 
 static void web_dbg_on_stopped(int stop_reason, uint16_t addr) {
-    int webapi_stop_reason;
     // stopping on the entry or exit breakpoints always
     // overrides the incoming stop_reason
     if ((state.dbg.entry_addr + 1) == state.kc85.cpu.pc) {
@@ -710,6 +680,7 @@ static void web_dbg_read_memory(uint16_t addr, int num_bytes, uint8_t* dst_ptr) 
         *dst_ptr++ = mem_rd(&state.kc85.mem, addr++);
     }
 }
+#endif
 
 sapp_desc sokol_main(int argc, char* argv[]) {
     sargs_setup(&(sargs_desc) { .argc = argc, .argv = argv });
