@@ -80,7 +80,6 @@ static void web_dbg_on_reset(void);
 static webapi_cpu_state_t web_dbg_cpu_state(void);
 static void web_dbg_request_disassemly(uint16_t addr, int offset_lines, int num_lines, webapi_dasm_line_t* result);
 static void web_dbg_read_memory(uint16_t addr, int num_bytes, uint8_t* dst_ptr);
-
 #else
 #define BORDER_TOP (8)
 #endif
@@ -634,21 +633,21 @@ static webapi_cpu_state_t web_dbg_cpu_state(void) {
     return (webapi_cpu_state_t){
         .items = {
             [WEBAPI_CPUSTATE_TYPE] = WEBAPI_CPUTYPE_Z80,
-            [WEBAPI_CPUSTATE_AF]   = cpu->af,
-            [WEBAPI_CPUSTATE_BC]   = cpu->bc,
-            [WEBAPI_CPUSTATE_DE]   = cpu->de,
-            [WEBAPI_CPUSTATE_HL]   = cpu->hl,
-            [WEBAPI_CPUSTATE_IX]   = cpu->ix,
-            [WEBAPI_CPUSTATE_IY]   = cpu->iy,
-            [WEBAPI_CPUSTATE_SP]   = cpu->sp,
-            [WEBAPI_CPUSTATE_PC]   = cpu->pc,
-            [WEBAPI_CPUSTATE_AF2]  = cpu->af2,
-            [WEBAPI_CPUSTATE_BC2]  = cpu->bc2,
-            [WEBAPI_CPUSTATE_DE2]  = cpu->de2,
-            [WEBAPI_CPUSTATE_HL2]  = cpu->hl2,
-            [WEBAPI_CPUSTATE_IM]   = cpu->im,
-            [WEBAPI_CPUSTATE_IR]   = cpu->ir,
-            [WEBAPI_CPUSTATE_IFF]  = (cpu->iff1 ? 1 : 0) | (cpu->iff2 ? 2 : 0),
+            [WEBAPI_CPUSTATE_Z80_AF]   = cpu->af,
+            [WEBAPI_CPUSTATE_Z80_BC]   = cpu->bc,
+            [WEBAPI_CPUSTATE_Z80_DE]   = cpu->de,
+            [WEBAPI_CPUSTATE_Z80_HL]   = cpu->hl,
+            [WEBAPI_CPUSTATE_Z80_IX]   = cpu->ix,
+            [WEBAPI_CPUSTATE_Z80_IY]   = cpu->iy,
+            [WEBAPI_CPUSTATE_Z80_SP]   = cpu->sp,
+            [WEBAPI_CPUSTATE_Z80_PC]   = cpu->pc,
+            [WEBAPI_CPUSTATE_Z80_AF2]  = cpu->af2,
+            [WEBAPI_CPUSTATE_Z80_BC2]  = cpu->bc2,
+            [WEBAPI_CPUSTATE_Z80_DE2]  = cpu->de2,
+            [WEBAPI_CPUSTATE_Z80_HL2]  = cpu->hl2,
+            [WEBAPI_CPUSTATE_Z80_IM]   = cpu->im,
+            [WEBAPI_CPUSTATE_Z80_IR]   = cpu->ir,
+            [WEBAPI_CPUSTATE_Z80_IFF]  = (cpu->iff1 ? 1 : 0) | (cpu->iff2 ? 2 : 0),
         }
     };
 }
