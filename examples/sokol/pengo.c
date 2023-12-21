@@ -271,7 +271,7 @@ static void ui_load_snapshots_from_storage(void) {
 #endif
 
 sapp_desc sokol_main(int argc, char* argv[]) {
-    (void)argc; (void)argv;
+    sargs_setup(&(sargs_desc) { .argc = argc, .argv = argv });
     const chips_display_info_t info = namco_display_info(0);
     return (sapp_desc) {
         .init_cb = app_init,
