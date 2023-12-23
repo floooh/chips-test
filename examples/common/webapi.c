@@ -108,11 +108,15 @@ EMSCRIPTEN_KEEPALIVE bool webapi_ready(void) {
     }
 }
 
-EMSCRIPTEN_KEEPALIVE void webapi_quickload(void* ptr, int size, int start, int stop_on_entry) {
-    if (state.inited && state.funcs.quickload && ptr && (size > 0)) {
-        const chips_range_t data = { .ptr = ptr, .size = (size_t) size };
-        state.funcs.quickload(data, start, stop_on_entry);
+EMSCRIPTEN_KEEPALIVE bool webapi_load(void* ptr, int size) {
+    if (state.inited && state.funcs.load && ptr && ((size_t)size > sizeof(webapi_fileheader_t))) {
+        const webapi_fileheader_t* hdr = (webapi_fileheader_t*)ptr;
+        if ((hdr->magic[0] != 'C') || (hdr->magic[1] != 'H') || (hdr->magic[2] != 'I') || (hdr->magic[3] != 'P')) {
+            return false;
+        }
+        return state.funcs.load((chips_range_t){ .ptr = ptr, .size = (size_t)size });
     }
+    return false;
 }
 
 EMSCRIPTEN_KEEPALIVE void webapi_dbg_add_breakpoint(uint16_t addr) {

@@ -56,11 +56,27 @@ typedef struct {
     char chars[WEBAPI_DASM_LINE_MAX_CHARS];
 } webapi_dasm_line_t;
 
+// the webapi_load() function takes a byte blob which is a container
+// format for emulator-specific quickload fileformats with an additional
+// 16-byte header with meta-information
+typedef struct {
+    uint8_t magic[4];       // 'CHIP'
+    uint8_t type[4];        // 'KCC ', 'PRG ', etc...
+    uint8_t start_addr_lo;  // execution starts here
+    uint8_t start_addr_hi;
+    uint8_t flags;
+    uint8_t reserved[5];
+    uint8_t payload[];
+} webapi_fileheader_t;
+
+#define WEBAPI_FILEHEADER_FLAG_START (1<<0)         // if set, start automatically
+#define WEBAPI_FILEHEADER_FLAG_STOPONENTRY (1<<1)   // if set, stop execution on entry
+
 typedef struct {
     void (*boot)(void);
     void (*reset)(void);
     bool (*ready)(void);
-    bool (*quickload)(chips_range_t data, bool start, bool stop_on_entry);
+    bool (*load)(chips_range_t data);       // data starts with a webapi_fileheader_t
     void (*dbg_connect)(void);
     void (*dbg_disconnect)(void);
     void (*dbg_add_breakpoint)(uint16_t addr);

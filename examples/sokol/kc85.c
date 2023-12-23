@@ -64,7 +64,7 @@ static void ui_load_snapshots_from_storage(void);
 static void web_boot(void);
 static void web_reset(void);
 static bool web_ready(void);
-static bool web_quickload(chips_range_t data, bool start, bool stop_on_entry);
+static bool web_load(chips_range_t data);
 static void web_dbg_connect(void);
 static void web_dbg_disconnect(void);
 static void web_dbg_add_breakpoint(uint16_t addr);
@@ -217,7 +217,7 @@ void app_init(void) {
                 .boot = web_boot,
                 .reset = web_reset,
                 .ready = web_ready,
-                .quickload = web_quickload,
+                .load = web_load,
                 .dbg_connect = web_dbg_connect,
                 .dbg_disconnect = web_dbg_disconnect,
                 .dbg_add_breakpoint = web_dbg_add_breakpoint,
@@ -559,10 +559,20 @@ static bool web_ready(void) {
     return clock_frame_count_60hz() > LOAD_DELAY_FRAMES;
 }
 
-static bool web_quickload(chips_range_t data, bool start, bool stop_on_entry) {
-    bool loaded = kc85_quickload(&state.kc85, data, start);
-    if (stop_on_entry) {
-        state.dbg.entry_addr = kc85_kcc_exec_addr(data);
+static bool web_load(chips_range_t data) {
+    if (data.size <= sizeof(webapi_fileheader_t)) {
+        return false;
+    }
+    const webapi_fileheader_t* hdr = (webapi_fileheader_t*)data.ptr;
+    if ((hdr->type[0] != 'K') || (hdr->type[1] != 'C') || (hdr->type[2] != 'C') || (hdr->type[3] != ' ')) {
+        return false;
+    }
+    const bool start = 0 != (hdr->flags & WEBAPI_FILEHEADER_FLAG_START);
+    const bool stop_on_entry = 0 != (hdr->flags & WEBAPI_FILEHEADER_FLAG_STOPONENTRY);
+    const chips_range_t kcc = { .ptr = (void*)&hdr->payload, .size = data.size - sizeof(webapi_fileheader_t) };
+    bool loaded = kc85_quickload(&state.kc85, kcc, start);
+    if (loaded && stop_on_entry) {
+        state.dbg.entry_addr = kc85_kcc_exec_addr(kcc);
         state.dbg.exit_addr = kc85_quickload_return_addr();
         ui_dbg_add_breakpoint(&state.ui.dbg, state.dbg.entry_addr);
         ui_dbg_add_breakpoint(&state.ui.dbg, state.dbg.exit_addr);
