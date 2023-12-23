@@ -478,12 +478,20 @@ static bool web_load(chips_range_t data) {
     if ((hdr->type[0] != 'P') || (hdr->type[1] != 'R') || (hdr->type[2] != 'G') || (hdr->type[3] != ' ')) {
         return false;
     }
-    const bool start = 0 != (hdr->flags & WEBAPI_FILEHEADER_FLAG_START);
-    const bool stop_on_entry = 0 != (hdr->flags & WEBAPI_FILEHEADER_FLAG_STOPONENTRY);
+    const uint16_t start_addr = (hdr->start_addr_hi<<8) | hdr->start_addr_lo;
     const chips_range_t prg = { .ptr = (void*)&hdr->payload, .size = data.size - sizeof(webapi_fileheader_t) };
     bool loaded = c64_quickload(&state.c64, prg);
     if (loaded) {
-        // FIXME
+        state.dbg.entry_addr = start_addr;
+        state.dbg.exit_addr = c64_syscall_return_addr();
+        ui_dbg_add_breakpoint(&state.ui.dbg, state.dbg.entry_addr);
+        ui_dbg_add_breakpoint(&state.ui.dbg, state.dbg.exit_addr);
+        // if debugger is stopped, unstuck it
+        if (ui_dbg_stopped(&state.ui.dbg)) {
+            ui_dbg_continue(&state.ui.dbg, false);
+        }
+        // execute a SYS start_addr
+        c64_syscall(&state.c64, start_addr);
     }
     return loaded;
 }
@@ -516,9 +524,9 @@ static void web_dbg_on_stopped(int stop_reason, uint16_t addr) {
     // stopping on the entry or exit breakpoints always
     // overrides the incoming stop_reason
     int webapi_stop_reason = WEBAPI_STOPREASON_UNKNOWN;
-    if ((state.dbg.entry_addr + 1) == state.c64.cpu.PC) {
+    if (state.dbg.entry_addr == state.c64.cpu.PC) {
         webapi_stop_reason = WEBAPI_STOPREASON_ENTRY;
-    } else if ((state.dbg.exit_addr + 1) == state.c64.cpu.PC) {
+    } else if (state.dbg.exit_addr == state.c64.cpu.PC) {
         webapi_stop_reason = WEBAPI_STOPREASON_EXIT;
     } else if (stop_reason == UI_DBG_STOP_REASON_BREAK) {
         webapi_stop_reason = WEBAPI_STOPREASON_BREAK;

@@ -568,10 +568,9 @@ static bool web_load(chips_range_t data) {
         return false;
     }
     const bool start = 0 != (hdr->flags & WEBAPI_FILEHEADER_FLAG_START);
-    const bool stop_on_entry = 0 != (hdr->flags & WEBAPI_FILEHEADER_FLAG_STOPONENTRY);
     const chips_range_t kcc = { .ptr = (void*)&hdr->payload, .size = data.size - sizeof(webapi_fileheader_t) };
     bool loaded = kc85_quickload(&state.kc85, kcc, start);
-    if (loaded && stop_on_entry) {
+    if (loaded) {
         state.dbg.entry_addr = kc85_kcc_exec_addr(kcc);
         state.dbg.exit_addr = kc85_quickload_return_addr();
         ui_dbg_add_breakpoint(&state.ui.dbg, state.dbg.entry_addr);
