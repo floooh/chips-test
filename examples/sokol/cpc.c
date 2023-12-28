@@ -56,6 +56,7 @@ static struct {
         struct {
             uint32_t entry_addr;
             uint32_t exit_addr;
+            bool entered;
         } dbg;
         cpc_snapshot_t snapshots[UI_SNAPSHOT_MAX_SLOTS];
     #endif
@@ -507,12 +508,14 @@ static void web_dbg_connect(void) {
     gfx_disable_speaker_icon();
     state.dbg.entry_addr = 0xFFFFFFFF;
     state.dbg.exit_addr = 0xFFFFFFFF;
+    state.dbg.entered = false;
     ui_dbg_external_debugger_connected(&state.ui.dbg);
 }
 
 static void web_dbg_disconnect(void) {
     state.dbg.entry_addr = 0xFFFFFFFF;
     state.dbg.exit_addr = 0xFFFFFFFF;
+    state.dbg.entered = false;
     ui_dbg_external_debugger_disconnected(&state.ui.dbg);
 }
 
@@ -533,7 +536,7 @@ static bool web_load(chips_range_t data) {
     bool loaded = cpc_quickload(&state.cpc, bin, start);
     if (loaded) {
         state.dbg.entry_addr = cpc_quickload_exec_addr(bin);
-        state.dbg.exit_addr = cpc_quickload_return_addr();
+        state.dbg.exit_addr = cpc_quickload_return_addr(&state.cpc);
         ui_dbg_add_breakpoint(&state.ui.dbg, state.dbg.entry_addr);
         ui_dbg_add_breakpoint(&state.ui.dbg, state.dbg.exit_addr);
         // if debugger is stopped, unstuck it
@@ -574,7 +577,15 @@ static void web_dbg_on_stopped(int stop_reason, uint16_t addr) {
     int webapi_stop_reason = WEBAPI_STOPREASON_UNKNOWN;
     if ((state.dbg.entry_addr + 1) == state.cpc.cpu.pc) {
         webapi_stop_reason = WEBAPI_STOPREASON_ENTRY;
+        state.dbg.entered = true;
     } else if ((state.dbg.exit_addr + 1) == state.cpc.cpu.pc) {
+        // NOTE: the exit address will be hit multiple times before
+        // the entry address is actually reached, ignore the exit breakpoint
+        // until entry happens
+        if (!state.dbg.entered) {
+            ui_dbg_continue(&state.ui.dbg, false);
+            return;
+        }
         webapi_stop_reason = WEBAPI_STOPREASON_EXIT;
     } else if (stop_reason == UI_DBG_STOP_REASON_BREAK) {
         webapi_stop_reason = WEBAPI_STOPREASON_BREAK;
