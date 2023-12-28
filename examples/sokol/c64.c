@@ -126,11 +126,9 @@ void app_init(void) {
     if (sargs_exists("joystick")) {
         if (sargs_equals("joystick", "digital_1")) {
             joy_type = C64_JOYSTICKTYPE_DIGITAL_1;
-        }
-        else if (sargs_equals("joystick", "digital_2")) {
+        } else if (sargs_equals("joystick", "digital_2")) {
             joy_type = C64_JOYSTICKTYPE_DIGITAL_2;
-        }
-        else if (sargs_equals("joystick", "digital_12")) {
+        } else if (sargs_equals("joystick", "digital_12")) {
             joy_type = C64_JOYSTICKTYPE_DIGITAL_12;
         }
     }
@@ -262,8 +260,7 @@ void app_input(const sapp_event* event) {
                 // need to invert case (unshifted is upper caps, shifted is lower caps
                 if (isupper(c)) {
                     c = tolower(c);
-                }
-                else if (islower(c)) {
+                } else if (islower(c)) {
                     c = toupper(c);
                 }
                 c64_key_down(&state.c64, c);
@@ -294,8 +291,7 @@ void app_input(const sapp_event* event) {
             if (c) {
                 if (event->type == SAPP_EVENTTYPE_KEY_DOWN) {
                     c64_key_down(&state.c64, c);
-                }
-                else {
+                } else {
                     c64_key_up(&state.c64, c);
                 }
             }
@@ -336,11 +332,9 @@ static void handle_file_loading(void) {
         if (fs_ext(FS_SLOT_IMAGE, "txt") || fs_ext(FS_SLOT_IMAGE, "bas")) {
             load_success = true;
             keybuf_put((const char*)fs_data(FS_SLOT_IMAGE).ptr);
-        }
-        else if (fs_ext(FS_SLOT_IMAGE, "tap")) {
+        } else if (fs_ext(FS_SLOT_IMAGE, "tap")) {
             load_success = c64_insert_tape(&state.c64, fs_data(FS_SLOT_IMAGE));
-        }
-        else if (fs_ext(FS_SLOT_IMAGE, "bin") || fs_ext(FS_SLOT_IMAGE, "prg") || fs_ext(FS_SLOT_IMAGE, "")) {
+        } else if (fs_ext(FS_SLOT_IMAGE, "bin") || fs_ext(FS_SLOT_IMAGE, "prg") || fs_ext(FS_SLOT_IMAGE, "")) {
             load_success = c64_quickload(&state.c64, fs_data(FS_SLOT_IMAGE));
         }
         if (load_success) {
@@ -353,16 +347,13 @@ static void handle_file_loading(void) {
             if (!sargs_exists("debug")) {
                 if (sargs_exists("input")) {
                     keybuf_put(sargs_value("input"));
-                }
-                else if (fs_ext(FS_SLOT_IMAGE, "tap")) {
-                    keybuf_put("LOAD\n");
-                }
-                else if (fs_ext(FS_SLOT_IMAGE, "prg")) {
-                    keybuf_put("RUN\n");
+                } else if (fs_ext(FS_SLOT_IMAGE, "tap")) {
+                    c64_basic_load(&state.c64);
+                } else if (fs_ext(FS_SLOT_IMAGE, "prg")) {
+                    c64_basic_run(&state.c64);
                 }
             }
-        }
-        else {
+        } else {
             gfx_flash_error();
         }
         fs_reset(FS_SLOT_IMAGE);
@@ -491,7 +482,7 @@ static bool web_load(chips_range_t data) {
             ui_dbg_continue(&state.ui.dbg, false);
         }
         // execute a SYS start_addr
-        c64_syscall(&state.c64, start_addr);
+        c64_basic_syscall(&state.c64, start_addr);
     }
     return loaded;
 }
