@@ -36,7 +36,8 @@ fips_begin_lib(common)
         fs.c fs.h
         gfx.c gfx.h
         keybuf.c keybuf.h
-        prof.c prof.h)
+        prof.c prof.h
+        webapi.c webapi.h)
     sokol_shader(shaders.glsl ${slang})
     if (FIPS_OSX)
         fips_files(sokol.m)
@@ -65,4 +66,8 @@ fips_end_lib()
 # a separate library with just keybuf (for the ASCII emulators)
 fips_begin_lib(keybuf)
     fips_files(keybuf.c keybuf.h)
+fips_end_lib()
+
+fips_begin_lib(webapi)
+    fips_files(webapi.c webapi.h)
 fips_end_lib()

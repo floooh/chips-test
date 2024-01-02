@@ -16,6 +16,7 @@
 
 typedef struct {
     bool valid;
+    bool disable_speaker_icon;
     gfx_border_t border;
     struct {
         sg_image img;       // framebuffer texture, RGBA8 or R8 if paletted
@@ -151,6 +152,11 @@ void gfx_flash_error(void) {
     state.flash_error_count = 20;
 }
 
+void gfx_disable_speaker_icon(void) {
+    assert(state.valid);
+    state.disable_speaker_icon = true;
+}
+
 sg_image gfx_create_icon_texture(const uint8_t* packed_pixels, int width, int height, int stride) {
     const size_t pixel_data_size = width * height * sizeof(uint32_t);
     uint32_t* pixels = malloc(pixel_data_size);
@@ -256,6 +262,7 @@ void gfx_init(const gfx_desc_t* desc) {
     });
 
     state.valid = true;
+    state.disable_speaker_icon = desc->disable_speaker_icon;
     state.border = desc->border;
     state.display.portrait = desc->display_info.portrait;
     state.draw_extra_cb = desc->draw_extra_cb;
@@ -413,7 +420,7 @@ void gfx_draw(chips_display_info_t display_info) {
     }
 
     // if audio is off, draw speaker icon via sokol-gl
-    if (saudio_suspended()) {
+    if (!state.disable_speaker_icon && saudio_suspended()) {
         const float x0 = display.width - (float)state.icon.dim.width - 10.0f;
         const float x1 = x0 + (float)state.icon.dim.width;
         const float y0 = 10.0f;

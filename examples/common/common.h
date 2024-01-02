@@ -11,4 +11,5 @@
 #include "fs.h"
 #include "gfx.h"
 #include "keybuf.h"
+#include "webapi.h"
 #include <ctype.h> // isupper, islower, toupper, tolower

@@ -91,6 +91,7 @@ static void app_init(void) {
         #endif
     });
     gfx_init(&(gfx_desc_t) {
+        .disable_speaker_icon = sargs_exists("disable-speaker-icon"),
         #ifdef CHIPS_USE_UI
         .draw_extra_cb = ui_draw,
         #endif
@@ -276,7 +277,7 @@ static void ui_load_snapshots_from_storage(void) {
 #endif
 
 sapp_desc sokol_main(int argc, char* argv[]) {
-    (void)argc; (void)argv;
+    sargs_setup(&(sargs_desc){ .argc=argc, .argv=argv });
     const chips_display_info_t info = bombjack_display_info(0);
     return (sapp_desc) {
         .init_cb = app_init,

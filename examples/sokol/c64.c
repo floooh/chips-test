@@ -34,6 +34,7 @@
     #include "ui/ui_snapshot.h"
     #include "ui/ui_c64.h"
 #endif
+#include <stdlib.h>
 
 typedef struct {
     uint32_t version;
@@ -47,6 +48,10 @@ static struct {
     double emu_time_ms;
     #ifdef CHIPS_USE_UI
         ui_c64_t ui;
+        struct {
+            uint32_t entry_addr;
+            uint32_t exit_addr;
+        } dbg;
         c64_snapshot_t snapshots[UI_SNAPSHOT_MAX_SLOTS];
     #endif
 } state;
@@ -57,6 +62,25 @@ static void ui_boot_cb(c64_t* sys);
 static void ui_save_snapshot(size_t slot_index);
 static bool ui_load_snapshot(size_t slot_index);
 static void ui_load_snapshots_from_storage(void);
+static void web_boot(void);
+static void web_reset(void);
+static bool web_ready(void);
+static bool web_load(chips_range_t data);
+static void web_dbg_connect(void);
+static void web_dbg_disconnect(void);
+static void web_dbg_add_breakpoint(uint16_t addr);
+static void web_dbg_remove_breakpoint(uint16_t addr);
+static void web_dbg_break(void);
+static void web_dbg_continue(void);
+static void web_dbg_step_next(void);
+static void web_dbg_step_into(void);
+static void web_dbg_on_stopped(int stop_reason, uint16_t addr);
+static void web_dbg_on_continued(void);
+static void web_dbg_on_reboot(void);
+static void web_dbg_on_reset(void);
+static webapi_cpu_state_t web_dbg_cpu_state(void);
+static void web_dbg_request_disassemly(uint16_t addr, int offset_lines, int num_lines, webapi_dasm_line_t* result);
+static void web_dbg_read_memory(uint16_t addr, int num_bytes, uint8_t* dst_ptr);
 #define BORDER_TOP (24)
 #else
 #define BORDER_TOP (8)
@@ -64,6 +88,7 @@ static void ui_load_snapshots_from_storage(void);
 #define BORDER_LEFT (8)
 #define BORDER_RIGHT (8)
 #define BORDER_BOTTOM (16)
+#define LOAD_DELAY_FRAMES (180)
 
 // audio-streaming callback
 static void push_audio(const float* samples, int num_samples, void* user_data) {
@@ -101,11 +126,9 @@ void app_init(void) {
     if (sargs_exists("joystick")) {
         if (sargs_equals("joystick", "digital_1")) {
             joy_type = C64_JOYSTICKTYPE_DIGITAL_1;
-        }
-        else if (sargs_equals("joystick", "digital_2")) {
+        } else if (sargs_equals("joystick", "digital_2")) {
             joy_type = C64_JOYSTICKTYPE_DIGITAL_2;
-        }
-        else if (sargs_equals("joystick", "digital_12")) {
+        } else if (sargs_equals("joystick", "digital_12")) {
             joy_type = C64_JOYSTICKTYPE_DIGITAL_12;
         }
     }
@@ -114,6 +137,7 @@ void app_init(void) {
     c64_desc_t desc = c64_desc(joy_type, c1530_enabled, c1541_enabled);
     c64_init(&state.c64, &desc);
     gfx_init(&(gfx_desc_t){
+        .disable_speaker_icon = sargs_exists("disable-speaker-icon"),
         #ifdef CHIPS_USE_UI
         .draw_extra_cb = ui_draw,
         #endif
@@ -142,6 +166,12 @@ void app_init(void) {
                 .update_cb = ui_update_texture,
                 .destroy_cb = ui_destroy_texture,
             },
+            .dbg_debug = {
+                .reboot_cb = web_dbg_on_reboot,
+                .reset_cb = web_dbg_on_reset,
+                .stopped_cb = web_dbg_on_stopped,
+                .continued_cb = web_dbg_on_continued,
+            },
             .snapshot = {
                 .load_cb = ui_load_snapshot,
                 .save_cb = ui_save_snapshot,
@@ -159,6 +189,26 @@ void app_init(void) {
             }
         });
         ui_load_snapshots_from_storage();
+        // important: initialize webapi after ui
+        webapi_init(&(webapi_desc_t){
+            .funcs = {
+                .boot = web_boot,
+                .reset = web_reset,
+                .ready = web_ready,
+                .load = web_load,
+                .dbg_connect = web_dbg_connect,
+                .dbg_disconnect = web_dbg_disconnect,
+                .dbg_add_breakpoint = web_dbg_add_breakpoint,
+                .dbg_remove_breakpoint = web_dbg_remove_breakpoint,
+                .dbg_break = web_dbg_break,
+                .dbg_continue = web_dbg_continue,
+                .dbg_step_next = web_dbg_step_next,
+                .dbg_step_into = web_dbg_step_into,
+                .dbg_cpu_state = web_dbg_cpu_state,
+                .dbg_request_disassembly = web_dbg_request_disassemly,
+                .dbg_read_memory = web_dbg_read_memory,
+            }
+        });
     #endif
     bool delay_input = false;
     if (sargs_exists("file")) {
@@ -210,8 +260,7 @@ void app_input(const sapp_event* event) {
                 // need to invert case (unshifted is upper caps, shifted is lower caps
                 if (isupper(c)) {
                     c = tolower(c);
-                }
-                else if (islower(c)) {
+                } else if (islower(c)) {
                     c = toupper(c);
                 }
                 c64_key_down(&state.c64, c);
@@ -242,8 +291,7 @@ void app_input(const sapp_event* event) {
             if (c) {
                 if (event->type == SAPP_EVENTTYPE_KEY_DOWN) {
                     c64_key_down(&state.c64, c);
-                }
-                else {
+                } else {
                     c64_key_up(&state.c64, c);
                 }
             }
@@ -278,17 +326,15 @@ static void send_keybuf_input(void) {
 
 static void handle_file_loading(void) {
     fs_dowork();
-    const uint32_t load_delay_frames = 180;
+    const uint32_t load_delay_frames = LOAD_DELAY_FRAMES;
     if (fs_success(FS_SLOT_IMAGE) && clock_frame_count_60hz() > load_delay_frames) {
         bool load_success = false;
         if (fs_ext(FS_SLOT_IMAGE, "txt") || fs_ext(FS_SLOT_IMAGE, "bas")) {
             load_success = true;
             keybuf_put((const char*)fs_data(FS_SLOT_IMAGE).ptr);
-        }
-        else if (fs_ext(FS_SLOT_IMAGE, "tap")) {
+        } else if (fs_ext(FS_SLOT_IMAGE, "tap")) {
             load_success = c64_insert_tape(&state.c64, fs_data(FS_SLOT_IMAGE));
-        }
-        else if (fs_ext(FS_SLOT_IMAGE, "bin") || fs_ext(FS_SLOT_IMAGE, "prg") || fs_ext(FS_SLOT_IMAGE, "")) {
+        } else if (fs_ext(FS_SLOT_IMAGE, "bin") || fs_ext(FS_SLOT_IMAGE, "prg") || fs_ext(FS_SLOT_IMAGE, "")) {
             load_success = c64_quickload(&state.c64, fs_data(FS_SLOT_IMAGE));
         }
         if (load_success) {
@@ -301,16 +347,13 @@ static void handle_file_loading(void) {
             if (!sargs_exists("debug")) {
                 if (sargs_exists("input")) {
                     keybuf_put(sargs_value("input"));
-                }
-                else if (fs_ext(FS_SLOT_IMAGE, "tap")) {
-                    keybuf_put("LOAD\n");
-                }
-                else if (fs_ext(FS_SLOT_IMAGE, "prg")) {
-                    keybuf_put("RUN\n");
+                } else if (fs_ext(FS_SLOT_IMAGE, "tap")) {
+                    c64_basic_load(&state.c64);
+                } else if (fs_ext(FS_SLOT_IMAGE, "prg")) {
+                    c64_basic_run(&state.c64);
                 }
             }
-        }
-        else {
+        } else {
             gfx_flash_error();
         }
         fs_reset(FS_SLOT_IMAGE);
@@ -332,7 +375,9 @@ static void draw_status_bar(void) {
 static void ui_draw_cb(void) {
     ui_c64_draw(&state.ui);
 }
+
 static void ui_boot_cb(c64_t* sys) {
+    clock_init();
     c64_desc_t desc = c64_desc(sys->joystick_type, sys->c1530.valid, sys->c1541.valid);
     c64_init(sys, &desc);
 }
@@ -383,6 +428,158 @@ static void ui_fetch_snapshot_callback(const fs_snapshot_response_t* response) {
 static void ui_load_snapshots_from_storage(void) {
     for (size_t snapshot_slot = 0; snapshot_slot < UI_SNAPSHOT_MAX_SLOTS; snapshot_slot++) {
         fs_start_load_snapshot(FS_SLOT_SNAPSHOTS, "c64", snapshot_slot, ui_fetch_snapshot_callback);
+    }
+}
+
+// webapi wrappers
+static void web_boot(void) {
+    clock_init();
+    c64_desc_t desc = c64_desc(state.c64.joystick_type, state.c64.c1530.valid, state.c64.c1541.valid);
+    c64_init(&state.c64, &desc);
+    ui_dbg_reboot(&state.ui.dbg);
+}
+
+static void web_reset(void) {
+    c64_reset(&state.c64);
+    ui_dbg_reset(&state.ui.dbg);
+}
+
+static void web_dbg_connect(void) {
+    gfx_disable_speaker_icon();
+    state.dbg.entry_addr = 0xFFFFFFFF;
+    state.dbg.exit_addr = 0xFFFFFFFF;
+    ui_dbg_external_debugger_connected(&state.ui.dbg);
+}
+
+static void web_dbg_disconnect(void) {
+    state.dbg.entry_addr = 0xFFFFFFFF;
+    state.dbg.exit_addr = 0xFFFFFFFF;
+    ui_dbg_external_debugger_disconnected(&state.ui.dbg);
+}
+
+static bool web_ready(void) {
+    return clock_frame_count_60hz() > LOAD_DELAY_FRAMES;
+}
+
+static bool web_load(chips_range_t data) {
+    if (data.size <= sizeof(webapi_fileheader_t)) {
+        return false;
+    }
+    const webapi_fileheader_t* hdr = (webapi_fileheader_t*)data.ptr;
+    if ((hdr->type[0] != 'P') || (hdr->type[1] != 'R') || (hdr->type[2] != 'G') || (hdr->type[3] != ' ')) {
+        return false;
+    }
+    const uint16_t start_addr = (hdr->start_addr_hi<<8) | hdr->start_addr_lo;
+    const chips_range_t prg = { .ptr = (void*)&hdr->payload, .size = data.size - sizeof(webapi_fileheader_t) };
+    bool loaded = c64_quickload(&state.c64, prg);
+    if (loaded) {
+        state.dbg.entry_addr = start_addr;
+        state.dbg.exit_addr = c64_syscall_return_addr();
+        ui_dbg_add_breakpoint(&state.ui.dbg, state.dbg.entry_addr);
+        ui_dbg_add_breakpoint(&state.ui.dbg, state.dbg.exit_addr);
+        // if debugger is stopped, unstuck it
+        if (ui_dbg_stopped(&state.ui.dbg)) {
+            ui_dbg_continue(&state.ui.dbg, false);
+        }
+        // execute a SYS start_addr
+        c64_basic_syscall(&state.c64, start_addr);
+    }
+    return loaded;
+}
+
+static void web_dbg_add_breakpoint(uint16_t addr) {
+    ui_dbg_add_breakpoint(&state.ui.dbg, addr);
+}
+
+static void web_dbg_remove_breakpoint(uint16_t addr) {
+    ui_dbg_remove_breakpoint(&state.ui.dbg, addr);
+}
+
+static void web_dbg_break(void) {
+    ui_dbg_break(&state.ui.dbg);
+}
+
+static void web_dbg_continue(void) {
+    ui_dbg_continue(&state.ui.dbg, false);
+}
+
+static void web_dbg_step_next(void) {
+    ui_dbg_step_next(&state.ui.dbg);
+}
+
+static void web_dbg_step_into(void) {
+    ui_dbg_step_into(&state.ui.dbg);
+}
+
+static void web_dbg_on_stopped(int stop_reason, uint16_t addr) {
+    // stopping on the entry or exit breakpoints always
+    // overrides the incoming stop_reason
+    int webapi_stop_reason = WEBAPI_STOPREASON_UNKNOWN;
+    if (state.dbg.entry_addr == state.c64.cpu.PC) {
+        webapi_stop_reason = WEBAPI_STOPREASON_ENTRY;
+    } else if (state.dbg.exit_addr == state.c64.cpu.PC) {
+        webapi_stop_reason = WEBAPI_STOPREASON_EXIT;
+    } else if (stop_reason == UI_DBG_STOP_REASON_BREAK) {
+        webapi_stop_reason = WEBAPI_STOPREASON_BREAK;
+    } else if (stop_reason == UI_DBG_STOP_REASON_STEP) {
+        webapi_stop_reason = WEBAPI_STOPREASON_STEP;
+    } else if (stop_reason == UI_DBG_STOP_REASON_BREAKPOINT) {
+        webapi_stop_reason = WEBAPI_STOPREASON_BREAKPOINT;
+    }
+    webapi_event_stopped(webapi_stop_reason, addr);
+}
+
+static void web_dbg_on_continued(void) {
+    webapi_event_continued();
+}
+
+static void web_dbg_on_reboot(void) {
+    webapi_event_reboot();
+}
+
+static void web_dbg_on_reset(void) {
+    webapi_event_reset();
+}
+
+static webapi_cpu_state_t web_dbg_cpu_state(void) {
+    const m6502_t* cpu = &state.c64.cpu;
+    return (webapi_cpu_state_t){
+        .items = {
+            [WEBAPI_CPUSTATE_TYPE] = WEBAPI_CPUTYPE_6502,
+            [WEBAPI_CPUSTATE_6502_A] = cpu->A,
+            [WEBAPI_CPUSTATE_6502_X] = cpu->X,
+            [WEBAPI_CPUSTATE_6502_Y] = cpu->Y,
+            [WEBAPI_CPUSTATE_6502_S] = cpu->S,
+            [WEBAPI_CPUSTATE_6502_P] = cpu->P,
+            [WEBAPI_CPUSTATE_6502_PC] = cpu->PC,
+        }
+    };
+}
+
+static void web_dbg_request_disassemly(uint16_t addr, int offset_lines, int num_lines, webapi_dasm_line_t* result) {
+    assert(num_lines > 0);
+    ui_dbg_dasm_line_t* lines = calloc((size_t)num_lines, sizeof(ui_dbg_dasm_line_t));
+    ui_dbg_disassemble(&state.ui.dbg, &(ui_dbg_dasm_request_t){
+        .addr = addr,
+        .num_lines = num_lines,
+        .offset_lines = offset_lines,
+        .out_lines = lines,
+    });
+    for (int line_idx = 0; line_idx < num_lines; line_idx++) {
+        const ui_dbg_dasm_line_t* src = &lines[line_idx];
+        webapi_dasm_line_t* dst = &result[line_idx];
+        dst->addr = src->addr;
+        dst->num_bytes = (src->num_bytes <= WEBAPI_DASM_LINE_MAX_BYTES) ? src->num_bytes : WEBAPI_DASM_LINE_MAX_BYTES;
+        dst->num_chars = (src->num_chars <= WEBAPI_DASM_LINE_MAX_CHARS) ? src->num_chars : WEBAPI_DASM_LINE_MAX_CHARS;
+        memcpy(dst->bytes, src->bytes, dst->num_bytes);
+        memcpy(dst->chars, src->chars, dst->num_chars);
+    }
+    free(lines);
+}
+
+static void web_dbg_read_memory(uint16_t addr, int num_bytes, uint8_t* dst_ptr) {
+    for (int i = 0; i < num_bytes; i++) {
+        *dst_ptr++ = mem_rd(&state.c64.mem_cpu, addr++);
     }
 }
 #endif

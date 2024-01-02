@@ -469,7 +469,6 @@ EM_JS(void, fs_js_load_snapshot, (const char* system_name_cstr, int snapshot_ind
     const db_name = 'chips';
     const db_store_name = 'store';
     const system_name = UTF8ToString(system_name_cstr);
-    console.log('fs_js_load_snapshot: called with', system_name, snapshot_index);
     let open_request;
     try {
         open_request = window.indexedDB.open(db_name, 1);
@@ -501,7 +500,6 @@ EM_JS(void, fs_js_load_snapshot, (const char* system_name_cstr, int snapshot_ind
                 HEAPU8.set(get_request.result, ptr);
                 _fs_emsc_load_snapshot_callback(context, ptr, num_bytes);
             } else {
-                console.log('fs_js_load_snapshot:', key, 'does not exist');
                 _fs_emsc_load_snapshot_callback(context, 0, 0);
             }
         };
