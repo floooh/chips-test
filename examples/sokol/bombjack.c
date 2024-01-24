@@ -288,6 +288,7 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .height = (3 * info.screen.height) + BORDER_TOP + BORDER_BOTTOM,
         .window_title = "Bomb Jack Arcade",
         .icon.sokol_default = true,
+        .html5_bubble_mouse_events = true,
         .logger.func = slog_func,
     };
 }
