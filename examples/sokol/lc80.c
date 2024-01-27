@@ -214,6 +214,7 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .height = 720,
         .window_title = "LC-80",
         .icon.sokol_default = true,
+        .html5_bubble_mouse_events = true,
         .logger.func = slog_func,
     };
 }

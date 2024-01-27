@@ -369,6 +369,7 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .window_title = "Robotron Z9001/KC87",
         .icon.sokol_default = true,
         .enable_dragndrop = true,
+        .html5_bubble_mouse_events = true,
         .logger.func = slog_func,
     };
 }
