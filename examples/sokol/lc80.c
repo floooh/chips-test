@@ -72,7 +72,7 @@ static lc80_desc_t lc80_desc(void) {
 
 void app_init(void) {
     sg_setup(&(sg_desc){
-        .context = sapp_sgcontext(),
+        .environment = sglue_environment(),
         .logger.func = slog_func,
     });
     sdtx_setup(&(sdtx_desc_t){
@@ -123,7 +123,7 @@ void app_frame(void) {
     state.ticks = lc80_exec(&state.lc80, state.frame_time_us);
     state.emu_time_ms = stm_ms(stm_since(emu_start_time));
     draw_status_bar();
-    sg_begin_default_pass(&(sg_pass_action){0}, sapp_width(), sapp_height());
+    sg_begin_pass(&(sg_pass){ .swapchain = sglue_swapchain() });
     ui_draw();
     sdtx_draw();
     sg_end_pass();
