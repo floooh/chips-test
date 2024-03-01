@@ -32,7 +32,7 @@ typedef struct {
         sg_sampler smp;
         sg_buffer vbuf;
         sg_pipeline pip;
-        sg_pass pass;
+        sg_attachments attachments;
         sg_pass_action pass_action;
     } offscreen;
     struct {
@@ -199,7 +199,7 @@ static void gfx_init_images_and_pass(void) {
     sg_destroy_sampler(state.fb.smp);
     sg_destroy_image(state.offscreen.img);
     sg_destroy_sampler(state.offscreen.smp);
-    sg_destroy_pass(state.offscreen.pass);
+    sg_destroy_attachments(state.offscreen.attachments);
 
     // a texture with the emulator's raw pixel data
     assert((state.fb.dim.width > 0) && (state.fb.dim.height > 0));
@@ -232,8 +232,8 @@ static void gfx_init_images_and_pass(void) {
         .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
         .wrap_v = SG_WRAP_CLAMP_TO_EDGE,
     });
-    state.offscreen.pass = sg_make_pass(&(sg_pass_desc){
-        .color_attachments[0].image = state.offscreen.img
+    state.offscreen.attachments = sg_make_attachments(&(sg_attachments_desc){
+        .colors[0].image = state.offscreen.img
     });
 }
 
@@ -243,8 +243,8 @@ void gfx_init(const gfx_desc_t* desc) {
         .image_pool_size = 128,
         .shader_pool_size = 16,
         .pipeline_pool_size = 16,
-        .context_pool_size = 2,
-        .context = sapp_sgcontext(),
+        .attachments_pool_size = 2,
+        .environment = sglue_environment(),
         .logger.func = slog_func,
     });
     sgl_setup(&(sgl_desc_t){
@@ -450,7 +450,10 @@ void gfx_draw(chips_display_info_t display_info) {
     });
 
     // upscale the original framebuffer 2x with nearest filtering
-    sg_begin_pass(state.offscreen.pass, &state.offscreen.pass_action);
+    sg_begin_pass(&(sg_pass){
+        .action = state.offscreen.pass_action,
+        .attachments = state.offscreen.attachments
+    });
     sg_apply_pipeline(state.offscreen.pip);
     sg_apply_bindings(&(sg_bindings){
         .vertex_buffers[0] = state.offscreen.vbuf,
@@ -491,7 +494,10 @@ void gfx_draw(chips_display_info_t display_info) {
     }
 
     // draw the final pass with linear filtering
-    sg_begin_default_pass(&state.display.pass_action, display.width, display.height);
+    sg_begin_pass(&(sg_pass){
+        .action = state.display.pass_action,
+        .swapchain = sglue_swapchain()
+    });
     apply_viewport(display, display_info.screen, state.offscreen.pixel_aspect, state.border);
     sg_apply_pipeline(state.display.pip);
     sg_apply_bindings(&(sg_bindings){
