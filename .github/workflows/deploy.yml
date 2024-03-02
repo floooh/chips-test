@@ -5,7 +5,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: seanmiddleditch/gha-setup-ninja@master
       - name: prepare
         run: |
@@ -17,7 +17,7 @@ jobs:
           python3 fips set local on
           python3 fips webpage build
       - name: upload-artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: webpage
           path: fips-files/deploy/chips-webpage
@@ -26,11 +26,11 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           repository: floooh/tiny8bit
           ssh-key: ${{ secrets.GHACTION_PUSH }}
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4
         with:
           name: webpage
       - name: "commit and push"
