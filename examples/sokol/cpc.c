@@ -211,6 +211,8 @@ void app_init(void) {
                 .reset = web_reset,
                 .ready = web_ready,
                 .load = web_load,
+                .load_snapshot = ui_load_snapshot,
+                .save_snapshot = ui_save_snapshot,
                 .dbg_connect = web_dbg_connect,
                 .dbg_disconnect = web_dbg_disconnect,
                 .dbg_add_breakpoint = web_dbg_add_breakpoint,
