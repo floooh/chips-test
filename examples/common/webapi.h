@@ -77,6 +77,8 @@ typedef struct {
     void (*reset)(void);
     bool (*ready)(void);
     bool (*load)(chips_range_t data);       // data starts with a webapi_fileheader_t
+    bool (*load_snapshot)(size_t index);
+    void (*save_snapshot)(size_t index);
     void (*dbg_connect)(void);
     void (*dbg_disconnect)(void);
     void (*dbg_add_breakpoint)(uint16_t addr);
