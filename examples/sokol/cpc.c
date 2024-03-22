@@ -73,6 +73,8 @@ static void web_boot(void);
 static void web_reset(void);
 static bool web_ready(void);
 static bool web_load(chips_range_t data);
+static void web_save_snapshot(size_t slot_index);
+static bool web_load_snapshot(size_t slot_index);
 static void web_dbg_connect(void);
 static void web_dbg_disconnect(void);
 static void web_dbg_add_breakpoint(uint16_t addr);
@@ -211,8 +213,8 @@ void app_init(void) {
                 .reset = web_reset,
                 .ready = web_ready,
                 .load = web_load,
-                .load_snapshot = ui_load_snapshot,
-                .save_snapshot = ui_save_snapshot,
+                .load_snapshot = web_load_snapshot,
+                .save_snapshot = web_save_snapshot,
                 .dbg_connect = web_dbg_connect,
                 .dbg_disconnect = web_dbg_disconnect,
                 .dbg_add_breakpoint = web_dbg_add_breakpoint,
@@ -547,6 +549,14 @@ static bool web_load(chips_range_t data) {
         }
     }
     return loaded;
+}
+
+static void web_save_snapshot(size_t slot_index) {
+    ui_save_snapshot(slot_index);
+}
+
+static bool web_load_snapshot(size_t slot_index) {
+    return ui_load_snapshot(slot_index);
 }
 
 static void web_dbg_add_breakpoint(uint16_t addr) {
