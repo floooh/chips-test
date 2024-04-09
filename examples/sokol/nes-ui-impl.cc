@@ -1,6 +1,5 @@
 /*
-    nes-ui.c
-    UI implementation for nes.c
+   UI implementation for nes.c, this must live in a .cc file.
 */
 #include "chips/chips_common.h"
 #include "chips/m6502.h"
