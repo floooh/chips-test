@@ -119,6 +119,20 @@ EMSCRIPTEN_KEEPALIVE bool webapi_load(void* ptr, int size) {
     return false;
 }
 
+EMSCRIPTEN_KEEPALIVE bool webapi_load_snapshot(size_t index) {
+    if (state.funcs.load_snapshot != NULL) {
+        return state.funcs.load_snapshot(index);
+    } else {
+        return false;
+    }
+}
+
+EMSCRIPTEN_KEEPALIVE void webapi_save_snapshot(size_t index) {
+    if (state.funcs.save_snapshot != NULL) {
+        state.funcs.save_snapshot(index);
+    }
+}
+
 EMSCRIPTEN_KEEPALIVE void webapi_dbg_add_breakpoint(uint16_t addr) {
     if (state.inited && state.funcs.dbg_add_breakpoint) {
         state.funcs.dbg_add_breakpoint(addr);
