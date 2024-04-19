@@ -22,6 +22,16 @@ void webapi_init(const webapi_desc_t* desc) {
     if (before_init_state.dbg_connect_requested && state.funcs.dbg_connect) {
         state.funcs.dbg_connect();
     }
+
+    /* Wrap _webapi_input so we don't need to sweat the string to char* conversion in JavaScript */
+    EM_ASM({
+        const saveWebInput = Module["_webapi_input"];
+        Module["_webapi_input"] = function(text) {
+            const utf8 = stringToNewUTF8(text);
+            saveWebInput(utf8);
+            Module["_webapi_free"](utf8);
+        }
+    });
 }
 
 #if defined(__EMSCRIPTEN__)
@@ -204,6 +214,15 @@ EMSCRIPTEN_KEEPALIVE uint8_t* webapi_dbg_read_memory(uint16_t addr, int num_byte
         return ptr;
     } else {
         return 0;
+    }
+}
+
+EMSCRIPTEN_KEEPALIVE bool webapi_input(char* text) {
+    if (state.funcs.input != NULL && text != NULL) {
+        state.funcs.input(text);
+        return true;
+    } else {
+        return false;
     }
 }
 
