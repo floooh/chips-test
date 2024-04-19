@@ -6,6 +6,10 @@
 #endif
 #include "gfx.h"
 
+#if defined(EM_JS_DEPS)
+EM_JS_DEPS(chips_webapi, "$withStackSave,$stringToUTF8OnStack");
+#endif
+
 static struct {
     bool dbg_connect_requested;
 } before_init_state;
@@ -23,15 +27,15 @@ void webapi_init(const webapi_desc_t* desc) {
         state.funcs.dbg_connect();
     }
 
-    /* Wrap _webapi_input so we don't need to sweat the string to char* conversion in JavaScript */
+    // replace webapi_input() export with a JS shim which takes care of string marshalling
+    #if defined(__EMSCRIPTEN__)
     EM_ASM({
-        const saveWebInput = Module["_webapi_input"];
-        Module["_webapi_input"] = function(text) {
-            const utf8 = stringToNewUTF8(text);
-            saveWebInput(utf8);
-            Module["_webapi_free"](utf8);
+        const cfunc = Module["_webapi_input"];
+        Module["_webapi_input"] = (text) => {
+            withStackSave(() => cfunc(stringToUTF8OnStack(text)));
         }
     });
+    #endif
 }
 
 #if defined(__EMSCRIPTEN__)
