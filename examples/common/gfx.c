@@ -11,6 +11,7 @@
 #include "shaders.glsl.h"
 #include <assert.h>
 #include <stdlib.h> // malloc/free
+#include <string.h>
 
 #define GFX_DEF(v,def) (v?v:def)
 
