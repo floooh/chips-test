@@ -98,7 +98,7 @@ static void init(uint16_t start_addr, const uint8_t* bytes, size_t num_bytes) {
     cpu.de2 = 0xFFFF;
     cpu.hl2 = 0xFFFF;
     copy(start_addr, bytes, num_bytes);
-    prefetch(start_addr);    
+    prefetch(start_addr);
 }
 
 // test that the nested ix/iy/hl mapping union works
@@ -164,8 +164,8 @@ UTEST(z80, RST) {
     };
     init(0x0000, prog, sizeof(prog));
     T(10 == step()); T(_SP == 0x0100);
-    T(11 == step()); T(_PC == 0x0009); T(_SP == 0x00FE); T(_WZ == 0x0008); mem16(0x00FE == 0x0004);
-    T(11 == step()); T(_PC == 0x0039); T(_SP == 0x00FC); T(_WZ == 0x0038); mem16(0x00FC == 0x0009); 
+    T(11 == step()); T(_PC == 0x0009); T(_SP == 0x00FE); T(_WZ == 0x0008); T(mem16(0x00FE) == 0x0004);
+    T(11 == step()); T(_PC == 0x0039); T(_SP == 0x00FC); T(_WZ == 0x0038); T(mem16(0x00FC) == 0x0009);
 }
 
 /* LD r,s; LD r,n */
@@ -323,7 +323,7 @@ UTEST(z80, LD_r_iHLi) {
     T(7==step()); T(0x10 == _H);
     T(7==step()); T(0x33 == _L);
     T(7==step()); T(0x00 == _L);
-    T(7==step()); T(0x33 == _A);       
+    T(7==step()); T(0x33 == _A);
 }
 
 /* LD (HL),r */
@@ -1720,7 +1720,7 @@ UTEST(z80, SET_RES) {
 
 /* BIT b,r; BIT b,(HL); BIT b,(IX+d); BIT b,(IY+d) */
 UTEST(z80, BIT) {
-    // only test cycle count for now 
+    // only test cycle count for now
     uint8_t prog[] = {
         0x3E, 0x01,             // LD A,1
         0x21, 0x40, 0x00,       // LD HL,0x0040
@@ -2442,7 +2442,7 @@ UTEST(z80, ADD_ADC_SBC_16) {
     T(15==step()); T(0x0103 == _IX); T(flags(Z80_HF|Z80_CF)); T(0x0105 == _WZ);
     T(15==step()); T(0x0206 == _IX); T(flags(0)); T(0x0104 == _WZ);
     T(15==step()); T(0x1206 == _IX); T(flags(0)); T(0x0207 == _WZ);
-    T(14==step()); T(0xFFFF == _IY); 
+    T(14==step()); T(0xFFFF == _IY);
     T(15==step()); T(0x0007 == _IY); T(flags(Z80_HF|Z80_CF)); T(0x0000 == _WZ);
     T(15==step()); T(0x0006 == _IY); T(flags(Z80_HF|Z80_CF)); T(0x0008 == _WZ);
     T(15==step()); T(0x000C == _IY); T(flags(0)); T(0x0007 == _WZ);
@@ -2742,6 +2742,3 @@ UTEST(z80, OTIR_OTDR) {
 }
 
 UTEST_MAIN()
-
-
-
