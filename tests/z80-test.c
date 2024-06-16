@@ -1602,7 +1602,7 @@ UTEST(z80, SRL_r) {
     T(8==step()); T(0x7F == _D); T(flags(0));
     T(8==step()); T(0x3F == _E); T(flags(Z80_PF|Z80_CF));
     T(8==step()); T(0x08 == _H); T(flags(Z80_CF));
-    T(8==step()); T(0x00 == _L); T(flags(Z80_ZF|Z80_PF))
+    T(8==step()); T(0x00 == _L); T(flags(Z80_ZF|Z80_PF));
 }
 
 /* SRL (HL)/(IX+d)/(IY+d) */
