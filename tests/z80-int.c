@@ -768,7 +768,7 @@ UTEST(z80, INT_disabled) {
     // next NOP
     tick(); T(pins_m1());
     tick(); T(pins_none());
-    tick(); T(pins_rfsh())
+    tick(); T(pins_rfsh());
     tick(); T(pins_none());
 }
 
