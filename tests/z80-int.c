@@ -97,11 +97,11 @@ UTEST(z80, NMI) {
         0xFB,               //       EI
         0x21, 0x11, 0x11,   // loop: LD HL, 1111h
         0x11, 0x22, 0x22,   //       LD DE, 2222h
-        0xC3, 0x01, 0x00,   //       JP loop 
+        0xC3, 0x01, 0x00,   //       JP loop
     };
     uint8_t isr[] = {
         0x3E, 0x33,         //       LD A,33h
-        0xED, 0x45,         //       RETN    
+        0xED, 0x45,         //       RETN
     };
     init(0x0000, prog, sizeof(prog));
     copy(0x0066, isr, sizeof(isr));
@@ -747,7 +747,7 @@ UTEST(z80, INT_disabled) {
     tick(); T(pins_m1());
     pins |= Z80_INT;
     tick(); T(pins_none());
-    tick(); T(pins_rfsh())
+    tick(); T(pins_rfsh());
     tick(); T(pins_none());
     // JR l0 (interrupt should not have triggered)
     tick(); T(pins_m1());
