@@ -278,7 +278,7 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .frame_cb = app_frame,
         .event_cb = app_input,
         .cleanup_cb = app_cleanup,
-        .width = ((5 * info.screen.width) / 2) + BORDER_LEFT + BORDER_RIGHT,
+        .width = 2 * info.screen.width + BORDER_LEFT + BORDER_RIGHT,
         .height = 3 * info.screen.height + BORDER_TOP + BORDER_BOTTOM,
         .window_title = "Pengo Arcade",
         .icon.sokol_default = true,

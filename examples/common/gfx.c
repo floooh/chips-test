@@ -386,7 +386,7 @@ static void apply_viewport(chips_dim_t canvas, chips_rect_t view, chips_dim_t pi
     if (ch < 1.0f) {
         ch = 1.0f;
     }
-    const float canvas_aspect = (float)cw / (float)ch;
+    const float canvas_aspect = cw / ch;
     const chips_dim_t aspect = pixel_aspect;
     const float emu_aspect = (float)(view.width * aspect.width) / (float)(view.height * aspect.height);
     float vp_x, vp_y, vp_w, vp_h;
