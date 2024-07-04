@@ -65,6 +65,13 @@ fips_begin_app(m6502-perfect cmdline)
     )
 fips_end_app()
 
+fips_begin_app(nes-test1 cmdline)
+    fips_files(nes-test1.c)
+    fips_dir(nestest)
+    fips_generate(FROM nestest.log.txt TYPE nestestlog HEADER nestestlog.h)
+    fipsutil_embed(dump.yml dump.h)
+fips_end_app()
+
 fips_begin_app(z80-fuse cmdline)
     fips_files(z80-fuse.c)
     fips_dir(fuse)
