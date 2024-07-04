@@ -102,6 +102,9 @@ z9001_desc_t z9001_desc(z9001_type_t type) {
 }
 
 void app_init(void) {
+    saudio_setup(&(saudio_desc){
+        .logger.func = slog_func,
+    });
     gfx_init(&(gfx_desc_t) {
         .disable_speaker_icon = sargs_exists("disable-speaker-icon"),
         #ifdef CHIPS_USE_UI
@@ -119,9 +122,6 @@ void app_init(void) {
     clock_init();
     prof_init();
     fs_init();
-    saudio_setup(&(saudio_desc){
-        .logger.func = slog_func,
-    });
     z9001_type_t type = Z9001_TYPE_Z9001;
     if (sargs_exists("type")) {
         if (sargs_equals("type", "kc87")) {

@@ -136,6 +136,9 @@ cpc_desc_t cpc_desc(cpc_type_t type, cpc_joystick_type_t joy_type) {
 }
 
 void app_init(void) {
+    saudio_setup(&(saudio_desc){
+        .logger.func = slog_func,
+    });
     cpc_type_t type = CPC_TYPE_6128;
     if (sargs_exists("type")) {
         if (sargs_equals("type", "cpc464")) {
@@ -170,9 +173,6 @@ void app_init(void) {
     keybuf_init(&(keybuf_desc_t) { .key_delay_frames=7 });
     clock_init();
     prof_init();
-    saudio_setup(&(saudio_desc){
-        .logger.func = slog_func,
-    });
     fs_init();
     #ifdef CHIPS_USE_UI
         ui_init(ui_draw_cb);

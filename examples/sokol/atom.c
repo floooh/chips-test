@@ -95,6 +95,9 @@ atom_desc_t atom_desc(atom_joystick_type_t joy_type) {
 }
 
 void app_init(void) {
+    saudio_setup(&(saudio_desc){
+        .logger.func = slog_func,
+    });
     atom_joystick_type_t joy_type = ATOM_JOYSTICKTYPE_NONE;
     if (sargs_exists("joystick")) {
         if (sargs_equals("joystick", "mmc") || sargs_equals("joystick", "yes")) {
@@ -120,9 +123,6 @@ void app_init(void) {
     clock_init();
     prof_init();
     fs_init();
-    saudio_setup(&(saudio_desc){
-        .logger.func = slog_func,
-    });
     #ifdef CHIPS_USE_UI
         ui_init(ui_draw_cb);
         ui_atom_init(&state.ui, &(ui_atom_desc_t){

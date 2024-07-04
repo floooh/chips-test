@@ -156,6 +156,9 @@ kc85_desc_t kc85_desc(void) {
 }
 
 void app_init(void) {
+    saudio_setup(&(saudio_desc){
+        .logger.func = slog_func,
+    });
     gfx_init(&(gfx_desc_t) {
         .disable_speaker_icon = sargs_exists("disable-speaker-icon"),
         #ifdef CHIPS_USE_UI
@@ -172,9 +175,6 @@ void app_init(void) {
     keybuf_init(&(keybuf_desc_t){ .key_delay_frames = 10 });
     clock_init();
     prof_init();
-    saudio_setup(&(saudio_desc){
-        .logger.func = slog_func,
-    });
     fs_init();
     const kc85_desc_t desc = kc85_desc();
     kc85_init(&state.kc85, &desc);

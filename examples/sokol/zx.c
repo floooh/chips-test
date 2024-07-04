@@ -89,6 +89,9 @@ zx_desc_t zx_desc(zx_type_t type, zx_joystick_type_t joy_type) {
 }
 
 void app_init(void) {
+    saudio_setup(&(saudio_desc){
+        .logger.func = slog_func,
+    });
     gfx_init(&(gfx_desc_t){
         .disable_speaker_icon = sargs_exists("disable-speaker-icon"),
         #ifdef CHIPS_USE_UI
@@ -105,9 +108,6 @@ void app_init(void) {
     keybuf_init(&(keybuf_desc_t){ .key_delay_frames=6 });
     clock_init();
     prof_init();
-    saudio_setup(&(saudio_desc){
-        .logger.func = slog_func,
-    });
     fs_init();
     zx_type_t type = ZX_TYPE_128;
     if (sargs_exists("type")) {

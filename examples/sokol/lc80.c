@@ -71,6 +71,9 @@ static lc80_desc_t lc80_desc(void) {
 }
 
 void app_init(void) {
+    saudio_setup(&(saudio_desc){
+        .logger.func = slog_func,
+    });
     sg_setup(&(sg_desc){
         .environment = sglue_environment(),
         .logger.func = slog_func,
@@ -82,9 +85,6 @@ void app_init(void) {
     });
     clock_init();
     prof_init();
-    saudio_setup(&(saudio_desc){
-        .logger.func = slog_func,
-    });
     fs_init();
 
     lc80_desc_t desc = lc80_desc();

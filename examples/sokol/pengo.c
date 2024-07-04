@@ -61,6 +61,9 @@ static void push_audio(const float* samples, int num_samples, void* user_data) {
 }
 
 static void app_init(void) {
+    saudio_setup(&(saudio_desc){
+        .logger.func = slog_func,
+    });
     namco_init(&state.sys, &(namco_desc_t){
         .audio = {
             .callback = { .func = push_audio },
@@ -109,9 +112,6 @@ static void app_init(void) {
     });
     clock_init();
     prof_init();
-    saudio_setup(&(saudio_desc){
-        .logger.func = slog_func,
-    });
     fs_init();
     #ifdef CHIPS_USE_UI
         ui_init(ui_draw_cb);

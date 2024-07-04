@@ -421,7 +421,7 @@ void gfx_draw(chips_display_info_t display_info) {
     }
 
     // if audio is off, draw speaker icon via sokol-gl
-    if (!state.disable_speaker_icon && saudio_suspended()) {
+    if (!state.disable_speaker_icon && saudio_isvalid() && saudio_suspended()) {
         const float x0 = display.width - (float)state.icon.dim.width - 10.0f;
         const float x1 = x0 + (float)state.icon.dim.width;
         const float y0 = 10.0f;

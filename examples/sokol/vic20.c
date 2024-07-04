@@ -90,6 +90,9 @@ vic20_desc_t vic20_desc(vic20_joystick_type_t joy_type, vic20_memory_config_t me
 }
 
 void app_init(void) {
+    saudio_setup(&(saudio_desc){
+        .logger.func = slog_func,
+    });
     vic20_joystick_type_t joy_type = VIC20_JOYSTICKTYPE_NONE;
     if (sargs_exists("joystick")) {
         joy_type = VIC20_JOYSTICKTYPE_DIGITAL;
@@ -136,9 +139,6 @@ void app_init(void) {
     clock_init();
     prof_init();
     fs_init();
-    saudio_setup(&(saudio_desc){
-        .logger.func = slog_func,
-    });
     #ifdef CHIPS_USE_UI
         ui_init(ui_draw_cb);
         ui_vic20_init(&state.ui, &(ui_vic20_desc_t){
