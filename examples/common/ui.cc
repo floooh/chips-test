@@ -114,7 +114,7 @@ bool ui_input(const sapp_event* event) {
     return simgui_handle_event(event);
 }
 
-void* ui_create_texture(int w, int h) {
+ui_texture_t ui_create_texture(int w, int h) {
     return simgui_imtextureid(simgui_make_image({
         .image = sg_make_image({
             .width = w,
@@ -126,7 +126,7 @@ void* ui_create_texture(int w, int h) {
     }));
 }
 
-void ui_update_texture(void* h, void* data, int data_byte_size) {
+void ui_update_texture(ui_texture_t h, void* data, int data_byte_size) {
     simgui_image_t img = simgui_image_from_imtextureid(h);
     const simgui_image_desc_t desc = simgui_query_image_desc(img);
     sg_image_data img_data = { };
@@ -134,14 +134,14 @@ void ui_update_texture(void* h, void* data, int data_byte_size) {
     sg_update_image(desc.image, img_data);
 }
 
-void ui_destroy_texture(void* h) {
+void ui_destroy_texture(ui_texture_t h) {
     if (state.delete_stack.cur_slot < UI_DELETE_STACK_SIZE) {
         state.delete_stack.images[state.delete_stack.cur_slot++] = simgui_image_from_imtextureid(h);
     }
 }
 
 // creates a 2x downscaled screenshot texture of the emulator framebuffer
-void* ui_create_screenshot_texture(chips_display_info_t info) {
+uint64_t ui_create_screenshot_texture(chips_display_info_t info) {
     assert(info.frame.buffer.ptr);
 
     size_t dst_w = (info.screen.width + 1) >> 1;
@@ -203,7 +203,7 @@ void* ui_create_screenshot_texture(chips_display_info_t info) {
     }));
 }
 
-void* ui_shared_empty_snapshot_texture(void) {
+ui_texture_t ui_shared_empty_snapshot_texture(void) {
     // must create on demand to prevent chicken/egg problem with sokol-imgui initialization
     if (state.empty_snapshot_texture.id == 0) {
         state.empty_snapshot_texture = simgui_make_image({
