@@ -458,13 +458,11 @@ void gfx_draw(chips_display_info_t display_info) {
     sg_apply_pipeline(state.offscreen.pip);
     sg_apply_bindings(&(sg_bindings){
         .vertex_buffers[0] = state.offscreen.vbuf,
-        .fs = {
-            .images = {
-                [SLOT_fb_tex] = state.fb.img,
-                [SLOT_pal_tex] = state.fb.pal_img,
-            },
-            .samplers[SLOT_smp] = state.fb.smp,
-        }
+        .images = {
+            [IMG_fb_tex] = state.fb.img,
+            [IMG_pal_tex] = state.fb.pal_img,
+        },
+        .samplers[SMP_smp] = state.fb.smp,
     });
     const offscreen_vs_params_t vs_params = {
         .uv_offset = {
@@ -476,7 +474,7 @@ void gfx_draw(chips_display_info_t display_info) {
             (float)state.offscreen.view.height / (float)state.fb.dim.height
         }
     };
-    sg_apply_uniforms(SG_SHADERSTAGE_VS, SLOT_offscreen_vs_params, &SG_RANGE(vs_params));
+    sg_apply_uniforms(UB_offscreen_vs_params, &SG_RANGE(vs_params));
     sg_draw(0, 4, 1);
     sg_end_pass();
 
@@ -503,10 +501,8 @@ void gfx_draw(chips_display_info_t display_info) {
     sg_apply_pipeline(state.display.pip);
     sg_apply_bindings(&(sg_bindings){
         .vertex_buffers[0] = state.display.vbuf,
-        .fs = {
-            .images[SLOT_tex] = state.offscreen.img,
-            .samplers[SLOT_smp] = state.offscreen.smp,
-        }
+        .images[IMG_tex] = state.offscreen.img,
+        .samplers[SMP_smp] = state.offscreen.smp,
     });
     sg_draw(0, 4, 1);
     sg_apply_viewport(0, 0, display.width, display.height, true);

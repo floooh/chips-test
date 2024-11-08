@@ -2,7 +2,7 @@
 layout(location=0) in vec2 in_pos;
 layout(location=1) in vec2 in_uv;
 
-uniform offscreen_vs_params {
+layout(binding=0) uniform offscreen_vs_params {
     vec2 uv_offset;
     vec2 uv_scale;
 };
@@ -15,8 +15,8 @@ void main() {
 @end
 
 @fs offscreen_fs
-uniform texture2D fb_tex;
-uniform sampler smp;
+layout(binding=0) uniform texture2D fb_tex;
+layout(binding=0) uniform sampler smp;
 in vec2 uv;
 out vec4 frag_color;
 void main() {
@@ -26,9 +26,9 @@ void main() {
 
 // offscreen shader with color palette decoding
 @fs offscreen_pal_fs
-uniform texture2D fb_tex;
-uniform texture2D pal_tex;
-uniform sampler smp;
+layout(binding=0) uniform texture2D fb_tex;
+layout(binding=1) uniform texture2D pal_tex;
+layout(binding=0) uniform sampler smp;
 in vec2 uv;
 out vec4 frag_color;
 void main() {
@@ -48,8 +48,8 @@ void main() {
 @end
 
 @fs display_fs
-uniform texture2D tex;
-uniform sampler smp;
+layout(binding=0) uniform texture2D tex;
+layout(binding=0) uniform sampler smp;
 in vec2 uv;
 out vec4 frag_color;
 
