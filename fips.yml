@@ -5,8 +5,8 @@
 policies:
   no_auto_import: true
 imports:
-  fips-imgui:
-    git: https://github.com/fips-libs/fips-imgui.git
+  dcimgui:
+    git: https://github.com/floooh/dcimgui
   chips:
     git: https://github.com/floooh/chips
   sokol:
