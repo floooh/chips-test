@@ -11,7 +11,13 @@ extern "C" {
 typedef uint64_t ui_texture_t;
 
 typedef void(*ui_draw_t)(void);
-void ui_init(ui_draw_t draw_cb);
+
+typedef struct {
+    ui_draw_t draw_cb;
+    const char* imgui_ini_key;
+} ui_desc_t;
+
+void ui_init(const ui_desc_t* desc);
 void ui_discard(void);
 void ui_draw(void);
 bool ui_input(const sapp_event* event);

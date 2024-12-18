@@ -114,7 +114,10 @@ static void app_init(void) {
     prof_init();
     fs_init();
     #ifdef CHIPS_USE_UI
-        ui_init(ui_draw_cb);
+        ui_init(&(ui_desc_t){
+            .draw_cb = ui_draw_cb,
+            .imgui_ini_key = "floooh.chips.bombjack",
+        });
         ui_bombjack_init(&state.ui, &(ui_bombjack_desc_t){
             .sys = &state.sys,
             .dbg_texture = {

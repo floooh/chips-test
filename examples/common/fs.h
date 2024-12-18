@@ -31,7 +31,6 @@ bool fs_load_base64(size_t slot_index, const char* name, const char* payload);
 void fs_load_mem(size_t slot_index, const char* path, chips_range_t data);
 bool fs_save_snapshot(const char* system_name, size_t snapshot_index, chips_range_t data);
 bool fs_start_load_snapshot(size_t slot_index, const char* system_name, size_t snapshot_index, fs_snapshot_load_callback_t callback);
-
 fs_result_t fs_result(size_t slot_index);
 bool fs_success(size_t slot_index);
 bool fs_failed(size_t slot_index);

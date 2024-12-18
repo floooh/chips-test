@@ -131,7 +131,10 @@ void app_init(void) {
     z9001_desc_t desc = z9001_desc(type);
     z9001_init(&state.z9001, &desc);
     #ifdef CHIPS_USE_UI
-        ui_init(ui_draw_cb);
+        ui_init(&(ui_desc_t){
+            .draw_cb = ui_draw_cb,
+            .imgui_ini_key = "floooh.chips.z9001",
+        });
         ui_z9001_init(&state.ui, &(ui_z9001_desc_t){
             .z9001 = &state.z9001,
             .boot_cb = ui_boot_cb,

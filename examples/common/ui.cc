@@ -10,6 +10,11 @@
 #include "sokol_imgui.h"
 #include "gfx.h"
 #include <stdlib.h> // calloc
+#include <stdio.h> // snprintf
+
+#if defined(__EMSCRIPTEN__)
+#include <emscripten.h>
+#endif
 
 #define UI_DELETE_STACK_SIZE (32)
 
@@ -26,6 +31,7 @@ static struct {
         sg_image images[UI_DELETE_STACK_SIZE];
         size_t cur_slot;
     } delete_stack;
+    char imgui_ini_key[128];
 } state;
 
 static const struct {
@@ -57,23 +63,23 @@ static const struct {
     }
 };
 
-static void commit_listener(void* user_data) {
-    (void)user_data;
-    // garbage collect images
-    for (size_t i = 0; i < state.delete_stack.cur_slot; i++) {
-        sg_destroy_image(state.delete_stack.images[i]);
-    }
-    state.delete_stack.cur_slot = 0;
-}
+static void commit_listener(void* user_data);
+static void load_imgui_ini(void);
+static void handle_save_imgui_ini(void);
 
-void ui_init(ui_draw_t draw_cb) {
+void ui_init(const ui_desc_t* desc) {
+    assert(desc && desc->draw_cb && desc->imgui_ini_key);
+
+    state.draw_cb = desc->draw_cb;
+    snprintf(state.imgui_ini_key, sizeof(state.imgui_ini_key), "%s", desc->imgui_ini_key);
+
     simgui_desc_t simgui_desc = { };
     simgui_setup(&simgui_desc);
     auto& style = ImGui::GetStyle();
     style.WindowRounding = 0.0f;
     style.WindowBorderSize = 1.0f;
     style.Alpha = 1.0f;
-    state.draw_cb = draw_cb;
+    load_imgui_ini();
 
     sg_add_commit_listener({ .func = commit_listener });
 
@@ -96,6 +102,7 @@ void ui_init(ui_draw_t draw_cb) {
         empty_snapshot_icon.width,
         empty_snapshot_icon.height,
         empty_snapshot_icon.stride);
+
 }
 
 void ui_discard(void) {
@@ -106,6 +113,7 @@ void ui_discard(void) {
 }
 
 void ui_draw(void) {
+    handle_save_imgui_ini();
     simgui_new_frame({sapp_width(), sapp_height(), sapp_frame_duration(), sapp_dpi_scale() });
     if (state.draw_cb) {
         state.draw_cb();
@@ -203,4 +211,52 @@ ui_texture_t ui_create_screenshot_texture(chips_display_info_t info) {
 
 ui_texture_t ui_shared_empty_snapshot_texture(void) {
     return simgui_imtextureid_with_sampler(state.empty_snapshot_texture, state.nearest_sampler);
+}
+
+static void commit_listener(void* user_data) {
+    (void)user_data;
+    // garbage collect images
+    for (size_t i = 0; i < state.delete_stack.cur_slot; i++) {
+        sg_destroy_image(state.delete_stack.images[i]);
+    }
+    state.delete_stack.cur_slot = 0;
+}
+
+#if defined(__EMSCRIPTEN__)
+EM_JS_DEPS(v6502r, "$UTF8ToString,$stringToNewUTF8");
+
+EM_JS(void, emsc_js_save_imgui_ini, (const char* c_key, const char* c_payload), {
+    const key = UTF8ToString(c_key);
+    const payload = UTF8ToString(c_payload);
+    window.localStorage.setItem(key, payload);
+});
+
+EM_JS(const char*, emsc_js_load_imgui_ini, (const char* c_key), {
+    const key = UTF8ToString(c_key);
+    const payload = window.localStorage.getItem(key);
+    if (payload) {
+        return stringToNewUTF8(payload);
+    } else {
+        return 0;
+    }
+});
+#endif
+
+static void handle_save_imgui_ini(void) {
+    if (ImGui::GetIO().WantSaveIniSettings) {
+        ImGui::GetIO().WantSaveIniSettings = false;
+        #if defined(__EMSCRIPTEN__)
+        emsc_js_save_imgui_ini(state.imgui_ini_key, ImGui::SaveIniSettingsToMemory());
+        #endif
+    }
+}
+
+static void load_imgui_ini(void) {
+    #if defined(__EMSCRIPTEN__)
+    const char* payload = emsc_js_load_imgui_ini(state.imgui_ini_key);
+    if (payload) {
+        ImGui::LoadIniSettingsFromMemory(payload);
+        free((void*)payload);
+    }
+    #endif
 }

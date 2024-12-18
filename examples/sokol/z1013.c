@@ -104,7 +104,10 @@ void app_init(void) {
     z1013_desc_t desc = z1013_desc(type);
     z1013_init(&state.z1013, &desc);
     #ifdef CHIPS_USE_UI
-        ui_init(ui_draw_cb);
+        ui_init(&(ui_desc_t){
+            .draw_cb = ui_draw_cb,
+            .imgui_ini_key = "floooh.chips.z1013",
+        });
         ui_z1013_init(&state.ui, &(ui_z1013_desc_t){
             .z1013 = &state.z1013,
             .boot_cb = ui_boot_cb,

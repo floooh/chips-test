@@ -179,7 +179,10 @@ void app_init(void) {
     const kc85_desc_t desc = kc85_desc();
     kc85_init(&state.kc85, &desc);
     #ifdef CHIPS_USE_UI
-        ui_init(ui_draw_cb);
+        ui_init(&(ui_desc_t){
+            .draw_cb = ui_draw_cb,
+            .imgui_ini_key = "floooh.chips.kc85",
+        });
         ui_kc85_init(&state.ui, &(ui_kc85_desc_t){
             .kc85 = &state.kc85,
             .boot_cb = ui_boot_cb,

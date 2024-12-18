@@ -130,7 +130,10 @@ void app_init(void) {
     zx_desc_t desc = zx_desc(type, joy_type);
     zx_init(&state.zx, &desc);
     #ifdef CHIPS_USE_UI
-        ui_init(ui_draw_cb);
+        ui_init(&(ui_desc_t){
+            .draw_cb = ui_draw_cb,
+            .imgui_ini_key = "floooh.chips.zx",
+        });
         ui_zx_init(&state.ui, &(ui_zx_desc_t){
             .zx = &state.zx,
             .boot_cb = ui_boot_cb,

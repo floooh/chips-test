@@ -90,7 +90,10 @@ void app_init(void) {
     lc80_desc_t desc = lc80_desc();
     lc80_init(&state.lc80, &desc);
 
-    ui_init(ui_draw_cb);
+    ui_init(&(ui_desc_t){
+        .draw_cb = ui_draw_cb,
+        .imgui_ini_key = "floooh.chips.lc80",
+    });
     ui_lc80_init(&state.ui, &(ui_lc80_desc_t){
         .sys = &state.lc80,
         .boot_cb = ui_boot_cb,

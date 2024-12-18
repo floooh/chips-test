@@ -157,7 +157,10 @@ void app_init(void) {
     prof_init();
     fs_init();
     #ifdef CHIPS_USE_UI
-        ui_init(ui_draw_cb);
+        ui_init(&(ui_desc_t){
+            .draw_cb = ui_draw_cb,
+            .imgui_ini_key = "floooh.chips.c64",
+        });
         ui_c64_init(&state.ui, &(ui_c64_desc_t){
             .c64 = &state.c64,
             .boot_cb = ui_boot_cb,
