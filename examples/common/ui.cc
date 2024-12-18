@@ -75,6 +75,7 @@ void ui_init(const ui_desc_t* desc) {
 
     simgui_desc_t simgui_desc = { };
     simgui_setup(&simgui_desc);
+    ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     auto& style = ImGui::GetStyle();
     style.WindowRounding = 0.0f;
     style.WindowBorderSize = 1.0f;
@@ -115,6 +116,10 @@ void ui_discard(void) {
 void ui_draw(void) {
     handle_save_imgui_ini();
     simgui_new_frame({sapp_width(), sapp_height(), sapp_frame_duration(), sapp_dpi_scale() });
+
+    const ImGuiViewport* viewport = ImGui::GetMainViewport();
+    const ImGuiID dockspace = ImGui::GetID("main_dockspace");
+    ImGui::DockSpaceOverViewport(dockspace, viewport, ImGuiDockNodeFlags_NoDockingOverCentralNode | ImGuiDockNodeFlags_PassthruCentralNode);
     if (state.draw_cb) {
         state.draw_cb();
     }
@@ -226,12 +231,18 @@ static void commit_listener(void* user_data) {
 EM_JS_DEPS(v6502r, "$UTF8ToString,$stringToNewUTF8");
 
 EM_JS(void, emsc_js_save_imgui_ini, (const char* c_key, const char* c_payload), {
+    if (window.localStorage === undefined) {
+        return;
+    }
     const key = UTF8ToString(c_key);
     const payload = UTF8ToString(c_payload);
     window.localStorage.setItem(key, payload);
 });
 
 EM_JS(const char*, emsc_js_load_imgui_ini, (const char* c_key), {
+    if (window.localStorage === undefined) {
+        return 0;
+    }
     const key = UTF8ToString(c_key);
     const payload = window.localStorage.getItem(key);
     if (payload) {
