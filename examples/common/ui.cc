@@ -6,6 +6,7 @@
 #include "sokol_app.h"
 #include "sokol_time.h"
 #include "imgui.h"
+#include "imgui_internal.h" // ImGui::SettingsHandler
 #define SOKOL_IMGUI_IMPL
 #include "sokol_imgui.h"
 #include "gfx.h"
@@ -24,6 +25,7 @@
 
 static struct {
     ui_draw_t draw_cb;
+    ui_save_settings_t save_settings_cb;
     sg_sampler nearest_sampler;
     sg_sampler linear_sampler;
     sg_image empty_snapshot_texture;
@@ -32,6 +34,7 @@ static struct {
         size_t cur_slot;
     } delete_stack;
     char imgui_ini_key[128];
+    ui_settings_t settings;
 } state;
 
 static const struct {
@@ -66,15 +69,18 @@ static const struct {
 static void commit_listener(void* user_data);
 static void load_imgui_ini(void);
 static void handle_save_imgui_ini(void);
+static void register_imgui_settings_handler(void);
 
 void ui_init(const ui_desc_t* desc) {
     assert(desc && desc->draw_cb && desc->imgui_ini_key);
 
     state.draw_cb = desc->draw_cb;
+    state.save_settings_cb = desc->save_settings_cb;
     snprintf(state.imgui_ini_key, sizeof(state.imgui_ini_key), "%s", desc->imgui_ini_key);
 
     simgui_desc_t simgui_desc = { };
     simgui_setup(&simgui_desc);
+    register_imgui_settings_handler();
     ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     auto& style = ImGui::GetStyle();
     style.WindowRounding = 0.0f;
@@ -104,6 +110,10 @@ void ui_init(const ui_desc_t* desc) {
         empty_snapshot_icon.height,
         empty_snapshot_icon.stride);
 
+}
+
+const ui_settings_t* ui_settings(void) {
+    return &state.settings;
 }
 
 void ui_discard(void) {
@@ -256,18 +266,91 @@ EM_JS(const char*, emsc_js_load_imgui_ini, (const char* c_key), {
 static void handle_save_imgui_ini(void) {
     if (ImGui::GetIO().WantSaveIniSettings) {
         ImGui::GetIO().WantSaveIniSettings = false;
+        const char* settings = ImGui::SaveIniSettingsToMemory();
         #if defined(__EMSCRIPTEN__)
-        emsc_js_save_imgui_ini(state.imgui_ini_key, ImGui::SaveIniSettingsToMemory());
+        emsc_js_save_imgui_ini(state.imgui_ini_key, settings);
+        #else
+        (void)settings;
         #endif
     }
 }
 
 static void load_imgui_ini(void) {
+    const char* payload = 0;
     #if defined(__EMSCRIPTEN__)
-    const char* payload = emsc_js_load_imgui_ini(state.imgui_ini_key);
+    payload = emsc_js_load_imgui_ini(state.imgui_ini_key);
+    #endif
     if (payload) {
         ImGui::LoadIniSettingsFromMemory(payload);
         free((void*)payload);
     }
-    #endif
+}
+
+// ImGui Settings handler implementation
+
+// clear all settings data
+static void imgui_ClearAllFn(ImGuiContext* ctx, ImGuiSettingsHandler* handler) {
+    (void)ctx; (void)handler;
+    ui_settings_init(&state.settings);
+}
+
+// read: Called before reading (in registration order)
+static void imgui_ReadInitFn(ImGuiContext* ctx, ImGuiSettingsHandler* handler) {
+    (void)ctx; (void)handler;
+    ui_settings_init(&state.settings);
+}
+
+// read: Called when entering into a new ini entry e.g. "[Window][Name]"
+static void* imgui_ReadOpenFn(ImGuiContext* ctx, ImGuiSettingsHandler* handler, const char* name) {
+    (void)ctx; (void)handler;
+    ui_settings_add(&state.settings, name, false);
+    // NOTE: cannot return nullptr since this means 'no valid ini entry'
+    return (void*)&state.settings;
+}
+
+// read: Called for every line of text within an ini entry
+static void imgui_ReadLineFn(ImGuiContext* ctx, ImGuiSettingsHandler* handler, void* entry, const char* line) {
+    (void)ctx; (void)handler; (void)entry;
+    assert(state.settings.num_slots > 0);
+    int cur_slot_idx = state.settings.num_slots - 1;
+    int is_open = 0;
+    if (sscanf(line, "IsOpen=%i", &is_open) == 1) {
+        state.settings.slots[cur_slot_idx].open = true;
+    }
+}
+
+// read: Called after reading (in registration order)
+static void imgui_ApplyAllFn(ImGuiContext* ctx, ImGuiSettingsHandler* handler) {
+    (void)ctx; (void)handler;
+}
+
+// write: output all entries into 'out_buf'
+static void imgui_WriteAllFn(ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf) {
+    (void)ctx; (void)handler;
+    if (state.save_settings_cb) {
+        ui_settings_t settings = state.save_settings_cb();
+        buf->reserve(buf->size() + settings.num_slots * 64);
+        for (int i = 0; i < settings.num_slots; i++) {
+            const ui_settings_slot_t* slot = &settings.slots[i];
+            buf->appendf("[%s][%s]\n", handler->TypeName, slot->window_title.buf);
+            if (slot->open) {
+                buf->append("IsOpen=1\n");
+            }
+        }
+        buf->append("\n");
+    }
+}
+
+static void register_imgui_settings_handler(void) {
+    const char* type_name = "floooh.chips";
+    ImGuiSettingsHandler ini_handler;
+    ini_handler.TypeName = type_name;;
+    ini_handler.TypeHash = ImHashStr(type_name);
+    ini_handler.ClearAllFn = imgui_ClearAllFn;
+    ini_handler.ReadInitFn = imgui_ReadInitFn;
+    ini_handler.ReadOpenFn = imgui_ReadOpenFn;
+    ini_handler.ReadLineFn = imgui_ReadLineFn;
+    ini_handler.ApplyAllFn = imgui_ApplyAllFn;
+    ini_handler.WriteAllFn = imgui_WriteAllFn;
+    ImGui::AddSettingsHandler(&ini_handler);
 }
