@@ -12,7 +12,7 @@ extern "C" {
 typedef uint64_t ui_texture_t;
 
 typedef void (*ui_draw_t)(void);
-typedef ui_settings_t (*ui_save_settings_t)(void);
+typedef void (*ui_save_settings_t)(ui_settings_t* settings);
 
 typedef struct {
     ui_draw_t draw_cb;

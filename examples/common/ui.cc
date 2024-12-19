@@ -328,7 +328,9 @@ static void imgui_ApplyAllFn(ImGuiContext* ctx, ImGuiSettingsHandler* handler) {
 static void imgui_WriteAllFn(ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf) {
     (void)ctx; (void)handler;
     if (state.save_settings_cb) {
-        ui_settings_t settings = state.save_settings_cb();
+        ui_settings_t settings;
+        ui_settings_init(&settings);
+        state.save_settings_cb(&settings);
         buf->reserve(buf->size() + settings.num_slots * 64);
         for (int i = 0; i < settings.num_slots; i++) {
             const ui_settings_slot_t* slot = &settings.slots[i];
