@@ -21,6 +21,7 @@
 #if defined(CHIPS_USE_UI)
     #define UI_DBG_USE_Z80
     #include "ui.h"
+    #include "ui/ui_settings.h"
     #include "ui/ui_chip.h"
     #include "ui/ui_memedit.h"
     #include "ui/ui_memmap.h"
@@ -56,6 +57,7 @@ static struct {
 
 #ifdef CHIPS_USE_UI
 static void ui_draw_cb(void);
+static void ui_save_settings_cb(ui_settings_t* settings);
 static void ui_boot_cb(z9001_t* sys, z9001_type_t type);
 static void ui_save_snapshot(size_t slot_index);
 static bool ui_load_snapshot(size_t slot_index);
@@ -133,6 +135,7 @@ void app_init(void) {
     #ifdef CHIPS_USE_UI
         ui_init(&(ui_desc_t){
             .draw_cb = ui_draw_cb,
+            .save_settings_cb = ui_save_settings_cb,
             .imgui_ini_key = "floooh.chips.z9001",
         });
         ui_z9001_init(&state.ui, &(ui_z9001_desc_t){
@@ -159,6 +162,7 @@ void app_init(void) {
                 .toggle_breakpoint = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F9), .name = "F9" }
             }
         });
+        ui_z9001_load_settings(&state.ui, ui_settings());
         ui_load_snapshots_from_storage();
     #endif
     bool delay_input = false;
@@ -302,6 +306,10 @@ static void draw_status_bar(void) {
 #if defined(CHIPS_USE_UI)
 static void ui_draw_cb(void) {
     ui_z9001_draw(&state.ui);
+}
+
+static void ui_save_settings_cb(ui_settings_t* settings) {
+    ui_z9001_save_settings(&state.ui, settings);
 }
 
 static void ui_boot_cb(z9001_t* sys, z9001_type_t type) {

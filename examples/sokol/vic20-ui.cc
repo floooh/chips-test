@@ -17,6 +17,7 @@
 #define CHIPS_UI_IMPL
 #include "imgui.h"
 #include "util/m6502dasm.h"
+#include "ui/ui_settings.h"
 #include "ui/ui_util.h"
 #include "ui/ui_chip.h"
 #include "ui/ui_memedit.h"
