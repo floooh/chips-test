@@ -22,6 +22,7 @@
 #include "lc80-roms.h"
 #define UI_DBG_USE_Z80
 #include "ui.h"
+#include "ui/ui_settings.h"
 #include "ui/ui_chip.h"
 #include "ui/ui_memedit.h"
 #include "ui/ui_dasm.h"
@@ -50,6 +51,7 @@ static struct {
 
 static void ui_boot_cb(lc80_t* sys);
 static void ui_draw_cb(void);
+static void ui_save_settings_cb(ui_settings_t* settings);
 static void ui_save_snapshot(size_t slot_index);
 static bool ui_load_snapshot(size_t slot_index);
 static void ui_load_snapshots_from_storage(void);
@@ -92,6 +94,7 @@ void app_init(void) {
 
     ui_init(&(ui_desc_t){
         .draw_cb = ui_draw_cb,
+        .save_settings_cb = ui_save_settings_cb,
         .imgui_ini_key = "floooh.chips.lc80",
     });
     ui_lc80_init(&state.ui, &(ui_lc80_desc_t){
@@ -115,6 +118,7 @@ void app_init(void) {
             .toggle_breakpoint = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F9), .name = "F9" }
         }
     });
+    ui_lc80_load_settings(&state.ui, ui_settings());
     ui_load_snapshots_from_storage();
 }
 
@@ -165,6 +169,10 @@ static void ui_boot_cb(lc80_t* sys) {
 
 static void ui_draw_cb(void) {
     ui_lc80_draw(&state.ui);
+}
+
+static void ui_save_settings_cb(ui_settings_t* settings) {
+    ui_lc80_save_settings(&state.ui, settings);
 }
 
 static void ui_save_snapshot(size_t slot) {
