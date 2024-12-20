@@ -18,6 +18,7 @@
 #if defined(CHIPS_USE_UI)
     #define UI_DBG_USE_Z80
     #include "ui.h"
+    #include "ui/ui_settings.h"
     #include "ui/ui_chip.h"
     #include "ui/ui_memedit.h"
     #include "ui/ui_memmap.h"
@@ -57,6 +58,7 @@ static struct {
 #ifdef CHIPS_USE_UI
 #define BORDER_TOP (24)
 static void ui_draw_cb(void);
+static void ui_save_settings_cb(ui_settings_t* settings);
 static void ui_boot_cb(kc85_t* sys);
 static void ui_save_snapshot(size_t slot_index);
 static bool ui_load_snapshot(size_t slot_index);
@@ -181,6 +183,7 @@ void app_init(void) {
     #ifdef CHIPS_USE_UI
         ui_init(&(ui_desc_t){
             .draw_cb = ui_draw_cb,
+            .save_settings_cb = ui_save_settings_cb,
             .imgui_ini_key = "floooh.chips.kc85",
         });
         ui_kc85_init(&state.ui, &(ui_kc85_desc_t){
@@ -213,6 +216,7 @@ void app_init(void) {
                 .toggle_breakpoint = { .keycode = simgui_map_keycode(SAPP_KEYCODE_F9), .name = "F9" }
             }
         });
+        ui_kc85_load_settings(&state.ui, ui_settings());
         ui_load_snapshots_from_storage();
         // important: initialize webapi after ui
         webapi_init(&(webapi_desc_t){
@@ -475,6 +479,10 @@ static void draw_status_bar(void) {
 #if defined(CHIPS_USE_UI)
 static void ui_draw_cb(void) {
     ui_kc85_draw(&state.ui);
+}
+
+static void ui_save_settings_cb(ui_settings_t* settings) {
+    ui_kc85_save_settings(&state.ui, settings);
 }
 
 static void ui_boot_cb(kc85_t* sys) {
