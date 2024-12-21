@@ -3,9 +3,12 @@
 #include <stddef.h>
 
 // standard loading slots
-#define FS_SLOT_IMAGE (0)
-#define FS_SLOT_SNAPSHOTS (1)
-#define FS_NUM_SLOTS (2)
+typedef enum {
+    FS_CHANNEL_IMAGES = 0,
+    FS_CHANNEL_SNAPSHOTS,
+    //---
+    FS_CHANNEL_NUM,
+} fs_channel_t;
 
 typedef enum {
     FS_RESULT_IDLE,
@@ -24,16 +27,15 @@ typedef void (*fs_snapshot_load_callback_t)(const fs_snapshot_response_t* respon
 
 void fs_init(void);
 void fs_dowork(void);
-void fs_reset(size_t slot_index);
-void fs_start_load_file(size_t slot_index, const char* path);
-void fs_start_load_dropped_file(size_t slot_index);
-bool fs_load_base64(size_t slot_index, const char* name, const char* payload);
-void fs_load_mem(size_t slot_index, const char* path, chips_range_t data);
+void fs_reset(fs_channel_t chn);
+void fs_load_file_async(fs_channel_t chn, const char* path);
+void fs_load_dropped_file_async(fs_channel_t chn);
+bool fs_load_base64(fs_channel_t chn, const char* name, const char* payload);
 bool fs_save_snapshot(const char* system_name, size_t snapshot_index, chips_range_t data);
-bool fs_start_load_snapshot(size_t slot_index, const char* system_name, size_t snapshot_index, fs_snapshot_load_callback_t callback);
-fs_result_t fs_result(size_t slot_index);
-bool fs_success(size_t slot_index);
-bool fs_failed(size_t slot_index);
-bool fs_pending(size_t slot_index);
-chips_range_t fs_data(size_t slot_index);
-bool fs_ext(size_t slot_index, const char* str);
+bool fs_load_snapshot_async(const char* system_name, size_t snapshot_index, fs_snapshot_load_callback_t callback);
+fs_result_t fs_result(fs_channel_t chn);
+bool fs_success(fs_channel_t chn);
+bool fs_failed(fs_channel_t chn);
+bool fs_pending(fs_channel_t chn);
+chips_range_t fs_data(fs_channel_t chn);
+bool fs_ext(fs_channel_t chn, const char* str);

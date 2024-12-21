@@ -220,10 +220,10 @@ void app_init(void) {
     bool delay_input = false;
     if (sargs_exists("file")) {
         delay_input = true;
-        fs_start_load_file(FS_SLOT_IMAGE, sargs_value("file"));
+        fs_load_file_async(FS_CHANNEL_IMAGES, sargs_value("file"));
     }
     if (sargs_exists("prg")) {
-        fs_load_base64(FS_SLOT_IMAGE, "url.prg", sargs_value("prg"));
+        fs_load_base64(FS_CHANNEL_IMAGES, "url.prg", sargs_value("prg"));
     }
     if (!delay_input) {
         if (sargs_exists("input")) {
@@ -250,7 +250,7 @@ void app_frame(void) {
 void app_input(const sapp_event* event) {
     // accept dropped files also when ImGui grabs input
     if (event->type == SAPP_EVENTTYPE_FILES_DROPPED) {
-        fs_start_load_dropped_file(FS_SLOT_IMAGE);
+        fs_load_dropped_file_async(FS_CHANNEL_IMAGES);
     }
     #ifdef CHIPS_USE_UI
     if (ui_input(event)) {
@@ -334,36 +334,36 @@ static void send_keybuf_input(void) {
 static void handle_file_loading(void) {
     fs_dowork();
     const uint32_t load_delay_frames = LOAD_DELAY_FRAMES;
-    if (fs_success(FS_SLOT_IMAGE) && clock_frame_count_60hz() > load_delay_frames) {
+    if (fs_success(FS_CHANNEL_IMAGES) && clock_frame_count_60hz() > load_delay_frames) {
         bool load_success = false;
-        if (fs_ext(FS_SLOT_IMAGE, "txt") || fs_ext(FS_SLOT_IMAGE, "bas")) {
+        if (fs_ext(FS_CHANNEL_IMAGES, "txt") || fs_ext(FS_CHANNEL_IMAGES, "bas")) {
             load_success = true;
-            keybuf_put((const char*)fs_data(FS_SLOT_IMAGE).ptr);
-        } else if (fs_ext(FS_SLOT_IMAGE, "tap")) {
-            load_success = c64_insert_tape(&state.c64, fs_data(FS_SLOT_IMAGE));
-        } else if (fs_ext(FS_SLOT_IMAGE, "bin") || fs_ext(FS_SLOT_IMAGE, "prg") || fs_ext(FS_SLOT_IMAGE, "")) {
-            load_success = c64_quickload(&state.c64, fs_data(FS_SLOT_IMAGE));
+            keybuf_put((const char*)fs_data(FS_CHANNEL_IMAGES).ptr);
+        } else if (fs_ext(FS_CHANNEL_IMAGES, "tap")) {
+            load_success = c64_insert_tape(&state.c64, fs_data(FS_CHANNEL_IMAGES));
+        } else if (fs_ext(FS_CHANNEL_IMAGES, "bin") || fs_ext(FS_CHANNEL_IMAGES, "prg") || fs_ext(FS_CHANNEL_IMAGES, "")) {
+            load_success = c64_quickload(&state.c64, fs_data(FS_CHANNEL_IMAGES));
         }
         if (load_success) {
             if (clock_frame_count_60hz() > (load_delay_frames + 10)) {
                 gfx_flash_success();
             }
-            if (fs_ext(FS_SLOT_IMAGE, "tap")) {
+            if (fs_ext(FS_CHANNEL_IMAGES, "tap")) {
                 c64_tape_play(&state.c64);
             }
             if (!sargs_exists("debug")) {
                 if (sargs_exists("input")) {
                     keybuf_put(sargs_value("input"));
-                } else if (fs_ext(FS_SLOT_IMAGE, "tap")) {
+                } else if (fs_ext(FS_CHANNEL_IMAGES, "tap")) {
                     c64_basic_load(&state.c64);
-                } else if (fs_ext(FS_SLOT_IMAGE, "prg")) {
+                } else if (fs_ext(FS_CHANNEL_IMAGES, "prg")) {
                     c64_basic_run(&state.c64);
                 }
             }
         } else {
             gfx_flash_error();
         }
-        fs_reset(FS_SLOT_IMAGE);
+        fs_reset(FS_CHANNEL_IMAGES);
     }
 }
 
@@ -438,7 +438,7 @@ static void ui_fetch_snapshot_callback(const fs_snapshot_response_t* response) {
 
 static void ui_load_snapshots_from_storage(void) {
     for (size_t snapshot_slot = 0; snapshot_slot < UI_SNAPSHOT_MAX_SLOTS; snapshot_slot++) {
-        fs_start_load_snapshot(FS_SLOT_SNAPSHOTS, "c64", snapshot_slot, ui_fetch_snapshot_callback);
+        fs_load_snapshot_async("c64", snapshot_slot, ui_fetch_snapshot_callback);
     }
 }
 

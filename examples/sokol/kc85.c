@@ -244,10 +244,10 @@ void app_init(void) {
     // snapshot file or rom-module image
     if (sargs_exists("file")) {
         delay_input=true;
-        fs_start_load_file(FS_SLOT_IMAGE, sargs_value("file"));
+        fs_load_file_async(FS_CHANNEL_IMAGES, sargs_value("file"));
     }
     else if (sargs_exists("mod_image")) {
-        fs_start_load_file(FS_SLOT_IMAGE, sargs_value("mod_image"));
+        fs_load_file_async(FS_CHANNEL_IMAGES, sargs_value("mod_image"));
     }
     // check if any modules should be inserted
     if (sargs_exists("mod")) {
@@ -303,7 +303,7 @@ void app_frame(void) {
 void app_input(const sapp_event* event) {
     // accept dropped files also when ImGui grabs input
     if (event->type == SAPP_EVENTTYPE_FILES_DROPPED) {
-        fs_start_load_dropped_file(FS_SLOT_IMAGE);
+        fs_load_dropped_file_async(FS_CHANNEL_IMAGES);
     }
     #ifdef CHIPS_USE_UI
     if (ui_input(event)) {
@@ -403,8 +403,8 @@ static void send_keybuf_input(void) {
 static void handle_file_loading(void) {
     fs_dowork();
     const uint32_t load_delay_frames = LOAD_DELAY_FRAMES;
-    if (fs_success(FS_SLOT_IMAGE) && clock_frame_count_60hz() > load_delay_frames) {
-        const chips_range_t file_data = fs_data(FS_SLOT_IMAGE);
+    if (fs_success(FS_CHANNEL_IMAGES) && clock_frame_count_60hz() > load_delay_frames) {
+        const chips_range_t file_data = fs_data(FS_CHANNEL_IMAGES);
         bool load_success = false;
         if (sargs_exists("mod_image")) {
             // insert the rom module
@@ -412,7 +412,7 @@ static void handle_file_loading(void) {
                 load_success = kc85_insert_rom_module(&state.kc85, 0x08, state.delay_insert_module, file_data);
             }
         }
-        else if (fs_ext(FS_SLOT_IMAGE, "txt") || fs_ext(FS_SLOT_IMAGE, "bas")) {
+        else if (fs_ext(FS_CHANNEL_IMAGES, "txt") || fs_ext(FS_CHANNEL_IMAGES, "bas")) {
             load_success = true;
             keybuf_put((const char*)file_data.ptr);
         }
@@ -430,7 +430,7 @@ static void handle_file_loading(void) {
         else {
             gfx_flash_error();
         }
-        fs_reset(FS_SLOT_IMAGE);
+        fs_reset(FS_CHANNEL_IMAGES);
     }
 }
 
@@ -536,7 +536,7 @@ static void ui_fetch_snapshot_callback(const fs_snapshot_response_t* response) {
 
 static void ui_load_snapshots_from_storage(void) {
     for (size_t snapshot_slot = 0; snapshot_slot < UI_SNAPSHOT_MAX_SLOTS; snapshot_slot++) {
-        fs_start_load_snapshot(FS_SLOT_SNAPSHOTS, KC85_SYSTEM_NAME, snapshot_slot, ui_fetch_snapshot_callback);
+        fs_load_snapshot_async(KC85_SYSTEM_NAME, snapshot_slot, ui_fetch_snapshot_callback);
     }
 }
 

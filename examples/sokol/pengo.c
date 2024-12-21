@@ -276,7 +276,7 @@ static void ui_fetch_snapshot_callback(const fs_snapshot_response_t* response) {
 
 static void ui_load_snapshots_from_storage(void) {
     for (size_t snapshot_slot = 0; snapshot_slot < UI_SNAPSHOT_MAX_SLOTS; snapshot_slot++) {
-        fs_start_load_snapshot(FS_SLOT_SNAPSHOTS, "pengo", snapshot_slot, ui_fetch_snapshot_callback);
+        fs_load_snapshot_async("pengo", snapshot_slot, ui_fetch_snapshot_callback);
     }
 }
 #endif
