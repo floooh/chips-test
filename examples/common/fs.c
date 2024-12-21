@@ -18,7 +18,7 @@
 #endif
 
 #define FS_EXT_SIZE (16)
-#define FS_PATH_SIZE (256)
+#define FS_PATH_SIZE (2048)
 #define FS_MAX_SIZE (2024 * 1024)
 
 typedef struct {
@@ -66,15 +66,29 @@ static void fs_path_reset(fs_path_t* path) {
     path->clamped = false;
 }
 
-#if defined(__GNUC__)
-static void fs_path_printf(fs_path_t* path, const char* fmt, ...) __attribute__((format(printf, 2, 3)));
+#if defined (WIN32)
+bool fs_win32_path_to_wide(const fs_path* path, WCHAR* out_buf, size_t out_buf_size_bytes) {
+    if ((path.len == 0) || (path.clamped)) {
+        return false;
+    }
+    if (0 == MultiByteToWideChar(CP_UTF8, 0, path.cstr, -1, out_buf, out_buf_size_bytes)) {
+        return false;
+    }
+    return true;
+}
 #endif
-static void fs_path_printf(fs_path_t* path, const char* fmt, ...) {
+
+#if defined(__GNUC__)
+static fs_path_t fs_path_printf(const char* fmt, ...) __attribute__((format(printf, 1, 2)));
+#endif
+static fs_path_t fs_path_printf(const char* fmt, ...) {
+    fs_path_t path = {0};
     va_list args;
     va_start(args, fmt);
-    int res = vsnprintf(path->cstr, sizeof(path->cstr), fmt, args);
+    int res = vsnprintf(path.cstr, sizeof(path.cstr), fmt, args);
     va_end(args);
-    path->clamped = res >= (int)sizeof(path->cstr);
+    path.clamped = res >= (int)sizeof(path.cstr);
+    return path;
 }
 
 static void fs_path_extract_extension(fs_path_t* path, char* buf, size_t buf_size) {
@@ -96,6 +110,57 @@ static void fs_path_extract_extension(fs_path_t* path, char* buf, size_t buf_siz
         }
         buf[i] = 0;
     }
+}
+
+static fs_path_t fs_tmp_dir(void) {
+    #if defined(WIN32)
+    WCHAR wc_tmp_path[FS_PATH_SIZE];
+    if (0 == GetTempPathW(sizeof(wc_tmp_path) / sizeof(WCHAR), wc_tmp_path)) {
+        return (fs_path_t){0};
+    }
+    char utf8_tmp_path[FS_PATH_SIZE];
+    if (0 == WideCharToMultiByte(CP_UTF8, 0, wc_tmp_path, -1, utf8_tmp_path, sizeof(utf8_tmp_path), NULL, NULL)) {
+        return (fs_path_t){0};
+    }
+    return fs_path_printf("%s", utf8_tmp_path);
+    #else
+    return fs_path_printf("%s", "/tmp");
+    #endif
+}
+
+fs_result_t fs_result(fs_channel_t chn) {
+    assert(state.valid);
+    assert(chn < FS_CHANNEL_NUM);
+    return state.channels[chn].result;
+}
+
+bool fs_success(fs_channel_t chn) {
+    return fs_result(chn) == FS_RESULT_SUCCESS;
+}
+
+bool fs_failed(fs_channel_t chn) {
+    return fs_result(chn) == FS_RESULT_FAILED;
+}
+
+bool fs_pending(fs_channel_t chn) {
+    return fs_result(chn) == FS_RESULT_PENDING;
+}
+
+chips_range_t fs_data(fs_channel_t chn) {
+    assert(state.valid);
+    assert(chn < FS_CHANNEL_NUM);
+    fs_channel_state_t* channel = &state.channels[chn];
+    if (channel->result == FS_RESULT_SUCCESS) {
+        return (chips_range_t){ .ptr = channel->ptr, .size = channel->size };
+    }
+    else {
+        return (chips_range_t){0};
+    }
+}
+
+fs_path_t fs_make_snapshot_path(const char* system_name, size_t snapshot_index) {
+    fs_path_t tmp_dir = fs_tmp_dir();
+    return fs_path_printf("%s/chips_%s_snapshot_%zu", tmp_dir.cstr, system_name, snapshot_index);
 }
 
 // http://web.mit.edu/freebsd/head/contrib/wpa/src/utils/base64.c
@@ -191,7 +256,7 @@ bool fs_load_base64(fs_channel_t chn, const char* name, const char* payload) {
     assert(chn < FS_CHANNEL_NUM);
     fs_reset(chn);
     fs_channel_state_t* channel = &state.channels[chn];
-    fs_path_printf(&channel->path, "%s", name);
+    channel->path = fs_path_printf("%s", name);
     if (fs_base64_decode(channel, payload)) {
         channel->result = FS_RESULT_SUCCESS;
         channel->ptr = channel->buf;
@@ -222,6 +287,31 @@ static void fs_fetch_callback(const sfetch_response_t* response) {
 }
 
 #if defined(__EMSCRIPTEN__)
+
+EM_JS_DEPS(chips_ini, "$UTF8ToString,$stringToNewUTF8");
+
+EM_JS(void, emsc_js_save_ini, (const char* c_key, const char* c_payload), {
+    if (window.localStorage === undefined) {
+        return;
+    }
+    const key = UTF8ToString(c_key);
+    const payload = UTF8ToString(c_payload);
+    window.localStorage.setItem(key, payload);
+});
+
+EM_JS(const char*, emsc_js_load_ini, (const char* c_key), {
+    if (window.localStorage === undefined) {
+        return 0;
+    }
+    const key = UTF8ToString(c_key);
+    const payload = window.localStorage.getItem(key);
+    if (payload) {
+        return stringToNewUTF8(payload);
+    } else {
+        return 0;
+    }
+});
+
 static void fs_emsc_dropped_file_callback(const sapp_html5_fetch_response* response) {
     fs_channel_t chn = (fs_channel_t)(uintptr_t)response->user_data;
     assert(chn < FS_CHANNEL_NUM);
@@ -238,168 +328,6 @@ static void fs_emsc_dropped_file_callback(const sapp_html5_fetch_response* respo
         channel->result = FS_RESULT_FAILED;
     }
 }
-#endif
-
-void fs_load_file_async(fs_channel_t chn, const char* path) {
-    assert(state.valid);
-    assert(chn < FS_CHANNEL_NUM);
-    fs_reset(chn);
-    fs_channel_state_t* channel = &state.channels[chn];
-    fs_path_printf(&channel->path, "%s", path);
-    channel->result = FS_RESULT_PENDING;
-    sfetch_send(&(sfetch_request_t){
-        .path = path,
-        .channel = chn,
-        .callback = fs_fetch_callback,
-        .buffer = { .ptr = channel->buf, .size = FS_MAX_SIZE },
-        .user_data = { .ptr = &chn, .size = sizeof(chn) },
-    });
-}
-
-void fs_load_dropped_file_async(fs_channel_t chn) {
-    assert(state.valid);
-    assert(chn < FS_CHANNEL_NUM);
-    fs_reset(chn);
-    fs_channel_state_t* channel = &state.channels[chn];
-    const char* path = sapp_get_dropped_file_path(0);
-    fs_path_printf(&channel->path, "%s", path);
-    channel->result = FS_RESULT_PENDING;
-    #if defined(__EMSCRIPTEN__)
-        sapp_html5_fetch_dropped_file(&(sapp_html5_fetch_request){
-            .dropped_file_index = 0,
-            .callback = fs_emsc_dropped_file_callback,
-            .buffer = { .ptr = channel->buf, .size = FS_MAX_SIZE },
-            .user_data = (void*)(intptr_t)chn,
-        });
-    #else
-        fs_load_file_async(chn, path);
-    #endif
-}
-
-fs_result_t fs_result(fs_channel_t chn) {
-    assert(state.valid);
-    assert(chn < FS_CHANNEL_NUM);
-    return state.channels[chn].result;
-}
-
-bool fs_success(fs_channel_t chn) {
-    return fs_result(chn) == FS_RESULT_SUCCESS;
-}
-
-bool fs_failed(fs_channel_t chn) {
-    return fs_result(chn) == FS_RESULT_FAILED;
-}
-
-bool fs_pending(fs_channel_t chn) {
-    return fs_result(chn) == FS_RESULT_PENDING;
-}
-
-chips_range_t fs_data(fs_channel_t chn) {
-    assert(state.valid);
-    assert(chn < FS_CHANNEL_NUM);
-    fs_channel_state_t* channel = &state.channels[chn];
-    if (channel->result == FS_RESULT_SUCCESS) {
-        return (chips_range_t){ .ptr = channel->ptr, .size = channel->size };
-    }
-    else {
-        return (chips_range_t){0};
-    }
-}
-
-fs_path_t fs_make_snapshot_path(const char* dir, const char* system_name, size_t snapshot_index) {
-    fs_path_t path = {0};
-    fs_path_printf(&path, "%s/chips_%s_snapshot_%zu", dir, system_name, snapshot_index);
-    return path;
-}
-
-#if !defined(__EMSCRIPTEN__)
-static void fs_snapshot_fetch_callback(const sfetch_response_t* response) {
-    const fs_snapshot_load_context_t* ctx = (fs_snapshot_load_context_t*) response->user_data;
-    size_t snapshot_index = ctx->snapshot_index;
-    fs_snapshot_load_callback_t callback = ctx->callback;
-    if (response->fetched) {
-        callback(&(fs_snapshot_response_t){
-            .snapshot_index = snapshot_index,
-            .result = FS_RESULT_SUCCESS,
-            .data = {
-                .ptr = (uint8_t*)response->data.ptr,
-                .size = response->data.size
-            }
-        });
-    }
-    else if (response->failed) {
-        callback(&(fs_snapshot_response_t){
-            .snapshot_index = snapshot_index,
-            .result = FS_RESULT_FAILED,
-        });
-    }
-}
-#endif
-
-#if defined (WIN32)
-fs_path_t fs_win32_make_snapshot_path_utf8(const char* system_name, size_t snapshot_index) {
-    WCHAR wc_tmp_path[1024];
-    if (0 == GetTempPathW(sizeof(wc_tmp_path), wc_tmp_path)) {
-        return (fs_path_t){0};
-    }
-    char utf8_tmp_path[2048];
-    if (0 == WideCharToMultiByte(CP_UTF8, 0, wc_tmp_path, -1, utf8_tmp_path, sizeof(utf8_tmp_path), NULL, NULL)) {
-        return (fs_path_t){0};
-    }
-    return fs_make_snapshot_path(utf8_tmp_path, system_name, snapshot_index);
-}
-
-bool fs_win32_make_snapshot_path_wide(const char* system_name, size_t snapshot_index, WCHAR* out_buf, size_t out_buf_size_bytes) {
-    const fs_path_t path = fs_win32_make_snapshot_path_utf8(system_name, snapshot_index);
-    if ((path.len == 0) || (path.clamped)) {
-        return false;
-    }
-    if (0 == MultiByteToWideChar(CP_UTF8, 0, path.cstr, -1, out_buf, out_buf_size_bytes)) {
-        return false;
-    }
-    return true;
-}
-
-bool fs_save_snapshot(const char* system_name, size_t snapshot_index, chips_range_t data) {
-    WCHAR wc_path[1024];
-    if (!fs_win32_make_snapshot_path_wide(system_name, snapshot_index, wc_path, sizeof(wc_path)/sizeof(WCHAR))) {
-        return false;
-    }
-    HANDLE fp = CreateFileW(wc_path, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (fp == INVALID_HANDLE_VALUE) {
-        return false;
-    }
-    if (!WriteFile(fp, data.ptr, data.size, NULL, NULL)) {
-        CloseHandle(fp);
-        return false;
-    }
-    CloseHandle(fp);
-    return true;
-}
-
-bool fs_load_snapshot_async(size_t slot_index, const char* system_name, size_t snapshot_index, fs_snapshot_load_callback_t callback) {
-    assert(slot_index < FS_NUM_SLOTS);
-    assert(system_name && callback);
-    fs_path_t path = fs_win32_make_snapshot_path_utf8(system_name, snapshot_index);
-    if ((path.len == 0) || path.clamped) {
-        return false;
-    }
-    fs_snapshot_load_context_t context = {
-        .snapshot_index = snapshot_index,
-        .callback = callback
-    };
-    fs_slot_t* slot = &state.slots[slot_index];
-    sfetch_send(&(sfetch_request_t){
-        .path = path.cstr,
-        .channel = slot_index,
-        .callback = fs_snapshot_fetch_callback,
-        .buffer = { .ptr = slot->buf, .size = FS_MAX_SIZE },
-        .user_data = { .ptr = &context, .size = sizeof(context) }
-    });
-    return true;
-}
-
-#elif defined(__EMSCRIPTEN__)
 
 EM_JS(void, fs_js_save_snapshot, (const char* system_name_cstr, int snapshot_index, void* bytes, int num_bytes), {
     const db_name = 'chips';
@@ -491,7 +419,7 @@ EM_JS(void, fs_js_load_snapshot, (const char* system_name_cstr, int snapshot_ind
     }
 });
 
-bool fs_save_snapshot(const char* system_name, size_t snapshot_index, chips_range_t data) {
+bool fs_emsc_save_snapshot(const char* system_name, size_t snapshot_index, chips_range_t data) {
     assert(system_name && data.ptr && data.size > 0);
     fs_js_save_snapshot(system_name, (int)snapshot_index, data.ptr, data.size);
     return true;
@@ -524,7 +452,7 @@ EMSCRIPTEN_KEEPALIVE void fs_emsc_load_snapshot_callback(const fs_snapshot_load_
     free((void*)ctx);
 }
 
-bool fs_load_snapshot_async(const char* system_name, size_t snapshot_index, fs_snapshot_load_callback_t callback) {
+bool fs_emsc_load_snapshot_async(const char* system_name, size_t snapshot_index, fs_snapshot_load_callback_t callback) {
     assert(slot_index < FS_NUM_SLOTS);
     assert(system_name && callback);
 
@@ -537,28 +465,66 @@ bool fs_load_snapshot_async(const char* system_name, size_t snapshot_index, fs_s
 
     return true;
 }
-#else // Apple or Linux
-
-bool fs_save_snapshot(const char* system_name, size_t snapshot_index, chips_range_t data) {
-    assert(system_name && data.ptr && data.size > 0);
-    fs_path_t path = fs_make_snapshot_path("/tmp", system_name, snapshot_index);
-    if (path.clamped) {
-        return false;
+#else // any native platform
+static void fs_win32_posix_snapshot_fetch_callback(const sfetch_response_t* response) {
+    const fs_snapshot_load_context_t* ctx = (fs_snapshot_load_context_t*) response->user_data;
+    size_t snapshot_index = ctx->snapshot_index;
+    fs_snapshot_load_callback_t callback = ctx->callback;
+    if (response->fetched) {
+        callback(&(fs_snapshot_response_t){
+            .snapshot_index = snapshot_index,
+            .result = FS_RESULT_SUCCESS,
+            .data = {
+                .ptr = (uint8_t*)response->data.ptr,
+                .size = response->data.size
+            }
+        });
     }
-    FILE* fp = fopen(path.cstr, "wb");
-    if (fp) {
-        fwrite(data.ptr, data.size, 1, fp);
-        fclose(fp);
-        return true;
-    }
-    else {
-        return false;
+    else if (response->failed) {
+        callback(&(fs_snapshot_response_t){
+            .snapshot_index = snapshot_index,
+            .result = FS_RESULT_FAILED,
+        });
     }
 }
 
-bool fs_load_snapshot_async(const char* system_name, size_t snapshot_index, fs_snapshot_load_callback_t callback) {
+static bool fs_win32_posix_write_file(fs_path_t path, chips_range_t data) {
+    if (path.clamped) {
+        return false;
+    }
+    #if defined(WIN32)
+        WCHAR wc_path[1024];
+        if (!fs_win32_path_to_wide(path, wc_path, sizeof(wc_path)/sizeof(WCHAR))) {
+            return false;
+        }
+        HANDLE fp = CreateFileW(wc_path, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+        if (fp == INVALID_HANDLE_VALUE) {
+            return false;
+        }
+        if (!WriteFile(fp, data.ptr, data.size, NULL, NULL)) {
+            CloseHandle(fp);
+            return false;
+        }
+        CloseHandle(fp);
+    #else
+        FILE* fp = fopen(path.cstr, "wb");
+        if (!fp) {
+            return false;
+        }
+        fwrite(data.ptr, data.size, 1, fp);
+        fclose(fp);
+    #endif
+    return true;
+}
+
+bool fs_win32_posix_save_snapshot(const char* system_name, size_t snapshot_index, chips_range_t data) {
+    fs_path_t path = fs_make_snapshot_path(system_name, snapshot_index);
+    return fs_win32_posix_write_file(path, data);
+}
+
+bool fs_win32_posix_load_snapshot_async(const char* system_name, size_t snapshot_index, fs_snapshot_load_callback_t callback) {
     assert(system_name && callback);
-    fs_path_t path = fs_make_snapshot_path("/tmp", system_name, snapshot_index);
+    fs_path_t path = fs_make_snapshot_path(system_name, snapshot_index);
     if (path.clamped) {
         return false;
     }
@@ -571,10 +537,88 @@ bool fs_load_snapshot_async(const char* system_name, size_t snapshot_index, fs_s
     sfetch_send(&(sfetch_request_t){
         .path = path.cstr,
         .channel = (int)chn,
-        .callback = fs_snapshot_fetch_callback,
+        .callback = fs_win32_posix_snapshot_fetch_callback,
         .buffer = { .ptr = channel->buf, .size = FS_MAX_SIZE },
         .user_data = { .ptr = &context, .size = sizeof(context) }
     });
     return true;
 }
 #endif
+
+void fs_load_file_async(fs_channel_t chn, const char* path) {
+    assert(state.valid);
+    assert(chn < FS_CHANNEL_NUM);
+    fs_reset(chn);
+    fs_channel_state_t* channel = &state.channels[chn];
+    channel->path = fs_path_printf("%s", path);
+    channel->result = FS_RESULT_PENDING;
+    sfetch_send(&(sfetch_request_t){
+        .path = path,
+        .channel = chn,
+        .callback = fs_fetch_callback,
+        .buffer = { .ptr = channel->buf, .size = FS_MAX_SIZE },
+        .user_data = { .ptr = &chn, .size = sizeof(chn) },
+    });
+}
+
+void fs_load_dropped_file_async(fs_channel_t chn) {
+    assert(state.valid);
+    assert(chn < FS_CHANNEL_NUM);
+    fs_reset(chn);
+    fs_channel_state_t* channel = &state.channels[chn];
+    const char* path = sapp_get_dropped_file_path(0);
+    channel->path = fs_path_printf("%s", path);
+    channel->result = FS_RESULT_PENDING;
+    #if defined(__EMSCRIPTEN__)
+        sapp_html5_fetch_dropped_file(&(sapp_html5_fetch_request){
+            .dropped_file_index = 0,
+            .callback = fs_emsc_dropped_file_callback,
+            .buffer = { .ptr = channel->buf, .size = FS_MAX_SIZE },
+            .user_data = (void*)(intptr_t)chn,
+        });
+    #else
+        fs_load_file_async(chn, path);
+    #endif
+}
+
+bool fs_save_snapshot(const char* system_name, size_t snapshot_index, chips_range_t data) {
+    #if defined(__EMSCRIPTEN__)
+    return fs_emsc_save_snapshot(system_name, snapshot_index, data);
+    #else
+    return fs_win32_posix_save_snapshot(system_name, snapshot_index, data);
+    #endif
+}
+
+bool fs_load_snapshot_async(const char* system_name, size_t snapshot_index, fs_snapshot_load_callback_t callback) {
+    #if defined(__EMSCRIPTEN__)
+    return fs_emsc_load_snapshot_async(system_name, snapshot_index, callback);
+    #else
+    return fs_win32_posix_load_snapshot_async(system_name, snapshot_index, callback);
+    #endif
+}
+
+void fs_save_ini(const char* key, const char* payload) {
+    assert(key && payload);
+    #if defined(__EMSCRIPTEN__)
+    emsc_js_save_ini(key, payload);
+    #else
+    (void)key; (void)payload;
+    #endif
+}
+
+const char* fs_load_ini(const char* key) {
+    assert(key);
+    #if defined(__EMSCRIPTEN__)
+    return emsc_js_load_ini(key);
+    #else
+    (void)key;
+    return 0;
+    #endif
+}
+
+void fs_free_ini(const char* payload_or_null) {
+    if (payload_or_null) {
+        void* payload = (void*)payload_or_null;
+        free(payload);
+    }
+}

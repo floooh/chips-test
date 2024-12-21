@@ -2,6 +2,10 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 // standard loading slots
 typedef enum {
     FS_CHANNEL_IMAGES = 0,
@@ -39,3 +43,10 @@ bool fs_failed(fs_channel_t chn);
 bool fs_pending(fs_channel_t chn);
 chips_range_t fs_data(fs_channel_t chn);
 bool fs_ext(fs_channel_t chn, const char* str);
+void fs_save_ini(const char* key, const char* payload);
+const char* fs_load_ini(const char* key);
+void fs_free_ini(const char* payload_or_null);
+
+#if defined(__cplusplus)
+} // extern "C"
+#endif

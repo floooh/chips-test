@@ -10,12 +10,9 @@
 #define SOKOL_IMGUI_IMPL
 #include "sokol_imgui.h"
 #include "gfx.h"
+#include "fs.h"
 #include <stdlib.h> // calloc
 #include <stdio.h> // snprintf
-
-#if defined(__EMSCRIPTEN__)
-#include <emscripten.h>
-#endif
 
 #define UI_DELETE_STACK_SIZE (32)
 
@@ -237,52 +234,18 @@ static void commit_listener(void* user_data) {
     state.delete_stack.cur_slot = 0;
 }
 
-#if defined(__EMSCRIPTEN__)
-EM_JS_DEPS(v6502r, "$UTF8ToString,$stringToNewUTF8");
-
-EM_JS(void, emsc_js_save_imgui_ini, (const char* c_key, const char* c_payload), {
-    if (window.localStorage === undefined) {
-        return;
-    }
-    const key = UTF8ToString(c_key);
-    const payload = UTF8ToString(c_payload);
-    window.localStorage.setItem(key, payload);
-});
-
-EM_JS(const char*, emsc_js_load_imgui_ini, (const char* c_key), {
-    if (window.localStorage === undefined) {
-        return 0;
-    }
-    const key = UTF8ToString(c_key);
-    const payload = window.localStorage.getItem(key);
-    if (payload) {
-        return stringToNewUTF8(payload);
-    } else {
-        return 0;
-    }
-});
-#endif
-
 static void handle_save_imgui_ini(void) {
     if (ImGui::GetIO().WantSaveIniSettings) {
         ImGui::GetIO().WantSaveIniSettings = false;
-        const char* settings = ImGui::SaveIniSettingsToMemory();
-        #if defined(__EMSCRIPTEN__)
-        emsc_js_save_imgui_ini(state.imgui_ini_key, settings);
-        #else
-        (void)settings;
-        #endif
+        fs_save_ini(state.imgui_ini_key, ImGui::SaveIniSettingsToMemory());
     }
 }
 
 static void load_imgui_ini(void) {
-    const char* payload = 0;
-    #if defined(__EMSCRIPTEN__)
-    payload = emsc_js_load_imgui_ini(state.imgui_ini_key);
-    #endif
+    const char* payload = fs_load_ini(state.imgui_ini_key);
     if (payload) {
         ImGui::LoadIniSettingsFromMemory(payload);
-        free((void*)payload);
+        fs_free_ini(payload);
     }
 }
 
