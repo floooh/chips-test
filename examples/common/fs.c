@@ -67,11 +67,12 @@ static void fs_path_reset(fs_path_t* path) {
 }
 
 #if defined (WIN32)
-bool fs_win32_path_to_wide(const fs_path_t* path, WCHAR* out_buf, size_t out_buf_size_bytes) {
+bool fs_win32_path_to_wide(const fs_path_t* path, WCHAR* out_buf, size_t out_buf_size_in_bytes) {
     if ((path->cstr[0] == 0) || (path->clamped)) {
         return false;
     }
-    if (0 == MultiByteToWideChar(CP_UTF8, 0, path->cstr, -1, out_buf, out_buf_size_bytes)) {
+    int out_num_chars = (int)(out_buf_size_in_bytes / sizeof(wchar_t));
+    if (0 == MultiByteToWideChar(CP_UTF8, 0, path->cstr, -1, out_buf, out_num_chars)) {
         return false;
     }
     return true;
@@ -488,8 +489,8 @@ static bool fs_win32_posix_write_file(fs_path_t path, chips_range_t data) {
         return false;
     }
     #if defined(WIN32)
-        WCHAR wc_path[1024];
-        if (!fs_win32_path_to_wide(&path, wc_path, sizeof(wc_path)/sizeof(WCHAR))) {
+        WCHAR wc_path[FS_PATH_SIZE];
+        if (!fs_win32_path_to_wide(&path, wc_path, sizeof(wc_path))) {
             return false;
         }
         HANDLE fp = CreateFileW(wc_path, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -518,8 +519,8 @@ static chips_range_t fs_win32_posix_read_file(fs_path_t path, bool null_terminat
         return (chips_range_t){0};
     }
     #if defined(WIN32)
-        WCHAR wc_path[1024];
-        if (!fs_win32_path_to_wide(&path, wc_path, sizeof(wc_path)/sizeof(WCHAR))) {
+        WCHAR wc_path[FS_PATH_SIZE];
+        if (!fs_win32_path_to_wide(&path, wc_path, sizeof(wc_path))) {
             return (chips_range_t){0};
         }
         HANDLE fp = CreateFileW(wc_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
