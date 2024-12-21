@@ -158,11 +158,6 @@ chips_range_t fs_data(fs_channel_t chn) {
     }
 }
 
-fs_path_t fs_make_snapshot_path(const char* system_name, size_t snapshot_index) {
-    fs_path_t tmp_dir = fs_tmp_dir();
-    return fs_path_printf("%s/chips_%s_snapshot_%zu", tmp_dir.cstr, system_name, snapshot_index);
-}
-
 // http://web.mit.edu/freebsd/head/contrib/wpa/src/utils/base64.c
 static const unsigned char fs_base64_table[65] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 static bool fs_base64_decode(fs_channel_state_t* channel, const char* src) {
@@ -517,14 +512,71 @@ static bool fs_win32_posix_write_file(fs_path_t path, chips_range_t data) {
     return true;
 }
 
+// NOTE: free the returned range.ptr with free(ptr)
+static chips_range_t fs_win32_posix_read_file(fs_path_t path, bool null_terminated) {
+    if (path.clamped) {
+        return (chips_range_t){0};
+    }
+    #if defined(WIN32)
+        WCHAR wc_path[1024];
+        if (!fs_win32_path_to_wide(&path, wc_path, sizeof(wc_path)/sizeof(WCHAR))) {
+            return (chips_range_t){0};
+        }
+        HANDLE fp = CreateFileW(wc_path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+        if (fp == INVALID_HANDLE_VALUE) {
+            return (chips_range_t){0};
+        }
+        size_t file_size = GetFileSize(fp, NULL);
+        size_t alloc_size = null_terminated ? file_size + 1 : file_size;
+        void* ptr = calloc(1, alloc_size);
+        DWORD read_bytes = 0;
+        BOOL read_res = ReadFile(fp, ptr, file_size, &read_bytes, NULL);
+        CloseHandle(fp);
+        if (read_res && read_bytes == file_size) {
+            return (chips_range_t){ .ptr = ptr, .size = alloc_size };
+        } else {
+            free(ptr);
+            return (chips_range_t){0};
+        }
+    #else
+        FILE* fp = fopen(path.cstr, "rb");
+        if (!fp) {
+            return (chips_range_t){0};
+        }
+        fseek(fp, 0, SEEK_END);
+        size_t file_size = ftell(fp);
+        fseek(fp, 0, SEEK_SET);
+        size_t alloc_size = null_terminated ? file_size + 1 : file_size;
+        void* ptr = calloc(1, alloc_size);
+        size_t bytes_read = fread(ptr, 1, file_size, fp);
+        fclose(fp);
+        if (bytes_read == file_size) {
+            return (chips_range_t){ .ptr = ptr, .size = alloc_size };
+        } else {
+            free(ptr);
+            return (chips_range_t){0};
+        }
+    #endif
+}
+
+fs_path_t fs_win32_posix_make_snapshot_path(const char* system_name, size_t snapshot_index) {
+    fs_path_t tmp_dir = fs_tmp_dir();
+    return fs_path_printf("%s/chips_%s_snapshot_%zu", tmp_dir.cstr, system_name, snapshot_index);
+}
+
+fs_path_t fs_win32_posix_make_ini_path(const char* key) {
+    fs_path_t tmp_dir = fs_tmp_dir();
+    return fs_path_printf("%s/%s_imgui.ini", tmp_dir.cstr, key);
+}
+
 bool fs_win32_posix_save_snapshot(const char* system_name, size_t snapshot_index, chips_range_t data) {
-    fs_path_t path = fs_make_snapshot_path(system_name, snapshot_index);
+    fs_path_t path = fs_win32_posix_make_snapshot_path(system_name, snapshot_index);
     return fs_win32_posix_write_file(path, data);
 }
 
 bool fs_win32_posix_load_snapshot_async(const char* system_name, size_t snapshot_index, fs_snapshot_load_callback_t callback) {
     assert(system_name && callback);
-    fs_path_t path = fs_make_snapshot_path(system_name, snapshot_index);
+    fs_path_t path = fs_win32_posix_make_snapshot_path(system_name, snapshot_index);
     if (path.clamped) {
         return false;
     }
@@ -602,7 +654,9 @@ void fs_save_ini(const char* key, const char* payload) {
     #if defined(__EMSCRIPTEN__)
     emsc_js_save_ini(key, payload);
     #else
-    (void)key; (void)payload;
+    fs_path_t path = fs_win32_posix_make_ini_path(key);
+    chips_range_t data = { .ptr = (void*)payload, .size = strlen(payload) };
+    fs_win32_posix_write_file(path, data);
     #endif
 }
 
@@ -611,8 +665,9 @@ const char* fs_load_ini(const char* key) {
     #if defined(__EMSCRIPTEN__)
     return emsc_js_load_ini(key);
     #else
-    (void)key;
-    return 0;
+    fs_path_t path = fs_win32_posix_make_ini_path(key);
+    chips_range_t data = fs_win32_posix_read_file(path, true);
+    return data.ptr;
     #endif
 }
 
