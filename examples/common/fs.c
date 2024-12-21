@@ -415,17 +415,17 @@ EM_JS(void, fs_js_save_snapshot, (const char* system_name_cstr, int snapshot_ind
     }
     open_request.onupgradeneeded = () => {
         console.log('fs_js_save_snapshot: creating db');
-        let db = open_request.result;
+        const db = open_request.result;
         db.createObjectStore(db_store_name);
     };
     open_request.onsuccess = () => {
         console.log('fs_js_save_snapshot: onsuccess');
-        let db = open_request.result;
-        let transaction = db.transaction([db_store_name], 'readwrite');
-        let file = transaction.objectStore(db_store_name);
-        let key = system_name + '_' + snapshot_index;
-        let blob = HEAPU8.subarray(bytes, bytes + num_bytes);
-        let put_request = file.put(blob, key);
+        const db = open_request.result;
+        const transaction = db.transaction([db_store_name], 'readwrite');
+        const file = transaction.objectStore(db_store_name);
+        const key = system_name + '_' + snapshot_index;
+        const blob = HEAPU8.subarray(bytes, bytes + num_bytes);
+        const put_request = file.put(blob, key);
         put_request.onsuccess = () => {
             console.log('fs_js_save_snapshot:', key, 'successfully stored')
         };
@@ -453,11 +453,11 @@ EM_JS(void, fs_js_load_snapshot, (const char* system_name_cstr, int snapshot_ind
     }
     open_request.onupgradeneeded = () => {
         console.log('fs_js_load_snapshot: creating db');
-        let db = open_request.result;
+        const db = open_request.result;
         db.createObjectStore(db_store_name);
     };
     open_request.onsuccess = () => {
-        let db = open_request.result;
+        const db = open_request.result;
         let transaction;
         try {
             transaction = db.transaction([db_store_name], 'readwrite');
@@ -465,14 +465,14 @@ EM_JS(void, fs_js_load_snapshot, (const char* system_name_cstr, int snapshot_ind
             console.log('fs_js_load_snapshot: db.transaction failed with', e);
             return;
         };
-        let file = transaction.objectStore(db_store_name);
-        let key = system_name + '_' + snapshot_index;
-        let get_request = file.get(key);
+        const file = transaction.objectStore(db_store_name);
+        const key = system_name + '_' + snapshot_index;
+        const get_request = file.get(key);
         get_request.onsuccess = () => {
             if (get_request.result !== undefined) {
-                let num_bytes = get_request.result.length;
+                const num_bytes = get_request.result.length;
                 console.log('fs_js_load_snapshot:', key, 'successfully loaded', num_bytes, 'bytes');
-                let ptr = _fs_emsc_alloc(num_bytes);
+                const ptr = _fs_emsc_alloc(num_bytes);
                 HEAPU8.set(get_request.result, ptr);
                 _fs_emsc_load_snapshot_callback(context, ptr, num_bytes);
             } else {
