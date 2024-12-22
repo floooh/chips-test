@@ -13,6 +13,7 @@
 #include "fs.h"
 #include <stdlib.h> // calloc
 #include <stdio.h> // snprintf
+#include "ui/ui_display.h"
 
 #define UI_DELETE_STACK_SIZE (32)
 
@@ -120,15 +121,21 @@ void ui_discard(void) {
     simgui_shutdown();
 }
 
-void ui_draw(void) {
+void ui_draw(const gfx_draw_info_t* gfx_draw_info) {
     handle_save_imgui_ini();
     simgui_new_frame({sapp_width(), sapp_height(), sapp_frame_duration(), sapp_dpi_scale() });
 
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
     const ImGuiID dockspace = ImGui::GetID("main_dockspace");
-    ImGui::DockSpaceOverViewport(dockspace, viewport, ImGuiDockNodeFlags_NoDockingOverCentralNode | ImGuiDockNodeFlags_PassthruCentralNode);
+    ImGui::DockSpaceOverViewport(dockspace, viewport, ImGuiDockNodeFlags_PassthruCentralNode);
     if (state.draw_cb) {
-        state.draw_cb();
+        ui_draw_info_t ui_draw_info = {};
+        if (gfx_draw_info) {
+            ui_draw_info.display.tex = simgui_imtextureid(gfx_draw_info->display_image);
+            ui_draw_info.display.portrait = gfx_draw_info->display_info.portrait;
+            ui_draw_info.display.origin_top_left = sg_query_features().origin_top_left;
+        }
+        state.draw_cb(&ui_draw_info);
     }
     simgui_render();
 }
@@ -223,6 +230,12 @@ ui_texture_t ui_create_screenshot_texture(chips_display_info_t info) {
 
 ui_texture_t ui_shared_empty_snapshot_texture(void) {
     return simgui_imtextureid_with_sampler(state.empty_snapshot_texture, state.nearest_sampler);
+}
+
+ui_display_frame_t ui_display_frame_info(void) {
+    ui_display_frame_t info = {};
+    info.tex = simgui_imtextureid(gfx_display_texture());
+    return info;
 }
 
 static void commit_listener(void* user_data) {

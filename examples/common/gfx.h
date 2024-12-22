@@ -21,11 +21,18 @@ typedef struct {
 } gfx_border_t;
 
 typedef struct {
+    sg_image display_image;
+    chips_display_info_t display_info;
+} gfx_draw_info_t;
+
+typedef void(*gfx_draw_extra_t)(const gfx_draw_info_t* draw_info);
+
+typedef struct {
     bool disable_speaker_icon;
     gfx_border_t border;
     chips_display_info_t display_info;
     chips_dim_t pixel_aspect;   // optional pixel aspect ratio, default is 1:1
-    void (*draw_extra_cb)(void);
+    gfx_draw_extra_t draw_extra_cb;
 } gfx_desc_t;
 
 void gfx_init(const gfx_desc_t* desc);
@@ -35,6 +42,7 @@ void gfx_flash_success(void);
 void gfx_flash_error(void);
 void gfx_disable_speaker_icon(void);
 sg_image gfx_create_icon_texture(const uint8_t* packed_pixels, int width, int height, int stride);
+sg_image gfx_display_texture(void);
 
 #ifdef __cplusplus
 } /* extern "C" */

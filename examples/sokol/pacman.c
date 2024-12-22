@@ -44,7 +44,7 @@ static struct {
 } state;
 
 #ifdef CHIPS_USE_UI
-static void ui_draw_cb(void);
+static void ui_draw_cb(const ui_draw_info_t* draw_info);
 static void ui_save_settings_cb(ui_settings_t* settings);
 static void ui_save_snapshot(size_t slot_index);
 static bool ui_load_snapshot(size_t slot_index);
@@ -216,7 +216,8 @@ static void draw_status_bar(void) {
 
 #if defined(CHIPS_USE_UI)
 
-static void ui_draw_cb(void) {
+static void ui_draw_cb(const ui_draw_info_t* draw_info) {
+    (void)draw_info;
     ui_namco_draw(&state.ui);
 }
 

@@ -23,6 +23,7 @@
 #include "ui/ui_dasm.h"
 #include "ui/ui_dbg.h"
 #include "ui/ui_audio.h"
+#include "ui/ui_display.h"
 #include "ui/ui_kbd.h"
 #include "ui/ui_audio.h"
 #include "ui/ui_z80.h"

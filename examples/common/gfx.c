@@ -50,7 +50,7 @@ typedef struct {
     } icon;
     int flash_success_count;
     int flash_error_count;
-    void (*draw_extra_cb)(void);
+    gfx_draw_extra_t draw_extra_cb;
 } gfx_state_t;
 static gfx_state_t state;
 
@@ -78,6 +78,15 @@ static const float gfx_verts_flipped_rot[] = {
     0.0f, 1.0f, 0.0f, 1.0f,
     1.0f, 1.0f, 0.0f, 0.0f
 };
+
+static sg_range gfx_select_vertices(void) {
+    return (sg_range){
+        .ptr = sg_query_features().origin_top_left ?
+               (state.display.portrait ? gfx_verts_rot : gfx_verts) :
+               (state.display.portrait ? gfx_verts_flipped_rot : gfx_verts_flipped),
+        .size = sizeof(gfx_verts),
+    };
+}
 
 // a bit-packed speaker-off icon
 static const struct {
@@ -320,12 +329,7 @@ void gfx_init(const gfx_desc_t* desc) {
         .colors[0] = { .load_action = SG_LOADACTION_CLEAR, .clear_value = { 0.05f, 0.05f, 0.05f, 1.0f } }
     };
     state.display.vbuf = sg_make_buffer(&(sg_buffer_desc){
-        .data = {
-            .ptr = sg_query_features().origin_top_left ?
-                   (state.display.portrait ? gfx_verts_rot : gfx_verts) :
-                   (state.display.portrait ? gfx_verts_flipped_rot : gfx_verts_flipped),
-            .size = sizeof(gfx_verts)
-        }
+        .data = gfx_select_vertices(),
     });
 
     state.display.pip = sg_make_pipeline(&(sg_pipeline_desc){
@@ -509,7 +513,10 @@ void gfx_draw(chips_display_info_t display_info) {
     sdtx_draw();
     sgl_draw();
     if (state.draw_extra_cb) {
-        state.draw_extra_cb();
+        state.draw_extra_cb(&(gfx_draw_info_t){
+            .display_image = state.offscreen.img,
+            .display_info = display_info,
+        });
     }
     sg_end_pass();
     sg_commit();

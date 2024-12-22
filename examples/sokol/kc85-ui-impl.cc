@@ -28,5 +28,6 @@
 #include "ui/ui_z80ctc.h"
 #include "ui/ui_kc85sys.h"
 #include "ui/ui_audio.h"
+#include "ui/ui_display.h"
 #include "ui/ui_snapshot.h"
 #include "ui/ui_kc85.h"

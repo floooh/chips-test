@@ -50,7 +50,7 @@ static struct {
 } state;
 
 static void ui_boot_cb(lc80_t* sys);
-static void ui_draw_cb(void);
+static void ui_draw_cb(const ui_draw_info_t* draw_info);
 static void ui_save_settings_cb(ui_settings_t* settings);
 static void ui_save_snapshot(size_t slot_index);
 static bool ui_load_snapshot(size_t slot_index);
@@ -131,7 +131,7 @@ void app_frame(void) {
     state.emu_time_ms = stm_ms(stm_since(emu_start_time));
     draw_status_bar();
     sg_begin_pass(&(sg_pass){ .swapchain = sglue_swapchain() });
-    ui_draw();
+    ui_draw(0);
     sdtx_draw();
     sg_end_pass();
     sg_commit();
@@ -167,7 +167,8 @@ static void ui_boot_cb(lc80_t* sys) {
     lc80_init(sys, &desc);
 }
 
-static void ui_draw_cb(void) {
+static void ui_draw_cb(const ui_draw_info_t* draw_info) {
+    (void)draw_info;
     ui_lc80_draw(&state.ui);
 }
 

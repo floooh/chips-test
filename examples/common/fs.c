@@ -113,22 +113,6 @@ static void fs_path_extract_extension(fs_path_t* path, char* buf, size_t buf_siz
     }
 }
 
-static fs_path_t fs_tmp_dir(void) {
-    #if defined(WIN32)
-    WCHAR wc_tmp_path[FS_PATH_SIZE];
-    if (0 == GetTempPathW(sizeof(wc_tmp_path) / sizeof(WCHAR), wc_tmp_path)) {
-        return (fs_path_t){0};
-    }
-    char utf8_tmp_path[FS_PATH_SIZE];
-    if (0 == WideCharToMultiByte(CP_UTF8, 0, wc_tmp_path, -1, utf8_tmp_path, sizeof(utf8_tmp_path), NULL, NULL)) {
-        return (fs_path_t){0};
-    }
-    return fs_path_printf("%s", utf8_tmp_path);
-    #else
-    return fs_path_printf("%s", "/tmp");
-    #endif
-}
-
 fs_result_t fs_result(fs_channel_t chn) {
     assert(state.valid);
     assert(chn < FS_CHANNEL_NUM);
@@ -560,13 +544,29 @@ static chips_range_t fs_win32_posix_read_file(fs_path_t path, bool null_terminat
     #endif
 }
 
+static fs_path_t fs_win32_posix_tmp_dir(void) {
+    #if defined(WIN32)
+    WCHAR wc_tmp_path[FS_PATH_SIZE];
+    if (0 == GetTempPathW(sizeof(wc_tmp_path) / sizeof(WCHAR), wc_tmp_path)) {
+        return (fs_path_t){0};
+    }
+    char utf8_tmp_path[FS_PATH_SIZE];
+    if (0 == WideCharToMultiByte(CP_UTF8, 0, wc_tmp_path, -1, utf8_tmp_path, sizeof(utf8_tmp_path), NULL, NULL)) {
+        return (fs_path_t){0};
+    }
+    return fs_path_printf("%s", utf8_tmp_path);
+    #else
+    return fs_path_printf("%s", "/tmp");
+    #endif
+}
+
 fs_path_t fs_win32_posix_make_snapshot_path(const char* system_name, size_t snapshot_index) {
-    fs_path_t tmp_dir = fs_tmp_dir();
+    fs_path_t tmp_dir = fs_win32_posix_tmp_dir();
     return fs_path_printf("%s/chips_%s_snapshot_%zu", tmp_dir.cstr, system_name, snapshot_index);
 }
 
 fs_path_t fs_win32_posix_make_ini_path(const char* key) {
-    fs_path_t tmp_dir = fs_tmp_dir();
+    fs_path_t tmp_dir = fs_win32_posix_tmp_dir();
     return fs_path_printf("%s/%s_imgui.ini", tmp_dir.cstr, key);
 }
 
