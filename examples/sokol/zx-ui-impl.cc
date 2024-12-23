@@ -26,5 +26,6 @@
 #include "ui/ui_z80.h"
 #include "ui/ui_ay38910.h"
 #include "ui/ui_audio.h"
+#include "ui/ui_display.h"
 #include "ui/ui_snapshot.h"
 #include "ui/ui_zx.h"

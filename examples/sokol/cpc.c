@@ -35,6 +35,7 @@
     #include "ui/ui_i8255.h"
     #include "ui/ui_upd765.h"
     #include "ui/ui_audio.h"
+    #include "ui/ui_display.h"
     #include "ui/ui_kbd.h"
     #include "ui/ui_fdd.h"
     #include "ui/ui_snapshot.h"
@@ -446,8 +447,9 @@ static void draw_status_bar(void) {
 
 #if defined(CHIPS_USE_UI)
 static void ui_draw_cb(const ui_draw_info_t* draw_info) {
-    (void)draw_info;
-    ui_cpc_draw(&state.ui);
+    ui_cpc_draw(&state.ui, &(ui_cpc_frame_t){
+        .display = draw_info->display,
+    });
 }
 
 static void ui_save_settings_cb(ui_settings_t* settings) {

@@ -23,5 +23,6 @@
 #include "ui/ui_dbg.h"
 #include "ui/ui_z80.h"
 #include "ui/ui_audio.h"
+#include "ui/ui_display.h"
 #include "ui/ui_snapshot.h"
 #include "ui/ui_namco.h"

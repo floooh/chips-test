@@ -24,6 +24,7 @@
     #include "ui/ui_dbg.h"
     #include "ui/ui_z80.h"
     #include "ui/ui_z80pio.h"
+    #include "ui/ui_display.h"
     #include "ui/ui_snapshot.h"
     #include "ui/ui_z1013.h"
 #endif
@@ -276,8 +277,9 @@ static void draw_status_bar(void) {
 
 #if defined(CHIPS_USE_UI)
 static void ui_draw_cb(const ui_draw_info_t* draw_info) {
-    (void)draw_info;
-    ui_z1013_draw(&state.ui);
+    ui_z1013_draw(&state.ui, &(ui_z1013_frame_t){
+        .display = draw_info->display,
+    });
 }
 
 static void ui_save_settings_cb(ui_settings_t* settings) {

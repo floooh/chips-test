@@ -34,6 +34,7 @@
 #include "ui/ui_i8255.h"
 #include "ui/ui_upd765.h"
 #include "ui/ui_audio.h"
+#include "ui/ui_display.h"
 #include "ui/ui_kbd.h"
 #include "ui/ui_fdd.h"
 #include "ui/ui_snapshot.h"

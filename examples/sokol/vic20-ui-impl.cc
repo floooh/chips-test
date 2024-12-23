@@ -28,6 +28,7 @@
 #include "ui/ui_m6522.h"
 #include "ui/ui_m6561.h"
 #include "ui/ui_audio.h"
+#include "ui/ui_display.h"
 #include "ui/ui_kbd.h"
 #include "ui/ui_c1530.h"
 #include "ui/ui_snapshot.h"

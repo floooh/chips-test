@@ -31,6 +31,7 @@
 #include "ui/ui_m6581.h"
 #include "ui/ui_m6569.h"
 #include "ui/ui_audio.h"
+#include "ui/ui_display.h"
 #include "ui/ui_kbd.h"
 #include "ui/ui_snapshot.h"
 #include "ui/ui_c64.h"

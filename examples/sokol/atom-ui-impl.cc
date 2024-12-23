@@ -30,6 +30,7 @@
 #include "ui/ui_mc6847.h"
 #include "ui/ui_i8255.h"
 #include "ui/ui_audio.h"
+#include "ui/ui_display.h"
 #include "ui/ui_kbd.h"
 #include "ui/ui_snapshot.h"
 #include "ui/ui_atom.h"
