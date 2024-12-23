@@ -144,7 +144,8 @@ void ui_draw(const gfx_draw_info_t* gfx_draw_info) {
 }
 
 bool ui_input(const sapp_event* event) {
-    return simgui_handle_event(event);
+    simgui_handle_event(event);
+    return ImGui::GetIO().WantCaptureKeyboard;
 }
 
 ui_texture_t ui_create_texture(int w, int h) {
