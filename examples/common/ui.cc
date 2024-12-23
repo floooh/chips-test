@@ -132,6 +132,9 @@ void ui_draw(const gfx_draw_info_t* gfx_draw_info) {
         ui_draw_info_t ui_draw_info = {};
         if (gfx_draw_info) {
             ui_draw_info.display.tex = simgui_imtextureid(gfx_draw_info->display_image);
+            ui_draw_info.display.dim = gfx_draw_info->display_info.frame.dim;
+            ui_draw_info.display.screen = gfx_draw_info->display_info.screen;
+            ui_draw_info.display.pixel_aspect = gfx_pixel_aspect();
             ui_draw_info.display.portrait = gfx_draw_info->display_info.portrait;
             ui_draw_info.display.origin_top_left = sg_query_features().origin_top_left;
         }
@@ -230,12 +233,6 @@ ui_texture_t ui_create_screenshot_texture(chips_display_info_t info) {
 
 ui_texture_t ui_shared_empty_snapshot_texture(void) {
     return simgui_imtextureid_with_sampler(state.empty_snapshot_texture, state.nearest_sampler);
-}
-
-ui_display_frame_t ui_display_frame_info(void) {
-    ui_display_frame_t info = {};
-    info.tex = simgui_imtextureid(gfx_display_texture());
-    return info;
 }
 
 static void commit_listener(void* user_data) {

@@ -41,8 +41,8 @@ void gfx_shutdown(void);
 void gfx_flash_success(void);
 void gfx_flash_error(void);
 void gfx_disable_speaker_icon(void);
+chips_dim_t gfx_pixel_aspect(void);
 sg_image gfx_create_icon_texture(const uint8_t* packed_pixels, int width, int height, int stride);
-sg_image gfx_display_texture(void);
 
 #ifdef __cplusplus
 } /* extern "C" */

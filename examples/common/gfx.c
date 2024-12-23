@@ -167,6 +167,11 @@ void gfx_disable_speaker_icon(void) {
     state.disable_speaker_icon = true;
 }
 
+chips_dim_t gfx_pixel_aspect(void) {
+    assert(state.valid);
+    return state.offscreen.pixel_aspect;
+}
+
 sg_image gfx_create_icon_texture(const uint8_t* packed_pixels, int width, int height, int stride) {
     const size_t pixel_data_size = width * height * sizeof(uint32_t);
     uint32_t* pixels = malloc(pixel_data_size);
@@ -398,13 +403,13 @@ static void apply_viewport(chips_dim_t canvas, chips_rect_t view, chips_dim_t pi
         vp_y = (float)border.top;
         vp_h = ch;
         vp_w = (ch * emu_aspect);
-        vp_x = border.left + (cw - vp_w) / 2;
+        vp_x = border.left + (cw - vp_w) * 0.5f;
     }
     else {
         vp_x = (float)border.left;
         vp_w = cw;
         vp_h = (cw / emu_aspect);
-        vp_y = (float)border.top;
+        vp_y = border.top + (ch - vp_h) * 0.5f;
     }
     sg_apply_viewportf(vp_x, vp_y, vp_w, vp_h, true);
 }
