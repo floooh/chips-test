@@ -433,7 +433,6 @@ EMSCRIPTEN_KEEPALIVE void fs_emsc_load_snapshot_callback(const fs_snapshot_load_
 }
 
 bool fs_emsc_load_snapshot_async(const char* system_name, size_t snapshot_index, fs_snapshot_load_callback_t callback) {
-    assert(slot_index < FS_NUM_SLOTS);
     assert(system_name && callback);
 
     // allocate a 'context' struct which needs to be tunneled through JS to the fs_emsc_load_snapshot_callback() function
