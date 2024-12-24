@@ -1,7 +1,6 @@
 /*
     UI implementation for pacman.c, this must live in its own .cc file.
 */
-#include "imgui.h"
 #include "chips/chips_common.h"
 #include "chips/z80.h"
 #include "chips/clk.h"
@@ -13,6 +12,8 @@
 #include "util/z80dasm.h"
 #define CHIPS_UI_IMPL
 #define NAMCO_PACMAN
+#include "imgui.h"
+#include "imgui_internal.h"
 #include "ui/ui_settings.h"
 #include "ui/ui_util.h"
 #include "ui/ui_chip.h"
