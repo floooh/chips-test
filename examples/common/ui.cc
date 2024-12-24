@@ -131,7 +131,7 @@ void ui_draw(const gfx_draw_info_t* gfx_draw_info) {
     if (state.draw_cb) {
         ui_draw_info_t ui_draw_info = {};
         if (gfx_draw_info) {
-            ui_draw_info.display.tex = simgui_imtextureid(gfx_draw_info->display_image);
+            ui_draw_info.display.tex = simgui_imtextureid_with_sampler(gfx_draw_info->display_image, gfx_draw_info->display_sampler);
             ui_draw_info.display.dim = gfx_draw_info->display_info.frame.dim;
             ui_draw_info.display.screen = gfx_draw_info->display_info.screen;
             ui_draw_info.display.pixel_aspect = gfx_pixel_aspect();

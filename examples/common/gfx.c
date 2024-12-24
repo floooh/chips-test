@@ -520,6 +520,7 @@ void gfx_draw(chips_display_info_t display_info) {
     if (state.draw_extra_cb) {
         state.draw_extra_cb(&(gfx_draw_info_t){
             .display_image = state.offscreen.img,
+            .display_sampler = state.offscreen.smp,
             .display_info = display_info,
         });
     }

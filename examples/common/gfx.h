@@ -22,6 +22,7 @@ typedef struct {
 
 typedef struct {
     sg_image display_image;
+    sg_sampler display_sampler;
     chips_display_info_t display_info;
 } gfx_draw_info_t;
 
