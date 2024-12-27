@@ -30,7 +30,7 @@
 #include "systems/c64.h"
 #include "c64-roms.h"
 
-#define FRAME_USEC (33333)
+#define FRAME_USEC (16666)
 #define MAX_WIDTH (512)
 #define MAX_HEIGHT (512)
 #define BYTES_PER_PIXEL (3)
@@ -137,7 +137,6 @@ int main(int argc, char* argv[]) {
             .basic = { .ptr=dump_c64_basic_bin, .size=sizeof(dump_c64_basic_bin) },
             .kernal = { .ptr=dump_c64_kernalv3_bin, .size=sizeof(dump_c64_kernalv3_bin) }
         },
-        .joystick_type = C64_JOYSTICKTYPE_DIGITAL_1,
     });
     size_t frame_count = 0;
     while (!quit_requested) {
