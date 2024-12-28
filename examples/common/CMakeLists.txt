@@ -71,3 +71,7 @@ fips_end_lib()
 fips_begin_lib(webapi)
     fips_files(webapi.c webapi.h)
 fips_end_lib()
+
+fips_begin_lib(kitty)
+    fips_files(kitty.c kitty.h)
+fips_end_lib()
