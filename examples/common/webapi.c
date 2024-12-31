@@ -31,9 +31,11 @@ void webapi_init(const webapi_desc_t* desc) {
     #if defined(__EMSCRIPTEN__)
     EM_ASM({
         const cfunc = Module["_webapi_input"];
-        Module["_webapi_input"] = (text) => {
+        const nfunc = (text) => {
             withStackSave(() => cfunc(stringToUTF8OnStack(text)));
-        }
+            Module["_webapi_input"] = nfunc;
+        };
+        Module["_webapi_input"] = nfunc;
     });
     #endif
 }
