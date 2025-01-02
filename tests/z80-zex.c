@@ -33,14 +33,10 @@ static void put_char(char c) {
 static uint64_t tick(uint64_t pins) {
     pins = z80_tick(&state.cpu, pins);
     if (pins & Z80_MREQ) {
-        const uint16_t addr = Z80_GET_ADDR(pins);
         if (pins & Z80_RD) {
-            const uint8_t data = state.mem[addr];
-            Z80_SET_DATA(pins, data);
-        }
-        else if (pins & Z80_WR) {
-            const uint8_t data = Z80_GET_DATA(pins);
-            state.mem[addr] = data;
+            Z80_SET_DATA(pins, state.mem[Z80_GET_ADDR(pins)]);
+        } else if (pins & Z80_WR) {
+            state.mem[Z80_GET_ADDR(pins)] = Z80_GET_DATA(pins);
         }
     }
     return pins;
@@ -52,16 +48,14 @@ static bool cpm_bdos(void) {
     if (2 == state.cpu.c) {
         // output character in register E
         put_char(state.cpu.e);
-    }
-    else if (9 == state.cpu.c) {
+    } else if (9 == state.cpu.c) {
         // output $-terminated string pointed to by register DE
         uint8_t c;
         uint16_t addr = state.cpu.de;
         while ((c = state.mem[addr++ & MEM_MASK]) != '$') {
             put_char(c);
         }
-    }
-    else {
+    } else {
         printf("Unhandled CP/M system call: %d\n", state.cpu.c);
         retval = false;
     }
@@ -90,8 +84,7 @@ static bool run_test(const char* name, uint8_t* prog, size_t prog_num_bytes) {
         // check for BDOS call
         if (state.cpu.pc == 5) {
             running = cpm_bdos();
-        }
-        else if (state.cpu.pc == 0) {
+        } else if (state.cpu.pc == 0) {
             running = false;
         }
     }
@@ -103,8 +96,7 @@ static bool run_test(const char* name, uint8_t* prog, size_t prog_num_bytes) {
         state.output[state.out_pos-1] = 0;
         if (strstr((const char*)state.output, "ERROR")) {
             return false;
-        }
-        else {
+        } else {
             printf("\n\n ALL %s TESTS PASSED!\n", name);
         }
     }
