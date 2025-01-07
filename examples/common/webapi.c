@@ -27,12 +27,18 @@ void webapi_init(const webapi_desc_t* desc) {
         state.funcs.dbg_connect();
     }
 
-    // replace webapi_input() export with a JS shim which takes care of string marshalling
+    // add JS wrapper functions for any webapi functions which require
+    // argument marshalling (=> replacing JS string with C string)
+    // NOTE: a previous version of this code *replaced* the Module["_webapi_input"]
+    // function object. This only works for the first time because the
+    // Emscripten runtime will *reset* EM_JS function objects during the call
+    // (so this webapi_input shim only worked once).
+    //
+    // Thus the separation of `_webapi_input_internal` vs `_webapi_input`.
     #if defined(__EMSCRIPTEN__)
     EM_ASM({
-        const cfunc = Module["_webapi_input"];
         Module["_webapi_input"] = (text) => {
-            withStackSave(() => cfunc(stringToUTF8OnStack(text)));
+            withStackSave(() => Module["_webapi_input_internal"](stringToUTF8OnStack(text)));
         }
     });
     #endif
@@ -221,7 +227,7 @@ EMSCRIPTEN_KEEPALIVE uint8_t* webapi_dbg_read_memory(uint16_t addr, int num_byte
     }
 }
 
-EMSCRIPTEN_KEEPALIVE bool webapi_input(char* text) {
+EMSCRIPTEN_KEEPALIVE bool webapi_input_internal(char* text) {
     if (state.funcs.input != NULL && text != NULL) {
         state.funcs.input(text);
         return true;
