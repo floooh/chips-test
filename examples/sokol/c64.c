@@ -69,6 +69,7 @@ static void web_boot(void);
 static void web_reset(void);
 static bool web_ready(void);
 static bool web_load(chips_range_t data);
+static void web_input(const char* text);
 static void web_dbg_connect(void);
 static void web_dbg_disconnect(void);
 static void web_dbg_add_breakpoint(uint16_t addr);
@@ -204,6 +205,7 @@ void app_init(void) {
                 .reset = web_reset,
                 .ready = web_ready,
                 .load = web_load,
+                .input = web_input,
                 .dbg_connect = web_dbg_connect,
                 .dbg_disconnect = web_dbg_disconnect,
                 .dbg_add_breakpoint = web_dbg_add_breakpoint,
@@ -499,6 +501,10 @@ static bool web_load(chips_range_t data) {
         c64_basic_syscall(&state.c64, start_addr);
     }
     return loaded;
+}
+
+static void web_input(const char* text) {
+    keybuf_put(text);
 }
 
 static void web_dbg_add_breakpoint(uint16_t addr) {

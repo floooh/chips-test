@@ -76,9 +76,9 @@ static void web_boot(void);
 static void web_reset(void);
 static bool web_ready(void);
 static bool web_load(chips_range_t data);
+static void web_input(const char*);
 static void web_save_snapshot(size_t slot_index);
 static bool web_load_snapshot(size_t slot_index);
-static void web_input(char*);
 static void web_dbg_connect(void);
 static void web_dbg_disconnect(void);
 static void web_dbg_add_breakpoint(uint16_t addr);
@@ -222,6 +222,7 @@ void app_init(void) {
                 .reset = web_reset,
                 .ready = web_ready,
                 .load = web_load,
+                .input = web_input,
                 .load_snapshot = web_load_snapshot,
                 .save_snapshot = web_save_snapshot,
                 .dbg_connect = web_dbg_connect,
@@ -235,7 +236,6 @@ void app_init(void) {
                 .dbg_cpu_state = web_dbg_cpu_state,
                 .dbg_request_disassembly = web_dbg_request_disassemly,
                 .dbg_read_memory = web_dbg_read_memory,
-                .input = web_input,
             }
         });
     #endif
@@ -575,7 +575,7 @@ static bool web_load_snapshot(size_t slot_index) {
     return ui_load_snapshot(slot_index);
 }
 
-static void web_input(char* text) {
+static void web_input(const char* text) {
     keybuf_put(text);
 }
 
