@@ -39,12 +39,10 @@ void webapi_init(const webapi_desc_t* desc) {
     EM_ASM({
         Module["_webapi_input"] = (text) => {
             withStackSave(() => Module["_webapi_input_internal"](stringToUTF8OnStack(text)));
-        }
-    });
-    EM_ASM({
+        };
         Module["_webapi_load_file"] = (text) => {
             withStackSave(() => Module["_webapi_load_file_internal"](stringToUTF8OnStack(text)));
-        }
+        };
     });
     #endif
 }
