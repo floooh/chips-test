@@ -41,6 +41,11 @@ void webapi_init(const webapi_desc_t* desc) {
             withStackSave(() => Module["_webapi_input_internal"](stringToUTF8OnStack(text)));
         }
     });
+    EM_ASM({
+        Module["_webapi_load_file"] = (text) => {
+            withStackSave(() => Module["_webapi_load_file_internal"](stringToUTF8OnStack(text)));
+        }
+    });
     #endif
 }
 
@@ -137,6 +142,22 @@ EMSCRIPTEN_KEEPALIVE bool webapi_load(void* ptr, int size) {
         return state.funcs.load((chips_range_t){ .ptr = ptr, .size = (size_t)size });
     }
     return false;
+}
+
+EMSCRIPTEN_KEEPALIVE bool webapi_load_file_internal(char *file) {
+    if (state.funcs.load_file != NULL) {
+        return state.funcs.load_file(file);
+    } else {
+        return false;
+    }
+}
+
+EMSCRIPTEN_KEEPALIVE bool webapi_unload_file() {
+    if (state.funcs.unload_file != NULL) {
+        return state.funcs.unload_file();
+    } else {
+        return false;
+    }
 }
 
 EMSCRIPTEN_KEEPALIVE bool webapi_load_snapshot(size_t index) {
