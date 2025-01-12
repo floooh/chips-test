@@ -303,6 +303,7 @@ sapp_desc sokol_main(int argc, char* argv[]) {
         .window_title = "Bomb Jack Arcade",
         .icon.sokol_default = true,
         .html5_bubble_mouse_events = true,
+        .html5_update_document_title = true,
         .logger.func = slog_func,
     };
 }
