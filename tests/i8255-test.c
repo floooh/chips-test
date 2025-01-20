@@ -31,7 +31,7 @@ UTEST(i8255, mode_select) {
     I8255_SET_PC(pins, 0x45);
     I8255_SET_DATA(pins, ctrl);
     uint64_t res_pins = i8255_tick(&ppi, pins);
-    T(I8255_GET_PA(res_pins) == 0x00);
+    T(I8255_GET_PA(res_pins) == 0x12);
     T(I8255_GET_PB(res_pins) == 0x00);
     T(I8255_GET_PC(res_pins) == 0x05);
     T(ppi.control == ctrl);
@@ -109,7 +109,7 @@ UTEST(i8255, in_out) {
     I8255_SET_PC(pins, 0x45);
     I8255_SET_DATA(pins, 0x33);
     uint64_t res_pins = i8255_tick(&ppi, pins);
-    T(I8255_GET_PA(res_pins) == 0);
+    T(I8255_GET_PA(res_pins) == 0x12);
 
     /* writing to an output port (B) should invoke the out callback and set the output latch */
     pins &= ~(I8255_A1|I8255_A0);
