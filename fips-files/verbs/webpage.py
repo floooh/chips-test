@@ -25,6 +25,7 @@ systems = [
     'bombjack', 'bombjack-ui',
     'pacman', 'pacman-ui',
     'pengo', 'pengo-ui',
+    'nes', 'nes-ui',
     'lc80',
     'ext'
 ]
@@ -50,6 +51,7 @@ items = [
     { 'type':'emu',  'title':'Robotron Z1013',  'system':'z1013',   'url':'z1013.html',   'img':'z1013/z1013.jpg', 'note':'' },
     { 'type':'emu',  'title':'Robotron Z9001',  'system':'z9001',   'url':'z9001.html',   'img':'z9001/z9001.jpg', 'note':'(with BASIC and RAM modules)' },
     { 'type':'emu',  'title':'Robotron KC87',   'system':'z9001',   'url':'z9001.html?type=kc87', 'img':'z9001/kc87.jpg',     'note':'BASIC[Enter]' },
+    { 'type':'emu',  'title':'NES',             'system':'nes',     'url':'nes.html',     'img':'nes/nes.jpg',     'note':'' },
     { 'type':'demo', 'title':'FORTH (KC85/4)',  'system':'kc854',   'url':'kc854.html?mod=m026&mod_image=kc85/forth.853&input=SWITCH%208%20C1%0AFORTH%0A', 'img':'kc85/forth.jpg', 'note':'' },
     { 'type':'demo', 'title':'FORTH (Z1013)',   'system':'z1013',   'url':'z1013.html?type=z1013_64&file=z1013/z1013_forth.z80', 'img':'z1013/z1013_forth.jpg', 'note':''},
     { 'type':'demo', 'title':'BASIC (Z1013)',   'system':'z1013',   'url':'z1013.html?type=z1013_64&file=z1013/kc_basic.z80', 'img':'z1013/z1013_basic.jpg', 'note':''},
