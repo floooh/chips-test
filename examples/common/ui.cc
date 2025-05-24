@@ -153,7 +153,7 @@ ui_texture_t ui_create_texture(int w, int h) {
         sg_make_image({
             .width = w,
             .height = h,
-            .usage = SG_USAGE_STREAM,
+            .usage.stream_update = true,
             .pixel_format = SG_PIXELFORMAT_RGBA8,
         }),
         state.nearest_sampler);

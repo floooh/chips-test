@@ -219,10 +219,10 @@ static void gfx_init_images_and_pass(void) {
     // a texture with the emulator's raw pixel data
     assert((state.fb.dim.width > 0) && (state.fb.dim.height > 0));
     state.fb.img = sg_make_image(&(sg_image_desc){
+        .usage.stream_update = true,
         .width = state.fb.dim.width,
         .height = state.fb.dim.height,
         .pixel_format = state.fb.paletted ? SG_PIXELFORMAT_R8 : SG_PIXELFORMAT_RGBA8,
-        .usage = SG_USAGE_STREAM,
     });
 
     // a sampler for sampling the emulators raw pixel data
@@ -236,7 +236,7 @@ static void gfx_init_images_and_pass(void) {
     // 2x-upscaling render target texture, sampler and pass
     assert((state.offscreen.view.width > 0) && (state.offscreen.view.height > 0));
     state.offscreen.img = sg_make_image(&(sg_image_desc){
-        .render_target = true,
+        .usage.render_attachment = true,
         .width = 2 * state.offscreen.view.width,
         .height = 2 * state.offscreen.view.height,
         .sample_count = 1,
