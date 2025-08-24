@@ -146,6 +146,7 @@ void app_init(void) {
     gfx_init(&(gfx_desc_t){
         .disable_speaker_icon = sargs_exists("disable-speaker-icon"),
         #ifdef CHIPS_USE_UI
+        .init_extra_cb = ui_preinit,
         .draw_extra_cb = ui_draw,
         #endif
         .border = {
@@ -169,6 +170,9 @@ void app_init(void) {
         ui_c64_init(&state.ui, &(ui_c64_desc_t){
             .c64 = &state.c64,
             .boot_cb = ui_boot_cb,
+            .inject = {
+                .menu_cb = ui_draw_sokol_menu,
+            },
             .dbg_texture = {
                 .create_cb = ui_create_texture,
                 .update_cb = ui_update_texture,

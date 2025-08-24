@@ -20,21 +20,27 @@ typedef struct {
     bool disable_speaker_icon;
     gfx_border_t border;
     struct {
-        sg_image img;       // framebuffer texture, RGBA8 or R8 if paletted
-        sg_image pal_img;   // optional color palette texture
+        struct {   // framebuffer texture, RGBA8 or R8 if paletted
+            sg_image img;
+            sg_view tex_view;
+        } vidmem;
+        struct {   // optional color palette texture
+            sg_image img;
+            sg_view tex_view;
+        } pal;
         sg_sampler smp;
         chips_dim_t dim;
         bool paletted;
     } fb;
     struct {
-        chips_rect_t view;
+        chips_rect_t viewport;
         chips_dim_t pixel_aspect;
         sg_image img;
+        sg_view tex_view;
         sg_sampler smp;
         sg_buffer vbuf;
         sg_pipeline pip;
-        sg_attachments attachments;
-        sg_pass_action pass_action;
+        sg_pass pass;
     } offscreen;
     struct {
         sg_buffer vbuf;
@@ -43,7 +49,7 @@ typedef struct {
         bool portrait;
     } display;
     struct {
-        sg_image img;
+        sg_view tex_view;
         sg_sampler smp;
         sgl_pipeline pip;
         chips_dim_t dim;
@@ -172,7 +178,7 @@ chips_dim_t gfx_pixel_aspect(void) {
     return state.offscreen.pixel_aspect;
 }
 
-sg_image gfx_create_icon_texture(const uint8_t* packed_pixels, int width, int height, int stride) {
+sg_view gfx_create_icon_texview(const uint8_t* packed_pixels, int width, int height, int stride, const char* label) {
     const size_t pixel_data_size = width * height * sizeof(uint32_t);
     uint32_t* pixels = malloc(pixel_data_size);
     assert(pixels);
@@ -201,28 +207,37 @@ sg_image gfx_create_icon_texture(const uint8_t* packed_pixels, int width, int he
         .pixel_format = SG_PIXELFORMAT_RGBA8,
         .width = width,
         .height = height,
-        .data.subimage[0][0] = { .ptr=pixels, .size=pixel_data_size }
+        .data.subimage[0][0] = { .ptr=pixels, .size=pixel_data_size },
+        .label = label,
     });
     free(pixels);
-    return img;
+    sg_view view = sg_make_view(&(sg_view_desc){ .texture.image = img, .label = label });
+    return view;
 }
 
 // this function will be called at init time and when the emulator framebuffer size changes
 static void gfx_init_images_and_pass(void) {
     // destroy previous resources (if exist)
-    sg_destroy_image(state.fb.img);
+    sg_destroy_image(state.fb.vidmem.img);
+    sg_destroy_view(state.fb.vidmem.tex_view);
     sg_destroy_sampler(state.fb.smp);
     sg_destroy_image(state.offscreen.img);
+    sg_destroy_view(state.offscreen.tex_view);
+    sg_destroy_view(state.offscreen.pass.attachments.colors[0]);
     sg_destroy_sampler(state.offscreen.smp);
-    sg_destroy_attachments(state.offscreen.attachments);
 
-    // a texture with the emulator's raw pixel data
+    // an image and texture-view with the emulator's raw pixel data
     assert((state.fb.dim.width > 0) && (state.fb.dim.height > 0));
-    state.fb.img = sg_make_image(&(sg_image_desc){
+    state.fb.vidmem.img = sg_make_image(&(sg_image_desc){
         .usage.stream_update = true,
         .width = state.fb.dim.width,
         .height = state.fb.dim.height,
         .pixel_format = state.fb.paletted ? SG_PIXELFORMAT_R8 : SG_PIXELFORMAT_RGBA8,
+        .label = "vidmem-image",
+    });
+    state.fb.vidmem.tex_view = sg_make_view(&(sg_view_desc){
+        .texture.image = state.fb.vidmem.img,
+        .label = "vidmem-tex-view",
     });
 
     // a sampler for sampling the emulators raw pixel data
@@ -230,25 +245,33 @@ static void gfx_init_images_and_pass(void) {
         .min_filter = SG_FILTER_NEAREST,
         .mag_filter = SG_FILTER_NEAREST,
         .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
-        .wrap_v = SG_WRAP_CLAMP_TO_EDGE
+        .wrap_v = SG_WRAP_CLAMP_TO_EDGE,
+        .label = "vidmem-sampler",
     });
 
     // 2x-upscaling render target texture, sampler and pass
-    assert((state.offscreen.view.width > 0) && (state.offscreen.view.height > 0));
+    assert((state.offscreen.viewport.width > 0) && (state.offscreen.viewport.height > 0));
     state.offscreen.img = sg_make_image(&(sg_image_desc){
-        .usage.render_attachment = true,
-        .width = 2 * state.offscreen.view.width,
-        .height = 2 * state.offscreen.view.height,
+        .usage.color_attachment = true,
+        .width = 2 * state.offscreen.viewport.width,
+        .height = 2 * state.offscreen.viewport.height,
         .sample_count = 1,
+        .label = "upscale-image"
+    });
+    state.offscreen.tex_view = sg_make_view(&(sg_view_desc){
+        .texture.image = state.offscreen.img,
+        .label = "upscale-texview",
+    });
+    state.offscreen.pass.attachments.colors[0] = sg_make_view(&(sg_view_desc){
+        .color_attachment.image = state.offscreen.img,
+        .label = "upscale-attachment-view",
     });
     state.offscreen.smp = sg_make_sampler(&(sg_sampler_desc){
         .min_filter = SG_FILTER_LINEAR,
         .mag_filter = SG_FILTER_LINEAR,
         .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
         .wrap_v = SG_WRAP_CLAMP_TO_EDGE,
-    });
-    state.offscreen.attachments = sg_make_attachments(&(sg_attachments_desc){
-        .colors[0].image = state.offscreen.img
+        .label = "upscale-sampler",
     });
 }
 
@@ -258,10 +281,13 @@ void gfx_init(const gfx_desc_t* desc) {
         .image_pool_size = 128,
         .shader_pool_size = 16,
         .pipeline_pool_size = 16,
-        .attachments_pool_size = 2,
+        .view_pool_size = 256,
         .environment = sglue_environment(),
         .logger.func = slog_func,
     });
+    if (desc->init_extra_cb) {
+        desc->init_extra_cb();
+    }
     sgl_setup(&(sgl_desc_t){
         .max_vertices = 16,
         .max_commands = 16,
@@ -285,13 +311,13 @@ void gfx_init(const gfx_desc_t* desc) {
     state.fb.paletted = 0 != desc->display_info.palette.ptr;
     state.offscreen.pixel_aspect.width = GFX_DEF(desc->pixel_aspect.width, 1);
     state.offscreen.pixel_aspect.height = GFX_DEF(desc->pixel_aspect.height, 1);
-    state.offscreen.view = desc->display_info.screen;
+    state.offscreen.viewport = desc->display_info.screen;
 
     if (state.fb.paletted) {
         static uint32_t palette_buf[256];
         assert((desc->display_info.palette.size > 0) && (desc->display_info.palette.size <= sizeof(palette_buf)));
         memcpy(palette_buf, desc->display_info.palette.ptr, desc->display_info.palette.size);
-        state.fb.pal_img = sg_make_image(&(sg_image_desc){
+        state.fb.pal.img = sg_make_image(&(sg_image_desc){
             .width = 256,
             .height = 1,
             .pixel_format = SG_PIXELFORMAT_RGBA8,
@@ -300,22 +326,27 @@ void gfx_init(const gfx_desc_t* desc) {
                     .ptr = palette_buf,
                     .size = sizeof(palette_buf)
                 }
-            }
+            },
+            .label = "palette-image",
+        });
+        state.fb.pal.tex_view = sg_make_view(&(sg_view_desc){
+            .texture.image = state.fb.pal.img,
+            .label = "palette-texview",
         });
     }
 
-    state.offscreen.pass_action = (sg_pass_action) {
+    state.offscreen.pass.action = (sg_pass_action) {
         .colors[0] = { .load_action = SG_LOADACTION_DONTCARE }
     };
     state.offscreen.vbuf = sg_make_buffer(&(sg_buffer_desc){
-        .data = SG_RANGE(gfx_verts)
+        .data = SG_RANGE(gfx_verts),
+        .label = "offscreen-vbuf",
     });
 
     sg_shader shd = {0};
     if (state.fb.paletted) {
         shd = sg_make_shader(offscreen_pal_shader_desc(sg_query_backend()));
-    }
-    else {
+    } else {
         shd = sg_make_shader(offscreen_shader_desc(sg_query_backend()));
     }
     state.offscreen.pip = sg_make_pipeline(&(sg_pipeline_desc){
@@ -335,6 +366,7 @@ void gfx_init(const gfx_desc_t* desc) {
     };
     state.display.vbuf = sg_make_buffer(&(sg_buffer_desc){
         .data = gfx_select_vertices(),
+        .label = "display-vbuf",
     });
 
     state.display.pip = sg_make_pipeline(&(sg_pipeline_desc){
@@ -353,16 +385,19 @@ void gfx_init(const gfx_desc_t* desc) {
         // textures must be 2^n for WebGL
         state.icon.dim.width = speaker_icon.width;
         state.icon.dim.height = speaker_icon.height;
-        state.icon.img = gfx_create_icon_texture(
+        state.icon.tex_view = gfx_create_icon_texview(
             speaker_icon.pixels,
             speaker_icon.width,
             speaker_icon.height,
-            speaker_icon.stride);
+            speaker_icon.stride,
+            "speaker-icon"
+        );
         state.icon.smp = sg_make_sampler(&(sg_sampler_desc){
             .min_filter = SG_FILTER_LINEAR,
             .mag_filter = SG_FILTER_LINEAR,
             .wrap_u = SG_WRAP_CLAMP_TO_EDGE,
             .wrap_v = SG_WRAP_CLAMP_TO_EDGE,
+            .label = "speaker-icon",
         });
 
         // sokol-gl pipeline for alpha-blended rendering
@@ -421,7 +456,7 @@ void gfx_draw(chips_display_info_t display_info) {
     assert((display_info.screen.width > 0) && (display_info.screen.height > 0));
     const chips_dim_t display = { .width = sapp_width(), .height = sapp_height() };
 
-    state.offscreen.view = display_info.screen;
+    state.offscreen.viewport = display_info.screen;
 
     // check if emulator framebuffer size has changed, need to create new backing texture
     if ((display_info.frame.dim.width != state.fb.dim.width) || (display_info.frame.dim.height != state.fb.dim.height)) {
@@ -438,7 +473,7 @@ void gfx_draw(chips_display_info_t display_info) {
         const float alpha = (sapp_frame_count() & 0x20) ? 0.0f : 1.0f;
         sgl_defaults();
         sgl_enable_texture();
-        sgl_texture(state.icon.img, state.icon.smp);
+        sgl_texture(state.icon.tex_view, state.icon.smp);
         sgl_matrix_mode_projection();
         sgl_ortho(0.0f, (float)display.width, (float)display.height, 0.0f, -1.0f, +1.0f);
         sgl_c4f(1.0f, 1.0f, 1.0f, alpha);
@@ -452,7 +487,7 @@ void gfx_draw(chips_display_info_t display_info) {
     }
 
     // copy emulator pixel data into emulator framebuffer texture
-    sg_update_image(state.fb.img, &(sg_image_data){
+    sg_update_image(state.fb.vidmem.img, &(sg_image_data){
         .subimage[0][0] = {
             .ptr = display_info.frame.buffer.ptr,
             .size = display_info.frame.buffer.size,
@@ -460,27 +495,24 @@ void gfx_draw(chips_display_info_t display_info) {
     });
 
     // upscale the original framebuffer 2x with nearest filtering
-    sg_begin_pass(&(sg_pass){
-        .action = state.offscreen.pass_action,
-        .attachments = state.offscreen.attachments
-    });
+    sg_begin_pass(&state.offscreen.pass);
     sg_apply_pipeline(state.offscreen.pip);
     sg_apply_bindings(&(sg_bindings){
         .vertex_buffers[0] = state.offscreen.vbuf,
-        .images = {
-            [IMG_fb_tex] = state.fb.img,
-            [IMG_pal_tex] = state.fb.pal_img,
+        .views = {
+            [VIEW_fb_tex] = state.fb.vidmem.tex_view,
+            [VIEW_pal_tex] = state.fb.pal.tex_view,
         },
         .samplers[SMP_smp] = state.fb.smp,
     });
     const offscreen_vs_params_t vs_params = {
         .uv_offset = {
-            (float)state.offscreen.view.x / (float)state.fb.dim.width,
-            (float)state.offscreen.view.y / (float)state.fb.dim.height,
+            (float)state.offscreen.viewport.x / (float)state.fb.dim.width,
+            (float)state.offscreen.viewport.y / (float)state.fb.dim.height,
         },
         .uv_scale = {
-            (float)state.offscreen.view.width / (float)state.fb.dim.width,
-            (float)state.offscreen.view.height / (float)state.fb.dim.height
+            (float)state.offscreen.viewport.width / (float)state.fb.dim.width,
+            (float)state.offscreen.viewport.height / (float)state.fb.dim.height
         }
     };
     sg_apply_uniforms(UB_offscreen_vs_params, &SG_RANGE(vs_params));
@@ -510,7 +542,7 @@ void gfx_draw(chips_display_info_t display_info) {
     sg_apply_pipeline(state.display.pip);
     sg_apply_bindings(&(sg_bindings){
         .vertex_buffers[0] = state.display.vbuf,
-        .images[IMG_tex] = state.offscreen.img,
+        .views[VIEW_tex] = state.offscreen.tex_view,
         .samplers[SMP_smp] = state.offscreen.smp,
     });
     sg_draw(0, 4, 1);
@@ -519,14 +551,13 @@ void gfx_draw(chips_display_info_t display_info) {
     sgl_draw();
     if (state.draw_extra_cb) {
         state.draw_extra_cb(&(gfx_draw_info_t){
-            .display_image = state.offscreen.img,
+            .display_texview = state.offscreen.tex_view,
             .display_sampler = state.offscreen.smp,
             .display_info = display_info,
         });
     }
     sg_end_pass();
     sg_commit();
-
 }
 
 void gfx_shutdown() {

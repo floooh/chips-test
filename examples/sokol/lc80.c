@@ -80,6 +80,7 @@ void app_init(void) {
         .environment = sglue_environment(),
         .logger.func = slog_func,
     });
+    ui_preinit();
     sdtx_setup(&(sdtx_desc_t){
         .context_pool_size = 1,
         .fonts[0] = sdtx_font_oric(),
@@ -100,6 +101,9 @@ void app_init(void) {
     ui_lc80_init(&state.ui, &(ui_lc80_desc_t){
         .sys = &state.lc80,
         .boot_cb = ui_boot_cb,
+        .inject = {
+            .menu_cb = ui_draw_sokol_menu,
+        },
         .dbg_texture = {
             .create_cb = ui_create_texture,
             .update_cb = ui_update_texture,
