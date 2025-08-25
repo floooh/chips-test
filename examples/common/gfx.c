@@ -249,7 +249,7 @@ static void gfx_init_images_and_pass(void) {
         .label = "vidmem-sampler",
     });
 
-    // 2x-upscaling render target texture, views and sampler
+    // 2x-upscaling render target image, views and sampler
     assert((state.offscreen.viewport.width > 0) && (state.offscreen.viewport.height > 0));
     state.offscreen.img = sg_make_image(&(sg_image_desc){
         .usage.color_attachment = true,
