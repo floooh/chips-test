@@ -207,7 +207,7 @@ sg_view gfx_create_icon_texview(const uint8_t* packed_pixels, int width, int hei
         .pixel_format = SG_PIXELFORMAT_RGBA8,
         .width = width,
         .height = height,
-        .data.subimage[0][0] = { .ptr=pixels, .size=pixel_data_size },
+        .data.mip_levels[0] = { .ptr=pixels, .size=pixel_data_size },
         .label = label,
     });
     free(pixels);
@@ -322,7 +322,7 @@ void gfx_init(const gfx_desc_t* desc) {
             .height = 1,
             .pixel_format = SG_PIXELFORMAT_RGBA8,
             .data = {
-                .subimage[0][0] = {
+                .mip_levels[0] = {
                     .ptr = palette_buf,
                     .size = sizeof(palette_buf)
                 }
@@ -488,7 +488,7 @@ void gfx_draw(chips_display_info_t display_info) {
 
     // copy emulator pixel data into emulator framebuffer texture
     sg_update_image(state.fb.vidmem.img, &(sg_image_data){
-        .subimage[0][0] = {
+        .mip_levels[0] = {
             .ptr = display_info.frame.buffer.ptr,
             .size = display_info.frame.buffer.size,
         }

@@ -188,7 +188,7 @@ ui_texture_t ui_create_texture(int w, int h, const char* label) {
 void ui_update_texture(ui_texture_t h, void* data, int data_byte_size) {
     sg_image img = sg_query_view_image(simgui_texture_view_from_imtextureid(h));
     sg_image_data img_data = { };
-    img_data.subimage[0][0] = { .ptr = data, .size = (size_t) data_byte_size };
+    img_data.mip_levels[0] = { .ptr = data, .size = (size_t) data_byte_size };
     sg_update_image(img, img_data);
 }
 
@@ -253,7 +253,7 @@ ui_texture_t ui_create_screenshot_texture(chips_display_info_t info) {
         .pixel_format = SG_PIXELFORMAT_RGBA8,
         .label = "screenshot-image",
     };
-    img_desc.data.subimage[0][0] = { .ptr = dst, .size = dst_num_bytes };
+    img_desc.data.mip_levels[0] = { .ptr = dst, .size = dst_num_bytes };
     sg_image img = sg_make_image(img_desc);
     free(dst);
     sg_view view = sg_make_view({
