@@ -35,7 +35,6 @@ static struct {
     } delete_stack;
     char imgui_ini_key[128];
     ui_settings_t settings;
-    sgimgui_t sgimgui;
 } state;
 
 static const struct {
@@ -76,7 +75,7 @@ static void register_imgui_settings_handler(void);
 // sokol-gfx resources
 void ui_preinit(void) {
     const sgimgui_desc_t sgimgui_desc = { };
-    sgimgui_init(&state.sgimgui, &sgimgui_desc);
+    sgimgui_setup(&sgimgui_desc);
 }
 
 void ui_init(const ui_desc_t* desc) {
@@ -132,11 +131,11 @@ void ui_discard(void) {
     sg_destroy_sampler(state.linear_sampler);
     sg_remove_commit_listener({ .func = commit_listener });
     simgui_shutdown();
-    sgimgui_discard(&state.sgimgui);
+    sgimgui_shutdown();
 }
 
 void ui_draw_sokol_menu(void) {
-    sgimgui_draw_menu(&state.sgimgui, "Sokol");
+    sgimgui_draw_menu("Sokol");
 }
 
 void ui_draw(const gfx_draw_info_t* gfx_draw_info) {
@@ -158,7 +157,7 @@ void ui_draw(const gfx_draw_info_t* gfx_draw_info) {
         }
         state.draw_cb(&ui_draw_info);
     }
-    sgimgui_draw(&state.sgimgui);
+    sgimgui_draw();
     simgui_render();
 }
 
