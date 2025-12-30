@@ -35,6 +35,11 @@ export function configure(c: Configurer) {
 }
 
 export function build(b: Builder) {
+    // compile options
+    if (b.isGcc() || b.isClang()) {
+        b.addCompileOptions(['-flto']);
+        b.addLinkOptions(['-flto']);
+    }
     // an interface lib for the chips headers
     b.addTarget('chips', 'interface', (t) => {
         t.setDir(b.importDir('chips'));
@@ -43,27 +48,26 @@ export function build(b: Builder) {
     addCommon(b);
     addRoms(b);
     addEmulators(b);
+    if (b.isHostLinux() || b.isHostMacOS()) {
+        addAsciiEmulators(b);
+    }
 }
 
 function addEmulators(b: Builder) {
-    // compile options
-    if (b.isGcc() || b.isClang()) {
-        b.addCompileOptions(['-flto']);
-        b.addLinkOptions(['-flto']);
-    }
+    const dir = 'examples/emus';
 
     // regular emulators
     const emus = ['z1013', 'z9001', 'atom', 'c64', 'vic20', 'zx', 'cpc', 'bombjack', 'pacman', 'pengo'];
     for (const emu of emus) {
         // emulator without UI
         b.addTarget(emu, 'windowed-exe', (t) => {
-            t.setDir('examples/emus');
+            t.setDir(dir);
             t.addSources([`${emu}.c`]);
             t.addDependencies(['common', 'roms']);
         });
         // emulator with UI
         b.addTarget(`${emu}-ui`, 'windowed-exe', (t) => {
-            t.setDir('examples/emus');
+            t.setDir(dir);
             t.addSources([`${emu}.c`, `${emu}-ui-impl.cc`]);
             t.addCompileDefinitions({ CHIPS_USE_UI: '1' });
             t.addDependencies(['ui', 'roms']);
@@ -78,13 +82,13 @@ function addEmulators(b: Builder) {
     ];
     for (const kc85Model of kc85Models) {
         b.addTarget(kc85Model.name, 'windowed-exe', (t) => {
-            t.setDir('examples/emus');
+            t.setDir(dir);
             t.addSources(['kc85.c']);
             t.addCompileDefinitions({[kc85Model.def]: '1'});
             t.addDependencies(['common', 'roms']);
         });
         b.addTarget(`${kc85Model.name}-ui`, 'windowed-exe', (t) => {
-            t.setDir('examples/emus');
+            t.setDir(dir);
             t.addSources(['kc85.c', 'kc85-ui-impl.cc']);
             t.addCompileDefinitions({
                 [kc85Model.def]: '1',
@@ -94,26 +98,65 @@ function addEmulators(b: Builder) {
         });
     }
     b.addTarget('lc80', 'windowed-exe', (t) => {
-        t.setDir('examples/emus');
+        t.setDir(dir);
         t.addSources(['lc80.c', 'lc80-ui-impl.cc']);
         t.addDependencies(['ui', 'roms']);
     });
 }
 
+function addAsciiEmulators(b: Builder) {
+    // NOTE: these emulators use sokol_arg.h and sokol_time.h,
+    // but don't link with sokol since this would also
+    // bring in 3D API and window system dependencies
+    const dir = 'examples/ascii';
+    const libs = ['curses'];
+    const deps = ['chips', 'keybuf', 'roms'];
+    const incl = [b.importDir('sokol')];
+    b.addTarget('kc85-ascii', 'plain-exe', (t) => {
+        t.setDir(dir);
+        t.addSources(['kc85-ascii.c']);
+        t.addLibraries(libs);
+        t.addDependencies(deps);
+        t.addIncludeDirectories(incl);
+    });
+    b.addTarget('c64-ascii', 'plain-exe', (t) => {
+        t.setDir(dir);
+        t.addSources(['c64-ascii.c']);
+        t.addLibraries(libs);
+        t.addDependencies(deps);
+        t.addIncludeDirectories(incl);
+    });
+    b.addTarget('c64-sixel', 'plain-exe', (t) => {
+        t.setDir(dir);
+        t.addSources(['c64-sixel.c']);
+        t.addLibraries(libs);
+        t.addDependencies(deps);
+        t.addIncludeDirectories(incl);
+    });
+    b.addTarget('c64-kitty', 'plain-exe', (t) => {
+        t.setDir(dir);
+        t.addSources(['c64-kitty.c']);
+        t.addLibraries(libs);
+        t.addDependencies(deps);
+        t.addIncludeDirectories(incl);
+    });
+}
+
 function addCommon(b: Builder) {
+    const dir = 'examples/common';
     b.addTarget('keybuf', 'lib', (t) => {
-        t.setDir('examples/common');
+        t.setDir(dir);
         t.addSources(['keybuf.c', 'keybuf.h']);
         t.addIncludeDirectories({ dirs: ['.'], scope: 'interface'});
     });
     b.addTarget('webapi', 'lib', (t) => {
-        t.setDir('examples/common');
+        t.setDir(dir);
         t.addSources(['webapi.c', 'webapi.h']);
         t.addIncludeDirectories({ dirs: ['.'], scope: 'interface'});
         t.addDependencies(['chips']);
     });
     b.addTarget('common', 'lib', (t) => {
-        t.setDir('examples/common');
+        t.setDir(dir);
         t.addSources([
             'common.h',
             'sokol.c',
@@ -128,7 +171,7 @@ function addCommon(b: Builder) {
         t.addDependencies(['keybuf', 'webapi', 'sokol']);
     });
     b.addTarget('ui', 'lib', (t) => {
-        t.setDir('examples/common');
+        t.setDir(dir);
         t.addSources([ 'ui.cc', 'ui.h' ]);
         t.addDependencies(['imgui-docking', 'common']);
     });
