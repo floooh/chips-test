@@ -1,3 +1,4 @@
+// deno-lint-ignore no-unversioned-import
 import { Configurer, Builder } from 'jsr:@floooh/fibs';
 
 export function configure(c: Configurer) {
@@ -45,6 +46,12 @@ export function build(b: Builder) {
 }
 
 function addEmulators(b: Builder) {
+    // compile options
+    if (b.isGcc() || b.isClang()) {
+        b.addCompileOptions(['-flto']);
+        b.addLinkOptions(['-flto']);
+    }
+
     // regular emulators
     const emus = ['z1013', 'z9001', 'atom', 'c64', 'vic20', 'zx', 'cpc', 'bombjack', 'pacman', 'pengo'];
     for (const emu of emus) {
@@ -227,7 +234,7 @@ function addRoms(b: Builder) {
         ],
         z9001: [
             'kc87_os_2.bin',
-            'kc87_font_2.bin ',
+            'kc87_font_2.bin',
             'z9001_basic.bin',
             'z9001_os12_1.bin',
             'z9001_os12_2.bin',
@@ -242,12 +249,18 @@ function addRoms(b: Builder) {
     };
 
     b.addTarget('roms', 'interface', (t) => {
-        t.addJob({
-            job: 'embedfiles',
-            args: {
-                outHeader: 'roms/atom-roms.h',
-                prefix: 'dump_',
-                files: ['roms/abasic.ic20', 'afloat.']
+        t.setDir('examples/roms');
+        t.addIncludeDirectories(['.']);
+        for (const [name, files] of Object.entries(roms)) {
+            t.addJob({
+                job: 'embedfiles',
+                args: {
+                    outHeader: `${name}-roms.h`,
+                    prefix: 'dump_',
+                    asConst: false,
+                    files,
+                }
+            })
         }
-    })
+    });
 }

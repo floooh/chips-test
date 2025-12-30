@@ -1,6 +1,0 @@
----
-options:
-    prefix: dump_
-files:
-    - 1541_c000_325302_01.bin
-    - 1541_e000_901229_06aa.bin

@@ -1,7 +1,0 @@
----
-platform: osx
-generator: Ninja
-build_tool: vscode
-build_type: Debug
-defines:
-    FIPS_OSX_USE_ARC: ON
