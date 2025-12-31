@@ -41,6 +41,7 @@ export function build(b: Builder) {
         addAsciiEmulators(b);
     }
     addTools(b);
+    addTests(b);
 }
 
 function addEmulators(b: Builder) {
@@ -302,5 +303,40 @@ function addRoms(b: Builder) {
                 }
             })
         }
+    });
+}
+
+function addTests(b: Builder) {
+    const dir = 'tests';
+    b.addTarget('chips-test', 'plain-exe', (t) => {
+        t.setDir(dir);
+        t.addSources([
+            'chips-test.c',
+            'kbd-test.c',
+            'mem-test.c',
+            'fdd-test.c',
+            'upd765-test.c',
+            'ay38910-test.c',
+            'i8255-test.c',
+            'mc6847-test.c',
+            'mc6845-test.c',
+            'm6569-test.c',
+            'm6581-test.c',
+            'z80ctc-test.c',
+            'z80pio-test.c',
+            'm6502dasm-test.c',
+            'z80dasm-test.c',
+            'm6502-test.c',
+        ]);
+        t.addJob({
+            job: 'embedfiles',
+            args: {
+                outHeader: 'disks/fdd-test.h',
+                prefix: 'dump_',
+                asConst: false,
+                files: ['disks/boulderdash_cpc.dsk', 'disks/dtc_cpc.dsk' ],
+            }
+        });
+        t.addDependencies(['chips']);
     });
 }
