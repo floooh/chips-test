@@ -2,12 +2,6 @@
 import { Configurer, Builder } from 'jsr:@floooh/fibs';
 
 export function configure(c: Configurer) {
-    c.addImportOptions({
-        emscripten: {
-            // we're using our own shell-files
-            useMinimalShellFile: false,
-        }
-    });
     c.addImport({
         name: 'chips',
         url: 'https://github.com/floooh/chips',
@@ -35,11 +29,6 @@ export function configure(c: Configurer) {
 }
 
 export function build(b: Builder) {
-    // compile options
-    if (b.isGcc() || b.isClang()) {
-        b.addCompileOptions(['-flto']);
-        b.addLinkOptions(['-flto']);
-    }
     // an interface lib for the chips headers
     b.addTarget('chips', 'interface', (t) => {
         t.setDir(b.importDir('chips'));
@@ -51,6 +40,7 @@ export function build(b: Builder) {
     if (b.isHostLinux() || b.isHostMacOS()) {
         addAsciiEmulators(b);
     }
+    addTools(b);
 }
 
 function addEmulators(b: Builder) {
@@ -175,6 +165,13 @@ function addCommon(b: Builder) {
         t.addSources([ 'ui.cc', 'ui.h' ]);
         t.addDependencies(['imgui-docking', 'common']);
     });
+}
+
+function addTools(b: Builder) {
+    const dir = 'tools';
+    const type = 'plain-exe';
+    b.addTarget({ name: 'prgmerge', type, dir, sources: ['prgmerge.c', 'getopt.c', 'getopt.h'] });
+    b.addTarget({ name: 'png2bits', type, dir, sources: ['png2bits.c', 'getopt.c', 'getopt.h', 'stb_image.h'] });
 }
 
 function addRoms(b: Builder) {
