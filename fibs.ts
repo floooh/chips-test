@@ -1,5 +1,6 @@
 // deno-lint-ignore no-unversioned-import
 import { Configurer, Builder } from 'jsr:@floooh/fibs';
+import { addNesTestLogJob } from './fibs-scripts/nestestlog.ts';
 
 export function configure(c: Configurer) {
     c.addImport({
@@ -26,6 +27,7 @@ export function configure(c: Configurer) {
         url: 'https://github.com/floooh/fibs-utils',
         files: ['stdoptions.ts', 'sokolshdc.ts', 'embedfiles.ts'],
     });
+    addNesTestLogJob(c);
 }
 
 export function build(b: Builder) {
