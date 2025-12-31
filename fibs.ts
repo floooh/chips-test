@@ -308,7 +308,12 @@ function addRoms(b: Builder) {
 
 function addTests(b: Builder) {
     const dir = 'tests';
-    b.addTarget('chips-test', 'plain-exe', (t) => {
+    const type = 'plain-exe';
+    b.addTarget({ name: 'z80-test', dir, type, sources: ['z80-test.c'], deps: ['chips'] });
+    b.addTarget({ name: 'z80-int', dir, type, sources: ['z80-int.c'], deps: ['chips'] });
+    b.addTarget({ name: 'm6502-int', dir, type, sources: ['m6502-int.c'], deps: ['chips'] });
+    b.addTarget({ name: 'z80-timing', dir, type, sources: ['z80-timing.c'], deps: ['chips'] });
+    b.addTarget('chips-test', type, (t) => {
         t.setDir(dir);
         t.addSources([
             'chips-test.c',
@@ -338,5 +343,81 @@ function addTests(b: Builder) {
             }
         });
         t.addDependencies(['chips']);
+    });
+    b.addTarget('z80-zex', type, (t) => {
+        t.setDir(dir);
+        t.addSources(['z80-zex.c']);
+        t.addJob({
+            job: 'embedfiles',
+            args: {
+                outHeader: 'roms/zex-dump.h',
+                prefix: 'dump_',
+                asConst: false,
+                files: ['roms/zexall.com', 'roms/zexdoc.com'],
+            }
+        });
+        t.addIncludeDirectories([b.importDir('sokol')]);
+        t.addDependencies(['chips']);
+    });
+    b.addTarget('c64-bench', type, (t) => {
+        t.setDir(dir);
+        t.addSources(['c64-bench.c']);
+        t.addIncludeDirectories([b.importDir('sokol')]);
+        t.addDependencies(['chips', 'roms']);
+    });
+    b.addTarget('m6502-perfect', type, (t) => {
+        t.setDir(dir);
+        t.addSources([
+            'm6502-perfect.c',
+            'perfect6502/netlist_6502.h',
+            'perfect6502/netlist_sim.c',
+            'perfect6502/netlist_sim.h',
+            'perfect6502/perfect6502.c',
+            'perfect6502/perfect6502.h',
+            'perfect6502/types.h'
+        ]);
+        t.addDependencies(['chips']);
+    });
+    b.addTarget('m6502-wltest', type, (t) => {
+        t.setDir(dir);
+        t.addSources(['m6502-wltest.c']);
+        t.addIncludeDirectories([b.importDir('sokol')]);
+        t.addDependencies(['chips']);
+        t.addJob({
+            job: 'embedfiles',
+            args: {
+                dir: `testsuite-2.15/bin`,
+                outHeader: 'dump.h',
+                prefix: 'dump_',
+                list: true,
+                asConst: false,
+                // deno-fmt-ignore
+                files: [
+                    '_start', 'adca', 'adcax', 'adcay', 'adcb', 'adcix', 'adciy', 'adcz', 'adczx', 'alrb', 'ancb', 'anda',
+                    'andax', 'anday', 'andb', 'andix', 'andiy', 'andz', 'andzx', 'aneb', 'arrb', 'asla', 'aslax', 'asln',
+                    'aslz', 'aslzx', 'asoa', 'asoax', 'asoay', 'asoix', 'asoiy', 'asoz', 'asozx', 'axsa', 'axsix', 'axsz',
+                    'axszy', 'bccr', 'bcsr', 'beqr', 'bita', 'bitz', 'bmir', 'bner', 'bplr', 'branchwrap', 'brkn', 'bvcr',
+                    'bvsr', 'cia1pb6', 'cia1pb7', 'cia1ta', 'cia1tab', 'cia1tb', 'cia1tb123',  'cia2pb6', 'cia2pb7',
+                    'cia2ta', 'cia2tb', 'cia2tb123', 'clcn', 'cldn', 'clin', 'clvn', 'cmpa', 'cmpax', 'cmpay', 'cmpb',
+                    'cmpix', 'cmpiy', 'cmpz', 'cmpzx', 'cntdef', 'cnto2', 'cpuport', 'cputiming', 'cpxa', 'cpxb', 'cpxz',
+                    'cpya', 'cpyb', 'cpyz', 'dcma', 'dcmax', 'dcmay', 'dcmix', 'dcmiy', 'dcmz', 'dcmzx', 'deca', 'decax',
+                    'decz', 'deczx', 'dexn', 'deyn', 'eora', 'eorax', 'eoray', 'eorb', 'eorix', 'eoriy', 'eorz', 'eorzx',
+                    'finish', 'flipos', 'icr01', 'imr', 'inca', 'incax', 'incz', 'inczx', 'insa', 'insax', 'insay', 'insix',
+                    'insiy', 'insz', 'inszx', 'inxn', 'inyn', 'irq', 'jmpi', 'jmpw', 'jsrw', 'lasay', 'laxa', 'laxay',
+                    'laxix', 'laxiy', 'laxz', 'laxzy', 'ldaa', 'ldaax', 'ldaay', 'ldab', 'ldaix', 'ldaiy', 'ldaz', 'ldazx',
+                    'ldxa', 'ldxay', 'ldxb', 'ldxz', 'ldxzy', 'ldya', 'ldyax', 'ldyb', 'ldyz', 'ldyzx', 'loadth', 'lsea',
+                    'lseax', 'lseay', 'lseix', 'lseiy', 'lsez', 'lsezx', 'lsra', 'lsrax', 'lsrn', 'lsrz', 'lsrzx', 'lxab',
+                    'mmu', 'mmufetch', 'nmi', 'nopa', 'nopax', 'nopb', 'nopn', 'nopz', 'nopzx', 'oneshot', 'oraa', 'oraax',
+                    'oraay', 'orab', 'oraix', 'oraiy', 'oraz', 'orazx', 'phan', 'phpn', 'plan', 'plpn', 'rlaa', 'rlaax',
+                    'rlaay', 'rlaix', 'rlaiy', 'rlaz', 'rlazx', 'rola', 'rolax', 'roln', 'rolz', 'rolzx', 'rora', 'rorax',
+                    'rorn', 'rorz', 'rorzx', 'rraa', 'rraax', 'rraay', 'rraix', 'rraiy', 'rraz', 'rrazx', 'rtin', 'rtsn',
+                    'sbca', 'sbcax', 'sbcay', 'sbcb', 'sbcb_eb', 'sbcix', 'sbciy', 'sbcz', 'sbczx', 'sbxb', 'secn', 'sedn',
+                    'sein', 'shaay', 'shaiy', 'shsay', 'shxay', 'shyax', 'staa', 'staax', 'staay', 'staix', 'staiy', 'staz',
+                    'stazx', 'stxa', 'stxz', 'stxzy', 'stya', 'styz', 'styzx', 'taxn', 'tayn', 'trap1', 'trap10', 'trap11',
+                    'trap12', 'trap13', 'trap14', 'trap15', 'trap16', 'trap17', 'trap2', 'trap3', 'trap4', 'trap5', 'trap6',
+                    'trap7', 'trap8', 'trap9', 'tsxn', 'txan', 'txsn', 'tyan',
+                ],
+            },
+        })
     });
 }
