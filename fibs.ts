@@ -338,10 +338,11 @@ function addTests(b: Builder) {
         t.addJob({
             job: 'embedfiles',
             args: {
-                outHeader: 'disks/fdd-test.h',
+                dir: 'disks',
+                outHeader: 'fdd-test.h',
                 prefix: 'dump_',
                 asConst: false,
-                files: ['disks/boulderdash_cpc.dsk', 'disks/dtc_cpc.dsk' ],
+                files: ['boulderdash_cpc.dsk', 'dtc_cpc.dsk' ],
             }
         });
         t.addDependencies(['chips']);
@@ -352,10 +353,11 @@ function addTests(b: Builder) {
         t.addJob({
             job: 'embedfiles',
             args: {
-                outHeader: 'roms/zex-dump.h',
+                dir: 'roms',
+                outHeader: 'zex-dump.h',
                 prefix: 'dump_',
                 asConst: false,
-                files: ['roms/zexall.com', 'roms/zexdoc.com'],
+                files: ['zexall.com', 'zexdoc.com'],
             }
         });
         t.addIncludeDirectories([b.importDir('sokol')]);
@@ -421,5 +423,28 @@ function addTests(b: Builder) {
                 ],
             },
         })
+    });
+    b.addTarget('m6502-nestest', type, (t) => {
+        t.setDir(dir);
+        t.addSources(['m6502-nestest.c']);
+        t.addDependencies(['chips']);
+        t.addJob({
+            job: 'nestestlog',
+            args: {
+                dir: 'nestest',
+                input: 'nestest.log.txt',
+                outHeader: 'nestestlog.h',
+            }
+        });
+        t.addJob({
+            job: 'embedfiles',
+            args: {
+                dir: 'nestest',
+                outHeader: 'dump.h',
+                files: ['nestest.nes'],
+                prefix: 'dump_',
+                asConst: false,
+            }
+        });
     });
 }

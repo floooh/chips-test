@@ -53,14 +53,16 @@ function build(_p: Project, _c: Config, t: Target, args: unknown) {
             str += '} cpu_state;\n';
             str += 'cpu_state state_table[] = {\n';
             for (const line of lines) {
-                const desc = line.slice(16, 48);
-                const pc = line.slice(0, 4);
-                const a = line.slice(50, 52);
-                const x = line.slice(55, 57);
-                const y = line.slice(60, 62);
-                const p = line.slice(65, 67);
-                const s = line.slice(71, 73);
-                str += `  { "${desc}", 0x${pc}, 0x${a}, 0x${x}, 0x${y}, 0x${p}, 0x${s} },\n`;
+                if (line.trim().length > 0) {
+                    const desc = line.slice(16, 48);
+                    const pc = line.slice(0, 4);
+                    const a = line.slice(50, 52);
+                    const x = line.slice(55, 57);
+                    const y = line.slice(60, 62);
+                    const p = line.slice(65, 67);
+                    const s = line.slice(71, 73);
+                    str += `  { "${desc}", 0x${pc}, 0x${a}, 0x${x}, 0x${y}, 0x${p}, 0x${s} },\n`;
+                }
             }
             str += '};\n';
             Deno.writeTextFile(outputs[0], str);
