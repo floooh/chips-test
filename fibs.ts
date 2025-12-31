@@ -1,6 +1,7 @@
 // deno-lint-ignore no-unversioned-import
 import { Configurer, Builder } from 'jsr:@floooh/fibs';
 import { addNesTestLogJob } from './fibs-scripts/nestestlog.ts';
+import { addFuseJob } from './fibs-scripts/fuse.ts';
 
 export function configure(c: Configurer) {
     c.addImport({
@@ -28,6 +29,7 @@ export function configure(c: Configurer) {
         files: ['stdoptions.ts', 'sokolshdc.ts', 'embedfiles.ts'],
     });
     addNesTestLogJob(c);
+    addFuseJob(c);
 }
 
 export function build(b: Builder) {
@@ -444,6 +446,20 @@ function addTests(b: Builder) {
                 files: ['nestest.nes'],
                 prefix: 'dump_',
                 asConst: false,
+            }
+        });
+    });
+    b.addTarget('z80-fuse', type, (t) => {
+        t.setDir(dir);
+        t.addSources(['z80-fuse.c']);
+        t.addDependencies(['chips']);
+        t.addJob({
+            job: 'fuse',
+            args: {
+                dir: 'fuse',
+                fuse_input_file: 'tests.in',
+                fuse_expected_file: 'tests.expected',
+                outHeader: 'fuse.h',
             }
         });
     });

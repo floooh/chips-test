@@ -65,7 +65,7 @@ function build(_p: Project, _c: Config, t: Target, args: unknown) {
                 }
             }
             str += '};\n';
-            Deno.writeTextFile(outputs[0], str);
+            await Deno.writeTextFile(outputs[0], str);
         },
     }
 }
