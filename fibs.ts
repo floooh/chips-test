@@ -45,11 +45,13 @@ export function build(b: Builder) {
     addCommon(b);
     addRoms(b);
     addEmulators(b);
-    if (b.isHostLinux() || b.isHostMacOS()) {
+    if (b.isLinux() || b.isMacOS()) {
         addAsciiEmulators(b);
     }
-    addTools(b);
-    addTests(b);
+    if (!b.isEmscripten()) {
+        addTests(b);
+        addTools(b);
+    }
 }
 
 function addEmulators(b: Builder) {
