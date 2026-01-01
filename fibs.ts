@@ -3,6 +3,7 @@ import { Configurer, Builder } from 'jsr:@floooh/fibs';
 import { addNesTestLogJob } from './fibs-scripts/nestestlog.ts';
 import { addFuseJob } from './fibs-scripts/fuse.ts';
 import { addVic20TestCommand } from './fibs-scripts/vic20-via-tests.ts';
+import { addC64TestCommand } from './fibs-scripts/c64-wlspecial-tests.ts';
 
 export function configure(c: Configurer) {
     c.addImport({
@@ -30,6 +31,7 @@ export function configure(c: Configurer) {
         files: ['stdoptions.ts', 'sokolshdc.ts', 'embedfiles.ts'],
     });
     addVic20TestCommand(c);
+    addC64TestCommand(c);
     addNesTestLogJob(c);
     addFuseJob(c);
 }

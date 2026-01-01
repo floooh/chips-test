@@ -14,7 +14,7 @@ function help() {
 }
 
 async function run(p: Project, args: string[]): Promise<void> {
-    const testDir = '/tests/vice-tests/VIC20/'
+    const testDir = 'tests/vice-tests/VIC20/'
     const allTests = [
         'viavarious/via1.prg',
         'viavarious/via2.prg',
