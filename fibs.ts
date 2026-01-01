@@ -4,6 +4,7 @@ import { addNesTestLogJob } from './fibs-scripts/nestestlog.ts';
 import { addFuseJob } from './fibs-scripts/fuse.ts';
 import { addVic20TestCommand } from './fibs-scripts/vic20-via-tests.ts';
 import { addC64TestCommand } from './fibs-scripts/c64-wlspecial-tests.ts';
+import { addWebpageCommand } from './fibs-scripts/webpage.ts';
 
 export function configure(c: Configurer) {
     c.addImport({
@@ -34,6 +35,7 @@ export function configure(c: Configurer) {
     addC64TestCommand(c);
     addNesTestLogJob(c);
     addFuseJob(c);
+    addWebpageCommand(c);
 }
 
 export function build(b: Builder) {
