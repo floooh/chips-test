@@ -2,6 +2,7 @@
 import { Configurer, Builder } from 'jsr:@floooh/fibs';
 import { addNesTestLogJob } from './fibs-scripts/nestestlog.ts';
 import { addFuseJob } from './fibs-scripts/fuse.ts';
+import { addVic20TestCommand } from './fibs-scripts/vic20-via-tests.ts';
 
 export function configure(c: Configurer) {
     c.addImport({
@@ -28,6 +29,7 @@ export function configure(c: Configurer) {
         url: 'https://github.com/floooh/fibs-utils',
         files: ['stdoptions.ts', 'sokolshdc.ts', 'embedfiles.ts'],
     });
+    addVic20TestCommand(c);
     addNesTestLogJob(c);
     addFuseJob(c);
 }
