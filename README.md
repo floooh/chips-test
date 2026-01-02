@@ -32,7 +32,7 @@ instead:
 # on Linux
 ./fibs config linux-ninja-release
 ./fibs build
-# on Windows
+# on macOS
 ./fibs config macos-ninja-release
 ./fibs build
 ```
