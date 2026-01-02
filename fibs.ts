@@ -19,7 +19,7 @@ export function configure(c: Configurer) {
     c.addImport({
         name: 'libs',
         url: 'https://github.com/floooh/fibs-libs',
-        files: ['sokol.ts'],
+        files: ['sokol.ts', 'stb.ts'],
     });
     c.addImport({
         name: 'platforms',
@@ -48,6 +48,10 @@ export function build(b: Builder) {
             '/wd4200',      // non-standard extension used: zero sized array
             '/wd4201',      // non-standard extension used: nameless struct/union
             '/wd4702',      // unreachable code
+        ]);
+    } else if (b.isGcc()) {
+        b.addCompileOptions([
+            '-Wno-stringop-overflow',   // possible false positives
         ]);
     }
     // an interface lib for the chips headers
@@ -195,7 +199,7 @@ function addTools(b: Builder) {
     const dir = 'tools';
     const type = 'plain-exe';
     b.addTarget({ name: 'prgmerge', type, dir, sources: ['prgmerge.c', 'getopt.c', 'getopt.h'] });
-    b.addTarget({ name: 'png2bits', type, dir, sources: ['png2bits.c', 'getopt.c', 'getopt.h', 'stb_image.h'] });
+    b.addTarget({ name: 'png2bits', type, dir, sources: ['png2bits.c', 'getopt.c', 'getopt.h'], deps: ['stb'] });
 }
 
 function addRoms(b: Builder) {
@@ -379,6 +383,7 @@ function addTests(b: Builder) {
                 outHeader: 'zex-dump.h',
                 prefix: 'dump_',
                 asConst: false,
+                asStatic: false,
                 files: ['zexall.com', 'zexdoc.com'],
             }
         });
