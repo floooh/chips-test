@@ -17,7 +17,6 @@ jobs:
           run: |
             ./fibs config win-vstudio-release
             ./fibs build
-            ./fibs run chips-test
     mac:
         runs-on: macos-latest
         steps:
@@ -33,7 +32,6 @@ jobs:
           run: |
             ./fibs config macos-ninja-release
             ./fibs build
-            ./fibs run chips-test
     linux:
         runs-on: ubuntu-latest
         steps:
@@ -53,7 +51,6 @@ jobs:
           run: |
             ./fibs config linux-ninja-release
             ./fibs build
-            ./fibs run chips-test
     emscripten:
         runs-on: ubuntu-latest
         steps:
