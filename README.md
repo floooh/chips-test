@@ -61,6 +61,10 @@ To open the project in an IDE:
 # on Windows with VStudio:
 ./fibs config win-vstudio-debug
 ./fibs open
+
+# on Windows with VSCode:
+./fibs config win-vscode-debug
+./fibs open
 ```
 
 To build the WebAssembly demos (Linux or OSX recommended here, Windows
