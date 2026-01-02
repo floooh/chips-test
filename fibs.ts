@@ -39,6 +39,17 @@ export function configure(c: Configurer) {
 }
 
 export function build(b: Builder) {
+    b.addCmakeVariable('CMAKE_CXX_STANDARD', '20');
+    if (b.isMsvc()) {
+        b.addCompileOptions([
+            '/wd4244',      // conversion from X to Y, possible loss of data
+            '/wd4267',      // ditto
+            '/wd4324',      // structure was padded due to alignment specifier
+            '/wd4200',      // non-standard extension used: zero sized array
+            '/wd4201',      // non-standard extension used: nameless struct/union
+            '/wd4702',      // unreachable code
+        ]);
+    }
     // an interface lib for the chips headers
     b.addTarget('chips', 'interface', (t) => {
         t.setDir(b.importDir('chips'));
