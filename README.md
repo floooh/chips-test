@@ -25,6 +25,18 @@ cd chips-test
 ./fibs run cpc
 ```
 
+...if you're on Linux or macOS and have Ninja installed, you'd want to use that
+instead:
+
+```bash
+# on Linux
+./fibs config linux-ninja-release
+./fibs build
+# on Windows
+./fibs config macos-ninja-release
+./fibs build
+```
+
 To see all runnable targets:
 
 ```bash
