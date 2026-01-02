@@ -1,7 +1,0 @@
----
-options:
-    prefix: dump_
-files:
-    - c64_basic.bin
-    - c64_char.bin
-    - c64_kernalv3.bin

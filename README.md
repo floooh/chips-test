@@ -8,100 +8,78 @@ Live demos of the example emulators: https://floooh.github.io/tiny8bit
 
 To build and run on Windows, OSX or Linux (exact versions of tools shouldn't matter):
 
-Check prerequisites:
+Prerequisites:
+
+- deno (https://docs.deno.com/runtime/getting_started/installation/)
+- cmake (at least version 3.21)
+- your system's C/C++ toolchain (Clang, GCC, MSVC)
+
+NOTE: on Linux, additional dev packages need to be present for X11, GL, ALSA and ncurses development.
+
+Clone, build and run the CPC emulator:
 
 ```bash
-> python --version
-Python 2.x or 3.x
-> cmake --version
-cmake version 3.x
+git clone https://github.com/floooh/chips-test
+cd chips-test
+./fibs build
+./fibs run cpc
 ```
 
-NOTE: on Linux, additional dev packages need to be present for X11, GL and ALSA development.
-
-Create a 'workspace' directory (which will be populated with additional dependencies),
-clone and cd into ```chips-test```:
+To see all runnable targets:
 
 ```bash
-> mkdir workspace
-> cd workspace
-> git clone https://github.com/floooh/chips-test
-> cd chips-test
+./fibs list targets --exe
 ```
 
-Finally, build and run one of the emulators (for instance the Amstrad CPC):
+To open the project in an IDE:
 
 ```bash
-> ./fips build
-> ./fips list targets
-> ./fips run cpc
-```
+# on macOS with Xcode
+./fibs config macos-xcode-debug
+./fibs open
 
-To get optimized builds for performance testing:
+# on macOS with VSCOde:
+./fibs config macos-vscode-debug
+./fibs open
 
-```bash
-# on OSX:
-> ./fips set config osx-make-release
-> ./fips build
-> ./fips run [target]
+# on Linux with VSCode:
+./fibs config linux-vscode-debug
+./fibs open
 
-# on Linux
-> ./fips set config linux-make-release
-> ./fips build
-> ./fips run [target]
-
-# on Windows
-> fips set config win64-vstudio-release
-> fips build
-> fips run [target]
-```
-
-To open project in IDE:
-```bash
-# on OSX with Xcode:
-> ./fips set config osx-xcode-debug
-> ./fips gen
-> ./fips open
-
-# on Windows with Visual Studio:
-> ./fips set config win64-vstudio-debug
-> ./fips gen
-> ./fips open
-
-# experimental VSCode support on Win/OSX/Linux:
-> ./fips set config [linux|osx|win64]-vscode-debug
-> ./fips gen
-> ./fips open
+# on Windows with VStudio:
+./fibs config win-vstudio-debug
+./fibs open
 ```
 
 To build the WebAssembly demos (Linux or OSX recommended here, Windows
 might work too, but this is not well tested).
 
 ```bash
-# first get ninja (on Windows a ninja.exe comes with the fips build system)
-> ninja --version
-1.8.2
-# now install the emscripten toolchain, this needs a lot of time and memory
-> ./fips setup emscripten
-...
-# from here on as usual...
-> ./fips set config wasm-ninja-release
-> ./fips build
-...
-> ./fips list targets
-...
-> ./fips run c64
-...
+# check if required tools are installed (ninja and maybe http-server)
+./fibs diag tools
+# install the Emscripten SDK
+./fibs emsdk install
+# configure, build and run
+./fibs config emsc-ninja-release
+./fibs build
+./fibs run cpc
+# or to open the project in VSCode:
+./fibs config emsc-vscode-debug
+./fibs open
 ```
 
 When the above emscripten build steps work, you can also build and test the
 entire samples webpage like this:
 
 ```bash
-> ./fips webpage build
-...
-> ./fips webpage serve
-...
+./fibs webpage build
+./fibs webpage serve
+```
+
+If fibs gets stuck in an error situation, try `./fibs reset` to start over from scratch:
+
+```bash
+./fibs reset
 ```
 
 ## Many Thanks To:

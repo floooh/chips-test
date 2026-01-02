@@ -4,7 +4,6 @@
 #if defined(__EMSCRIPTEN__)
 #include <emscripten/emscripten.h>
 #endif
-#include "gfx.h"
 
 #if defined(EM_JS_DEPS)
 EM_JS_DEPS(chips_webapi, "$withStackSave,$stringToUTF8OnStack");

@@ -1,4 +1,3 @@
-// #version:2#
 // machine generated, do not edit!
 fuse_test_t fuse_input[] = {
   {

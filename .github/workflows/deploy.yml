@@ -6,21 +6,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@main
-      - uses: seanmiddleditch/gha-setup-ninja@master
+      - uses: ashutoshvarma/setup-ninja@master
+      - uses: denoland/setup-deno@v2
       - name: prepare
         run: |
           sudo apt update
           sudo apt install webp
-          python3 fips emsdk install latest
+          ./fibs emsdk install
       - name: build
         run: |
-          python3 fips set local on
-          python3 fips webpage build
+          ./fibs webpage build
       - name: upload-artifact
         uses: actions/upload-artifact@main
         with:
           name: webpage
-          path: fips-files/deploy/chips-webpage
+          path: .fibs/webpage
           retention-days: 1
   deploy:
     needs: build

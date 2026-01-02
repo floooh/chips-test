@@ -1,7 +1,0 @@
----
-options:
-    prefix: dump_
-files:
-    - vic20_basic_901486_01.bin
-    - vic20_characters_901460_03.bin
-    - vic20_kernal_901486_07.bin
