@@ -322,6 +322,7 @@ function addRoms(b: Builder) {
                     outHeader: `${name}-roms.h`,
                     prefix: 'dump_',
                     asConst: false,
+                    asStatic: false,
                     files,
                 }
             })

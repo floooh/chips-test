@@ -17,7 +17,7 @@ Python 2.x or 3.x
 cmake version 3.x
 ```
 
-NOTE: on Linux, additional dev packages need to be present for X11, GL and ALSA development.
+NOTE: on Linux, additional dev packages need to be present for X11, GL, ALSA and ncurses development.
 
 Create a 'workspace' directory (which will be populated with additional dependencies),
 clone and cd into ```chips-test```:
