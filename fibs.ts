@@ -73,6 +73,8 @@ export function build(b: Builder) {
 
 function addEmulators(b: Builder) {
     const dir = 'examples/emus';
+    const ideFolder = 'emus';
+    const uiIdeFolder = 'emus-ui';
 
     // regular emulators
     const emus = ['z1013', 'z9001', 'atom', 'c64', 'vic20', 'zx', 'cpc', 'bombjack', 'pacman', 'pengo'];
@@ -80,12 +82,14 @@ function addEmulators(b: Builder) {
         // emulator without UI
         b.addTarget(emu, 'windowed-exe', (t) => {
             t.setDir(dir);
+            t.setIdeFolder(ideFolder);
             t.addSources([`${emu}.c`]);
             t.addDependencies(['common', 'roms']);
         });
         // emulator with UI
         b.addTarget(`${emu}-ui`, 'windowed-exe', (t) => {
             t.setDir(dir);
+            t.setIdeFolder(uiIdeFolder);
             t.addSources([`${emu}.c`, `${emu}-ui-impl.cc`]);
             t.addCompileDefinitions({ CHIPS_USE_UI: '1' });
             t.addDependencies(['ui', 'roms']);
@@ -101,12 +105,14 @@ function addEmulators(b: Builder) {
     for (const kc85Model of kc85Models) {
         b.addTarget(kc85Model.name, 'windowed-exe', (t) => {
             t.setDir(dir);
+            t.setIdeFolder(ideFolder);
             t.addSources(['kc85.c']);
             t.addCompileDefinitions({[kc85Model.def]: '1'});
             t.addDependencies(['common', 'roms']);
         });
         b.addTarget(`${kc85Model.name}-ui`, 'windowed-exe', (t) => {
             t.setDir(dir);
+            t.setIdeFolder(uiIdeFolder);
             t.addSources(['kc85.c', 'kc85-ui-impl.cc']);
             t.addCompileDefinitions({
                 [kc85Model.def]: '1',
@@ -117,6 +123,7 @@ function addEmulators(b: Builder) {
     }
     b.addTarget('lc80', 'windowed-exe', (t) => {
         t.setDir(dir);
+        t.setIdeFolder(ideFolder);
         t.addSources(['lc80.c', 'lc80-ui-impl.cc']);
         t.addDependencies(['ui', 'roms']);
     });
@@ -126,12 +133,14 @@ function addAsciiEmulators(b: Builder) {
     // NOTE: these emulators use sokol_arg.h and sokol_time.h,
     // but don't link with sokol since this would also
     // bring in 3D API and window system dependencies
+    const ideFolder = 'emus-ascii';
     const dir = 'examples/ascii';
     const libs = ['curses'];
     const deps = ['chips', 'keybuf', 'roms'];
     const incl = [b.importDir('sokol')];
     b.addTarget('kc85-ascii', 'plain-exe', (t) => {
         t.setDir(dir);
+        t.setIdeFolder(ideFolder);
         t.addSources(['kc85-ascii.c']);
         t.addLibraries(libs);
         t.addDependencies(deps);
@@ -139,6 +148,7 @@ function addAsciiEmulators(b: Builder) {
     });
     b.addTarget('c64-ascii', 'plain-exe', (t) => {
         t.setDir(dir);
+        t.setIdeFolder(ideFolder);
         t.addSources(['c64-ascii.c']);
         t.addLibraries(libs);
         t.addDependencies(deps);
@@ -146,6 +156,7 @@ function addAsciiEmulators(b: Builder) {
     });
     b.addTarget('c64-sixel', 'plain-exe', (t) => {
         t.setDir(dir);
+        t.setIdeFolder(ideFolder);
         t.addSources(['c64-sixel.c']);
         t.addLibraries(libs);
         t.addDependencies(deps);
@@ -153,6 +164,7 @@ function addAsciiEmulators(b: Builder) {
     });
     b.addTarget('c64-kitty', 'plain-exe', (t) => {
         t.setDir(dir);
+        t.setIdeFolder(ideFolder);
         t.addSources(['c64-kitty.c']);
         t.addLibraries(libs);
         t.addDependencies(deps);
@@ -162,19 +174,23 @@ function addAsciiEmulators(b: Builder) {
 
 function addCommon(b: Builder) {
     const dir = 'examples/common';
+    const ideFolder = 'common';
     b.addTarget('keybuf', 'lib', (t) => {
         t.setDir(dir);
+        t.setIdeFolder(ideFolder);
         t.addSources(['keybuf.c', 'keybuf.h']);
         t.addIncludeDirectories({ dirs: ['.'], scope: 'interface'});
     });
     b.addTarget('webapi', 'lib', (t) => {
         t.setDir(dir);
+        t.setIdeFolder(ideFolder);
         t.addSources(['webapi.c', 'webapi.h']);
         t.addIncludeDirectories({ dirs: ['.'], scope: 'interface'});
         t.addDependencies(['chips']);
     });
     b.addTarget('common', 'lib', (t) => {
         t.setDir(dir);
+        t.setIdeFolder(ideFolder);
         t.addSources([
             'common.h',
             'sokol.c',
@@ -190,6 +206,7 @@ function addCommon(b: Builder) {
     });
     b.addTarget('ui', 'lib', (t) => {
         t.setDir(dir);
+        t.setIdeFolder(ideFolder);
         t.addSources([ 'ui.cc', 'ui.h' ]);
         t.addDependencies(['imgui-docking', 'common']);
     });
@@ -198,8 +215,9 @@ function addCommon(b: Builder) {
 function addTools(b: Builder) {
     const dir = 'tools';
     const type = 'plain-exe';
-    b.addTarget({ name: 'prgmerge', type, dir, sources: ['prgmerge.c', 'getopt.c', 'getopt.h'] });
-    b.addTarget({ name: 'png2bits', type, dir, sources: ['png2bits.c', 'getopt.c', 'getopt.h'], deps: ['stb'] });
+    const ideFolder = 'tools';
+    b.addTarget({ name: 'prgmerge', ideFolder, type, dir, sources: ['prgmerge.c', 'getopt.c', 'getopt.h'] });
+    b.addTarget({ name: 'png2bits', ideFolder, type, dir, sources: ['png2bits.c', 'getopt.c', 'getopt.h'], deps: ['stb'] });
 }
 
 function addRoms(b: Builder) {
@@ -318,6 +336,7 @@ function addRoms(b: Builder) {
 
     b.addTarget('roms', 'interface', (t) => {
         t.setDir('examples/roms');
+        t.setIdeFolder('roms');
         t.addIncludeDirectories(['.']);
         for (const [name, files] of Object.entries(roms)) {
             t.addJob({
@@ -336,13 +355,15 @@ function addRoms(b: Builder) {
 
 function addTests(b: Builder) {
     const dir = 'tests';
+    const ideFolder = 'tests';
     const type = 'plain-exe';
-    b.addTarget({ name: 'z80-test', dir, type, sources: ['z80-test.c'], deps: ['chips'] });
-    b.addTarget({ name: 'z80-int', dir, type, sources: ['z80-int.c'], deps: ['chips'] });
-    b.addTarget({ name: 'm6502-int', dir, type, sources: ['m6502-int.c'], deps: ['chips'] });
-    b.addTarget({ name: 'z80-timing', dir, type, sources: ['z80-timing.c'], deps: ['chips'] });
+    b.addTarget({ name: 'z80-test', dir, ideFolder, type, sources: ['z80-test.c'], deps: ['chips'] });
+    b.addTarget({ name: 'z80-int', dir, ideFolder, type, sources: ['z80-int.c'], deps: ['chips'] });
+    b.addTarget({ name: 'm6502-int', dir, ideFolder, type, sources: ['m6502-int.c'], deps: ['chips'] });
+    b.addTarget({ name: 'z80-timing', dir, ideFolder, type, sources: ['z80-timing.c'], deps: ['chips'] });
     b.addTarget('chips-test', type, (t) => {
         t.setDir(dir);
+        t.setIdeFolder(ideFolder);
         t.addSources([
             'chips-test.c',
             'kbd-test.c',
@@ -375,6 +396,7 @@ function addTests(b: Builder) {
     });
     b.addTarget('z80-zex', type, (t) => {
         t.setDir(dir);
+        t.setIdeFolder(ideFolder);
         t.addSources(['z80-zex.c']);
         t.addJob({
             job: 'embedfiles',
@@ -392,12 +414,14 @@ function addTests(b: Builder) {
     });
     b.addTarget('c64-bench', type, (t) => {
         t.setDir(dir);
+        t.setIdeFolder(ideFolder);
         t.addSources(['c64-bench.c']);
         t.addIncludeDirectories([b.importDir('sokol')]);
         t.addDependencies(['chips', 'roms']);
     });
     b.addTarget('m6502-perfect', type, (t) => {
         t.setDir(dir);
+        t.setIdeFolder(ideFolder);
         t.addSources([
             'm6502-perfect.c',
             'perfect6502/netlist_6502.h',
@@ -411,6 +435,7 @@ function addTests(b: Builder) {
     });
     b.addTarget('m6502-wltest', type, (t) => {
         t.setDir(dir);
+        t.setIdeFolder(ideFolder);
         t.addSources(['m6502-wltest.c']);
         t.addIncludeDirectories([b.importDir('sokol')]);
         t.addDependencies(['chips']);
@@ -453,6 +478,7 @@ function addTests(b: Builder) {
     });
     b.addTarget('m6502-nestest', type, (t) => {
         t.setDir(dir);
+        t.setIdeFolder(ideFolder);
         t.addSources(['m6502-nestest.c']);
         t.addDependencies(['chips']);
         t.addJob({
@@ -476,6 +502,7 @@ function addTests(b: Builder) {
     });
     b.addTarget('z80-fuse', type, (t) => {
         t.setDir(dir);
+        t.setIdeFolder(ideFolder);
         t.addSources(['z80-fuse.c']);
         t.addDependencies(['chips']);
         t.addJob({
