@@ -1,5 +1,4 @@
-// deno-lint-ignore no-unversioned-import
-import { Configurer, Builder } from 'jsr:@floooh/fibs';
+import { Configurer, Builder } from 'jsr:@floooh/fibs@^1';
 import { addNesTestLogJob } from './fibs-scripts/nestestlog.ts';
 import { addFuseJob } from './fibs-scripts/fuse.ts';
 import { addVic20TestCommand } from './fibs-scripts/vic20-via-tests.ts';

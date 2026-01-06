@@ -1,6 +1,5 @@
 // helper command to run C64 tests
-// deno-lint-ignore-file no-unversioned-import
-import { Configurer, Project, log } from 'jsr:@floooh/fibs';
+import { Configurer, Project, log } from 'jsr:@floooh/fibs@^1';
 
 export function addC64TestCommand(c: Configurer) {
     c.addCommand({ name: 'c64-wlspecial-tests', help, run });

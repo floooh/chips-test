@@ -1,7 +1,6 @@
 // a fibs code generator to turn a NESTest log file into a C header
-// deno-lint-ignore-file no-unversioned-import
-import { Configurer, Project, Config, Target, Schema, log, util } from 'jsr:@floooh/fibs';
-import { dirname } from 'jsr:@std/path';
+import { Configurer, Project, Config, Target, Schema, log, util } from 'jsr:@floooh/fibs@^1';
+import { dirname } from 'jsr:@std/path@^1';
 
 export function addNesTestLogJob(c: Configurer) {
     c.addJob({ name: 'nestestlog', help, validate, build });
