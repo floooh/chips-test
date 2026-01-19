@@ -137,38 +137,17 @@ function addAsciiEmulators(b: Builder) {
     const libs = ['curses'];
     const deps = ['chips', 'keybuf', 'roms'];
     const incl = [b.importDir('sokol')];
-    b.addTarget('kc85-ascii', 'plain-exe', (t) => {
-        t.setDir(dir);
-        t.setIdeFolder(ideFolder);
-        t.addSources(['kc85-ascii.c']);
-        t.addLibraries(libs);
-        t.addDependencies(deps);
-        t.addIncludeDirectories(incl);
-    });
-    b.addTarget('c64-ascii', 'plain-exe', (t) => {
-        t.setDir(dir);
-        t.setIdeFolder(ideFolder);
-        t.addSources(['c64-ascii.c']);
-        t.addLibraries(libs);
-        t.addDependencies(deps);
-        t.addIncludeDirectories(incl);
-    });
-    b.addTarget('c64-sixel', 'plain-exe', (t) => {
-        t.setDir(dir);
-        t.setIdeFolder(ideFolder);
-        t.addSources(['c64-sixel.c']);
-        t.addLibraries(libs);
-        t.addDependencies(deps);
-        t.addIncludeDirectories(incl);
-    });
-    b.addTarget('c64-kitty', 'plain-exe', (t) => {
-        t.setDir(dir);
-        t.setIdeFolder(ideFolder);
-        t.addSources(['c64-kitty.c']);
-        t.addLibraries(libs);
-        t.addDependencies(deps);
-        t.addIncludeDirectories(incl);
-    });
+    const emus = ['kc85-ascii', 'c64-ascii', 'c64-sixel', 'c64-kitty'];
+    for (const emu of emus) {
+        b.addTarget(emu, 'plain-exe', (t) => {
+            t.setDir(dir);
+            t.setIdeFolder(ideFolder);
+            t.addSources([`${emu}.c`]);
+            t.addLibraries(libs);
+            t.addDependencies(deps);
+            t.addIncludeDirectories(incl);
+        })
+    }
 }
 
 function addCommon(b: Builder) {
