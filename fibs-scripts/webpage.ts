@@ -32,7 +32,7 @@ async function run(p: Project, args: string[]): Promise<void> {
         await deployWebpage(p, srcDir, dstDir);
         log.info(`\n${green("Done.")} (webpage available in ${dstDir})`);
     } else if (subcmd === "serve") {
-        const emsc = p.importModule("platforms", "emscripten.ts");
+        const emsc = p.importModule("extras", "emscripten.ts");
         emsc.emrun(p, { cwd: dstDir, file: "index.html" });
     } else {
         throw new Error("subcommand 'build' or 'serve' (run 'fibs help webpage')");

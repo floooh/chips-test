@@ -21,14 +21,15 @@ export function configure(c: Configurer) {
         files: ['sokol.ts', 'stb.ts'],
     });
     c.addImport({
-        name: 'platforms',
-        url: 'https://github.com/floooh/fibs-platforms',
-        files: ['emscripten.ts', 'macos.ts'],
-    });
-    c.addImport({
-        name: 'utils',
-        url: 'https://github.com/floooh/fibs-utils',
-        files: ['stdoptions.ts', 'sokolshdc.ts', 'embedfiles.ts'],
+        name: 'extras',
+        url: 'https://github.com/floooh/fibs-extras',
+        files: [
+            'emscripten.ts',
+            'macos.ts',
+            'sokolshdc.ts',
+            'embedfiles.ts',
+            'stdoptions.ts',
+        ],
     });
     addVic20TestCommand(c);
     addC64TestCommand(c);
