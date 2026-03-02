@@ -23,7 +23,7 @@ export function configure(c: Configurer) {
     c.addImport({
         name: 'platforms',
         url: 'https://github.com/floooh/fibs-platforms',
-        files: ['emscripten.ts'],
+        files: ['emscripten.ts', 'macos.ts'],
     });
     c.addImport({
         name: 'utils',
