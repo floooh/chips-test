@@ -29,6 +29,7 @@ export function configure(c: Configurer) {
             'sokolshdc.ts',
             'embedfiles.ts',
             'stdoptions.ts',
+            'linux-threads.ts',
         ],
     });
     addVic20TestCommand(c);
