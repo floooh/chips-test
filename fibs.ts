@@ -26,6 +26,7 @@ export function configure(c: Configurer) {
         files: [
             'emscripten.ts',
             'macos.ts',
+            'windows.ts',
             'sokolshdc.ts',
             'embedfiles.ts',
             'stdoptions.ts',
