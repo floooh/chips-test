@@ -8,14 +8,14 @@ jobs:
         steps:
         - uses: actions/checkout@main
         - uses: denoland/setup-deno@v2
-        - name: win-vstudio-debug
+        - name: win-msvc-debug
           run: |
-            ./fibs config win-vstudio-debug
+            ./fibs config win-msvc-debug
             ./fibs build
             ./fibs run chips-test
-        - name: win-vstudio-release
+        - name: win-msvc-release
           run: |
-            ./fibs config win-vstudio-release
+            ./fibs config win-msvc-release
             ./fibs build
     mac:
         runs-on: macos-latest
