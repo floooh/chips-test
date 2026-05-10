@@ -206,6 +206,12 @@ void gfx_init(const gfx_desc_t* desc) {
         .format = state.paletted ? SFB_FORMAT_PALETTE8 : SFB_FORMAT_RGBA8,
         .prescale = 2,
         .rotate90 = desc->display_info.portrait,
+        .cliprect = {
+            .x = desc->display_info.screen.x,
+            .y = desc->display_info.screen.y,
+            .width = desc->display_info.screen.width,
+            .height = desc->display_info.screen.height,
+        },
     });
 
     if (state.paletted) {
@@ -292,6 +298,19 @@ void gfx_draw(chips_display_info_t display_info) {
         sgl_end();
     }
 
+    // NOTE: resize is lazy, if nothing changed this call is a no-op
+    sfb_resize(state.fb, &(sfb_resize_desc){
+        .width = display_info.frame.dim.width,
+        .height = display_info.frame.dim.height,
+        .prescale = 2,
+        .cliprect = {
+            .x = display_info.screen.x,
+            .y = display_info.screen.y,
+            .width = display_info.screen.width,
+            .height = display_info.screen.height,
+        },
+    });
+
     // update framebuffer pixel, palette and cliprect
     sfb_update(state.fb, &(sfb_update_desc){
         .pixels = {
@@ -302,12 +321,6 @@ void gfx_draw(chips_display_info_t display_info) {
             .ptr = state.palette,
             .size = sizeof(state.palette),
         },
-        .cliprect = {
-            .x = display_info.screen.x,
-            .y = display_info.screen.y,
-            .width = display_info.screen.width,
-            .height = display_info.screen.height,
-        }
     });
 
     // tint the clear color red or green if flash feedback is requested
@@ -337,7 +350,7 @@ void gfx_draw(chips_display_info_t display_info) {
     if (state.draw_extra_cb) {
         const sfb_framebuffer_info info = sfb_query_framebuffer_info(state.fb);
         state.draw_extra_cb(&(gfx_draw_info_t){
-            .display_texview = info.offscreen_texture_view,
+            .display_texview = info.offscreen.tex_view,
             .display_sampler = info.nearest_sampler,
             .display_info = display_info,
         });
