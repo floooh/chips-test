@@ -27,7 +27,6 @@ export function configure(c: Configurer) {
             'emscripten.ts',
             'macos.ts',
             'windows.ts',
-            'sokolshdc.ts',
             'embedfiles.ts',
             'stdoptions.ts',
             'linux-threads.ts',
@@ -182,7 +181,6 @@ function addCommon(b: Builder) {
             'prof.c', 'prof.h',
 
         ]);
-        t.addJob({ job: 'sokolshdc', args: { src: 'shaders.glsl', outDir: t.buildDir() } });
         t.addIncludeDirectories({ dirs: [t.buildDir()], scope: 'private'});
         t.addDependencies(['keybuf', 'webapi', 'sokol']);
     });
