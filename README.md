@@ -1,6 +1,6 @@
 # chips-test
 
-[![Build Status](https://github.com/floooh/chips-test/workflows/build_and_test/badge.svg)](https://github.com/floooh/chips-test/actions)
+[![Build Status](https://github.com/floooh/chips-test/actions/workflows/build.yml/badge.svg)](https://github.com/floooh/chips-test/actions/workflows/build.yml)
 
 Tests and sample emulators for https://github.com/floooh/chips
 
