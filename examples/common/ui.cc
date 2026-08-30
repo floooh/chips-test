@@ -171,7 +171,7 @@ ui_texture_t ui_create_texture(int w, int h, const char* label) {
         sg_make_view({
             .texture = {
                 .image = sg_make_image({
-                    .usage = { .stream_update = true },
+                    .usage = { .write_transient = true },
                     .width = w,
                     .height = h,
                     .pixel_format = SG_PIXELFORMAT_RGBA8,
@@ -185,10 +185,11 @@ ui_texture_t ui_create_texture(int w, int h, const char* label) {
 }
 
 void ui_update_texture(ui_texture_t h, void* data, int data_byte_size) {
-    sg_image img = sg_query_view_image(simgui_texture_view_from_imtextureid(h));
-    sg_image_data img_data = { };
-    img_data.mip_levels[0] = { .ptr = data, .size = (size_t) data_byte_size };
-    sg_update_image(img, img_data);
+    sg_write_image_desc desc = { };
+    desc.dst.image = sg_query_view_image(simgui_texture_view_from_imtextureid(h));
+    desc.src.data.ptr = data;
+    desc.src.data.size = (size_t)data_byte_size;
+    sg_write_image_transient(&desc);
 }
 
 void ui_destroy_texture(ui_texture_t h) {
