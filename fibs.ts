@@ -399,6 +399,18 @@ function addTests(b: Builder) {
         t.addIncludeDirectories([b.importDir('sokol')]);
         t.addDependencies(['chips', 'roms']);
     });
+    b.addTarget('c64-wltest', type, (t) => {
+        t.setDir(dir);
+        t.setIdeFolder(ideFolder);
+        t.addSources(['c64-wltest.c']);
+        t.addDependencies(['chips', 'roms']);
+    });
+    b.addTarget('c64-vicetest', type, (t) => {
+        t.setDir(dir);
+        t.setIdeFolder(ideFolder);
+        t.addSources(['c64-vicetest.c']);
+        t.addDependencies(['chips', 'roms', 'stb']);
+    });
     b.addTarget('m6502-perfect', type, (t) => {
         t.setDir(dir);
         t.setIdeFolder(ideFolder);

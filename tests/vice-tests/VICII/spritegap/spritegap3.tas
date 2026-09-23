@@ -1,0 +1,445 @@
+BUFFER = $4000
+
+  processor 6502
+
+  .org $801
+basic:
+  .word 0$      ; link to next line
+  .word 1995    ; line number
+  .byte $9E     ; SYS token
+
+; SYS digits
+
+  .if (* + 8) / 10000
+  .byte $30 + (* + 8) / 10000
+  .endif
+  .if (* + 7) / 1000
+  .byte $30 + (* + 7) % 10000 / 1000
+  .endif
+  .if (* + 6) / 100
+  .byte $30 + (* + 6) % 1000 / 100
+  .endif
+  .if (* + 5) / 10
+  .byte $30 + (* + 5) % 100 / 10
+  .endif
+  .byte $30 + (* + 4) % 10
+
+0$:
+  .byte 0,0,0   ; end of BASIC program
+
+start:
+
+    jsr $ff81   ; init VIC
+
+  sei
+  lda #$7f
+  sta $dc0d
+  lda $dc0d
+
+    jsr waitframes2
+    ; enable sprites for a frame to combat VIC powerup related glitches
+    lda #$ff
+    sta $d015
+    jsr waitframes2
+    lda #$00
+    sta $d015
+    jsr waitframes2
+    ; read/clear latches
+    lda $d013
+    lda $d014
+    inc $d019
+    lda $d01e
+    lda $d01f
+    jsr waitframes2
+    
+    ; save and clear zp
+    ldx #$09
+pushloop:
+    lda $ef,x
+    pha
+    lda #0
+    sta $ef,x
+    dex
+    bne pushloop
+
+    ldx #0
+clrlp:
+    lda #$20
+    sta $0400,x
+    sta $0500,x
+    sta $0600,x
+    sta $0700,x
+    lda #$01
+    sta $d800,x
+    sta $d900,x
+    sta $da00,x
+    sta $db00,x
+    inx
+    bne clrlp
+
+    ; set up all sprite pointers and positions
+    ldx #$07
+clrlp2:
+    lda #$ff
+    sta $07f8,x
+    dex
+    bpl clrlp2
+
+    ldx #$10
+clrlp3:
+    lda #0
+    sta $d000,x
+    dex
+    bpl clrlp3
+
+  ldx #39
+namelp:
+  lda testname,x
+  and #$3f
+  sta $0400+40*24,x
+  dex
+  bpl namelp
+
+  lda #$03
+  sta $f8
+  lda #$00
+  sta $fb
+  lda #$40
+  sta $fc
+
+  ldx #0
+  txa
+loop3:
+  sta BUFFER,x
+  sta BUFFER+$100,x
+  sta BUFFER+$200,x
+  inx
+  bne loop3
+
+  ldx #$00
+  lda #$00
+  sta $d020
+loop1:
+  sta $3fc0,x
+  sta $3f80,x
+  inx
+  cpx #$40
+  bne loop1
+
+  lda #$40
+  sta $3ffc
+  lda #$80
+  sta $3fbc  
+
+  lda #$80
+  ldx #$00
+loop2:
+  sta $d001,x
+  inx
+  inx
+  cpx #$10
+  bne loop2
+
+  lda #$01
+  ldx #$08
+colloop:
+  sta $d026,x
+  dex
+  bne colloop
+
+  lda #$00
+  sta $f0
+loopspr1:
+  ldx $f0
+  cpx #$08
+  bne initspr1
+  jmp loopendspr1
+initspr1:
+  lda #$ff
+  sta $07f8,x
+  lda #$01
+f2loop:
+  cpx #$00
+  beq f2ok
+  dex
+  asl
+  jmp f2loop
+f2ok:
+  sta $f2
+  sta $d015
+
+  lda $f0
+  sta $f1
+  inc $f1
+loopspr2:
+  ldx $f1
+  cpx #$08
+  bne initspr2
+  jmp loopendspr2
+initspr2:
+  lda #$fe
+  sta $07f8,x
+  lda #$01
+f3loop:
+  cpx #$00
+  beq f3ok
+  dex
+  asl
+  jmp f3loop
+f3ok:
+  sta $f3
+  ora $f2
+  sta $d015
+
+  ldx #$00
+  stx $f4
+  stx $f5
+
+loopx:
+  lda $f0
+  asl
+  tax
+  lda $f4
+  sta $d000,x
+  lda $f5
+  bne highx
+  sta $d010
+  jmp lowx1
+highx:
+  lda $f2
+  sta $d010  
+lowx1:
+  inc $f4
+  bne lowx2
+  dec $f5
+  beq lowx2
+  inc $f5
+  inc $f5
+lowx2:
+  lda $f1
+  asl
+  tax
+  lda $f4
+  sta $d000,x
+  lda $f5
+  beq lowx3
+  lda $f3
+  ora $d010
+  sta $d010  
+lowx3:
+
+
+delay0:
+  lda $d012
+  cmp #$90
+  bne delay0
+
+  inc $d020
+  
+  ldy $d01e
+
+delay1:
+  lda $d012
+  cmp #$a0
+  bne delay1
+
+  dec $d020
+  
+  ldx $d01e
+  cpx $f8
+  beq nolog
+  jsr log
+  lda $d020
+  eor #$01
+  sta $d020
+
+nolog:
+
+  clc
+  lda $f4
+  adc $f5
+  bne loopx
+
+  inc $f1
+  jmp loopspr2
+loopendspr2:
+
+  inc $f0
+  jmp loopspr1
+loopendspr1:
+     
+  ldx #$00
+pullloop:
+  pla
+  sta $f0,x
+  inx
+  cpx #$09
+  bne pullloop
+
+  lda #$00
+  sta $2b
+  lda #$40
+  sta $2c
+  lda $fb
+  sta $2d
+
+  lda $fc
+  sta $2e
+
+  cli
+  jsr checkref
+  rts
+
+
+log:
+  ldy #$00
+  stx $f8
+  lda $f2
+  ora $f3
+  sta ($fb),y
+  inc $fb
+  lda $f4
+  sta ($fb),y
+  inc $fb
+  lda $f5
+  sta ($fb),y
+  inc $fb
+  lda $f8
+  sta ($fb),y
+  inc $fb
+  bne lognohigh
+  inc $fc
+lognohigh:
+  rts
+  
+checkoneref:
+    ldx #0
+chklp:
+chksrc1 = * + 1
+    lda $4000,x
+chkref1 = * + 1
+    cmp reference,x
+    bne notfound
+chksrc2 = * + 1
+    lda $4100,x
+chkref2 = * + 1
+    cmp reference+$100,x
+    bne notfound
+    inx
+    bne chklp
+    clc
+    rts
+notfound:
+    sec
+    rts
+
+
+checkref:
+    ldx #>reference
+    stx chkref1+1
+    inx
+    stx chkref2+1
+
+    ldx #>BUFFER
+    stx chksrc1+1
+    inx
+    stx chksrc2+1
+
+    lda #1
+    sta $0400
+
+    ldy #NUMREFS
+chklp2:
+    jsr checkoneref
+    bcc passed
+
+    lda chkref1+1
+    clc
+    adc #2
+    tax
+    stx chkref1+1
+    inx
+    stx chkref2+1
+
+    inc $0400
+
+    dey
+    bne chklp2
+
+failed:
+    lda #10
+    sta $d020
+    lda #$ff
+    sta $d7ff
+    jmp *
+
+passed:
+
+    ldx $0400
+    dex
+    txa
+    asl
+    asl
+    asl
+    asl
+    tax
+
+    ldy #0
+txtlp:
+    lda reftext,x
+    and #$3f
+    sta $0400 + 3,y
+    inx
+    iny
+    cpy #16
+    bne txtlp
+
+    lda #5
+    sta $d020
+    lda #0
+    sta $d7ff
+    jmp *
+
+testname:
+          ;1234567890123456789012345678901234567890
+    .byte "SPRITEGAP3                              "
+
+NUMREFS = 4
+
+    .align 256
+reftext:
+    .byte "6569            "
+    .byte "6569R1 / 8565R2 "
+    .byte "6572            "
+    .byte "C128NTSC/ 6567R8"
+;    .byte "NEW PAL         "
+;    .byte "C128NTSC/ 6567R8"
+
+    .align 256
+reference:
+    .incbin "dumps/spritegap3-6569.bin"       ; 444
+    .align 256
+    .incbin "dumps/spritegap3-6569r1.bin"     ; 444
+    .align 256
+    .incbin "dumps/spritegap3-6572.bin"       ; 372
+    .align 256
+    .incbin "dumps/spritegap3-ntsc-c128.bin"  ; 340
+; this dump is equal to the 6569r1 one
+;    .align 256
+;    .incbin "dumps/spritegap3-pal-newvic.bin" ; 444
+; this dump is equal to the ntsc-c128 one
+;    .align 256
+;    .incbin "dumps/spritegap3-6567r8.bin" ; 340
+    .align 256
+    .byte 0
+  
+waitframes2:
+    jsr waitframe
+waitframe
+wf1:
+    bit $d011
+    bpl wf1
+wf2:
+    bit $d011
+    bmi wf2
+    rts

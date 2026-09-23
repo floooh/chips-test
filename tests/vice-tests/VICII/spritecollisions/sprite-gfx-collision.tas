@@ -1,0 +1,339 @@
+  processor 6502
+
+TESTING = 0
+
+sprite0 = $3f80
+char1 = $3800
+spacechar = $3800+($20*8)
+
+  .org $801
+basic:
+  .word 0$      ; link to next line
+  .word 1995    ; line number
+  .byte $9E     ; SYS token
+
+; SYS digits
+
+  .if (* + 8) / 10000
+  .byte $30 + (* + 8) / 10000
+  .endif
+  .if (* + 7) / 1000
+  .byte $30 + (* + 7) % 10000 / 1000
+  .endif
+  .if (* + 6) / 100
+  .byte $30 + (* + 6) % 1000 / 100
+  .endif
+  .if (* + 5) / 10
+  .byte $30 + (* + 5) % 100 / 10
+  .endif
+  .byte $30 + (* + 4) % 10
+
+0$:
+  .byte 0,0,0   ; end of BASIC program
+
+start:
+
+  lda #$00
+  sta fails
+
+  ldy #$00
+loop2:
+  lda #$20
+  sta $0400,y
+  sta $0500,y
+  sta $0600,y
+  sta $0700,y
+  lda #$01
+  sta $d800,y
+  sta $d900,y
+  sta $da00,y
+  sta $db00,y
+  iny
+  bne loop2
+
+  lda #$01+8
+  sta $d800+11*40+12
+  lda #$00
+  sta $0400+11*40+12
+  
+  lda #$00
+  ldy #$3f
+loop1:
+  sta sprite0,y
+  sta char1,y
+  sta spacechar,y
+  dey
+  bpl loop1
+
+; setup sprites
+  lda #sprite0 / 64
+  sta $07f8
+
+  ; we always use the same pixel pattern:
+  ;
+  ; sprite0 (horizontal): %00 01 00 10 00 11 00
+  ; 
+  ; char1 (vertical):
+  ;
+  ; 00
+  ; 01
+  ; 10
+  ; 11
+  ;
+  ; this lets us test all combinations of bit patterns that may collide
+
+#if TESTING=1
+  ; pattern with all bits set for testing the code
+  lda #%11111111
+  sta sprite0+0
+  lda #%11111100
+  sta sprite0+1
+  
+  lda #%11000000
+  sta char1+0
+  lda #%11000000
+  sta char1+1
+  lda #%11000000
+  sta char1+2
+  lda #%11000000
+  sta char1+3
+  
+#else
+  lda #%00010010
+  sta sprite0+0
+  lda #%00110000
+  sta sprite0+1
+
+  lda #%00000000
+  sta char1+0
+  lda #%01000000
+  sta char1+1
+  lda #%10000000
+  sta char1+2
+  lda #%11000000
+  sta char1+3
+#endif
+
+#if CHRMUCO=0
+  lda #$c8
+  sta $d016
+#endif
+
+#if CHRMUCO=1
+  lda #$d8
+  sta $d016
+#endif
+
+#if SPRMUCO=0
+  lda #0
+  sta $d01c ; muco
+#endif  
+
+#if SPRMUCO=1
+  lda #1
+  sta $d01c ; muco
+#endif  
+
+  lda #$01
+  sta $d015 ; enable
+  
+  lda #102+4+16
+  sta $d000
+  lda #100-3+8+32
+  sta $d001
+  
+  lda #0
+  sta $d010
+
+  lda #3
+  sta $d025
+  sta $d022
+  lda #4
+  sta $d026
+  sta $d023
+  lda #0
+  sta $d027
+  
+  lda #$1f
+  sta $d018
+
+  lda $d01f
+  
+;  jmp *
+
+TESTROWS = 4+2
+TESTCOLS = 15+2
+
+testloop:
+
+  ldy #TESTROWS
+lp2:
+  ldx #0
+lp1:
+  jsr waitframe
+
+  lda $d01f
+scr:
+  sta $0400,x
+  
+  dec $d000
+  
+  inx
+  cpx #TESTCOLS
+  bne lp1
+  
+  lda $d000
+  clc
+  adc #TESTCOLS
+  sta $d000
+  
+  inc $d001
+  
+  lda scr+1
+  clc
+  adc #40
+  sta scr+1
+  lda scr+2
+  adc #0
+  sta scr+2
+  
+  dey
+  bne lp2
+  
+  lda #$17
+  sta $d018
+  lda #$c8
+  sta $d016
+  
+; checkloop
+
+  ldy #TESTROWS
+lp4:
+  ldx #0  
+lp3:
+
+scr2:
+  lda $0400,x
+scr2a:
+  cmp reference,x
+  beq skp
+  
+  inc fails
+  
+  lda #10
+scr2b:
+  sta $d800,x
+
+skp:
+  
+  inx
+  cpx #TESTCOLS
+  bne lp3
+  
+  lda scr2+1
+  clc
+  adc #40
+  sta scr2+1
+  lda scr2+2
+  adc #0
+  sta scr2+2
+
+  lda scr2b+1
+  clc
+  adc #40
+  sta scr2b+1
+  lda scr2b+2
+  adc #0
+  sta scr2b+2
+  
+  lda scr2a+1
+  clc
+  adc #TESTCOLS
+  sta scr2a+1
+  
+  dey
+  bne lp4
+
+endoftest:
+  ldy #5
+  lda fails
+  beq allok
+  ldy #10
+allok:
+  sty $d020
+
+    lda $d020
+    and #$0f
+
+    ldx #$ff    ; failure
+    cmp #5      ; green
+    bne fail2
+    ldx #0      ; success
+fail2:
+    stx $d7ff
+
+  jmp *
+
+fails:
+    .byte 0
+    
+waitframe:
+l1: bit $d011
+    bpl l1
+l2: bit $d011
+    bmi l2
+    rts
+
+    
+    .align 256
+reference:
+#if TESTING=1
+    .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    .byte 0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0
+    .byte 0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0
+    .byte 0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0
+    .byte 0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0
+    .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+#else
+
+#if CHRMUCO=0
+#if SPRMUCO=0
+    ; hires sprite vs hires charset
+    .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    .byte 0,0,0,0,1,0,0,1,0,0,0,1,1,0,0,0,0
+    .byte 0,0,0,0,0,1,0,0,1,0,0,0,1,1,0,0,0
+    .byte 0,0,0,0,1,1,0,1,1,0,0,1,1,1,0,0,0
+    .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+#else
+    ; multicolor sprite vs hires charset
+    .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    .byte 0,0,0,1,1,0,0,1,1,0,0,1,1,0,0,0,0
+    .byte 0,0,0,0,1,1,0,0,1,1,0,0,1,1,0,0,0
+    .byte 0,0,0,1,1,1,0,1,1,1,0,1,1,1,0,0,0
+    .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+#endif
+#endif
+
+#if CHRMUCO=1
+#if SPRMUCO=0
+    ; hires sprite vs multicolor charset
+    .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0  ; this row differs from sprite vs sprite
+    .byte 0,0,0,0,1,1,0,1,1,0,0,1,1,1,0,0,0
+    .byte 0,0,0,0,1,1,0,1,1,0,0,1,1,1,0,0,0
+    .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+#else
+    ; multicolor sprite vs multicolor charset
+    .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+    .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0  ; this row differs from sprite vs sprite
+    .byte 0,0,0,1,1,1,0,1,1,1,0,1,1,1,0,0,0
+    .byte 0,0,0,1,1,1,0,1,1,1,0,1,1,1,0,0,0
+    .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+#endif
+#endif
+
+#endif

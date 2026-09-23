@@ -1,0 +1,8 @@
+D017-54.PRG and D017-57.PRG both should display a sprite with only 23 lines.
+
+the first line of the sprite data contains 0,1,2
+
+the last line contains $fc, $fd, $fe
+
+left and right (light grey) the same pattern is shown using characters, the
+sprite in the middle (dark grey) should look exactly the same.

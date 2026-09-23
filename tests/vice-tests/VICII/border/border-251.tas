@@ -1,0 +1,262 @@
+videobankbase = $4000
+vrambase = $6000
+bitmapbase = $4000
+spritedata_loc = $6fc0
+
+        *=$0801
+
+basic:
+; BASIC stub: "1 SYS 2064"
+!by $0b,$08,$01,$00,$9e,$32,$30,$36,$34,$00,$00,$00
+
+        *=$0810
+
+        sei
+
+        ; use videobank 2, ie 4000-7fff
+        lda #$02
+        sta $dd00
+        ; vram at $6000, bitmap at $4000
+        lda #$80
+        sta $d018
+
+        ; setup textscreen Y position
+        lda #$39
+        sta $d011
+
+        ; setup background color for bitmap mode
+        ldx #$00
+col1
+        txa
+        sta vrambase+$000,x
+        lda #$f0
+        sta vrambase+$100,x
+        lda #$0f
+        sta vrambase+$200,x
+        lda #$01
+        sta vrambase+$300,x
+        inx
+        bne col1
+
+        ; put some pattern into the bitmap too
+        lda #>bitmapbase
+        sta bmpaddrh
+        ldy #$20
+bmplp2:
+        tya
+        ldx #0
+bmplp1:
+        eor #$ff
+bmpaddrh = * + 2
+        sta bitmapbase+$000,x
+        stx addxl
+        clc
+addxl = * +1
+        adc #0
+        inx
+        bne bmplp1
+        inc bmpaddrh
+        dey
+        bne bmplp2
+
+
+        ; init ghostbyte with some pattern to make border more visible
+        ; and so we can see character boundaries in the border
+        lda #%10000000
+        sta videobankbase+$3fff
+
+        ; init X scroll
+        lda #$c8
+        sta $d016
+
+        ; now setup the 8 sprites
+
+        lda #$ff
+        sta $d015 ;enable
+
+        lda #%11111111
+        sta $d01d ;xpand-x
+
+        lda #$0
+        sta $d017 ;xpand-y
+        sta $d01c ;muco
+        sta $d01b ;prio
+
+        ldx #0
+        ldy #0
+ll
+        txa
+        sta $d027,x        ; sprite colors
+        lda #(spritedata_loc/64) and $ff
+        sta vrambase+$03f8,x        ; sprite pointers
+        lda #$fa           ; $ff for the first variation of the main loop, $fa for the second variation
+        sta $d001,y        ; y-pos
+        iny
+        iny
+        inx
+        cpx #8
+        bne ll
+
+        ; sprite data
+        ldx #0
+l2
+        lda spritedata,x
+        sta spritedata_loc,x
+        inx
+        cpx #63
+        bne l2
+
+        ; to display a sprite further left than regular position 0, set MSB in $d010
+        ; and substract 8 extra pixels
+	lda #$f8-8
+	sta $d000
+
+        ; set x pos for the other 7 sprites
+	lda #$f8
+	ldx #7
+	ldy #2
+spr1			
+	clc
+	adc #(2*24)
+	sta $d000,y
+	iny
+	iny
+	dex
+	bpl spr1
+
+        ; x-pos MSB
+        lda #%11000001
+        sta $d010
+
+        jmp main_loop
+
+
+        *=$0900 ; align to some page so branches do not cross a page boundary and fuck up the timing        
+
+        ;-------------------mainloop---------
+main_loop
+
+        ; since we need cycle exact non jittering timing we must stabilize the raster
+
+        ldx #$d1
+       jsr rastersync
+
+        ldy #$c8        ; value for 40 columns mode
+
+        lda #$fa
+rl2     cmp $d012
+        bne rl2
+
+        ; delay so the first write to $d016 happens exactly at the
+        ; beginning of the last character before the border
+
+        ; 0: 4 cycles 1: 9 cycles 2: 14 cycles 3: 19 cycles etc
+        ldx #5             ; 2
+wl1     dex                ; 2
+        bpl wl1            ; 3 (2)
+
+        nop                ; 2
+        nop                ; 2
+        nop                ; 2
+        nop                ; 2
+
+        ; the actual loop to open the sideborders
+
+        ldx #21
+ol1
+        dec $d016       ; 6
+        sty $d016       ; 4
+        nop             ; 2
+        nop             ; 2
+        nop             ; 2
+        nop             ; 2
+        nop             ; 2
+        nop             ; 2
+        nop             ; 2
+        nop             ; 2
+        nop             ; 2
+        nop             ; 2
+        nop             ; 2
+        nop             ; 2
+        nop             ; 2
+        clc             ; 2
+        bcc sk1         ; 3
+sk1
+        dex             ; 2
+        bpl ol1         ; 3
+                        ; -> 46 ( 63-((8*2)+1) )
+
+        dec framecount
+        bne +
+        lda #0
+        sta $d7ff
++
+        jmp main_loop
+
+;--------------------------------------------------
+; simple polling rastersync routine
+
+        *=$0d00 ; align to some page so branches do not cross a page boundary and fuck up the timing
+
+rastersync:
+
+lp1:
+          cpx $d012
+          bne lp1
+          jsr cycles
+          bit $ea
+          nop
+          cpx $d012
+          beq skip1
+          nop
+          nop
+skip1:    jsr cycles
+          bit $ea
+          nop
+          cpx $d012
+          beq skip2
+          bit $ea
+skip2:    jsr cycles
+          nop
+          nop
+          nop
+          cpx $d012
+          bne onecycle
+onecycle: rts
+
+cycles:
+         ldy #$06
+lp2:     dey
+         bne lp2
+         inx
+         nop
+         nop
+         rts
+
+framecount: !byte 5
+
+spritedata:
+    !by %00000000,%00000000,%00000001
+    !by %00000000,%00000000,%00000010
+    !by %00000000,%00000000,%00000100
+    !by %00000000,%00000000,%00001000
+    !by %00000000,%00000000,%00010000
+    !by %00000000,%00000000,%00100000
+    !by %00000000,%00000000,%01000000
+    !by %00000000,%00000000,%10000000
+    !by %00000000,%00000001,%00000000
+    !by %00000000,%00000010,%00000000
+    !by %00000000,%00000100,%00000000
+    !by %00000000,%00001000,%00000000
+    !by %00000000,%00010000,%00000000
+    !by %00000000,%00100000,%00000000
+    !by %00000000,%01000000,%00000000
+    !by %00000000,%10000000,%00000000
+    !by %00000001,%00000000,%00000000
+    !by %00000010,%00000000,%00000000
+    !by %00000100,%00000000,%00000000
+    !by %00001000,%00000000,%00000000
+    !by %00010000,%00000000,%00000000
+    !by %00100000,%00000000,%00000000
+    !by %01000000,%00000000,%00000000
+    !by %10000000,%00000000,%00000000

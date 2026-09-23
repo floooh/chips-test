@@ -1,0 +1,59 @@
+
+After running TESTSUITE.PRG the collision data is stored
+in $4000. $81 indicates a collision (1 in the table below),
+$00 indicates no collision (0 in the table).
+The column 'C64' shows the correct behaviour.
+The collision data is also shown on the screen, with the correct
+results on the line below.
+
+Test#   C64     HOXS    CCS     1.21    1.22    1.22.8  1.22.9
+----------------------------------------------------------------
+0       0       0       0       0       0       0       0
+1       1       1       1       0*      0*      1       1
+2       1       1       1       1       1       1       1
+3       1       1       1       1       1       1       1
+4       0       0       0       1*      1*      0       0
+5       0       0       0       0       0       0       0
+6       1       1       1       1       1       1       1
+7       0       0       0       1*      1*      0       0
+8       0       0       0       0       0       0       0
+9       0       0       0       0       0       0       0
+10      0       0       0       0       0       0       0
+11      1       1       1       1       1       1       1
+
+12      0       0       1*      0       0       0       0
+13      0       0       1*      0       0       0       0
+14      1       1       1       0*      1       1       1
+15      1       1       1       1       0*      1       1
+
+16      1       1       1       1       1       1       1
+17      1       1       1       1       1       0*      1
+18      1       1       1       1       1       0*      1
+19      0       0       0       0       0       0       0
+20      0       0       0       0       0       1*      0
+21      0       0       0       0       0       1*      0
+22      0       0       0       0       0       0       0
+23      0       0       0       0       0       1*      0
+24      0       0       0       0       0       1*      0
+25      1       1       1       1       1       1       1
+26      1       1       1       1       1       0*      1
+27      1       1       1       1       1       0*      1
+
+
+1/0 Sprites collide / don't collide
+*   Wrong emulation
+
+Tests
+-----
+0-11:   Test for cycle exact usage of old or new x position; bug visible in +H2K demo
+12-15:  Test for reuse of sprites after fetch; the 9-sprites-trick in Krestage3
+16-27:  Special test for bug introduced in 1.22.1 and visible in unreleased filledcube demo of Skate / Glance
+...
+
+C64C / new VIC-II:
+
+A@AAA@@A@@@@A@@AAAAA@@@@@@AAA
+
+C64 / 6567R8 (NTSC) (gpz)
+
+AAAA@@@@@@AAA@@@@AAA@@@@@@AAA

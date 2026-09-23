@@ -1,0 +1,153 @@
+  processor 6502
+
+; Select the video timing (processor clock cycles per raster line)
+;CYCLES = 65     ; 6567R8 and above, NTSC-M
+;CYCLES = 64    ; 6567R5 6A, NTSC-M
+;CYCLES = 63    ; 6569 (all revisions), PAL-B
+testnum = $8000
+
+
+  .org $801
+basic:
+  .word 0$      ; link to next line
+  .word 1995    ; line number
+  .byte $9E     ; SYS token
+
+; SYS digits
+
+  .if (* + 8) / 10000
+  .byte $30 + (* + 8) / 10000
+  .endif
+  .if (* + 7) / 1000
+  .byte $30 + (* + 7) % 10000 / 1000
+  .endif
+  .if (* + 6) / 100
+  .byte $30 + (* + 6) % 1000 / 100
+  .endif
+  .if (* + 5) / 10
+  .byte $30 + (* + 5) % 100 / 10
+  .endif
+  .byte $30 + (* + 4) % 10
+
+0$:
+  .byte 0,0,0   ; end of BASIC program
+
+start:
+
+  lda #$00
+  sta testnum
+  sta fails
+
+; setup sprites
+  lda #$ff
+  sta $07fe
+  sta $07ff
+
+  lda #$00
+  ldy #$3f
+loop1:
+  sta $3fc0,y
+  dey
+  bne loop1
+  lda #$80
+  sta $3fc0
+
+  lda #$c0
+  sta $d015
+
+  lda #<testtable
+  sta $fd
+  lda #>testtable
+  sta $fe
+
+testloop:
+  lda ($fd),y
+  cmp #$ff
+  beq endoftest
+  sta $d010
+  iny
+  lda ($fd),y
+  sta $d00c
+  sta $d00e
+  iny
+  lda ($fd),y
+  sta $d00d
+  sta $d00f
+  iny
+
+  lda $d01e
+
+  ldx #$04
+wait1:
+  cmp $d012
+  bne wait1
+wait2:
+  cmp $d012
+  beq wait2
+  dex
+  bne wait1
+
+  lda $d01e
+
+  ldx testnum
+  sta $0400,x
+  lda ($fd),y
+  sta $0428,x
+  iny
+
+  lda #5
+  sta $d800,x
+  sta $d828,x
+
+  lda $0400,x
+  cmp $0428,x
+  beq nofail
+  lda #10
+  sta $d800,x
+  sta $d828,x
+  inc fails
+nofail:
+
+  inc testnum
+  jmp testloop
+
+endoftest:
+  ldy #5
+  lda fails
+  beq allok
+  ldy #10
+allok:
+  sty $d020
+
+    lda $d020
+    and #$0f
+
+    ldx #$ff    ; failure
+    cmp #5      ; green
+    bne fail2
+    ldx #0      ; success
+fail2:
+    stx $d7ff
+
+  rts  
+
+fails:
+    .byte 0
+
+; FIXME: tables for DTV and NTSC/NTSCOLD
+
+testtable:
+;       xhigh xlow  y    reference (d01e)
+  .byte 0,     0,    0,  192
+  .byte 0,    23,   50,  192
+  .byte 0,    24,   50,  192 ; first visible
+  .byte 0,    24,   50,  192 ; first visible
+  .byte 0,     0,   50,  192
+  .byte 0,    50,   50,  192
+  .byte 0,   255,   50,  192
+  .byte 0,   250,  250,  192
+  .byte 0,   255,  100,  192
+  .byte 192, 255,   50,    0
+  .byte 192,  87,   50,  192
+
+  .byte 255

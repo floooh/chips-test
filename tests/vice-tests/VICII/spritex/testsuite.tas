@@ -1,0 +1,495 @@
+  processor 6502
+
+; Select the video timing (processor clock cycles per raster line)
+;CYCLES = 65     ; 6567R8 and above, NTSC-M
+;CYCLES = 64    ; 6567R5 6A, NTSC-M
+;CYCLES = 63    ; 6569 (all revisions), PAL-B
+
+cinv = $314
+cnmi = $318
+raster = 46     ; start of raster interrupt
+m = $fb         ; zero page variable
+testnum = $8000
+
+  .org $801
+basic:
+  .word 0$      ; link to next line
+  .word 1995    ; line number
+  .byte $9E     ; SYS token
+
+; SYS digits
+
+  .if (* + 8) / 10000
+  .byte $30 + (* + 8) / 10000
+  .endif
+  .if (* + 7) / 1000
+  .byte $30 + (* + 7) % 10000 / 1000
+  .endif
+  .if (* + 6) / 100
+  .byte $30 + (* + 6) % 1000 / 100
+  .endif
+  .if (* + 5) / 10
+  .byte $30 + (* + 5) % 100 / 10
+  .endif
+  .byte $30 + (* + 4) % 10
+
+0$:
+  .byte 0,0,0   ; end of BASIC program
+
+start:
+  jmp install
+  jmp deinstall
+
+install:        ; install the raster routine
+  jsr restore   ; Disable the Restore key (disable NMI interrupts)
+checkirq:
+  lda cinv      ; check the original IRQ vector
+  ldx cinv+1    ; (to avoid multiple installation)
+  cmp #<irq1
+  bne irqinit
+  cpx #>irq1
+  beq skipinit
+irqinit:
+  sei
+  sta oldirq    ; store the old IRQ vector
+  stx oldirq+1
+  lda #<irq1
+  ldx #>irq1
+  sta cinv      ; set the new interrupt vector
+  stx cinv+1
+skipinit:
+
+  lda #$20
+  ldx #0
+llp:
+  sta $0400,x
+  sta $0500,x
+  sta $0600,x
+  sta $0700,x
+  inx
+  bne llp
+
+  lda #$1b
+  sta $d011     ; set the raster interrupt location
+  lda #raster
+  sta $d012
+  lda #$7f
+  sta $dc0d     ; disable timer interrupts
+  sta $dd0d
+  ldx #1
+  stx $d01a     ; enable raster interrupt
+  lda $dc0d     ; acknowledge CIA interrupts
+  lsr $d019     ; and video interrupts
+
+; setup sprites here
+  lda #$81
+  sta $d015
+  lda #100
+  sta $d000
+  lda #150
+  sta $d00e
+  lda #0
+  sta $d010
+  lda #49
+  sta $d001
+  sta $d00f
+  ldx #$3f
+sprloop1:
+  lda #$ff
+  sta $3e00,x
+  lda #$00
+  sta $3f00,x
+  dex
+  bne sprloop1
+; set test number to 0
+  sta testnum
+  lda #$80
+  sta $3f12
+  lda #$01
+  sta $3f14
+
+  lda #<testtable
+  sta $fd
+  lda #>testtable
+  sta $fe
+
+  lda #$05
+  sta $d020
+
+  ; wait until at least one frame was drawn to work around potentially buggy
+  ; first frame (see spritemcbase)
+  jsr waitframe
+  lda $dc0d     ; acknowledge CIA interrupts
+  lsr $d019     ; and video interrupts
+  lda $d01e
+  
+  jsr setuptest
+
+  cli
+  jmp *
+
+waitframe:
+  lda $d011
+  bpl * -3
+  lda $d011
+  bmi * -3
+  rts
+  
+deinstall:
+  sei           ; disable interrupts
+  lda #$1b
+  sta $d011     ; restore text screen mode
+  lda #$81
+  sta $dc0d     ; enable Timer A interrupts on CIA 1
+  lda #0
+  sta $d01a     ; disable video interrupts
+  lda oldirq
+  sta cinv      ; restore old IRQ vector
+  lda oldirq+1
+  sta cinv+1
+  bit $dd0d     ; re-enable NMI interrupts
+  cli
+  rts
+
+; Auxiliary raster interrupt (for syncronization)
+irq1:
+; irq (event)   ; > 7 + at least 2 cycles of last instruction (9 to 16 total)
+; pha           ; 3
+; txa           ; 2
+; pha           ; 3
+; tya           ; 2
+; pha           ; 3
+; tsx           ; 2
+; lda $0104,x   ; 4
+; and #xx       ; 2
+; beq           ; 3
+; jmp ($314)    ; 5
+                ; ---
+                ; 38 to 45 cycles delay at this stage
+  lda #<irq2
+  sta cinv
+  lda #>irq2
+  sta cinv+1
+  nop           ; waste at least 12 cycles
+  nop           ; (up to 64 cycles delay allowed here)
+  nop
+  nop
+  nop
+  nop
+  inc $d012     ; At this stage, $d012 has already been incremented by one.
+  lda #1
+  sta $d019     ; acknowledge the first raster interrupt
+  cli           ; enable interrupts (the second interrupt can now occur)
+  ldy #9
+  dey
+  bne *-1       ; delay
+  nop           ; The second interrupt will occur while executing these
+  nop           ; two-cycle instructions.
+  nop
+  nop
+  nop
+oldirq = * + 1  ; Placeholder for self-modifying code
+  jmp *         ; Return to the original interrupt
+
+; Main raster interrupt
+irq2:
+; irq (event)   ; 7 + 2 or 3 cycles of last instruction (9 or 10 total)
+; pha           ; 3
+; txa           ; 2
+; pha           ; 3
+; tya           ; 2
+; pha           ; 3
+; tsx           ; 2
+; lda $0104,x   ; 4
+; and #xx       ; 2
+; beq           ; 3
+; jmp (cinv)    ; 5
+                ; ---
+                ; 38 or 39 cycles delay at this stage
+  lda #<irq1
+  sta cinv
+  lda #>irq1
+  sta cinv+1
+  ldx $d012
+  nop
+#if CYCLES - 63
+#if CYCLES - 64
+  nop           ; 6567R8, 65 cycles/line
+  bit $24
+#else
+  nop           ; 6567R56A, 64 cycles/line
+  nop
+#endif
+#else
+  bit $24       ; 6569, 63 cycles/line
+#endif
+  cpx $d012     ; The comparison cycle is executed CYCLES or CYCLES+1 cycles
+                ; after the interrupt has occurred.
+  beq *+2       ; Delay by one cycle if $d012 hadn't changed.
+                ; Now exactly CYCLES+3 cycles have passed since the interrupt.
+  ldx #raster
+  nop
+  stx $d012     ; restore original raster interrupt position
+  ldx #1
+  stx $d019     ; acknowledge the raster interrupt
+
+
+; start action here
+
+  jsr test1
+  jsr setuptest
+  jmp endirq
+
+
+
+endirq:
+  jmp $ea81     ; return to the auxiliary raster interrupt
+
+restore:        ; disable the Restore key
+  lda cnmi
+  ldy cnmi+1
+  pha
+  lda #<nmi     ; Set the NMI vector
+  sta cnmi
+  lda #>nmi
+  sta cnmi+1
+  ldx #$81
+  stx $dd0d     ; Enable CIA 2 Timer A interrupt
+  ldx #0
+  stx $dd05
+  inx
+  stx $dd04     ; Prepare Timer A to count from 1 to 0.
+  ldx #$dd
+  stx $dd0e     ; Cause an interrupt.
+nmi = * + 1
+  lda #$40      ; RTI placeholder
+  pla
+  sta cnmi
+  sty cnmi+1    ; restore original NMI vector (although it won't be used)
+  rts
+
+
+test1:
+; move sprite#0
+
+  ldx #49
+prelooptest1:
+  dex
+  bne prelooptest1
+  nop
+
+cycledelay:
+  lda #60
+  bne dotest
+  jmp testend
+
+dotest:
+  jsr delay
+
+
+  lda $d000
+  sta $c000
+
+  lda $d010
+  sta $c001
+
+  lda $d01e
+
+  lda $fb
+xi1:
+  sta $d000 ; the sprite-x move to test
+  
+  ldx #50   ; wait for collision even on VICE
+postlooptest1:
+  dex
+  bne postlooptest1
+  lda $d01e
+  sta $d021
+result:
+  ldy testnum
+  sta $4000,y
+  sta $0480,y ; display result on screen
+  inc testnum
+
+  lda #5
+  sta $d880,y
+  sta $d880+40,y
+  lda $0480,y
+  cmp $0480+40,y
+  beq nofail2
+  lda #10
+  sta $d880,y
+  sta $d880+40,y
+  lda #10
+  sta $d020
+nofail2:
+  rts
+
+testend:
+
+    lda $d020
+    and #$0f
+
+    ldx #$ff    ; failure
+    cmp #5      ; green
+    bne fail2
+    ldx #0      ; success
+fail2:
+    stx $d7ff
+
+    lda #0
+    sta $d021
+
+  rts
+
+setuptest:
+  
+  lda #$f8
+  sta $07f8
+  lda #$fc
+  sta $07ff
+
+  ldy #00
+  ; delay
+  lda ($fd),y
+  sta cycledelay+1 
+  beq setupend
+  iny
+  ; xi
+  lda ($fd),y
+  sta xi1+1
+  sta xi2+1
+  bne setup70
+  lda #$0e
+  jmp setup07
+setup70:
+  lda #$00
+setup07:
+  sta xi3+1
+  iny
+  ; x1
+  lda ($fd),y
+xi2:
+  sta $d000
+  iny
+  ; xcmp
+  lda ($fd),y
+xi3:
+  sta $d00e
+  iny
+  ; x2
+  lda ($fd),y
+  sta $fb
+  iny
+  ; high
+  lda ($fd),y
+  sta $d010
+  iny
+  ; reference
+  lda ($fd),y
+  ldy testnum
+  sta $04a8,y ; display reference on screen
+  ; next test
+  clc
+  lda $fd
+  adc #$07  ; length of entries in testtable
+  sta $fd
+  bcc nofe
+  inc $fe
+nofe:
+
+setupend:
+  rts
+
+  .org $0a00 + $100
+
+delay:            ;delay 80-accu cycles, 0<=accu<=64
+  lsr             ;2 cycles akku=akku/2 carry=1 if accu was odd, 0 otherwise
+  bcc waste1cycle ;2/3 cycles, depending on lowest bit, same operation for both
+waste1cycle:
+  sta smod+1      ;4 cycles selfmodifies the argument of branch
+  clc             ;2 cycles 
+;now we have burned 10/11 cycles.. and jumping into a nopfield 
+smod:
+  bcc *+10
+  .byte $EA,$EA,$EA,$EA,$EA,$EA,$EA,$EA
+  .byte $EA,$EA,$EA,$EA,$EA,$EA,$EA,$EA
+  .byte $EA,$EA,$EA,$EA,$EA,$EA,$EA,$EA
+  .byte $EA,$EA,$EA,$EA,$EA,$EA,$EA,$EA
+  rts             ;6 cycles
+
+; test uses sprite#0 (completely filled with pixels)
+; and  sprite#7 (one pixel in first and one pixel in last column)
+;
+; columns of the testtable:
+;      del xi, x1 xcmp  x2, high, reference
+; del: a cycle offset that is used to time the movement 
+; xi: index*2 of active sprite (0 or 14)
+; x1: first position of the active sprite
+; xcmp: possition of the passive sprite
+; x2: position the active sprite is moved to
+; high: value of $D010 that is used for the test
+; reference: Value of the collision that is shown on a real C64
+testtable:
+  .byte 13, 14, 128, 72, 72, 129, 129   ; 1
+#if CYCLES = 63
+  .byte 40, 0, 95, 119, 96, 0, 0		; 2  test collision with new position
+#else
+  .byte 40, 0, 95, 119, 96, 0, 129
+#endif
+  .byte 40, 0, 96, 120, 97, 0, 129      ; 3
+  .byte 40, 0, 97, 121, 98, 0, 129      ; 4
+
+#if CYCLES = 63
+  .byte 40, 0, 95, 72, 96, 0, 129		; 5  test collision with old position
+#else
+  .byte 40, 0, 95, 72, 96, 0, 0
+#endif
+  .byte 40, 0, 96, 73, 97, 0, 0         ; 6
+  .byte 40, 0, 97, 74, 98, 0, 0         ; 7
+
+#if CYCLES = 63
+  .byte 40, 0, 95, 118, 94, 0, 129		; 8  test collision with old position
+#else
+  .byte 40, 0, 95, 118, 94, 0, 0
+#endif
+  
+  .byte 40, 0, 96, 119, 95, 0, 0        ; 9
+  .byte 40, 0, 97, 120, 96, 0, 0        ; 10
+  
+#if CYCLES = 63
+  .byte 40, 0, 95, 71, 94, 0, 0		    ; 11 test collision with new position
+  .byte 40, 0, 96, 72, 95, 0, 0         ; 12
+#else
+  .byte 40, 0, 95, 71, 94, 0, 129
+  .byte 40, 0, 96, 72, 95, 0, 129
+#endif
+  
+  .byte 40, 0, 97, 73, 96, 0, 129       ; 13
+
+  .byte 19, 0, 0, 111, 109, 129, 0		; 14 Krestage3
+  .byte 19, 0, 0, 111, 110, 129, 0		; 15 determine first pixel for reused sprite#0
+#if CYCLES = 63
+  .byte 19, 0, 0, 111, 111, 129, 129	; 16 and collide
+  .byte 19, 0, 0, 0, 111, 129, 129		; 17 with both
+#else
+  .byte 19, 0, 0, 111, 111, 129, 0
+  .byte 19, 0, 0, 0, 111, 129, 0
+#endif
+
+  .byte 61, 14, 100, 124, 101, 0, 129	; 18 special test for bug introduced in 1.22++
+  .byte 60, 14, 100, 124, 101, 0, 129	; 19 for sprites changed before their fetch but after
+  .byte 59, 14, 100, 124, 101, 0, 129	; 20 VICEs drawing handler
+  .byte 61, 14, 100, 77, 101, 0, 0		; 21 visible in unreleased filledcube demo of Skate / Glance
+  .byte 60, 14, 100, 77, 101, 0, 0	    ; 22
+  .byte 59, 14, 100, 77, 101, 0, 0      ; 23
+  .byte 61, 14, 100, 123, 99, 0, 0	    ; 24
+  .byte 60, 14, 100, 123, 99, 0, 0	    ; 25
+  .byte 59, 14, 100, 123, 99, 0, 0      ; 26
+  .byte 61, 14, 100, 76, 99, 0, 129     ; 27
+  .byte 60, 14, 100, 76, 99, 0, 129	    ; 28
+  .byte 59, 14, 100, 76, 99, 0, 129     ; 29
+
+
+
+  .byte 0, 0, 0, 0, 0, 0

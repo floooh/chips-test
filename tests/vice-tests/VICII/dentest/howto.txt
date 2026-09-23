@@ -1,0 +1,28 @@
+
+Expected results of the tests:
+
+den01-48-N.prg:
+  N=0,1,2: Screen displays usual text
+
+den01-49-N.prg:
+  N=0,1: Screen displays usual text
+  N=2: Screen displays idle data ($3FFF) in black
+
+den10-48-N.prg:
+  N=0,1: Screen displays idle data ($3FFF) in black
+  N=2: Screen displays usual text
+
+den10-51-N.prg:
+  N=0: Screen closed (border color)
+  N=1,2,3: Screen displays usual text
+
+denrsel-N.prg:
+  N=0: Screen closed (border color)
+  N=1,2,63: Upper/lower border open (idle data)
+
+denrsel-sN.prg:
+  N=0: Screen closed (border color)
+  N=1,2: Upper/lower border open (idle data)
+
+denrsel55.prg:
+  Screen displays usual text but is vertically narrowed.
