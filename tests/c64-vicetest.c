@@ -238,22 +238,29 @@ typedef struct {
     uint8_t* indices;           // one chips palette index per pixel
     int width, height;
     int num_colors;             // distinct colors found in the reference
+    int num_unknown;            // pixels whose color isn't in REF_COLORS
 } ref_image_t;
 
-static uint8_t nearest_palette_index(uint8_t r, uint8_t g, uint8_t b) {
-    int best = 0, best_dist = 1 << 30;
-    for (int i = 0; i < state.palette_size; i++) {
-        const uint32_t c = state.palette[i];
-        const int dr = (int)(c & 0xFF) - r;
-        const int dg = (int)((c >> 8) & 0xFF) - g;
-        const int db = (int)((c >> 16) & 0xFF) - b;
-        const int dist = dr*dr + dg*dg + db*db;
-        if (dist < best_dist) {
-            best_dist = dist;
-            best = i;
+// The VICE reference screenshots are rendered with the old vice.vpl palette
+// (http://unusedino.de/ec64/technical/misc/vic656x/colors/), not with the pepto
+// palette that chips uses. Matching by index against this table is exact;
+// matching by nearest RGB against the chips palette is not - vice.vpl's light
+// grey $959595 is closer to pepto's *mid* grey than to its light grey, which
+// silently mis-scored every test that uses both greys.
+static const uint32_t REF_COLORS[16] = {
+    0x000000, 0xFFFFFF, 0x68372B, 0x70A4B2, 0x6F3D86, 0x588D43, 0x352879, 0xB8C76F,
+    0x6F4F25, 0x433900, 0x9A6759, 0x444444, 0x6C6C6C, 0x9AD284, 0x6C5EB5, 0x959595,
+};
+
+// returns the palette index for an exact vice.vpl color, or -1
+static int ref_color_index(uint8_t r, uint8_t g, uint8_t b) {
+    const uint32_t rgb = ((uint32_t)r << 16) | ((uint32_t)g << 8) | b;
+    for (int i = 0; i < 16; i++) {
+        if (REF_COLORS[i] == rgb) {
+            return i;
         }
     }
-    return (uint8_t)best;
+    return -1;
 }
 
 // load a VICE reference screenshot and convert it to chips palette indices
@@ -281,16 +288,24 @@ static bool load_reference(const char* path, ref_image_t* out) {
             }
         }
         if (slot < 0) {
-            const uint8_t idx = nearest_palette_index(rgba[i*4+0], rgba[i*4+1], rgba[i*4+2]);
+            int idx = ref_color_index(rgba[i*4+0], rgba[i*4+1], rgba[i*4+2]);
+            if (idx < 0) {
+                // not a vice.vpl color, can't be compared - use an index that
+                // never matches so the mismatch is visible instead of silent
+                idx = 255;
+            }
             if (num_cached < 64) {
                 cache_key[num_cached] = key;
-                cache_val[num_cached] = idx;
+                cache_val[num_cached] = (uint8_t)idx;
                 slot = num_cached++;
             }
             else {
-                out->indices[i] = idx;
+                out->indices[i] = (uint8_t)idx;
                 continue;
             }
+        }
+        if (cache_val[slot] == 255) {
+            out->num_unknown++;
         }
         out->indices[i] = cache_val[slot];
     }
@@ -434,6 +449,10 @@ static result_t run_test(const char* path, const opts_t* opts) {
     }
     else if (ref.num_colors > 16) {
         printf("[SKIP] %s - reference has %d distinct colors, not a raw C64 screenshot\n", name, ref.num_colors);
+        result = RESULT_SKIP;
+    }
+    else if (ref.num_unknown > 0) {
+        printf("[SKIP] %s - reference has %d pixels outside the vice.vpl palette\n", name, ref.num_unknown);
         result = RESULT_SKIP;
     }
     else {
