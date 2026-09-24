@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tiny Emulators</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="player">
+<div class="bar">
+  <div class="bar-row">
+    <a class="btn left" href="index.html" aria-label="Back to all emulators">
+      <svg width="20" height="12" viewBox="0 0 20 12" aria-hidden="true"><path d="M10 0 L0 6 L10 12 Z M20 0 L10 6 L20 12 Z" fill="currentColor"></path></svg>
+      <span class="tip">Back to all emulators</span>
+    </a>
+    <h1 id="title"></h1>
+    <span class="bar-desc" id="desc" hidden></span>
+    <span class="bar-sys push" id="sys" hidden></span>
+    <a class="btn" id="open" href="#" target="_blank" rel="noopener" aria-label="Open emulator in new tab">
+      <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M0 2 H6 V4 H2 V12 H10 V8 H12 V14 H0 Z M8 0 H14 V6 H12 V3.4 L6.7 8.7 L5.3 7.3 L10.6 2 H8 Z" fill="currentColor"></path></svg>
+      <span class="tip">Open in new tab</span>
+    </a>
+    <button class="btn" id="help-btn" aria-label="Help" aria-pressed="false">?<span class="tip">Help</span></button>
+    <button class="btn" id="fs" aria-label="Fullscreen">
+      <svg width="16" height="14" viewBox="0 0 16 14" aria-hidden="true"><path d="M0 0 H6 V2 H2 V5 H0 Z M10 0 H16 V5 H14 V2 H10 Z M0 9 H2 V12 H6 V14 H0 Z M14 9 H16 V14 H10 V12 H14 Z" fill="currentColor"></path></svg>
+      <span class="tip">Fullscreen</span>
+    </button>
+  </div>
+  <div class="bar-stripe"><i style="background:#d6332b"></i><i style="background:#f07a1c"></i><i style="background:#e7b520"></i><i style="background:#2ca25e"></i><i style="background:#2aa7c9"></i></div>
+</div>
+<div class="stage">
+  <iframe id="emu" title="Emulator" allow="fullscreen; autoplay; gamepad"></iframe>
+</div>
+<aside class="help" id="help" aria-label="Help">
+  <div class="help-head">HELP<button class="help-close" id="help-close" aria-label="Close help">X</button></div>
+  <div class="help-body" id="help-body"></div>
+</aside>
+
+<script src="site.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const qp = new URLSearchParams(location.search), id = qp.get('id'), debug = qp.get('dbg') === '1';
+let url = '', helpSrc = '', helpLoaded = false;
+function loadHelp() {
+  if (helpLoaded) return;
+  helpLoaded = true;
+  if (!helpSrc) { $('help-body').innerHTML = '<p>No help available for this title yet.</p>'; return; }
+  fetch(helpSrc).then(r => { if (!r.ok) throw 0; return r.text(); })
+    .then(md => { $('help-body').innerHTML = TE.md(md); })
+    .catch(() => { helpLoaded = false; $('help-body').innerHTML = '<p>Help could not be loaded.</p>'; });
+}
+
+TE.loadData().then(data => {
+  const e = data.find(x => x.id === id);
+  if (!e) { $('title').textContent = 'Not found'; $('help-body').innerHTML = '<p>No emulator with this id.</p>'; return; }
+  document.title = e.title + ' · Tiny Emulators';
+  $('title').textContent = e.title;
+  $('sys').textContent = e.systemName || e.system; $('sys').hidden = false;
+  if (e.description) { $('desc').textContent = e.description; $('desc').hidden = false; }
+  url = new URL(TE.launchUrl(e, debug && e.debug !== false), location.href).href;
+  const f = $('emu');
+  f.src = url;
+  $('open').href = url;
+  f.addEventListener('load', () => f.focus());
+  helpSrc = e.help || '';
+  $('help-body').innerHTML = '<p>Loading…</p>';
+});
+
+
+const setHelp = open => { if (open) loadHelp(); $('help').classList.toggle('open', open); $('help-btn').setAttribute('aria-pressed', open); };
+$('help-btn').addEventListener('click', () => setHelp(!$('help').classList.contains('open')));
+$('help-close').addEventListener('click', () => { setHelp(false); $('emu').focus(); });
+addEventListener('keydown', ev => { if (ev.key === 'Escape') setHelp(false); });
+
+$('fs').addEventListener('click', () => {
+  const d = document, f = $('emu');
+  if (d.fullscreenElement || d.webkitFullscreenElement) { (d.exitFullscreen || d.webkitExitFullscreen).call(d); return; }
+  const req = f.requestFullscreen || f.webkitRequestFullscreen;
+  if (req) Promise.resolve(req.call(f)).then(() => f.focus()).catch(() => {});
+});
+</script>
+</body>
+</html>

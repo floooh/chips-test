@@ -1,0 +1,2609 @@
+[
+  {
+    "id": "visual6502remix",
+    "type": "sim",
+    "title": "Visual 6502 Remix",
+    "description": "Transistor-level 6502 CPU simulation",
+    "system": "Chip",
+    "systemName": "6502",
+    "screenshot": "ext/visual6502remix.jpg",
+    "wasm": "https://floooh.github.io/visual6502remix/",
+    "params": {},
+    "debug": false,
+    "help": "help/simulators.md"
+  },
+  {
+    "id": "visualz80remix",
+    "type": "sim",
+    "title": "Visual Z80 Remix",
+    "description": "Transistor-level Z80 CPU simulation",
+    "system": "Chip",
+    "systemName": "Z80",
+    "screenshot": "ext/visualz80remix.jpg",
+    "wasm": "https://floooh.github.io/visualz80remix/",
+    "params": {},
+    "debug": false,
+    "help": "help/simulators.md"
+  },
+  {
+    "id": "visual2a03remix",
+    "type": "sim",
+    "title": "Visual 2A03 Remix",
+    "description": "Transistor-level NES 2A03 CPU simulation",
+    "system": "Chip",
+    "systemName": "2A03",
+    "screenshot": "ext/visual2a03remix.jpg",
+    "wasm": "https://floooh.github.io/visual2a03remix/",
+    "params": {},
+    "debug": false,
+    "help": "help/simulators.md"
+  },
+  {
+    "id": "kc85_2",
+    "type": "computer",
+    "title": "KC85/2",
+    "description": "",
+    "system": "KC85",
+    "systemName": "KC85/2",
+    "screenshot": "kc85/kc85_2.jpg",
+    "wasm": "kc852.html",
+    "params": {},
+    "help": "help/default.md"
+  },
+  {
+    "id": "kc85_3",
+    "type": "computer",
+    "title": "KC85/3",
+    "description": "",
+    "system": "KC85",
+    "systemName": "KC85/3",
+    "screenshot": "kc85/kc85_3.jpg",
+    "wasm": "kc853.html",
+    "params": {},
+    "help": "help/default.md"
+  },
+  {
+    "id": "kc85_4",
+    "type": "computer",
+    "title": "KC85/4",
+    "description": "",
+    "system": "KC85",
+    "systemName": "KC85/4",
+    "screenshot": "kc85/kc85_4.jpg",
+    "wasm": "kc854.html",
+    "params": {},
+    "help": "help/default.md"
+  },
+  {
+    "id": "kccompact",
+    "type": "computer",
+    "title": "KC Compact",
+    "description": "",
+    "system": "KCC",
+    "systemName": "KC Compact",
+    "screenshot": "cpc/kccompact.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "type": "kccompact"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "cpc464",
+    "type": "computer",
+    "title": "Amstrad CPC464",
+    "description": "",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/cpc464.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "type": "cpc464"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "cpc6128",
+    "type": "computer",
+    "title": "Amstrad CPC6128",
+    "description": "",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/cpc6128.jpg",
+    "wasm": "cpc.html",
+    "params": {},
+    "help": "help/default.md"
+  },
+  {
+    "id": "zx48k",
+    "type": "computer",
+    "title": "ZX Spectrum 48k",
+    "description": "",
+    "system": "ZX",
+    "systemName": "ZX",
+    "screenshot": "zx/zx48k.jpg",
+    "wasm": "zx.html",
+    "params": {
+      "type": "zx48k"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "zx128",
+    "type": "computer",
+    "title": "ZX Spectrum 128",
+    "description": "",
+    "system": "ZX",
+    "systemName": "ZX",
+    "screenshot": "zx/zx128.jpg",
+    "wasm": "zx.html",
+    "params": {
+      "type": "zx128"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "vic20",
+    "type": "computer",
+    "title": "Commodore VIC-20",
+    "description": "",
+    "system": "VIC-20",
+    "systemName": "VIC-20",
+    "screenshot": "vic20/vic20.jpg",
+    "wasm": "vic20.html",
+    "params": {},
+    "help": "help/default.md"
+  },
+  {
+    "id": "c64",
+    "type": "computer",
+    "title": "Commodore C64",
+    "description": "",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/c64.jpg",
+    "wasm": "c64.html",
+    "params": {},
+    "help": "help/default.md"
+  },
+  {
+    "id": "atom",
+    "type": "computer",
+    "title": "Acorn Atom",
+    "description": "",
+    "system": "Atom",
+    "systemName": "Acorn Atom",
+    "screenshot": "atom/atom.jpg",
+    "wasm": "atom.html",
+    "params": {},
+    "help": "help/default.md"
+  },
+  {
+    "id": "lc80",
+    "type": "computer",
+    "title": "LC-80",
+    "description": "",
+    "system": "LC-80",
+    "systemName": "LC-80",
+    "screenshot": "lc80/lc80.jpg",
+    "wasm": "lc80.html",
+    "params": {},
+    "help": "help/default.md"
+  },
+  {
+    "id": "z1013",
+    "type": "computer",
+    "title": "Robotron Z1013",
+    "description": "",
+    "system": "Z1013",
+    "systemName": "Z1013",
+    "screenshot": "z1013/z1013.jpg",
+    "wasm": "z1013.html",
+    "params": {},
+    "help": "help/default.md"
+  },
+  {
+    "id": "z9001",
+    "type": "computer",
+    "title": "Robotron Z9001",
+    "description": "with BASIC and RAM modules",
+    "system": "Z9001",
+    "systemName": "Z9001",
+    "screenshot": "z9001/z9001.jpg",
+    "wasm": "z9001.html",
+    "params": {},
+    "help": "help/default.md"
+  },
+  {
+    "id": "kc87",
+    "type": "computer",
+    "title": "Robotron KC87",
+    "description": "BASIC[Enter]",
+    "system": "Z9001",
+    "systemName": "KC87",
+    "screenshot": "z9001/kc87.jpg",
+    "wasm": "z9001.html",
+    "params": {
+      "type": "kc87"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "forth",
+    "type": "tool",
+    "title": "FORTH",
+    "description": "",
+    "system": "KC85",
+    "systemName": "KC85/4",
+    "screenshot": "kc85/forth.jpg",
+    "wasm": "kc854.html",
+    "params": {
+      "mod": "m026",
+      "mod_image": "kc85/forth.853",
+      "input": "SWITCH 8 C1\nFORTH\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "z1013_forth",
+    "type": "tool",
+    "title": "FORTH",
+    "description": "",
+    "system": "Z1013",
+    "systemName": "Z1013",
+    "screenshot": "z1013/z1013_forth.jpg",
+    "wasm": "z1013.html",
+    "params": {
+      "type": "z1013_64",
+      "file": "z1013/z1013_forth.z80"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "z1013_basic",
+    "type": "tool",
+    "title": "BASIC",
+    "description": "",
+    "system": "Z1013",
+    "systemName": "Z1013",
+    "screenshot": "z1013/z1013_basic.jpg",
+    "wasm": "z1013.html",
+    "params": {
+      "type": "z1013_64",
+      "file": "z1013/kc_basic.z80"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "development",
+    "type": "tool",
+    "title": "ASMDEV",
+    "description": "",
+    "system": "KC85",
+    "systemName": "KC85/4",
+    "screenshot": "kc85/development.jpg",
+    "wasm": "kc854.html",
+    "params": {
+      "mod": "m027",
+      "mod_image": "kc85/develop.853",
+      "input": "SWITCH 8 C1\nMENU\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "cpm_cpc",
+    "type": "tool",
+    "title": "CP/M 2.2",
+    "description": "",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/cpm_cpc.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/6128sp_4.dsk",
+      "input": "|cpm\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "dtc",
+    "type": "demo",
+    "title": "DTC",
+    "description": "by Arkos/Overlanders",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/dtc.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/dtc_cpc.dsk",
+      "input": "run\"-DTC\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "tireauflan",
+    "type": "demo",
+    "title": "Tire Au Flan",
+    "description": "press SPACE!",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/tireauflan.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/tireauflan_cpc.dsk",
+      "input": "run\"TAFAPLIB\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "wolfenstrad",
+    "type": "demo",
+    "title": "Wolfenstrad",
+    "description": "by Dirty Minds",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/wolfenstrad.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/wolfenstrad.dsk",
+      "input": "run\"-WOLF\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "byte98",
+    "type": "demo",
+    "title": "Byte'98",
+    "description": "by mortel/Overlanders",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/byte98.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/byte98.dsk",
+      "input": "run\"-BYTE'98\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "ecole_buissonniere",
+    "type": "demo",
+    "title": "Ecole Buissonniere",
+    "description": "by MadRam/OVL",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/ecole_buissonniere.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/ecole_buissonniere.dsk",
+      "input": "run\"ecole\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "demoizart",
+    "type": "demo",
+    "title": "Demoizart",
+    "description": "strobe warning!",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/demoizart.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/demoizart_cpc.dsk",
+      "input": "run\"DIA\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "logons_run",
+    "type": "demo",
+    "title": "Logon's Run",
+    "description": "by Overflow/Logon System",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/logons_run.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/logons_run_cpc.dsk",
+      "input": "run\"logon's\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "yet_another_plasma",
+    "type": "demo",
+    "title": "YAP!",
+    "description": "by Logon System",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/yet_another_plasma.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/yet_another_plasma.dsk",
+      "input": "run\"-yap!\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "backtro",
+    "type": "demo",
+    "title": "Backtro",
+    "description": "by Overflow/Logon System",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/backtro.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/backtro.dsk",
+      "input": "run\"-backtro\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "isometrikum",
+    "type": "demo",
+    "title": "Isometrikum",
+    "description": "by Vanity",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/isometrikum.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/isometrikum.dsk",
+      "input": "run\"isometri.kum\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "sotb_cpc",
+    "type": "demo",
+    "title": "SotB Demo",
+    "description": "\"Preview 1\", then SPACE!",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/sotb_cpc.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/ovf-prev.dsk",
+      "input": "run\"-PREVIEW\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "points_barres",
+    "type": "demo",
+    "title": "Points Barres",
+    "description": "press SPACE!",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/points_barres.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/points_barres.dsk",
+      "input": "run\"-PBARRES\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "stillrising",
+    "type": "demo",
+    "title": "Still Rising",
+    "description": "by Vanity",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/stillrising.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/stillrising.dsk",
+      "input": "run\"-RISING\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "octopuspocus",
+    "type": "demo",
+    "title": "Octopus Pocus",
+    "description": "by Pulpo Corrosivo",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/octopuspocus.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/octopuspocus.dsk",
+      "input": "run\"OCTOPUS\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "piou",
+    "type": "demo",
+    "title": "Gloire a Piou!",
+    "description": "by Overlanders",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/piou.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/piou.dsk",
+      "input": "run\"gap\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "phx",
+    "type": "demo",
+    "title": "phX / Condense",
+    "description": "by Condense",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/phx.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/phx.dsk",
+      "input": "run\"phx\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "batman_forever",
+    "type": "demo",
+    "title": "Batman Forever",
+    "description": "by Batman Group",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/batman_forever.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/batman_forever.dsk",
+      "input": "run\"disc\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "crtc",
+    "type": "demo",
+    "title": "CRTC",
+    "description": "by benediction & Arkos",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/crtc.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/crtc.dsk",
+      "input": "run\"crtc\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "wunderbar",
+    "type": "demo",
+    "title": "Wunderbar",
+    "description": "by Arkos/Benediction",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/wunderbar.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/wunderbar.dsk",
+      "input": "run\"wunder.bar\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "phortem",
+    "type": "demo",
+    "title": "Phortem",
+    "description": "by Condense",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/phortem.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/phortem.dsk",
+      "input": "run\"phortem\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "pheelone",
+    "type": "demo",
+    "title": "Pheelone",
+    "description": "by Condense",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/pheelone.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/pheelone_2009condense.dsk",
+      "input": "run\"pheelone\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "phreaks",
+    "type": "demo",
+    "title": "Phreaks",
+    "description": "by Condense",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/phreaks.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/phreaks_2010condense.dsk",
+      "input": "run\"phreaks\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "phat_2",
+    "type": "demo",
+    "title": "Phat 2",
+    "description": "by Condense",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/phat_2.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/phat_2.dsk",
+      "input": "run\"phat2\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "wobbler",
+    "type": "demo",
+    "title": "Wobbler",
+    "description": "by TAF",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/wobbler.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/wobbler.dsk",
+      "input": "run\"-wobbler\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "battro",
+    "type": "demo",
+    "title": "Battro",
+    "description": "by Batman Group",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/battro.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/battro.dsk",
+      "input": "run\"battro\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "standup_party_version",
+    "type": "demo",
+    "title": "Stand Up!",
+    "description": "by Benediction",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/standup_party_version.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/standup_party_version.dsk",
+      "input": "run\"standup\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "osc3",
+    "type": "demo",
+    "title": "Onescreen Colonies #3",
+    "description": "by Vanity",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/osc3.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/osc3.dsk",
+      "input": "run\"-osc3\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "sphere",
+    "type": "demo",
+    "title": "Sphere",
+    "description": "by Resistance",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/sphere.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/sphere.dsk",
+      "input": "run\"sphere\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "foursome",
+    "type": "demo",
+    "title": "Foursome",
+    "description": "by Pulpo Corrosivo",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/foursome.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/foursome.dsk",
+      "input": "run\"foursome\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "fractoid",
+    "type": "demo",
+    "title": "Fractoid",
+    "description": "by Osmium Path",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/fractoid.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/fractoid.dsk",
+      "input": "run\"fractoid\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "debris",
+    "type": "demo",
+    "title": "Debris",
+    "description": "by Pulpo Corrosivo",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/debris.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/debris.dsk",
+      "input": "run\"debris\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "ghostnop",
+    "type": "demo",
+    "title": "Ghost NOP",
+    "description": "by Pulpo Corrosivo",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/ghostnop.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/ghostnop.dsk",
+      "input": "run\"ghostnop\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "rebels1989_c64",
+    "type": "demo",
+    "title": "Rebels 1989",
+    "description": "by Rebels",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/rebels1989_c64.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/rebels1989_c64.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "s777_c64",
+    "type": "demo",
+    "title": "$777",
+    "description": "by Razor 1911",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/s777_c64.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/s777_c64.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "wobbler_c64",
+    "type": "demo",
+    "title": "The Wobbler",
+    "description": "by Abyss Connection",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/wobbler_c64.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/wobbler_c64.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "dawnfall_c64",
+    "type": "demo",
+    "title": "Dawnfall",
+    "description": "by Oxyron",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/dawnfall_c64.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/dawnfall_c64.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "h4k_c64",
+    "type": "demo",
+    "title": "+H4K",
+    "description": "by Plush",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/h4k_c64.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/h4k_c64.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "crapman_c64",
+    "type": "demo",
+    "title": "Crapman",
+    "description": "by Latex",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/crapman_c64.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/crapman_c64.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "kongo2_c64",
+    "type": "demo",
+    "title": "Kongo2",
+    "description": "by Cruel Soldiers",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/kongo2_c64.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/kongo2_c64.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "cintentional_c64",
+    "type": "demo",
+    "title": "C.Intentional",
+    "description": "by Vision",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/cintentional_c64.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/cintentional_c64.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "soursalty_c64",
+    "type": "demo",
+    "title": "Sour & Salty",
+    "description": "by Artline Designs",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/soursalty_c64.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/soursalty_c64.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "nightcrawler_c64",
+    "type": "demo",
+    "title": "Nightcrawler",
+    "description": "by Almagest",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/nightcrawler_c64.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/nightcrawler_c64.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "arcade02_c64",
+    "type": "demo",
+    "title": "Arcade Intro",
+    "description": "by Arcade",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/arcade02_c64.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/arcade02_c64.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "inaloop_c64",
+    "type": "demo",
+    "title": "In A Loop 1K",
+    "description": "by Ate Bit",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/inaloop_c64.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/inaloop_c64.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "dubious_c64",
+    "type": "demo",
+    "title": "Dubious 4K",
+    "description": "by Fairlight",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/dubious_c64.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/dubious_c64.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "space_invaders_demo",
+    "type": "demo",
+    "title": "Space Invaders",
+    "description": "by Hokuto Force",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/space_invaders_demo.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/space_invaders_demo.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "rewind_tempest",
+    "type": "demo",
+    "title": "Rewind",
+    "description": "by TempesT",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/rewind_tempest.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/rewind_tempest.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "tunnelvision_omg",
+    "type": "demo",
+    "title": "Tunnel Vision",
+    "description": "by OMG",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/tunnelvision_omg.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/tunnelvision_omg.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "party_horse",
+    "type": "demo",
+    "title": "Party Horse",
+    "description": "by Booze Design",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/party_horse.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/party_horse.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "funnyrasters",
+    "type": "demo",
+    "title": "Funny Rasters",
+    "description": "by Excess",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/funnyrasters.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/funnyrasters.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "lft-field-sort",
+    "type": "demo",
+    "title": "Field Sort",
+    "description": "by Lft",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/lft-field-sort.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/lft-field-sort.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "onebitwonder",
+    "type": "demo",
+    "title": "One Bit Wonder",
+    "description": "by Offence et al.",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/onebitwonder.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/onebitwonder.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "swirl_by_dnp",
+    "type": "demo",
+    "title": "Swirl",
+    "description": "by DnP",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/swirl_by_dnp.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/swirl_by_dnp.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "the_earth_party_ver",
+    "type": "demo",
+    "title": "The Earth",
+    "description": "by eins",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/the_earth_party_ver.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/the_earth_party_ver.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "f600",
+    "type": "demo",
+    "title": "F600",
+    "description": "by Hokuto Force & PVM",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/f600.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/f600.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "reflections",
+    "type": "demo",
+    "title": "Reflections",
+    "description": "by Plush",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/reflections.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/reflections.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "summerof64",
+    "type": "demo",
+    "title": "Summer of 64",
+    "description": "by Offence",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/summerof64.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/summerof64.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "oneder_oxyron",
+    "type": "demo",
+    "title": "One-Der",
+    "description": "by Oxyron",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/oneder_oxyron.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/oneder_oxyron.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "gp_quadrants",
+    "type": "demo",
+    "title": "Quadrants",
+    "description": "by Genesis Project",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/gp_quadrants.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/gp_quadrants.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "copperbooze",
+    "type": "demo",
+    "title": "Copper Booze",
+    "description": "by Booze Design",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/copperbooze.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/copperbooze.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "squarebooze",
+    "type": "demo",
+    "title": "Square Booze",
+    "description": "by Booze Design",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/squarebooze.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/squarebooze.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "foryourspritesonly",
+    "type": "demo",
+    "title": "For Your Sprites Only",
+    "description": "by Booze Design",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/foryourspritesonly.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/foryourspritesonly.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "listentoyoureyes",
+    "type": "demo",
+    "title": "Listen to your Eyes",
+    "description": "by Booze Design",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/listentoyoureyes.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/listentoyoureyes.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "selbuvotter_latitudes",
+    "type": "demo",
+    "title": "Selbuvotter Latitudes",
+    "description": "by Fossil",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/selbuvotter_latitudes.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/selbuvotter_latitudes.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "rasterfun",
+    "type": "demo",
+    "title": "Raster Fun",
+    "description": "by Bonzai",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/rasterfun.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/rasterfun.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "onscreen_5k",
+    "type": "demo",
+    "title": "Onscreen 5K",
+    "description": "by Xenon",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/onscreen_5k.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/onscreen_5k.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "doctor_dither",
+    "type": "demo",
+    "title": "Doctor Dither",
+    "description": "by Miami Fun Project",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/doctor_dither.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/doctor_dither.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "whitelines",
+    "type": "demo",
+    "title": "White Lines",
+    "description": "by Plush",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/whitelines.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/whitelines.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "lastninja",
+    "type": "demo",
+    "title": "Tribute to Ben",
+    "description": "by Jason Page",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/lastninja.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/lastninja.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "thediskshaveeyes",
+    "type": "demo",
+    "title": "The Disks Have Eyes",
+    "description": "by Onslaught",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/thediskshaveeyes.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/thediskshaveeyes.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "elitecodemechanics",
+    "type": "demo",
+    "title": "Elite Code Mechanics",
+    "description": "by Abyss Connection",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/elitecodemechanics.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/elitecodemechanics.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "vecmors",
+    "type": "demo",
+    "title": "vECMors",
+    "description": "by Finnish Gold",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/vecmors.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/vecmors.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "layers",
+    "type": "demo",
+    "title": "Layers",
+    "description": "by Finnish Gold",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/layers.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/layers.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "plasmascroll",
+    "type": "demo",
+    "title": "Plasma Scroll",
+    "description": "by Finnish Gold",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/plasmascroll.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/plasmascroll.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "oldmeninyellowpools",
+    "type": "demo",
+    "title": "O.M.I.Y.P.",
+    "description": "by Fossil",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/oldmeninyellowpools.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/oldmeninyellowpools.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "cubicdream",
+    "type": "demo",
+    "title": "Cubic Dream",
+    "description": "by Lazycow",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/cubicdream.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/cubicdream.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "twoshadesofgray",
+    "type": "demo",
+    "title": "2 Shades of Gray",
+    "description": "by Gordian",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/twoshadesofgray.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/twoshadesofgray.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "proxima_ppy",
+    "type": "demo",
+    "title": "PPY",
+    "description": "by Proxima",
+    "system": "VIC-20",
+    "systemName": "VIC-20",
+    "screenshot": "vic20/proxima_ppy.jpg",
+    "wasm": "vic20.html",
+    "params": {
+      "file": "vic20/proxima_ppy.prg",
+      "exp": "maxram"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "munakois",
+    "type": "demo",
+    "title": "Muna.Paluu",
+    "description": "by Dekadence",
+    "system": "VIC-20",
+    "systemName": "VIC-20",
+    "screenshot": "vic20/munakois.jpg",
+    "wasm": "vic20.html",
+    "params": {
+      "file": "vic20/munakois.prg",
+      "exp": "ram8k"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "sotb_intro",
+    "type": "demo",
+    "title": "SotB Intro",
+    "description": "by Moods Plateau",
+    "system": "KC85",
+    "systemName": "KC85/4",
+    "screenshot": "kc85/sotb_intro.jpg",
+    "wasm": "kc854.html",
+    "params": {
+      "file": "kc85/sotb_intro.kcc"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "sotb_game",
+    "type": "game",
+    "title": "SotB Game",
+    "description": "by Moods Plateau",
+    "system": "KC85",
+    "systemName": "KC85/4",
+    "screenshot": "kc85/sotb_game.jpg",
+    "wasm": "kc854.html",
+    "params": {
+      "file": "kc85/sotb_game.kcc"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "quantumleap",
+    "type": "demo",
+    "title": "Quantum Leap",
+    "description": "by Moods Plateau",
+    "system": "KC85",
+    "systemName": "KC85/4",
+    "screenshot": "kc85/quantumleap.jpg",
+    "wasm": "kc854.html",
+    "params": {
+      "file": "kc85/quantumleap.kcc"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "serious",
+    "type": "demo",
+    "title": "Serious",
+    "description": "by Moods Plateau",
+    "system": "KC85",
+    "systemName": "KC85/4",
+    "screenshot": "kc85/serious.jpg",
+    "wasm": "kc854.html",
+    "params": {
+      "file": "kc85/serious.kcc"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "twenty",
+    "type": "demo",
+    "title": "Twenty",
+    "description": "by Moods Plateau",
+    "system": "KC85",
+    "systemName": "KC85/4",
+    "screenshot": "kc85/twenty.jpg",
+    "wasm": "kc854.html",
+    "params": {
+      "file": "kc85/twenty.kcc"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "ancient",
+    "type": "demo",
+    "title": "Ancient Civilizations",
+    "description": "by Moods Plateau",
+    "system": "KC85",
+    "systemName": "KC85/4",
+    "screenshot": "kc85/ancient.jpg",
+    "wasm": "kc854.html",
+    "params": {
+      "file": "kc85/ancient.kcc"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "stereo",
+    "type": "demo",
+    "title": "Stereo",
+    "description": "by Moods Plateau",
+    "system": "KC85",
+    "systemName": "KC85/4",
+    "screenshot": "kc85/stereo.jpg",
+    "wasm": "kc854.html",
+    "params": {
+      "file": "kc85/stereo.kcc"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "anaglyph",
+    "type": "demo",
+    "title": "Fractal Dimension",
+    "description": "by Moods Plateau",
+    "system": "KC85",
+    "systemName": "KC85/4",
+    "screenshot": "kc85/anaglyph.jpg",
+    "wasm": "kc854.html",
+    "params": {
+      "file": "kc85/anaglyph.kcc"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "sreplay",
+    "type": "demo",
+    "title": "Sampled Audio",
+    "description": "by Doc.K/Moods Plateau",
+    "system": "KC85",
+    "systemName": "KC85/4",
+    "screenshot": "kc85/sreplay.jpg",
+    "wasm": "kc854.html",
+    "params": {
+      "file": "kc85/sreplay.kcc",
+      "input": "PLAY\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "digger_3",
+    "type": "game",
+    "title": "Digger",
+    "description": "",
+    "system": "KC85",
+    "systemName": "KC85/3",
+    "screenshot": "kc85/digger_3.jpg",
+    "wasm": "kc853.html",
+    "params": {
+      "mod": "m022",
+      "file": "kc85/digger3.tap"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "jungle",
+    "type": "game",
+    "title": "Jungle",
+    "description": "",
+    "system": "KC85",
+    "systemName": "KC85/3",
+    "screenshot": "kc85/jungle.jpg",
+    "wasm": "kc853.html",
+    "params": {
+      "mod": "m022",
+      "file": "kc85/jungle.kcc"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "pengo",
+    "type": "game",
+    "title": "Pengo",
+    "description": "",
+    "system": "KC85",
+    "systemName": "KC85/3",
+    "screenshot": "kc85/pengo.jpg",
+    "wasm": "kc853.html",
+    "params": {
+      "file": "kc85/pengo.kcc"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "house",
+    "type": "game",
+    "title": "House",
+    "description": "",
+    "system": "KC85",
+    "systemName": "KC85/3",
+    "screenshot": "kc85/house.jpg",
+    "wasm": "kc853.html",
+    "params": {
+      "file": "kc85/house.kcc"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "cave",
+    "type": "game",
+    "title": "Cave",
+    "description": "",
+    "system": "KC85",
+    "systemName": "KC85/3",
+    "screenshot": "kc85/cave.jpg",
+    "wasm": "kc853.html",
+    "params": {
+      "file": "kc85/cave.kcc"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "cave2",
+    "type": "game",
+    "title": "Cave",
+    "description": "better alt. version",
+    "system": "KC85",
+    "systemName": "KC85/3",
+    "screenshot": "kc85/cave2.jpg",
+    "wasm": "kc853.html",
+    "params": {
+      "mod": "m022",
+      "file": "kc85/cave2.853"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "labyrinth",
+    "type": "game",
+    "title": "Labyrinth",
+    "description": "",
+    "system": "KC85",
+    "systemName": "KC85/3",
+    "screenshot": "kc85/labyrinth.jpg",
+    "wasm": "kc853.html",
+    "params": {
+      "file": "kc85/labyrinth.kcc"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "pacman",
+    "type": "game",
+    "title": "Pacman",
+    "description": "",
+    "system": "KC85",
+    "systemName": "KC85/3",
+    "screenshot": "kc85/pacman.jpg",
+    "wasm": "kc853.html",
+    "params": {
+      "file": "kc85/pacman.kcc",
+      "input": "PACMAN\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "ladder",
+    "type": "game",
+    "title": "Ladder",
+    "description": "",
+    "system": "KC85",
+    "systemName": "KC85/3",
+    "screenshot": "kc85/ladder.jpg",
+    "wasm": "kc853.html",
+    "params": {
+      "file": "kc85/ladder-3.kcc",
+      "input": "LADDER\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "chess",
+    "type": "game",
+    "title": "Chess",
+    "description": "",
+    "system": "KC85",
+    "systemName": "KC85/4",
+    "screenshot": "kc85/chess.jpg",
+    "wasm": "kc854.html",
+    "params": {
+      "file": "kc85/chess.kcc",
+      "input": "CHESS\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "enterprise",
+    "type": "game",
+    "title": "Enterprise",
+    "description": "",
+    "system": "KC85",
+    "systemName": "KC85/4",
+    "screenshot": "kc85/enterprise.jpg",
+    "wasm": "kc854.html",
+    "params": {
+      "file": "kc85/enterpri.tap"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "breakin",
+    "type": "game",
+    "title": "Mad Breakin",
+    "description": "",
+    "system": "KC85",
+    "systemName": "KC85/3",
+    "screenshot": "kc85/breakin.jpg",
+    "wasm": "kc853.html",
+    "params": {
+      "mod": "m022",
+      "file": "kc85/breakin.853"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "tetris",
+    "type": "game",
+    "title": "Tetris",
+    "description": "",
+    "system": "KC85",
+    "systemName": "KC85/4",
+    "screenshot": "kc85/tetris.jpg",
+    "wasm": "kc854.html",
+    "params": {
+      "file": "kc85/tetris.kcc"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "sokoban4",
+    "type": "game",
+    "title": "Sokoban",
+    "description": "",
+    "system": "KC85",
+    "systemName": "KC85/4",
+    "screenshot": "kc85/sokoban4.jpg",
+    "wasm": "kc854.html",
+    "params": {
+      "file": "kc85/sokoban4.kcc"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "boulderdash_c64",
+    "type": "game",
+    "title": "Boulderdash",
+    "description": "press F1 on start screen",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/boulderdash_c64.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/boulderdash_c64.prg",
+      "joystick": "digital_1"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "boulderdash_cpc",
+    "type": "game",
+    "title": "Boulderdash",
+    "description": "",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/boulderdash_cpc.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/boulder_dash.sna",
+      "joystick": "true"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "boulderdash_zx",
+    "type": "game",
+    "title": "Boulderdash",
+    "description": "select Kempston joystick!",
+    "system": "ZX",
+    "systemName": "ZX",
+    "screenshot": "zx/boulderdash_zx.jpg",
+    "wasm": "zx.html",
+    "params": {
+      "file": "zx/boulderdash_zx.z80",
+      "joystick": "kempston",
+      "type": "zx48k"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "boulderdash_3",
+    "type": "game",
+    "title": "Boulderdash",
+    "description": "",
+    "system": "KC85",
+    "systemName": "KC85/3",
+    "screenshot": "kc85/boulderdash_3.jpg",
+    "wasm": "kc853.html",
+    "params": {
+      "mod": "m022",
+      "file": "kc85/boulder3.tap"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "bd2010",
+    "type": "game",
+    "title": "Boulderdash",
+    "description": "",
+    "system": "KC85",
+    "systemName": "KC85/4",
+    "screenshot": "kc85/bd2010.jpg",
+    "wasm": "kc854.html",
+    "params": {
+      "file": "kc85/bd2010.kcc"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "boulderdash_z1013",
+    "type": "game",
+    "title": "Boulderdash",
+    "description": "",
+    "system": "Z1013",
+    "systemName": "Z1013",
+    "screenshot": "z1013/boulderdash_z1013.jpg",
+    "wasm": "z1013.html",
+    "params": {
+      "file": "z1013/boulderdash_1_0.z80"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "bombjack_cpc",
+    "type": "game",
+    "title": "Bomb Jack",
+    "description": "",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/bombjack_cpc.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/bomb_jack.sna",
+      "joystick": "true"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "bombjack_zx",
+    "type": "game",
+    "title": "Bomb Jack",
+    "description": "select Kempston joystick!",
+    "system": "ZX",
+    "systemName": "ZX",
+    "screenshot": "zx/bombjack_zx.jpg",
+    "wasm": "zx.html",
+    "params": {
+      "file": "zx/bombjack_zx.z80",
+      "joystick": "kempston",
+      "type": "zx48k"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "bombjack",
+    "type": "game",
+    "title": "Bomb Jack",
+    "description": "1 for coins, Enter to start",
+    "system": "Arcade",
+    "systemName": "Arcade",
+    "screenshot": "bombjack/bombjack.jpg",
+    "wasm": "bombjack.html",
+    "params": {},
+    "help": "help/default.md"
+  },
+  {
+    "id": "pengo-2",
+    "type": "game",
+    "title": "Pengo",
+    "description": "1 for coins, Enter to start",
+    "system": "Arcade",
+    "systemName": "Arcade",
+    "screenshot": "pengo/pengo.jpg",
+    "wasm": "pengo.html",
+    "params": {},
+    "help": "help/default.md"
+  },
+  {
+    "id": "zaxxon_c64",
+    "type": "game",
+    "title": "Zaxxon",
+    "description": "",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/zaxxon_c64.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/zaxxon_c64.prg",
+      "joystick": "digital_2"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "digdug_c64",
+    "type": "game",
+    "title": "Dig Dug",
+    "description": "",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/digdug_c64.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/digdug_c64.prg",
+      "joystick": "digital_1"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "cybernoid_cpc",
+    "type": "game",
+    "title": "Cybernoid",
+    "description": "",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/cybernoid_cpc.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/cybernoid.sna",
+      "joystick": "true"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "cybernoid_c64",
+    "type": "game",
+    "title": "Cybernoid",
+    "description": "",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/cybernoid_c64.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/cybernoid_c64.prg",
+      "joystick": "digital_12"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "arkanoid_cpc",
+    "type": "game",
+    "title": "Arkanoid",
+    "description": "",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/arkanoid_cpc.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/arkanoid.sna",
+      "joystick": "true"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "arkanoid2_cpc",
+    "type": "game",
+    "title": "Arkanoid RoD",
+    "description": "",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/arkanoid2_cpc.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/arkanoid2_cpc.dsk",
+      "joystick": "true",
+      "input": "run\"arkanoid\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "arkanoid_zx128k",
+    "type": "game",
+    "title": "Arkanoid RoD",
+    "description": "",
+    "system": "ZX",
+    "systemName": "ZX",
+    "screenshot": "zx/arkanoid_zx128k.jpg",
+    "wasm": "zx.html",
+    "params": {
+      "file": "zx/arkanoid_zx128k.z80",
+      "joystick": "sinclair1"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "batty",
+    "type": "game",
+    "title": "Batty",
+    "description": "",
+    "system": "ZX",
+    "systemName": "ZX",
+    "screenshot": "zx/batty.jpg",
+    "wasm": "zx.html",
+    "params": {
+      "type": "zx48k",
+      "file": "zx/batty.z80",
+      "joystick": "kempston"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "breakout",
+    "type": "game",
+    "title": "Breakout",
+    "description": "",
+    "system": "KC85",
+    "systemName": "KC85/3",
+    "screenshot": "kc85/breakout.jpg",
+    "wasm": "kc853.html",
+    "params": {
+      "file": "kc85/breakout.kcc",
+      "input": "BREAKOUT\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "silkworm_zx128k",
+    "type": "game",
+    "title": "Silkworm",
+    "description": "select Kempston joystick!",
+    "system": "ZX",
+    "systemName": "ZX",
+    "screenshot": "zx/silkworm_zx128k.jpg",
+    "wasm": "zx.html",
+    "params": {
+      "file": "zx/silkworm_zx128k.z80",
+      "joystick": "kempston"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "silkworm_cpc",
+    "type": "game",
+    "title": "Silkworm",
+    "description": "",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/silkworm_cpc.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/silkworm_cpc.dsk",
+      "joystick": "true",
+      "input": "run\"disc\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "the_great_escape",
+    "type": "game",
+    "title": "Great Escape",
+    "description": "select Kempston joystick!",
+    "system": "ZX",
+    "systemName": "ZX",
+    "screenshot": "zx/the_great_escape.jpg",
+    "wasm": "zx.html",
+    "params": {
+      "file": "zx/the_great_escape.z80",
+      "joystick": "kempston"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "flying_shark",
+    "type": "game",
+    "title": "Flying Shark",
+    "description": "select Kempston joystick!",
+    "system": "ZX",
+    "systemName": "ZX",
+    "screenshot": "zx/flying_shark.jpg",
+    "wasm": "zx.html",
+    "params": {
+      "type": "zx48k",
+      "file": "zx/flying_shark.z80",
+      "joystick": "kempston"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "chasehq_cpc",
+    "type": "game",
+    "title": "Chase HQ",
+    "description": "",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/chasehq_cpc.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/chase_hq.sna",
+      "joystick": "true"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "chase_hq",
+    "type": "game",
+    "title": "Chase HQ",
+    "description": "",
+    "system": "ZX",
+    "systemName": "ZX",
+    "screenshot": "zx/chase_hq.jpg",
+    "wasm": "zx.html",
+    "params": {
+      "file": "zx/chase_hq.z80",
+      "joystick": "kempston"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "ghostsngoblins_cpc",
+    "type": "game",
+    "title": "Ghosts'n'Goblins",
+    "description": "",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/ghostsngoblins_cpc.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/ghosts_n_goblins.sna",
+      "joystick": "true"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "ghostsngoblins_c64",
+    "type": "game",
+    "title": "Ghosts'n'Goblins",
+    "description": "",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/ghostsngoblins_c64.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/ghostsngoblins_c64.prg",
+      "joystick": "digital_12"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "fruityfrank_cpc",
+    "type": "game",
+    "title": "Fruity Frank",
+    "description": "",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/fruityfrank_cpc.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/fruity_frank.sna",
+      "joystick": "true"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "1943_cpc",
+    "type": "game",
+    "title": "1943",
+    "description": "",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/1943_cpc.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/1943.sna",
+      "joystick": "true"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "dragonninja_cpc",
+    "type": "game",
+    "title": "Dragon Ninja",
+    "description": "",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/dragonninja_cpc.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/dragon_ninja.sna",
+      "joystick": "true"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "gryzor_cpc",
+    "type": "game",
+    "title": "Gryzor",
+    "description": "",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/gryzor_cpc.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/gryzor.sna",
+      "joystick": "true"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "astro_marine_corps",
+    "type": "game",
+    "title": "Astro Marine Corps",
+    "description": "",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/astro_marine_corps.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/astro_marine_corps.sna",
+      "joystick": "true"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "bruce_lee",
+    "type": "game",
+    "title": "Bruce Lee",
+    "description": "",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/bruce_lee.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/bruce_lee.sna",
+      "joystick": "true"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "bruce_lee-2",
+    "type": "game",
+    "title": "Bruce Lee",
+    "description": "",
+    "system": "ZX",
+    "systemName": "ZX",
+    "screenshot": "zx/bruce_lee.jpg",
+    "wasm": "zx.html",
+    "params": {
+      "type": "zx48k",
+      "file": "zx/bruce_lee.z80",
+      "joystick": "kempston"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "intern_karate_cpc",
+    "type": "game",
+    "title": "Intern.Karate",
+    "description": "",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/intern_karate_cpc.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/intern_karate_cpc.dsk",
+      "joystick": "true",
+      "input": "run\"karate\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "intern_karate_plus_cpc",
+    "type": "game",
+    "title": "IK+",
+    "description": "",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/intern_karate_plus_cpc.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/intern_karate_plus_cpc.dsk",
+      "joystick": "true",
+      "input": "run\"IK+\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "ikariwarriors_cpc",
+    "type": "game",
+    "title": "Ikari Warriors",
+    "description": "",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/ikariwarriors_cpc.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/ikari_warriors.sna",
+      "joystick": "true"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "headoverheels_cpc",
+    "type": "game",
+    "title": "Head over Heels",
+    "description": "",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/headoverheels_cpc.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/head_over_heels.sna",
+      "joystick": "true"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "head_over_heels",
+    "type": "game",
+    "title": "Head over Heels",
+    "description": "",
+    "system": "ZX",
+    "systemName": "ZX",
+    "screenshot": "zx/head_over_heels.jpg",
+    "wasm": "zx.html",
+    "params": {
+      "file": "zx/head_over_heels.z80",
+      "joystick": "sinclair2"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "rickdangerous_cpc",
+    "type": "game",
+    "title": "Rick Dangerous",
+    "description": "",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/rickdangerous_cpc.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/rick_dangerous.sna",
+      "joystick": "true"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "prince_of_persia_cpc",
+    "type": "game",
+    "title": "Prince of Persia",
+    "description": "",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/prince_of_persia_cpc.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/prince_of_persia_cpc.dsk",
+      "joystick": "true",
+      "input": "run\"prince\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "nebulus_cpc",
+    "type": "game",
+    "title": "Nebulus",
+    "description": "",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/nebulus_cpc.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/nebulus_cpc.dsk",
+      "joystick": "true",
+      "input": "run\"nebulus\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "nebulus_c64",
+    "type": "game",
+    "title": "Nebulus",
+    "description": "",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/nebulus_c64.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/nebulus_c64.prg",
+      "joystick": "digital_1"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "live_and_let_die",
+    "type": "game",
+    "title": "Live and Let Die",
+    "description": "",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/live_and_let_die.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "type": "cpc464",
+      "file": "cpc/live_and_let_die.sna",
+      "joystick": "true"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "cyclone",
+    "type": "game",
+    "title": "Cyclone",
+    "description": "select Kempston joystick!",
+    "system": "ZX",
+    "systemName": "ZX",
+    "screenshot": "zx/cyclone.jpg",
+    "wasm": "zx.html",
+    "params": {
+      "file": "zx/cyclone.z80",
+      "joystick": "kempston",
+      "type": "zx48k"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "exolon",
+    "type": "game",
+    "title": "Exolon",
+    "description": "select Kempston joystick!",
+    "system": "ZX",
+    "systemName": "ZX",
+    "screenshot": "zx/exolon.jpg",
+    "wasm": "zx.html",
+    "params": {
+      "file": "zx/exolon.z80",
+      "joystick": "kempston",
+      "type": "zx48k"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "quazatron",
+    "type": "game",
+    "title": "Quazatron",
+    "description": "select Kempston joystick!",
+    "system": "ZX",
+    "systemName": "ZX",
+    "screenshot": "zx/quazatron.jpg",
+    "wasm": "zx.html",
+    "params": {
+      "file": "zx/quazatron.z80",
+      "joystick": "kempston"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "rainbow_islands",
+    "type": "game",
+    "title": "Rainbow Islands",
+    "description": "",
+    "system": "ZX",
+    "systemName": "ZX",
+    "screenshot": "zx/rainbow_islands.jpg",
+    "wasm": "zx.html",
+    "params": {
+      "file": "zx/rainbow_islands.z80",
+      "joystick": "kempston"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "sir_fred",
+    "type": "game",
+    "title": "Sir Fred",
+    "description": "select Kempston joystick!",
+    "system": "ZX",
+    "systemName": "ZX",
+    "screenshot": "zx/sir_fred.jpg",
+    "wasm": "zx.html",
+    "params": {
+      "type": "zx48k",
+      "file": "zx/sir_fred.z80",
+      "joystick": "kempston"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "cchuck",
+    "type": "game",
+    "title": "Chucky Egg",
+    "description": "press SPACE to start!",
+    "system": "Atom",
+    "systemName": "Acorn Atom",
+    "screenshot": "atom/cchuck.jpg",
+    "wasm": "atom.html",
+    "params": {
+      "file": "atom/cchuck.tap",
+      "joystick": "mmc",
+      "input": "*LOAD\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "jsw",
+    "type": "game",
+    "title": "Jet Set Willy",
+    "description": "select JOYMMC!",
+    "system": "Atom",
+    "systemName": "Acorn Atom",
+    "screenshot": "atom/jsw.jpg",
+    "wasm": "atom.html",
+    "params": {
+      "file": "atom/jsw.tap",
+      "joystick": "mmc",
+      "input": "*LOAD\n"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "alienblitz_vic20",
+    "type": "game",
+    "title": "Alien Blitz",
+    "description": "",
+    "system": "VIC-20",
+    "systemName": "VIC-20",
+    "screenshot": "vic20/alienblitz_vic20.jpg",
+    "wasm": "vic20.html",
+    "params": {
+      "file": "vic20/alienblitz_vic20.prg",
+      "joystick": "true"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "mazogs_z1013",
+    "type": "game",
+    "title": "Mazogs",
+    "description": "",
+    "system": "Z1013",
+    "systemName": "Z1013",
+    "screenshot": "z1013/mazogs_z1013.jpg",
+    "wasm": "z1013.html",
+    "params": {
+      "file": "z1013/mazog_deutsch.z80"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "galactica_z1013",
+    "type": "game",
+    "title": "Galactica",
+    "description": "",
+    "system": "Z1013",
+    "systemName": "Z1013",
+    "screenshot": "z1013/galactica_z1013.jpg",
+    "wasm": "z1013.html",
+    "params": {
+      "file": "z1013/galactica.z80"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "demolation_z1013",
+    "type": "game",
+    "title": "Demolation",
+    "description": "",
+    "system": "Z1013",
+    "systemName": "Z1013",
+    "screenshot": "z1013/demolation_z1013.jpg",
+    "wasm": "z1013.html",
+    "params": {
+      "file": "z1013/demolation.z80"
+    },
+    "help": "help/default.md"
+  }
+]

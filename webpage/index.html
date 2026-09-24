@@ -1,23 +1,111 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<meta charset="UTF-8"/>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tiny Emulators</title>
-<link rel="stylesheet" type="text/css" href="style.css"/>
-<link rel="icon" type="image/png" href="favicon.png"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="title"><a class="main-menu-link" href="https://github.com/floooh/chips-test">Tiny Emus</a>
-    <span class="main-menu-item"><a class="main-menu-link" href="help.html">HALP!</a></span>
-    <span class="main-menu-item"><a class="main-menu-link" href="https://github.com/floooh/chips-test">github</a></span>
-    <span class="main-menu-item"><a class="main-menu-link" href="https://marketplace.visualstudio.com/items?itemName=floooh.vscode-kcide">ide</a></span>
-    <span class="main-menu-item"><a class="main-menu-link" href="https://mastodon.gamedev.place/@floooh">mastodon</a></span>
-    <span class="main-menu-item"><a class="main-menu-link" href="https://twitter.com/FlohOfWoe">twitter</a></span>
-    <span class="main-menu-item"><a class="main-menu-link" href="https://floooh.github.io">blog</a></span>
-</div>
-<div class="gallery">
-    ${samples}
-</div>
-<div class="gallery-bottom"></div>
+<header class="hdr" id="hdr">
+  <div class="ribbon">
+    <div class="ribbon-inner">
+      <div class="ribbon-band"><i style="background:#d6332b"></i><i style="background:#f07a1c"></i><i style="background:#e7b520"></i><i style="background:#2ca25e"></i><i style="background:#2aa7c9"></i></div>
+      <svg width="574" height="240" viewBox="0 0 574 240" aria-hidden="true">
+        <path fill="#d6332b" d="M0,210 L10,210 C55,210 64.33,207.5 103.3,185 L423.74,0 L453.74,0 L114.25,196 Q79.61,216 39.61,216 L0,216 Z"></path>
+        <path fill="#f07a1c" d="M0,216 L39.61,216 Q79.61,216 114.25,196 L453.74,0 L483.74,0 L142.52,197 Q99.22,222 49.22,222 L0,222 Z"></path>
+        <path fill="#e7b520" d="M0,222 L49.22,222 Q99.22,222 142.52,197 L483.74,0 L513.74,0 L170.79,198 Q118.83,228 58.83,228 L0,228 Z"></path>
+        <path fill="#2ca25e" id="rb-green"></path>
+        <path fill="#2aa7c9" id="rb-cyan"></path>
+      </svg>
+    </div>
+  </div>
+  <div class="hdr-row">
+    <a class="logo" href="index.html">Tiny Emulators</a>
+    <nav class="nav">
+      <a class="ico" href="https://github.com/floooh/chips-test" title="GitHub"><img src="https://cdn.simpleicons.org/github/16140f" alt="GitHub"></a>
+      <a class="ico" href="https://mastodon.gamedev.place/@floooh" title="Mastodon"><img src="https://cdn.simpleicons.org/mastodon/16140f" alt="Mastodon"></a>
+      <a class="ico" href="https://bsky.app/profile/flohofwoe.bsky.social" title="Bluesky"><img src="https://cdn.simpleicons.org/bluesky/16140f" alt="Bluesky"></a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="filters">
+    <input type="search" id="q" placeholder="Filter by title…" aria-label="Filter by title">
+    <span id="chips" style="display:contents"></span>
+  </div>
+  <p class="empty" id="empty" hidden>Nothing matches that filter.</p>
+  <div id="sections" style="display:contents"></div>
+</main>
+
+<script src="site.js"></script>
+<script>
+const SECTIONS = [['computer', 'Home Computers', 'machine'], ['tool', 'Tools', 'title'], ['sim', 'Simulators', 'chip'], ['demo', 'Scene Demos', 'title'], ['game', 'Games', 'title']];
+let DATA = [], sys = 'All';
+const $ = id => document.getElementById(id);
+
+function card(e) {
+  const x = TE.esc;
+  return `<a class="card" href="${x(TE.playerUrl(e))}">
+    ${e.debug === false ? '' : `<span class="dbg" data-dbg="${x(TE.playerUrl(e, true))}" title="Open with debug UI">DBG</span>`}
+    <div class="shot">${e.screenshot ? `<img src="${x(e.screenshot)}" alt="" loading="lazy" onerror="this.remove()">` : ''}<span class="tag">${x(e.systemName || e.system)}</span></div>
+    <div class="cap"><b>${x(e.title)}</b>${e.description ? `<span>${x(e.description)}</span>` : ''}</div>
+  </a>`;
+}
+
+function render() {
+  const q = $('q').value.trim().toLowerCase();
+  const items = DATA.filter(e => (sys === 'All' || e.system === sys) && e.title.toLowerCase().includes(q));
+  let html = '';
+  for (const [type, title, unit] of SECTIONS) {
+    const list = items.filter(e => e.type === type);
+    if (!list.length) continue;
+    html += `<section class="sec"><div class="sec-head"><h2>${title}</h2><span>${list.length} ${unit}${list.length === 1 ? '' : 's'}</span></div>
+      <div class="grid">${list.map(card).join('')}</div></section>`;
+  }
+  $('sections').innerHTML = html;
+  $('empty').hidden = !!items.length;
+  $('chips').querySelectorAll('.chip').forEach(b => b.setAttribute('aria-pressed', b.dataset.sys === sys));
+}
+
+TE.loadData().then(d => {
+  DATA = d;
+  const systems = ['All', ...new Set(d.map(e => e.system))];
+  $('chips').innerHTML = systems.map(s => `<button class="chip" data-sys="${TE.esc(s)}">${TE.esc(s)}</button>`).join('');
+  render();
+});
+$('q').addEventListener('input', render);
+$('chips').addEventListener('click', ev => { const b = ev.target.closest('.chip'); if (b) { sys = b.dataset.sys; render(); } });
+// DBG sticker sits inside the card link: redirect to the debug player instead
+$('sections').addEventListener('click', ev => { const d = ev.target.closest('[data-dbg]'); if (d) { ev.preventDefault(); location.href = d.dataset.dbg; } });
+
+// Ribbon: the green and cyan stripes bend right along the top edge; depends on header size
+function ribbon() {
+  // The diagonal sits at a fixed distance from the right edge and passes behind the text.
+  // Only the header height matters: it decides where green and cyan bend right along the top.
+  const H = $('hdr').offsetHeight, s = 1.7321, f = n => n.toFixed(2);
+  const y0 = Math.max(0, 225 - H);
+  { const head = 'M0,228 L58.83,228 Q118.83,228 170.79,198 L513.74,0 L543.74,0 ', tail = ' L199.06,199 Q138.44,234 68.44,234 L0,234 Z', a = 36;
+    let d;
+    if (y0 <= 0) d = head + tail.slice(1);
+    else { const xA = 543.74 - s * y0, c = Math.min(55, y0), c2 = c * 30 / 55;
+      d = head + `L${f(xA + s * c)},${f(y0 - c)} C${f(xA + s * c2)},${f(y0 - c2)} ${f(xA + a + 12)},${f(y0)} ${f(xA + a)},${f(y0)} Q${f(xA)},${f(y0)} ${f(xA - .866 * a)},${f(y0 + .5 * a)}` + tail; }
+    $('rb-green').setAttribute('d', d); }
+  { const base = 'M0,234 L68.44,234 Q138.44,234 199.06,199 ', tail = ' L227.33,200 Q158.05,240 78.05,240 L0,240 Z';
+    let d;
+    if (y0 <= 0) d = base + 'L543.74,0 L573.75,0' + tail;
+    else { const a = 36, b = 12, xA = 543.74 - s * y0, xB = 573.75 - s * (y0 + 6);
+      d = base + `L${f(xA - .866 * a)},${f(y0 + .5 * a)} Q${f(xA)},${f(y0)} ${f(xA + a)},${f(y0)} L4000,${f(y0)} L4000,${f(y0 + 6)} L${f(xB + b)},${f(y0 + 6)} Q${f(xB)},${f(y0 + 6)} ${f(xB - .866 * b)},${f(y0 + 6 + .5 * b)}` + tail; }
+    $('rb-cyan').setAttribute('d', d); }
+}
+new ResizeObserver(ribbon).observe($('hdr'));
+ribbon();
+</script>
 </body>
 </html>
