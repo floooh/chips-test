@@ -786,6 +786,21 @@
     "help": "help/default.md"
   },
   {
+    "id": "bitsbrew",
+    "type": "demo",
+    "title": "Bits Brew",
+    "description": "by  Pulpo Corrosivo & Futurs",
+    "system": "CPC",
+    "systemName": "CPC",
+    "screenshot": "cpc/bitsbrew.jpg",
+    "wasm": "cpc.html",
+    "params": {
+      "file": "cpc/bitsbrew.dsk",
+      "input": "run\"bitsbrew\n"
+    },
+    "help": "help/default.md"
+  },
+  {
     "id": "rebels1989_c64",
     "type": "demo",
     "title": "Rebels 1989",
@@ -1416,6 +1431,48 @@
     "help": "help/default.md"
   },
   {
+    "id": "neonpulsecml",
+    "type": "demo",
+    "title": "Neonpulse",
+    "description": "by Camelot",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/neonpulse_cml.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/neonpulse_cml.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "traveller",
+    "type": "demo",
+    "title": "Traveller",
+    "description": "by Extend, Genesis Project",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/traveller.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/traveller.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "boilerplate",
+    "type": "demo",
+    "title": "Boilerplate",
+    "description": "by Atlantis",
+    "system": "C64",
+    "systemName": "C64",
+    "screenshot": "c64/boilerplate.jpg",
+    "wasm": "c64.html",
+    "params": {
+      "file": "c64/boilerplate.prg"
+    },
+    "help": "help/default.md"
+  },
+  {
     "id": "proxima_ppy",
     "type": "demo",
     "title": "PPY",
@@ -1470,6 +1527,35 @@
     "wasm": "kc854.html",
     "params": {
       "file": "kc85/sotb_game.kcc"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "dreamon",
+    "type": "demo",
+    "title": "Dream On",
+    "description": "by Moods Plateau",
+    "system": "KC85",
+    "systemName": "KC85/4",
+    "screenshot": "kc85/dream_on.jpg",
+    "wasm": "kc854.html",
+    "params": {
+      "file": "kc85/dream_on.kcc"
+    },
+    "help": "help/default.md"
+  },
+  {
+    "id": "8bitbreaker",
+    "type": "demo",
+    "title": "8 Bit Breaker",
+    "description": "by Moods Plateau",
+    "system": "KC85",
+    "systemName": "KC85/4",
+    "screenshot": "kc85/8_bit_breaker.jpg",
+    "wasm": "kc854.html",
+    "params": {
+      "mod": "m011",
+      "file": "kc85/8_bit_breaker.kcc"
     },
     "help": "help/default.md"
   },
