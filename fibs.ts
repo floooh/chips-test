@@ -399,7 +399,6 @@ function addTests(b: Builder) {
         t.addIncludeDirectories([b.importDir('sokol')]);
         t.addDependencies(['chips', 'roms']);
     });
-<<<<<<< Updated upstream
     b.addTarget('c64-wltest', type, (t) => {
         t.setDir(dir);
         t.setIdeFolder(ideFolder);
@@ -412,14 +411,18 @@ function addTests(b: Builder) {
         t.addSources(['c64-vicetest.c']);
         t.addDependencies(['chips', 'roms', 'stb']);
     });
-=======
     b.addTarget('c64-ciatest', type, (t) => {
         t.setDir(dir);
         t.setIdeFolder(ideFolder);
         t.addSources(['c64-ciatest.c']);
         t.addDependencies(['chips', 'roms']);
     });
->>>>>>> Stashed changes
+    b.addTarget('c64-dd0dtest', type, (t) => {
+        t.setDir(dir);
+        t.setIdeFolder(ideFolder);
+        t.addSources(['c64-dd0dtest.c']);
+        t.addDependencies(['chips', 'roms']);
+    });
     b.addTarget('m6502-perfect', type, (t) => {
         t.setDir(dir);
         t.setIdeFolder(ideFolder);
