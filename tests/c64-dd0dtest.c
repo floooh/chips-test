@@ -54,26 +54,46 @@
 #define TRACE_CYCLES (170)          // --trace: cycles to dump after a sub-test starts its timer
 #define NUM_TESTS (0x19)            // sub-tests are numbered 01..19 (hex)
 
-/*  Sub-tests which are expected to fail.
+/*  Sub-tests which are expected to fail - none at the moment.
 
-    All five are the same unfixed behaviour: an 'inc $dd0d,x' whose T3 dummy
-    read and T4 read straddle the timer A underflow cycle (0C and 0E are
-    byte-identical test code, 12 and 13 share 0C's cycle alignment). Making
-    them pass requires ICR bit 7 to be decoupled from the /IRQ output pin: the
-    read one cycle after the underflow would have to return $80 so that the
-    read-modify-write writes the mask back *enabled*, while a read *in* the
-    underflow cycle must still suppress the NMI (test 0B) and the clear-on-read
-    of bit 7 must lag a cycle (test 0D).
-
-    The test's own readme documents that VICE (x64/x64sc r31051) fails these
-    too, with byte-identical output, so there's no reference implementation to
-    check such a rework against.
+    The test detects whether it's running on an old or a new CIA (it prints
+    which) and picks its expected-value table accordingly, and chips emulates
+    the old CIA, so this is a real all-green.
 */
-static const uint8_t known_failed[] = { 0x0C, 0x0D, 0x0E, 0x12, 0x13 };
+static const uint8_t known_failed[] = { 0 };
+#define NUM_KNOWN_FAILED (0)
 
 static c64_t c64;
 static char text[64*1024];
 static size_t text_len;
+
+/*  --analyze support: what every sub-test does to $DD0D, relative to the timer
+    A underflow cycle. Each sub-test is one window starting at its 'force load +
+    start' write to $DD0E, and the interesting part is just the handful of ICR
+    accesses around the underflow plus whether an NMI was taken.
+*/
+#define ANALYZE_WINDOW (120)        // cycles to watch after a sub-test starts its timer
+#define ANALYZE_MAX_EVENTS (12)
+#define ANALYZE_MAX_UNDERFLOWS (8)
+
+typedef struct {
+    int cycle;                      // cycle within the window
+    bool write;
+    uint8_t data;
+} icr_access_t;
+
+typedef struct {
+    bool active;
+    int cycle;                      // cycles since the window started
+    int num_u;                      // timer A underflows (it keeps running, so there are several)
+    int u[ANALYZE_MAX_UNDERFLOWS];
+    bool prev_t_out;
+    int nmi;                        // window cycle of the NMI vector fetch, -1 if none
+    int num_acc;
+    icr_access_t acc[ANALYZE_MAX_EVENTS];
+} analyze_t;
+
+static analyze_t analyze[NUM_TESTS + 1];
 
 static uint8_t* load_file(const char* path, size_t* out_size) {
     *out_size = 0;
@@ -120,7 +140,7 @@ static void put_char(uint8_t c) {
 }
 
 static bool is_known_failed(uint8_t test) {
-    for (size_t i = 0; i < sizeof(known_failed); i++) {
+    for (int i = 0; i < NUM_KNOWN_FAILED; i++) {
         if (known_failed[i] == test) {
             return true;
         }
@@ -160,6 +180,7 @@ int main(int argc, char* argv[]) {
     const char* prg_path = 0;
     int boot_frames = DEF_BOOT_FRAMES;
     int trace_test = 0;
+    bool do_analyze = false;
     for (int i = 1; i < argc; i++) {
         const char* arg = argv[i];
         if (0 == strncmp(arg, "--boot=", 7)) {
@@ -168,8 +189,11 @@ int main(int argc, char* argv[]) {
         else if (0 == strncmp(arg, "--trace=", 8)) {
             trace_test = (int)strtol(arg + 8, 0, 16);
         }
+        else if (0 == strcmp(arg, "--analyze")) {
+            do_analyze = true;
+        }
         else if (arg[0] == '-') {
-            fprintf(stderr, "usage: c64-dd0dtest [--boot=N] [--trace=HH] <dd0dtest.prg>\n");
+            fprintf(stderr, "usage: c64-dd0dtest [--boot=N] [--trace=HH] [--analyze] <dd0dtest.prg>\n");
             return 2;
         }
         else {
@@ -177,7 +201,7 @@ int main(int argc, char* argv[]) {
         }
     }
     if (!prg_path) {
-        fprintf(stderr, "usage: c64-dd0dtest [--boot=N] [--trace=HH] <dd0dtest.prg>\n");
+        fprintf(stderr, "usage: c64-dd0dtest [--boot=N] [--trace=HH] [--analyze] <dd0dtest.prg>\n");
         return 2;
     }
 
@@ -232,12 +256,52 @@ int main(int argc, char* argv[]) {
     int trace_trigger = (trace_test >= 3) ? (trace_test - 2) : 0;
     int trace_count = 0;
     int trace_left = 0;
+    int sub_test = 0;               // --analyze: sub-test whose window is currently open
     for (uint32_t i = 0; (i < MAX_RUN_TICKS) && !done; i++) {
         c64.pins = _c64_tick(&c64, c64.pins);
+        const bool dd0e_start = (0 == (c64.pins & M6502_RW)) &&
+            (M6502_GET_ADDR(c64.pins) == 0xDD0E) && (M6502_GET_DATA(c64.pins) == 0x11);
+        if (do_analyze) {
+            // the Nth 'force load + start' write opens the window of sub-test N+2
+            if (dd0e_start) {
+                sub_test++;
+                const int idx = sub_test + 2;
+                if (idx <= NUM_TESTS) {
+                    analyze_t* a = &analyze[idx];
+                    a->active = true;
+                    a->cycle = 0;
+                    a->num_u = 0;
+                    a->prev_t_out = false;
+                    a->nmi = -1;
+                    a->num_acc = 0;
+                }
+            }
+            for (int t = 0; t <= NUM_TESTS; t++) {
+                analyze_t* a = &analyze[t];
+                if (!a->active) {
+                    continue;
+                }
+                if (c64.cia_2.ta.t_out && !a->prev_t_out && (a->num_u < ANALYZE_MAX_UNDERFLOWS)) {
+                    a->u[a->num_u++] = a->cycle;
+                }
+                a->prev_t_out = c64.cia_2.ta.t_out;
+                if ((c64.pins & M6502_RW) && (M6502_GET_ADDR(c64.pins) == 0xFFFA) && (a->nmi < 0)) {
+                    a->nmi = a->cycle;
+                }
+                if ((M6502_GET_ADDR(c64.pins) == 0xDD0D) && (a->num_acc < ANALYZE_MAX_EVENTS)) {
+                    a->acc[a->num_acc++] = (icr_access_t){
+                        .cycle = a->cycle,
+                        .write = (0 == (c64.pins & M6502_RW)),
+                        .data = M6502_GET_DATA(c64.pins),
+                    };
+                }
+                if (++a->cycle >= ANALYZE_WINDOW) {
+                    a->active = false;
+                }
+            }
+        }
         if (trace_trigger) {
-            if ((0 == (c64.pins & M6502_RW)) && (M6502_GET_ADDR(c64.pins) == 0xDD0E) &&
-                (M6502_GET_DATA(c64.pins) == 0x11))
-            {
+            if (dd0e_start) {
                 if (++trace_count == trace_trigger) {
                     trace_left = TRACE_CYCLES;
                     printf("trace of sub-test %02X (cycle / bus / cpu / cia2):\n", trace_test);
@@ -301,6 +365,40 @@ int main(int argc, char* argv[]) {
     */
     int8_t state[NUM_TESTS + 1];
     scan_results(state);
+
+    /*  --analyze: one line per sub-test with every $DD0D access placed relative
+        to the timer A underflow cycle (U), plus whether an NMI was taken. This
+        is what pins down the interrupt model: sub-tests with the same
+        alignment must behave the same way.
+    */
+    if (do_analyze) {
+        printf("\n$DD0D accesses relative to the nearest preceding timer A underflow (Un+k):\n\n");
+        for (int t = 3; t <= NUM_TESTS; t++) {
+            const analyze_t* a = &analyze[t];
+            printf("  %02X %-6s nmi=%-3s ", t,
+                (state[t] < 0) ? "?" : (state[t] ? "FAILED" : "ok"),
+                (a->nmi < 0) ? "no" : "yes");
+            for (int i = 0; i < a->num_acc; i++) {
+                int u = -1;
+                for (int k = 0; k < a->num_u; k++) {
+                    if (a->u[k] <= a->acc[i].cycle) {
+                        u = k;
+                    }
+                }
+                if (u < 0) {
+                    printf(" pre%+d:%c%02X", a->acc[i].cycle - ((a->num_u > 0) ? a->u[0] : 0),
+                        a->acc[i].write ? 'w' : 'r', a->acc[i].data);
+                }
+                else {
+                    printf(" U%d+%d:%c%02X", u, a->acc[i].cycle - a->u[u],
+                        a->acc[i].write ? 'w' : 'r', a->acc[i].data);
+                }
+            }
+            putchar('\n');
+        }
+        putchar('\n');
+    }
+
     int num_unexpected = 0;
     for (int i = 1; i <= NUM_TESTS; i++) {
         const bool known = is_known_failed((uint8_t)i);
@@ -318,9 +416,9 @@ int main(int argc, char* argv[]) {
         }
     }
     if (num_unexpected == 0) {
-        printf("\n=> PASSED (%d known failures: ", (int)sizeof(known_failed));
-        for (size_t i = 0; i < sizeof(known_failed); i++) {
-            printf("%s%02X", (i > 0) ? "," : "", known_failed[i]);
+        printf("\n=> PASSED (%d known failures", NUM_KNOWN_FAILED);
+        for (int i = 0; i < NUM_KNOWN_FAILED; i++) {
+            printf("%s%02X", (i > 0) ? "," : ": ", known_failed[i]);
         }
         printf(", %u interrupted CHROUT fetches skipped)\n", num_aborted);
         return 0;

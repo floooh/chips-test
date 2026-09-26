@@ -423,6 +423,12 @@ function addTests(b: Builder) {
         t.addSources(['c64-dd0dtest.c']);
         t.addDependencies(['chips', 'roms']);
     });
+    b.addTarget('c64-icr2test', type, (t) => {
+        t.setDir(dir);
+        t.setIdeFolder(ideFolder);
+        t.addSources(['c64-icr2test.c']);
+        t.addDependencies(['chips', 'roms']);
+    });
     b.addTarget('m6502-perfect', type, (t) => {
         t.setDir(dir);
         t.setIdeFolder(ideFolder);
