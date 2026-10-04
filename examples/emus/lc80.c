@@ -134,8 +134,9 @@ void app_frame(void) {
     state.ticks = lc80_exec(&state.lc80, state.frame_time_us);
     state.emu_time_ms = stm_ms(stm_since(emu_start_time));
     draw_status_bar();
+    ui_update(NULL);
     sg_begin_pass(&(sg_pass){ .swapchain = sglue_swapchain() });
-    ui_draw(0);
+    ui_draw();
     sdtx_draw();
     sg_end_pass();
     sg_commit();

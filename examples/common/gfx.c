@@ -32,7 +32,8 @@ typedef struct {
     } speaker_icon;
     int flash_success_count;
     int flash_error_count;
-    gfx_draw_extra_t draw_extra_cb;
+    gfx_update_ui_t update_ui_cb;
+    gfx_draw_ui_t draw_ui_cb;
     uint32_t palette[256];
 } gfx_state_t;
 static gfx_state_t state;
@@ -168,8 +169,8 @@ void gfx_init(const gfx_desc_t* desc) {
         .environment = sglue_environment(),
         .logger.func = slog_func,
     });
-    if (desc->init_extra_cb) {
-        desc->init_extra_cb();
+    if (desc->init_ui_cb) {
+        desc->init_ui_cb();
     }
     sfb_setup(&(sfb_desc){
         .framebuffer_pool_size = 1,
@@ -195,7 +196,8 @@ void gfx_init(const gfx_desc_t* desc) {
     state.pixel_aspect.width = GFX_DEF(desc->pixel_aspect.width, 1);
     state.pixel_aspect.height = GFX_DEF(desc->pixel_aspect.height, 1);
     state.paletted = desc->display_info.palette.ptr != 0;
-    state.draw_extra_cb = desc->draw_extra_cb;
+    state.update_ui_cb = desc->update_ui_cb;
+    state.draw_ui_cb = desc->draw_ui_cb;
     state.pass_action = (sg_pass_action) {
         .colors[0] = { .load_action = SG_LOADACTION_CLEAR, .clear_value = { 0.05f, 0.05f, 0.05f, 1.0f } }
     };
@@ -337,6 +339,15 @@ void gfx_draw(chips_display_info_t display_info) {
         state.pass_action.colors[0].clear_value.g = 0.05f;
     }
 
+    if (state.update_ui_cb) {
+        const sfb_framebuffer_info info = sfb_query_framebuffer_info(state.fb);
+        state.update_ui_cb(&(gfx_ui_info_t){
+            .display_texview = info.offscreen.tex_view,
+            .display_sampler = info.nearest_sampler,
+            .display_info = display_info,
+        });
+    }
+
     // draw the final pass with linear filtering
     sg_begin_pass(&(sg_pass){
         .action = state.pass_action,
@@ -347,13 +358,8 @@ void gfx_draw(chips_display_info_t display_info) {
     sg_apply_viewport(0, 0, display.width, display.height, true);
     sdtx_draw();
     sgl_draw();
-    if (state.draw_extra_cb) {
-        const sfb_framebuffer_info info = sfb_query_framebuffer_info(state.fb);
-        state.draw_extra_cb(&(gfx_draw_info_t){
-            .display_texview = info.offscreen.tex_view,
-            .display_sampler = info.nearest_sampler,
-            .display_info = display_info,
-        });
+    if (state.draw_ui_cb) {
+        state.draw_ui_cb();
     }
     sg_end_pass();
     sg_commit();

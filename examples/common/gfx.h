@@ -24,18 +24,20 @@ typedef struct {
     sg_view display_texview;
     sg_sampler display_sampler;
     chips_display_info_t display_info;
-} gfx_draw_info_t;
+} gfx_ui_info_t;
 
-typedef void(*gfx_init_extra_t)(void);
-typedef void(*gfx_draw_extra_t)(const gfx_draw_info_t* draw_info);
+typedef void(*gfx_init_ui_t)(void);
+typedef void(*gfx_update_ui_t)(const gfx_ui_info_t* ui_info);
+typedef void(*gfx_draw_ui_t)(void);
 
 typedef struct {
     bool disable_speaker_icon;
     gfx_border_t border;
     chips_display_info_t display_info;
     chips_dim_t pixel_aspect;   // optional pixel aspect ratio, default is 1:1
-    gfx_init_extra_t init_extra_cb;
-    gfx_draw_extra_t draw_extra_cb;
+    gfx_init_ui_t init_ui_cb;
+    gfx_update_ui_t update_ui_cb;
+    gfx_draw_ui_t draw_ui_cb;
 } gfx_desc_t;
 
 void gfx_init(const gfx_desc_t* desc);

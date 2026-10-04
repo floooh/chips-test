@@ -138,7 +138,7 @@ void ui_draw_sokol_menu(void) {
     sgimgui_draw_menu("Sokol");
 }
 
-void ui_draw(const gfx_draw_info_t* gfx_draw_info) {
+void ui_update(const gfx_ui_info_t* gfx_ui_info) {
     handle_save_imgui_ini();
     simgui_new_frame({sapp_width(), sapp_height(), sapp_frame_duration(), sapp_dpi_scale() });
 
@@ -147,18 +147,22 @@ void ui_draw(const gfx_draw_info_t* gfx_draw_info) {
     ImGui::DockSpaceOverViewport(dockspace, viewport, ImGuiDockNodeFlags_PassthruCentralNode);
     if (state.draw_cb) {
         ui_draw_info_t ui_draw_info = {};
-        if (gfx_draw_info) {
-            ui_draw_info.display.tex = simgui_imtextureid_with_sampler(gfx_draw_info->display_texview, gfx_draw_info->display_sampler);
-            ui_draw_info.display.dim = gfx_draw_info->display_info.frame.dim;
-            ui_draw_info.display.screen = gfx_draw_info->display_info.screen;
+        if (gfx_ui_info) {
+            ui_draw_info.display.tex = simgui_imtextureid_with_sampler(gfx_ui_info->display_texview, gfx_ui_info->display_sampler);
+            ui_draw_info.display.dim = gfx_ui_info->display_info.frame.dim;
+            ui_draw_info.display.screen = gfx_ui_info->display_info.screen;
             ui_draw_info.display.pixel_aspect = gfx_pixel_aspect();
-            ui_draw_info.display.portrait = gfx_draw_info->display_info.portrait;
+            ui_draw_info.display.portrait = gfx_ui_info->display_info.portrait;
             ui_draw_info.display.origin_top_left = sg_query_features().origin_top_left;
         }
         state.draw_cb(&ui_draw_info);
     }
     sgimgui_draw();
-    simgui_render();
+    simgui_flush();
+}
+
+void ui_draw(void) {
+    simgui_draw();
 }
 
 bool ui_input(const sapp_event* event) {
