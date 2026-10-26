@@ -151,7 +151,7 @@ sg_view gfx_create_icon_texview(const uint8_t* packed_pixels, int width, int hei
         .pixel_format = SG_PIXELFORMAT_RGBA8,
         .width = width,
         .height = height,
-        .data.mip_levels[0] = { .ptr=pixels, .size=pixel_data_size },
+        .data = { .ptr=pixels, .size=pixel_data_size },
         .label = label,
     });
     free(pixels);

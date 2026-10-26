@@ -257,7 +257,7 @@ ui_texture_t ui_create_screenshot_texture(chips_display_info_t info) {
         .pixel_format = SG_PIXELFORMAT_RGBA8,
         .label = "screenshot-image",
     };
-    img_desc.data.mip_levels[0] = { .ptr = dst, .size = dst_num_bytes };
+    img_desc.data = { .ptr = dst, .size = dst_num_bytes };
     sg_image img = sg_make_image(img_desc);
     free(dst);
     sg_view view = sg_make_view({
