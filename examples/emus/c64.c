@@ -151,10 +151,10 @@ void app_init(void) {
         .draw_ui_cb = ui_draw,
         #endif
         .border = {
-            .left = BORDER_LEFT,
-            .right = BORDER_RIGHT,
-            .top = BORDER_TOP,
-            .bottom = BORDER_BOTTOM,
+            .left = gfx_dpi_scale(BORDER_LEFT),
+            .right = gfx_dpi_scale(BORDER_RIGHT),
+            .top = gfx_dpi_scale(BORDER_TOP),
+            .bottom = gfx_dpi_scale(BORDER_BOTTOM),
         },
         .display_info = c64_display_info(&state.c64),
     });
@@ -378,8 +378,8 @@ static void handle_file_loading(void) {
 static void draw_status_bar(void) {
     prof_push(PROF_EMU, (float)state.emu_time_ms);
     prof_stats_t emu_stats = prof_stats(PROF_EMU);
-    const float w = sapp_widthf();
-    const float h = sapp_heightf();
+    const float w = sapp_widthf() / sapp_dpi_scale();
+    const float h = sapp_heightf() / sapp_dpi_scale();
     sdtx_canvas(w, h);
     sdtx_color3b(255, 255, 255);
     sdtx_pos(1.0f, (h / 8.0f) - 1.5f);
@@ -631,5 +631,7 @@ sapp_desc sokol_main(int argc, char* argv[]) {
             .update_document_title = true,
         },
         .logger.func = slog_func,
+        .high_dpi = true,
+        .depth_format = SAPP_PIXELFORMAT_NONE,
     };
 }

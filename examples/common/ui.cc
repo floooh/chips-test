@@ -11,6 +11,8 @@
 #include "sokol_imgui.h"
 #define SOKOL_GFX_IMGUI_IMPL
 #include "sokol_gfx_imgui.h"
+#define SOKOL_APP_IMGUI_IMPL
+#include "sokol_app_imgui.h"
 #include "gfx.h"
 #include "fs.h"
 #include <stdlib.h> // calloc
@@ -76,6 +78,7 @@ static void register_imgui_settings_handler(void);
 void ui_preinit(void) {
     const sgimgui_desc_t sgimgui_desc = { };
     sgimgui_setup(&sgimgui_desc);
+    sappimgui_setup();
 }
 
 void ui_init(const ui_desc_t* desc) {
@@ -131,14 +134,20 @@ void ui_discard(void) {
     sg_destroy_sampler(state.linear_sampler);
     sg_remove_commit_listener({ .func = commit_listener });
     simgui_shutdown();
+    sappimgui_shutdown();
     sgimgui_shutdown();
 }
 
 void ui_draw_sokol_menu(void) {
-    sgimgui_draw_menu("Sokol");
+    if (ImGui::BeginMenu("Sokol")) {
+        sappimgui_draw_menu("App");
+        sgimgui_draw_menu("Gfx");
+        ImGui::EndMenu();
+    }
 }
 
 void ui_update(const gfx_ui_info_t* gfx_ui_info) {
+    sappimgui_track_frame();
     handle_save_imgui_ini();
     simgui_new_frame({sapp_width(), sapp_height(), sapp_frame_duration(), sapp_dpi_scale() });
 
@@ -157,6 +166,7 @@ void ui_update(const gfx_ui_info_t* gfx_ui_info) {
         }
         state.draw_cb(&ui_draw_info);
     }
+    sappimgui_draw();
     sgimgui_draw();
     simgui_flush();
 }
@@ -166,6 +176,7 @@ void ui_draw(void) {
 }
 
 bool ui_input(const sapp_event* event) {
+    sappimgui_track_event(event);
     simgui_handle_event(event);
     return ImGui::GetIO().WantCaptureKeyboard;
 }

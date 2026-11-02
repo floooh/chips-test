@@ -41,6 +41,7 @@ typedef struct {
 } gfx_desc_t;
 
 void gfx_init(const gfx_desc_t* desc);
+int gfx_dpi_scale(int c);
 void gfx_draw(chips_display_info_t display_info);
 void gfx_shutdown(void);
 void gfx_flash_success(void);
