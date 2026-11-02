@@ -56,6 +56,10 @@ export function build(b: Builder) {
             '-Wno-stringop-overflow',   // possible false positives
         ]);
     }
+    if (b.isEmscripten()) {
+        // this is needed for the VSCode KC-IDE extension
+        b.addLinkOptions(['-sEXPORTED_RUNTIME_METHODS=HEAPU8,HEAPU16']);
+    }
     // an interface lib for the chips headers
     b.addTarget('chips', 'interface', (t) => {
         t.setDir(b.importDir('chips'));
