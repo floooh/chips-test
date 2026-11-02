@@ -159,6 +159,10 @@ sg_view gfx_create_icon_texview(const uint8_t* packed_pixels, int width, int hei
     return view;
 }
 
+int gfx_dpi_scale(int c) {
+    return (int)((float)c * sapp_dpi_scale());
+}
+
 void gfx_init(const gfx_desc_t* desc) {
     sg_setup(&(sg_desc){
         .buffer_pool_size = 32,
